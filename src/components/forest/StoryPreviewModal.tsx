@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   hint: {
-    color: 'rgba(255,255,255,0.7)',
+    color: COLORS.white,
     fontSize: 12,
     textAlign: 'center',
   },

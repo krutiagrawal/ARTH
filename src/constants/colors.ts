@@ -42,6 +42,7 @@ export const COLORS = {
   glass: 'rgba(255, 255, 255, 0.15)',
   glassDark: 'rgba(0, 0, 0, 0.15)',
   glassSage: 'rgba(135, 168, 120, 0.2)',
+  glassSageSubtle: 'rgba(135, 168, 120, 0.15)',
   overlay: 'rgba(0, 0, 0, 0.4)',
   overlayLight: 'rgba(0, 0, 0, 0.2)',
 
@@ -63,6 +64,11 @@ export const COLORS = {
   bronze: '#CD7F32',
   silver: '#C0C0C0',
   gold: '#FFD700',
+
+  // Danger / destructive (in-family warm red, not a generic Material red)
+  danger: '#C24A3B',
+  dangerDark: '#8E3229',
+  dangerLight: '#E8A99C',
 
   // Shadows
   shadowSage: 'rgba(94, 133, 80, 0.3)',

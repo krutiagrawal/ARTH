@@ -18,6 +18,7 @@ import { COLORS } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
 import { GlassCard } from '../components/common/GlassCard';
 import { ProgressRing } from '../components/common/ProgressRing';
+import { StatDisplay } from '../components/common/StatDisplay';
 import { Mascot } from '../components/common/Mascot';
 import { useFadeIn, useSlideUp, useScaleIn } from '../hooks/useAnimations';
 import { useAuth } from '../context/AuthContext';
@@ -72,6 +73,8 @@ function ProfileHeader({
         <TouchableOpacity
           style={styles.settingsButton}
           onPress={() => navigation?.navigate('Settings')}
+          accessibilityRole="button"
+          accessibilityLabel="Open settings"
         >
           <BlurView intensity={25} tint="dark" style={styles.settingsBlur}>
             <Text style={styles.settingsIcon}>⚙️</Text>
@@ -108,29 +111,51 @@ function ProfileHeader({
 
         {/* Stats strip */}
         <BlurView intensity={20} tint="light" style={styles.statsStrip}>
-          <View style={styles.headerStat}>
-            <Text style={styles.headerStatNum}>{user?.treesPlantedCount ?? 0}</Text>
-            <Text style={styles.headerStatLabel}>Trees</Text>
-          </View>
-          <View style={styles.headerStatDivider} />
-          <View style={styles.headerStat}>
-            <Text style={styles.headerStatNum}>{user?.streakCurrent ?? 0}</Text>
-            <Text style={styles.headerStatLabel}>Streak</Text>
-          </View>
-          <View style={styles.headerStatDivider} />
-          <View style={styles.headerStat}>
-            <Text style={styles.headerStatNum}>{user?.badgesCount ?? 0}</Text>
-            <Text style={styles.headerStatLabel}>Badges</Text>
-          </View>
-          <View style={styles.headerStatDivider} />
-          <View style={styles.headerStat}>
-            <Text style={styles.headerStatNum}>{rank ? `#${rank}` : '—'}</Text>
-            <Text style={styles.headerStatLabel}>Rank</Text>
-          </View>
+          {[
+            { value: user?.treesPlantedCount ?? 0, label: 'Trees' },
+            { value: user?.streakCurrent ?? 0, label: 'Streak' },
+            { value: user?.badgesCount ?? 0, label: 'Badges' },
+            { value: rank ? `#${rank}` : '—', label: 'Rank' },
+          ].map((s, i) => (
+            <React.Fragment key={s.label}>
+              {i > 0 && <View style={styles.headerStatDivider} />}
+              <StatDisplay
+                value={s.value}
+                label={s.label}
+                size="sm"
+                align="center"
+                color={COLORS.white}
+                labelColor={COLORS.white}
+                style={styles.headerStat}
+              />
+            </React.Fragment>
+          ))}
         </BlurView>
       </LinearGradient>
     </Animated.View>
   );
+}
+
+/**
+ * The calendar API always returns a rolling window ending exactly today (backend:
+ * `startDate = today - (weeksCount*7 - 1)`, sequential days from there) — so today's real
+ * calendar date for any (weekIndex, dayIndex) cell can be derived client-side without the API
+ * needing to send dates. Used to tell "missed" (past, not done) apart from "future" (not
+ * reached yet) and to mark today's cell, none of which the raw boolean grid alone can express.
+ */
+function classifyStreakDay(weekIndex: number, dayIndex: number, totalWeeks: number) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const totalDays = totalWeeks * 7;
+  const startDate = new Date(today);
+  startDate.setDate(startDate.getDate() - (totalDays - 1));
+  const date = new Date(startDate);
+  date.setDate(date.getDate() + (weekIndex * 7 + dayIndex));
+
+  return {
+    isToday: date.getTime() === today.getTime(),
+    isFuture: date.getTime() > today.getTime(),
+  };
 }
 
 function StreakCalendar({ streakCurrent, weeks }: { streakCurrent: number; weeks: StreakWeek[] }) {
@@ -151,19 +176,25 @@ function StreakCalendar({ streakCurrent, weeks }: { streakCurrent: number; weeks
         <View key={wi} style={styles.streakWeek}>
           <Text style={styles.streakWeekLabelDark}>{week.week.replace('Week ', 'W')}</Text>
           <View style={styles.streakDays}>
-            {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, di) => (
-              <View key={di} style={styles.streakDayWrapper}>
-                <View
-                  style={[
-                    styles.streakDay,
-                    week.days[di] ? styles.streakDayFilled : styles.streakDayEmpty,
-                  ]}
-                >
-                  {week.days[di] && <Text style={styles.streakDayCheck}>✓</Text>}
+            {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, di) => {
+              const done = week.days[di];
+              const { isToday, isFuture } = classifyStreakDay(wi, di, weeks.length);
+              const missed = !done && !isFuture && !isToday;
+              return (
+                <View key={di} style={styles.streakDayWrapper}>
+                  <View
+                    style={[
+                      styles.streakDay,
+                      done ? styles.streakDayFilled : missed ? styles.streakDayMissed : styles.streakDayEmpty,
+                      isToday && styles.streakDayToday,
+                    ]}
+                  >
+                    {done && <Text style={styles.streakDayCheck}>✓</Text>}
+                  </View>
+                  <Text style={[styles.streakDayLabelDark, isToday && styles.streakDayLabelToday]}>{day}</Text>
                 </View>
-                <Text style={styles.streakDayLabelDark}>{day}</Text>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </View>
       ))}
@@ -192,7 +223,7 @@ function AchievementItem({
   return (
     <Animated.View style={scaleStyle}>
       <TouchableOpacity activeOpacity={0.8} onPress={onPress}>
-        <View style={[styles.achievementCardDark, !achievement.unlocked && styles.achievementLocked]}>
+        <View style={[styles.achievementCardDark, !achievement.unlocked && styles.achievementCardLockedDark]}>
           {achievement.unlocked ? (
             <LinearGradient colors={colors} style={styles.achievementIconBg}>
               <Text style={styles.achievementIcon}>{achievement.icon}</Text>
@@ -215,7 +246,13 @@ function AchievementItem({
               />
             </View>
           )}
-          <View style={[styles.rarityDot, { backgroundColor: colors[0] }]} />
+          <View
+            style={[
+              styles.rarityDot,
+              { backgroundColor: colors[0] },
+              !achievement.unlocked && styles.rarityDotLocked,
+            ]}
+          />
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -491,12 +528,12 @@ const styles = StyleSheet.create({
   },
   profileHandle: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
+    color: COLORS.white,
     fontWeight: '500',
   },
   profileJoined: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.6)',
+    color: COLORS.white,
     marginBottom: 8,
   },
   statsStrip: {
@@ -512,18 +549,6 @@ const styles = StyleSheet.create({
   headerStat: {
     flex: 1,
     alignItems: 'center',
-  },
-  headerStatNum: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: COLORS.white,
-  },
-  headerStatLabel: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.7)',
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   headerStatDivider: {
     width: 1,
@@ -560,7 +585,7 @@ const styles = StyleSheet.create({
   },
   impactLabel: {
     fontSize: 10,
-    color: 'rgba(255,255,255,0.65)',
+    color: COLORS.white,
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -572,7 +597,7 @@ const styles = StyleSheet.create({
   },
   impactEquivText: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.75)',
+    color: COLORS.white,
     textAlign: 'center',
     fontWeight: '500',
   },
@@ -591,7 +616,7 @@ const styles = StyleSheet.create({
   },
   streakCalSubDark: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.6)',
+    color: COLORS.white,
     marginTop: 2,
   },
   streakCountBadge: {
@@ -615,7 +640,7 @@ const styles = StyleSheet.create({
   streakWeekLabelDark: {
     width: 24,
     fontSize: 11,
-    color: 'rgba(255,255,255,0.55)',
+    color: COLORS.white,
     fontWeight: '600',
   },
   streakDays: {
@@ -643,6 +668,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
   },
+  streakDayMissed: {
+    backgroundColor: 'rgba(194,74,59,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(194,74,59,0.35)',
+  },
+  streakDayToday: {
+    borderWidth: 2,
+    borderColor: COLORS.golden,
+  },
   streakDayCheck: {
     fontSize: 12,
     color: COLORS.white,
@@ -650,8 +684,12 @@ const styles = StyleSheet.create({
   },
   streakDayLabelDark: {
     fontSize: 8,
-    color: 'rgba(255,255,255,0.5)',
+    color: COLORS.white,
     fontWeight: '600',
+  },
+  streakDayLabelToday: {
+    color: COLORS.golden,
+    fontWeight: '800',
   },
   achievementsSection: {
     gap: 12,
@@ -687,8 +725,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.15)',
     position: 'relative',
   },
-  achievementLocked: {
-    opacity: 0.5,
+  achievementCardLockedDark: {
+    backgroundColor: 'rgba(13,35,24,0.3)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   achievementIconBg: {
     width: 44,
@@ -716,7 +756,7 @@ const styles = StyleSheet.create({
     lineHeight: 13,
   },
   achievementTitleLockedDark: {
-    color: 'rgba(255,255,255,0.45)',
+    color: COLORS.white,
   },
   achievementProgressBar: {
     width: '100%',
@@ -737,6 +777,9 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
+  },
+  rarityDotLocked: {
+    opacity: 0.45,
   },
   themeCard: {
     width: 110,
@@ -765,7 +808,7 @@ const styles = StyleSheet.create({
   },
   themeLockedDark: {
     fontSize: 10,
-    color: 'rgba(255,255,255,0.55)',
+    color: COLORS.white,
   },
   modalBackdrop: {
     flex: 1,
@@ -805,7 +848,7 @@ const styles = StyleSheet.create({
   },
   achievementModalDesc: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.75)',
+    color: COLORS.white,
     textAlign: 'center',
     lineHeight: 19,
     marginTop: 8,
@@ -817,7 +860,7 @@ const styles = StyleSheet.create({
   },
   achievementModalProgressText: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.6)',
+    color: COLORS.white,
     textAlign: 'center',
   },
   achievementModalUnlocked: {

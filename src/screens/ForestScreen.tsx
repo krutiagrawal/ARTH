@@ -45,6 +45,8 @@ import { COLORS } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
 import { GlassCard } from '../components/common/GlassCard';
 import { useBreathing, useFloat, useWave } from '../hooks/useAnimations';
+import { useReduceMotion } from '../hooks/useReduceMotion';
+import { AmbientCreatures } from '../components/common/AmbientCreatures';
 import { useTimeTheme } from '../hooks/useTimeTheme';
 import { useAuth } from '../context/AuthContext';
 import { useThemes, useSelectTheme, useDecorationPlacements, useCreateDecorationPlacement } from '../hooks/useApiQueries';
@@ -249,8 +251,14 @@ function FloatingLeaf({ x, delay, color }: { x: number; delay: number; color: st
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(0);
   const rotate = useSharedValue(0);
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
+    if (reduceMotion) {
+      opacity.value = withTiming(0.4, { duration: 400 });
+      return;
+    }
+
     translateY.value = withDelay(delay, withRepeat(
       withTiming(-FOREST_HEIGHT * 0.7, { duration: 5000 + Math.random() * 3000, easing: Easing.linear }), -1, false
     ));
@@ -271,7 +279,7 @@ function FloatingLeaf({ x, delay, color }: { x: number; delay: number; color: st
     rotate.value = withDelay(delay, withRepeat(
       withTiming(360, { duration: 6000, easing: Easing.linear }), -1, false
     ));
-  }, []);
+  }, [reduceMotion]);
 
   const style = useAnimatedStyle(() => ({
     transform: [
@@ -285,33 +293,6 @@ function FloatingLeaf({ x, delay, color }: { x: number; delay: number; color: st
   return (
     <Animated.View style={[styles.floatingLeaf, { left: x, bottom: 50 }, style]}>
       <View style={[styles.leafShape, { backgroundColor: color }]} />
-    </Animated.View>
-  );
-}
-
-function BirdAnimation({ startX, y, delay }: { startX: number; y: number; delay: number }) {
-  const translateX = useSharedValue(startX);
-  const wingAnim = useSharedValue(0);
-
-  useEffect(() => {
-    translateX.value = withDelay(delay, withRepeat(
-      withTiming(SW + 40, { duration: 8000 + Math.random() * 4000, easing: Easing.linear }), -1, false
-    ));
-    wingAnim.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 300 }),
-        withTiming(0, { duration: 300 })
-      ), -1, true
-    );
-  }, []);
-
-  const birdStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-  }));
-
-  return (
-    <Animated.View style={[styles.bird, { top: y }, birdStyle]}>
-      <Text style={styles.birdEmoji}>🐦</Text>
     </Animated.View>
   );
 }
@@ -533,9 +514,16 @@ export function ForestScreen({ navigation }: any) {
             <FloatingLeaf key={i} x={x} delay={i * 800} color={palette.accentColor} />
           ))}
 
-          {/* Birds */}
-          <BirdAnimation startX={-40} y={FOREST_HEIGHT * 0.18} delay={2000} />
-          <BirdAnimation startX={-80} y={FOREST_HEIGHT * 0.12} delay={5000} />
+          {/* Birds by day, fireflies at night/late-night — same swap rule as Home */}
+          <AmbientCreatures
+            period={theme.period}
+            birdConfigs={[
+              { direction: 'right', y: FOREST_HEIGHT * 0.18, delay: 2000, duration: 10000 },
+              { direction: 'right', y: FOREST_HEIGHT * 0.12, delay: 5000, duration: 11000 },
+            ]}
+            fireflyCount={7}
+            fireflyAreaHeight={FOREST_HEIGHT * 0.4}
+          />
 
           {/* Placed ecosystem decorations */}
           <DecorationOverlay
@@ -837,7 +825,7 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
   },
   timeLabelNight: {
-    color: 'rgba(255,255,255,0.9)',
+    color: COLORS.white,
   },
   lightText: {
     color: COLORS.white,
@@ -872,7 +860,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 10,
-    color: COLORS.textSecondary,
+    color: COLORS.textPrimary,
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -897,13 +885,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderTopRightRadius: 0,
     transform: [{ rotate: '45deg' }],
-  },
-  bird: {
-    position: 'absolute',
-  },
-  birdEmoji: {
-    fontSize: 14,
-    transform: [{ scaleX: -1 }],
   },
   bottomPanelWrap: {
     position: 'absolute',
@@ -935,7 +916,7 @@ const styles = StyleSheet.create({
   sheetHint: {
     fontSize: 11,
     fontWeight: '600',
-    color: COLORS.textMuted,
+    color: COLORS.textPrimary,
   },
   bottomPanelHandleNight: {
     backgroundColor: 'rgba(255,255,255,0.3)',
@@ -966,7 +947,7 @@ const styles = StyleSheet.create({
   panelCloseText: {
     fontSize: 15,
     fontWeight: '700',
-    color: COLORS.textSecondary,
+    color: COLORS.textPrimary,
   },
   reopenPill: {
     position: 'absolute',
@@ -1067,7 +1048,7 @@ const styles = StyleSheet.create({
   zoneCount: {
     fontSize: 10,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.55)',
+    color: COLORS.white,
   },
   themeCard: {
     width: 100,
@@ -1107,7 +1088,7 @@ const styles = StyleSheet.create({
   },
   windSubtitle: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: COLORS.textPrimary,
     marginTop: 1,
   },
 });

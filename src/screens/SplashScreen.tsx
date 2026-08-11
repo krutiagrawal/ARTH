@@ -136,7 +136,7 @@ export function SplashScreen({ navigation }: any) {
 
       {/* Heading + tagline, above the hero image */}
       <Animated.View style={[styles.logoContainer, logoStyle]}>
-        <Text style={styles.logoText}>PLANT</Text>
+        <Text style={styles.logoText}>ARTH</Text>
         <Text style={styles.tagline}>grow your world</Text>
       </Animated.View>
 
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.85)',
+    color: COLORS.white,
     letterSpacing: 3,
     textTransform: 'uppercase',
     fontWeight: '600',

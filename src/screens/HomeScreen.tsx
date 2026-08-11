@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -33,9 +33,15 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import {
   useFadeIn,
   useSlideUp,
+  useSpringPress,
 } from '../hooks/useAnimations';
 import { useTimeTheme, type TimeTheme } from '../hooks/useTimeTheme';
 import { MuteButton } from '../components/common/MuteButton';
+import { AmbientCreatures } from '../components/common/AmbientCreatures';
+import { useReduceMotion } from '../hooks/useReduceMotion';
+import { TreeCard } from '../components/common/TreeCard';
+import { Sheet } from '../components/common/Sheet';
+import { useHaptics } from '../hooks/useHaptics';
 import { useAuth } from '../context/AuthContext';
 import { useTrees, useTodayMissions, useEcoFacts, useCompleteMission } from '../hooks/useApiQueries';
 import { useDeviceWeather } from '../hooks/useDeviceWeather';
@@ -110,8 +116,16 @@ function RainDrop({ x, delay, duration, groundY }: { x: number; delay: number; d
   const opacity = useSharedValue(0);
   const splashScale = useSharedValue(0);
   const splashOpacity = useSharedValue(0);
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
+    if (reduceMotion) {
+      // A few still, gently-visible drops instead of an endless falling loop.
+      translateY.value = withTiming(groundY * 0.5, { duration: 400 });
+      opacity.value = withTiming(0.3, { duration: 400 });
+      return;
+    }
+
     translateY.value = withDelay(
       delay,
       withRepeat(withTiming(groundY, { duration, easing: Easing.linear }), -1, false)
@@ -156,7 +170,7 @@ function RainDrop({ x, delay, duration, groundY }: { x: number; delay: number; d
         false
       )
     );
-  }, []);
+  }, [reduceMotion]);
 
   const dropStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }, { rotate: '12deg' }],
@@ -200,8 +214,17 @@ function WindLeaf({ y, delay, duration, color }: { y: number; delay: number; dur
   const translateY = useSharedValue(0);
   const rotate = useSharedValue(0);
   const opacity = useSharedValue(0);
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
+    if (reduceMotion) {
+      translateX.value = withTiming(SW * 0.5, { duration: 400 });
+      translateY.value = withTiming(0, { duration: 400 });
+      rotate.value = withTiming(0, { duration: 400 });
+      opacity.value = withTiming(0.5, { duration: 400 });
+      return;
+    }
+
     translateX.value = withDelay(
       delay,
       withRepeat(withTiming(SW + 40, { duration, easing: Easing.linear }), -1, false)
@@ -224,7 +247,7 @@ function WindLeaf({ y, delay, duration, color }: { y: number; delay: number; dur
       withRepeat(withTiming(360, { duration: duration * 0.4, easing: Easing.linear }), -1, false)
     );
     opacity.value = withDelay(delay, withTiming(0.85, { duration: 300 }));
-  }, []);
+  }, [reduceMotion]);
 
   const style = useAnimatedStyle(() => ({
     transform: [
@@ -245,8 +268,15 @@ function WindLeaf({ y, delay, duration, color }: { y: number; delay: number; dur
 function GustLine({ y, delay, duration }: { y: number; delay: number; duration: number }) {
   const translateX = useSharedValue(-100);
   const opacity = useSharedValue(0);
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
+    if (reduceMotion) {
+      translateX.value = withTiming(SW * 0.4, { duration: 400 });
+      opacity.value = withTiming(0.15, { duration: 400 });
+      return;
+    }
+
     translateX.value = withDelay(
       delay,
       withRepeat(withTiming(SW + 100, { duration, easing: Easing.linear }), -1, false)
@@ -263,7 +293,7 @@ function GustLine({ y, delay, duration }: { y: number; delay: number; duration: 
         false
       )
     );
-  }, []);
+  }, [reduceMotion]);
 
   const style = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
@@ -307,182 +337,6 @@ function WindEffect({ count = 6 }: { count?: number }) {
 }
 
 
-
-function HomeBird({
-  direction,
-  y,
-  delay,
-  duration,
-}: {
-  direction: 'left' | 'right';
-  y: number;
-  delay: number;
-  duration: number;
-}) {
-  const startX = direction === 'right' ? -40 : SW + 40;
-  const endX = direction === 'right' ? SW + 40 : -40;
-  const translateX = useSharedValue(startX);
-  const translateY = useSharedValue(0);
-
-  useEffect(() => {
-    translateX.value = withDelay(
-      delay,
-      withRepeat(withTiming(endX, { duration, easing: Easing.linear }), -1, false)
-    );
-    // Gentle up/down bobbing so the flight path bounces rather than running in a straight line —
-    // the steps sum to `duration`, keeping it in sync with the horizontal sweep's own loop period.
-    translateY.value = withDelay(
-      delay,
-      withRepeat(
-        withSequence(
-          withTiming(-16, { duration: duration * 0.15, easing: Easing.inOut(Easing.sin) }),
-          withTiming(10, { duration: duration * 0.15, easing: Easing.inOut(Easing.sin) }),
-          withTiming(-14, { duration: duration * 0.15, easing: Easing.inOut(Easing.sin) }),
-          withTiming(8, { duration: duration * 0.15, easing: Easing.inOut(Easing.sin) }),
-          withTiming(-10, { duration: duration * 0.2, easing: Easing.inOut(Easing.sin) }),
-          withTiming(0, { duration: duration * 0.2, easing: Easing.inOut(Easing.sin) })
-        ),
-        -1,
-        false
-      )
-    );
-  }, []);
-
-  const style = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-      { scaleX: direction === 'right' ? -1 : 1 },
-    ],
-  }));
-
-  return (
-    <Animated.View style={[styles.homeBird, { top: y }, style]}>
-      <Text style={styles.homeBirdEmoji}>🐦</Text>
-    </Animated.View>
-  );
-}
-
-/** Birds sweeping across the full screen width, independent of scroll position and of which
- * period/background is active — restores the original always-visible flying-bird ambience. */
-function HomeBirds() {
-  const birds = useMemo(
-    () => [
-      { direction: 'right' as const, y: 70, delay: 0, duration: 14000 },
-      { direction: 'left' as const, y: 130, delay: 3000, duration: 16000 },
-      { direction: 'right' as const, y: 195, delay: 7000, duration: 13000 },
-      { direction: 'left' as const, y: 45, delay: 10000, duration: 17000 },
-    ],
-    []
-  );
-
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {birds.map((b, i) => (
-        <HomeBird key={i} {...b} />
-      ))}
-    </View>
-  );
-}
-
-const FIREFLY_COLORS = ['#D4A853', '#E8B84B', '#FFD700'];
-
-/** A single firefly: wanders in a small loop around its anchor point (unlike HomeBird's
- * straight-line sweep) and blinks on/off on its own randomized cycle so 8-10 of them never
- * flicker in unison. */
-function HomeFirefly({
-  x,
-  y,
-  delay,
-  color,
-}: {
-  x: number;
-  y: number;
-  delay: number;
-  color: string;
-}) {
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const opacity = useSharedValue(0);
-
-  useEffect(() => {
-    translateX.value = withDelay(
-      delay,
-      withRepeat(
-        withSequence(
-          withTiming(18, { duration: 2200, easing: Easing.inOut(Easing.sin) }),
-          withTiming(-14, { duration: 2600, easing: Easing.inOut(Easing.sin) }),
-          withTiming(10, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
-          withTiming(0, { duration: 2400, easing: Easing.inOut(Easing.sin) })
-        ),
-        -1,
-        true
-      )
-    );
-    translateY.value = withDelay(
-      delay,
-      withRepeat(
-        withSequence(
-          withTiming(-16, { duration: 2400, easing: Easing.inOut(Easing.sin) }),
-          withTiming(12, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
-          withTiming(-8, { duration: 2600, easing: Easing.inOut(Easing.sin) }),
-          withTiming(0, { duration: 2200, easing: Easing.inOut(Easing.sin) })
-        ),
-        -1,
-        true
-      )
-    );
-    // Blink cycle — randomized duration per instance (baked into `delay`'s caller via unique
-    // per-firefly timings) so the swarm blinks asynchronously rather than in lockstep.
-    opacity.value = withDelay(
-      delay,
-      withRepeat(
-        withSequence(
-          withTiming(1, { duration: 400 + Math.random() * 400 }),
-          withTiming(1, { duration: 500 + Math.random() * 700 }),
-          withTiming(0.1, { duration: 350 + Math.random() * 350 }),
-          withTiming(0.1, { duration: 300 + Math.random() * 500 })
-        ),
-        -1,
-        false
-      )
-    );
-  }, []);
-
-  const style = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }, { translateY: translateY.value }],
-    opacity: opacity.value,
-  }));
-
-  return (
-    <Animated.View
-      style={[styles.firefly, { left: x, top: y, backgroundColor: color, shadowColor: color }, style]}
-    />
-  );
-}
-
-/** Replaces HomeBirds at Night/Late Night — a swarm of blinking, wandering fireflies scattered
- * across the full screen instead of birds sweeping across it. */
-function HomeFireflies() {
-  const fireflies = useMemo(
-    () =>
-      Array.from({ length: 9 }, () => ({
-        x: Math.random() * SW,
-        y: 40 + Math.random() * (SH * 0.55),
-        delay: Math.random() * 2000,
-        color: FIREFLY_COLORS[Math.floor(Math.random() * FIREFLY_COLORS.length)],
-      })),
-    []
-  );
-
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {fireflies.map((f, i) => (
-        <HomeFirefly key={i} {...f} />
-      ))}
-    </View>
-  );
-}
 
 /** The entire illustrated top section — header text, stat row, hero illustration (a real image
  * when the current period has one, else the Skia-drawn ForestHeroCanvas fallback), and the
@@ -725,33 +579,15 @@ function RecentTrees({ trees, onNavigateTab }: { trees: ApiTree[]; onNavigateTab
         </TouchableOpacity>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.treeScroll}>
-        {recentTrees.map((tree, i) => (
-          <TouchableOpacity key={tree.id} activeOpacity={0.85} onPress={() => onNavigateTab('Map')}>
-            <BlurView
-              intensity={35}
-              tint={theme.cardTint === 'dark' ? 'dark' : 'light'}
-              experimentalBlurMethod="dimezisBlurView"
-              style={[styles.treeCard, { borderColor: theme.cardBorder, borderWidth: 1 }]}
-            >
-              <View style={[StyleSheet.absoluteFill, { backgroundColor: hexToRgba(theme.cardBackground, 0.4) }]} />
-              <Text style={styles.treeCardEmoji}>
-                {['🌱', '🌿', '🌳', '🌲', '🎋'][tree.growthStage - 1]}
-              </Text>
-              <Text style={[styles.treeCardName, { color: theme.textPrimaryOnCard }]}>{tree.nickname}</Text>
-              <Text style={[styles.treeCardSpecies, { color: theme.textSecondaryOnCard }]}>{tree.species}</Text>
-              <View style={[styles.treeGrowthBar, { backgroundColor: theme.accentColorSoft }]}>
-                <View
-                  style={[
-                    styles.treeGrowthFill,
-                    { width: `${(tree.growthStage / 5) * 100}%`, backgroundColor: theme.accentColor },
-                  ]}
-                />
-              </View>
-              <Text style={[styles.treeCardLocation, { color: theme.textSecondaryOnCard }]}>
-                📍 {tree.location?.split(',')[0] ?? 'Unknown'}
-              </Text>
-            </BlurView>
-          </TouchableOpacity>
+        {recentTrees.map(tree => (
+          <TreeCard
+            key={tree.id}
+            tree={tree}
+            size="chip"
+            theme={theme}
+            onPress={() => onNavigateTab('Map')}
+            style={styles.treeCardSpacing}
+          />
         ))}
       </ScrollView>
     </Animated.View>
@@ -782,11 +618,130 @@ function EcoFactCard({ fact }: { fact: string }) {
   );
 }
 
+/** The primary "take action" entry point — the single most important tap target on Home. Sits
+ * right below the hero, ahead of the XP card and quests, so the real-world mission always
+ * outranks the gamification below it. Opens GrowActionSheet's four contribution paths. */
+function HomeGrowCTA({ theme, onPress }: { theme: TimeTheme; onPress: () => void }) {
+  const { medium } = useHaptics();
+  const { style: pressStyle, onPressIn, onPressOut } = useSpringPress();
+  const slideStyle = useSlideUp(100, 20);
+
+  return (
+    <Animated.View style={slideStyle}>
+      <TouchableOpacity
+        activeOpacity={0.92}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        onPress={() => {
+          medium();
+          onPress();
+        }}
+        accessibilityRole="button"
+        accessibilityLabel="Take action for the Earth today"
+      >
+        <Animated.View style={pressStyle}>
+          <LinearGradient
+            colors={[theme.accentColor, COLORS.forest]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.growCta}
+          >
+            <View style={styles.growCtaIconWrap}>
+              <Text style={styles.growCtaIcon}>🌱</Text>
+            </View>
+            <View style={styles.growCtaTextWrap}>
+              <Text style={styles.growCtaTitle}>Take action for the Earth</Text>
+              <Text style={styles.growCtaSubtitle}>Plant, adopt, join a drive, or give</Text>
+            </View>
+            <Text style={styles.growCtaArrow}>›</Text>
+          </LinearGradient>
+        </Animated.View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+interface GrowAction {
+  key: 'plant' | 'adopt' | 'ngo' | 'donate';
+  icon: string;
+  title: string;
+  subtitle: string;
+}
+
+const GROW_ACTIONS: GrowAction[] = [
+  { key: 'plant', icon: '🌱', title: 'Plant by myself', subtitle: 'Snap a photo and add a real tree to your forest' },
+  { key: 'adopt', icon: '🌳', title: 'Adopt a nearby tree', subtitle: 'Take care of a tree already growing near you' },
+  { key: 'ngo', icon: '🤝', title: 'Join an NGO drive', subtitle: 'Plant alongside a local planting event' },
+  { key: 'donate', icon: '💚', title: 'Donate to an NGO', subtitle: 'Support verified tree-planting organizations' },
+];
+
+const COMING_SOON_COPY: Record<Exclude<GrowAction['key'], 'plant'>, { title: string; body: string }> = {
+  adopt: {
+    title: 'Adopt a Tree',
+    body: "Adopting a tree already growing near you is coming soon to ARTH. We're building partnerships with local nurseries and land partners so you can care for a real tree without planting a new one — we'll let you know the moment it's ready.",
+  },
+  ngo: {
+    title: 'NGO Drives',
+    body: "Joining a local planting drive is coming soon to ARTH. We're partnering with NGOs and community groups so you can show up and plant alongside others near you — we'll open this up as soon as drives go live in your area.",
+  },
+  donate: {
+    title: 'Donate to an NGO',
+    body: "Giving directly to verified tree-planting organizations is coming soon to ARTH. We're setting up secure donation partnerships so every contribution reaches real planting work on the ground. Thank you for wanting to help.",
+  },
+};
+
+/** The four contribution paths behind HomeGrowCTA. Only "Plant by myself" is a built flow today;
+ * the other three route to an honest, on-brand "coming soon" placeholder rather than pretending
+ * to be functional — per the brief, this is a navigation/UI pass, not new backend work. */
+function GrowActionSheet({
+  visible,
+  onClose,
+  navigation,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  navigation: any;
+}) {
+  const { selection } = useHaptics();
+
+  const handlePick = (key: GrowAction['key']) => {
+    selection();
+    onClose();
+    if (key === 'plant') {
+      navigation.navigate('PlantTree');
+      return;
+    }
+    const copy = COMING_SOON_COPY[key];
+    navigation.navigate('StaticContent', { title: copy.title, body: copy.body });
+  };
+
+  return (
+    <Sheet visible={visible} onClose={onClose} title="How would you like to help?" variant="slideUp">
+      {GROW_ACTIONS.map(action => (
+        <TouchableOpacity
+          key={action.key}
+          style={styles.growActionRow}
+          activeOpacity={0.8}
+          onPress={() => handlePick(action.key)}
+        >
+          <Text style={styles.growActionIcon}>{action.icon}</Text>
+          <View style={styles.growActionTextWrap}>
+            <Text style={styles.growActionTitle}>{action.title}</Text>
+            <Text style={styles.growActionSubtitle}>{action.subtitle}</Text>
+          </View>
+          <Text style={styles.growActionArrow}>›</Text>
+        </TouchableOpacity>
+      ))}
+    </Sheet>
+  );
+}
+
 export function HomeScreen({ navigation, onNavigateTab }: any) {
   const theme = useTimeTheme();
   const { user } = useAuth();
   const { weather } = useDeviceWeather();
   const sceneryMode = getSceneryMode(weather);
+  const [growSheetVisible, setGrowSheetVisible] = useState(false);
 
   const { data: trees = [] } = useTrees(4);
   const { data: missions = [] } = useTodayMissions();
@@ -807,6 +762,11 @@ export function HomeScreen({ navigation, onNavigateTab }: any) {
         {/* Illustrated hero — header, stat row, scenery, and stats pill all scroll together as
             one normal-flow block instead of a fixed backdrop the rest of the page scrolls over. */}
         <HeroSection theme={theme} user={user} navigation={navigation} onNavigateTab={onNavigateTab} weather={weather} />
+
+        {/* Primary "take action" entry point — outranks quests/XP below it in hierarchy */}
+        <View style={styles.growCtaSection}>
+          <HomeGrowCTA theme={theme} onPress={() => setGrowSheetVisible(true)} />
+        </View>
 
         {/* Mascot greeting */}
         <View style={styles.mascotSection}>
@@ -860,7 +820,7 @@ export function HomeScreen({ navigation, onNavigateTab }: any) {
       {/* Ambient scenery — rendered last so it drifts on top of everything, a constant animation.
           Reacts to real detected weather: rain when rainy, a windy breeze when cold, leaves otherwise. */}
       <View style={styles.ambientLayer} pointerEvents="none">
-        {theme.period === 'night' || theme.period === 'lateNight' ? <HomeFireflies /> : <HomeBirds />}
+        <AmbientCreatures period={theme.period} fireflyAreaHeight={SH * 0.55} />
         {sceneryMode === 'rain' && <RainEffect count={24} />}
         {sceneryMode === 'wind' && <WindEffect count={6} />}
         {sceneryMode === 'leaves' && (
@@ -871,6 +831,12 @@ export function HomeScreen({ navigation, onNavigateTab }: any) {
           />
         )}
       </View>
+
+      <GrowActionSheet
+        visible={growSheetVisible}
+        onClose={() => setGrowSheetVisible(false)}
+        navigation={navigation}
+      />
     </View>
   );
 }
@@ -881,22 +847,6 @@ const styles = StyleSheet.create({
   },
   ambientLayer: {
     ...StyleSheet.absoluteFillObject,
-  },
-  homeBird: {
-    position: 'absolute',
-  },
-  homeBirdEmoji: {
-    fontSize: 16,
-  },
-  firefly: {
-    position: 'absolute',
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 6,
-    elevation: 4,
   },
   raindrop: {
     position: 'absolute',
@@ -1063,7 +1013,7 @@ const styles = StyleSheet.create({
   },
   forestStatLabel: {
     fontSize: 10,
-    color: COLORS.textSecondary,
+    color: COLORS.textPrimary,
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -1072,6 +1022,77 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: 'rgba(0,0,0,0.1)',
     marginVertical: 4,
+  },
+  growCtaSection: {
+    marginBottom: 18,
+  },
+  growCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: RADIUS.xl,
+    padding: 16,
+    gap: 14,
+    ...SHADOWS.sage,
+  },
+  growCtaIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: RADIUS.md,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  growCtaIcon: {
+    fontSize: 26,
+  },
+  growCtaTextWrap: {
+    flex: 1,
+  },
+  growCtaTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: COLORS.white,
+  },
+  growCtaSubtitle: {
+    fontSize: 13,
+    color: COLORS.white,
+    marginTop: 2,
+  },
+  growCtaArrow: {
+    fontSize: 26,
+    color: COLORS.white,
+    fontWeight: '300',
+  },
+  growActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.06)',
+  },
+  growActionIcon: {
+    fontSize: 28,
+    width: 40,
+    textAlign: 'center',
+  },
+  growActionTextWrap: {
+    flex: 1,
+  },
+  growActionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  growActionSubtitle: {
+    fontSize: 12,
+    color: COLORS.textPrimary,
+    marginTop: 2,
+  },
+  growActionArrow: {
+    fontSize: 22,
+    color: COLORS.textPrimary,
+    fontWeight: '300',
   },
   mascotSection: {
     paddingLeft: 8,
@@ -1095,7 +1116,7 @@ const styles = StyleSheet.create({
   },
   xpSubLabel: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.6)',
+    color: COLORS.white,
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -1116,7 +1137,7 @@ const styles = StyleSheet.create({
   },
   xpBarLabel: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.6)',
+    color: COLORS.white,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -1140,45 +1161,8 @@ const styles = StyleSheet.create({
   treeScroll: {
     marginTop: 8,
   },
-  treeCard: {
-    width: 130,
+  treeCardSpacing: {
     marginRight: 10,
-    alignItems: 'center',
-    padding: 14,
-    gap: 4,
-    borderRadius: RADIUS.lg,
-    overflow: 'hidden',
-  },
-  treeCardEmoji: {
-    fontSize: 36,
-    marginBottom: 4,
-  },
-  treeCardName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.white,
-  },
-  treeCardSpecies: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.6)',
-  },
-  treeGrowthBar: {
-    width: '100%',
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginVertical: 4,
-  },
-  treeGrowthFill: {
-    height: '100%',
-    backgroundColor: COLORS.sageLight,
-    borderRadius: 2,
-  },
-  treeCardLocation: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.6)',
-    textAlign: 'center',
   },
   missionCard: {
     borderRadius: RADIUS.xl,
@@ -1247,11 +1231,11 @@ const styles = StyleSheet.create({
   },
   missionItemDoneText: {
     textDecorationLine: 'line-through',
-    color: 'rgba(255,255,255,0.5)',
+    color: COLORS.white,
   },
   missionItemDesc: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.6)',
+    color: COLORS.white,
     marginTop: 1,
   },
   missionXp: {

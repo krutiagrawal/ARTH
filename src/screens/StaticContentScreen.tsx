@@ -17,7 +17,12 @@ export function StaticContentScreen({ navigation, route }: any) {
       <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => navigation?.goBack?.()}
+          style={styles.backButton}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <BlurView intensity={25} tint="dark" style={styles.backBlur}>
             <Text style={styles.backIcon}>←</Text>
           </BlurView>

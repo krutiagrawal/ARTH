@@ -17,8 +17,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
+import Constants from 'expo-constants';
 import { GlassCard } from '../components/common/GlassCard';
 import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
+import { useReduceMotionContext } from '../context/ReduceMotionContext';
 import { useAuth } from '../context/AuthContext';
 import { useSettings, useUpdateSettings, useSessions } from '../hooks/useApiQueries';
 import { deleteAccount } from '../api/auth';
@@ -38,6 +40,8 @@ const DEFAULT_SETTINGS: ApiUserSettings = {
 };
 
 const { width: SW } = Dimensions.get('window');
+/** Sourced from app.json#expo.version via expo-constants — never hand-typed, so it can't drift. */
+const appVersionLabel = Constants.expoConfig?.version ? `ARTH v${Constants.expoConfig.version}` : 'ARTH';
 
 interface ToggleItem {
   id: string;
@@ -89,6 +93,7 @@ export function SettingsScreen({ navigation }: any) {
   const { data: fetchedSettings } = useSettings();
   const updateSettingsMutation = useUpdateSettings();
   const settings = fetchedSettings ?? DEFAULT_SETTINGS;
+  const { override: reduceMotionOverride, setOverride: setReduceMotionOverride } = useReduceMotionContext();
 
   const handleLogout = async () => {
     await logout();
@@ -133,7 +138,7 @@ export function SettingsScreen({ navigation }: any) {
   const { data: sessions } = useSessions();
 
   const handleSendFeedback = async () => {
-    const url = 'mailto:support@plantapp.example?subject=PLANT%20Feedback';
+    const url = 'mailto:support@plantapp.example?subject=ARTH%20Feedback';
     const canOpen = await Linking.canOpenURL(url);
     if (canOpen) {
       Linking.openURL(url);
@@ -149,7 +154,12 @@ export function SettingsScreen({ navigation }: any) {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => navigation?.goBack?.()}
+          style={styles.backButton}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <BlurView intensity={25} tint="dark" style={styles.backBlur}>
             <Text style={styles.backIconDark}>←</Text>
           </BlurView>
@@ -226,6 +236,21 @@ export function SettingsScreen({ navigation }: any) {
                 value={settings.haptics}
                 onValueChange={() => toggle('haptics')}
                 trackColor={{ false: COLORS.sand, true: COLORS.earth }}
+                thumbColor={COLORS.white}
+              />
+            }
+          />
+          <View style={styles.divider} />
+          <SettingsRow
+            icon="🧘"
+            label="Reduce Motion"
+            sublabel="Calmer visuals — pauses ambient animation"
+            accent={COLORS.textMuted}
+            rightElement={
+              <Switch
+                value={reduceMotionOverride === true}
+                onValueChange={(v) => setReduceMotionOverride(v ? true : null)}
+                trackColor={{ false: COLORS.sand, true: COLORS.textMuted }}
                 thumbColor={COLORS.white}
               />
             }
@@ -356,7 +381,7 @@ export function SettingsScreen({ navigation }: any) {
         {/* About */}
         <SectionHeader title="About" />
         <GlassCard variant="dark" noPadding>
-          <SettingsRow icon="ℹ️" label="App Version" sublabel="PLANT v1.0.0" accent={COLORS.textMuted} />
+          <SettingsRow icon="ℹ️" label="App Version" sublabel={appVersionLabel} accent={COLORS.textMuted} />
           <View style={styles.divider} />
           <SettingsRow
             icon="📜"
@@ -385,7 +410,7 @@ export function SettingsScreen({ navigation }: any) {
 
         <View style={styles.footer}>
           <Text style={styles.footerEmoji}>🌱</Text>
-          <Text style={styles.footerTextDark}>PLANT v1.0.0 — Made with love for the planet</Text>
+          <Text style={styles.footerTextDark}>{appVersionLabel} — Made with love for the planet</Text>
         </View>
       </ScrollView>
     </View>
@@ -457,7 +482,7 @@ const styles = StyleSheet.create({
   },
   profileCardHandle: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.7)',
+    color: COLORS.white,
     marginTop: 1,
   },
   editProfileButton: {
@@ -476,7 +501,7 @@ const styles = StyleSheet.create({
   sectionHeaderDark: {
     fontSize: 13,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.6)',
+    color: COLORS.white,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginTop: 8,
@@ -512,12 +537,12 @@ const styles = StyleSheet.create({
   },
   settingsRowSublabelDark: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.55)',
+    color: COLORS.white,
     marginTop: 1,
   },
   settingsRowArrowDark: {
     fontSize: 20,
-    color: 'rgba(255,255,255,0.4)',
+    color: COLORS.white,
     fontWeight: '300',
   },
   divider: {
@@ -531,7 +556,7 @@ const styles = StyleSheet.create({
   themeSectionLabelDark: {
     fontSize: 14,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.75)',
+    color: COLORS.white,
   },
   themeOptions: {
     flexDirection: 'row',
@@ -557,7 +582,7 @@ const styles = StyleSheet.create({
   themeOptionLabelDark: {
     fontSize: 12,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.55)',
+    color: COLORS.white,
   },
   themeOptionLabelSelected: {
     color: COLORS.sageLight,
@@ -572,7 +597,7 @@ const styles = StyleSheet.create({
   },
   footerTextDark: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.45)',
+    color: COLORS.white,
     textAlign: 'center',
   },
 });

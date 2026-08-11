@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, View, ViewStyle, StyleProp } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { COLORS } from '../../constants/colors';
-import { RADIUS, SHADOWS } from '../../constants/theme';
+import { RADIUS, SHADOWS, SPACING } from '../../constants/theme';
 
 interface GlassCardProps {
   children: React.ReactNode;
@@ -33,7 +33,7 @@ export function GlassCard({
       borderColor: 'rgba(135, 168, 120, 0.2)',
     },
     sage: {
-      backgroundColor: 'rgba(135, 168, 120, 0.2)',
+      backgroundColor: COLORS.glassSage,
       borderColor: 'rgba(135, 168, 120, 0.35)',
     },
     golden: {
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   padding: {
-    padding: 16,
+    padding: SPACING.md,
   },
   blurCard: {
     borderWidth: 1,

@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   rowIconText: { fontSize: 18 },
   rowContent: { flex: 1 },
   rowLabel: { fontSize: 14, fontWeight: '600', color: COLORS.white },
-  rowSublabel: { fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 2 },
+  rowSublabel: { fontSize: 12, color: COLORS.white, marginTop: 2 },
   revokeButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   revokeText: { fontSize: 12, fontWeight: '700', color: COLORS.coral },
   emptyText: {
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: COLORS.textPrimary,
     textAlign: 'center',
     marginTop: 40,
   },

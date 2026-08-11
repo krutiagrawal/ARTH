@@ -25,7 +25,7 @@ interface AnimatedButtonProps {
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'golden';
   size?: 'sm' | 'md' | 'lg';
-  icon?: string;
+  icon?: string | React.ReactNode;
   disabled?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
@@ -79,9 +79,14 @@ export function AnimatedButton({
   };
 
   const textSizes = {
-    sm: { fontSize: 14, fontWeight: '600' as const },
-    md: { fontSize: 16, fontWeight: '700' as const },
-    lg: { fontSize: 18, fontWeight: '700' as const },
+    sm: { fontSize: TYPOGRAPHY.bodySmall.fontSize, fontWeight: '600' as const },
+    md: { fontSize: TYPOGRAPHY.h4.fontSize, fontWeight: '700' as const },
+    lg: { fontSize: TYPOGRAPHY.h3.fontSize, fontWeight: '700' as const },
+  };
+
+  const renderIcon = () => {
+    if (!icon) return null;
+    return typeof icon === 'string' ? <Text style={styles.icon}>{icon}</Text> : icon;
   };
 
   if (variant === 'primary') {
@@ -100,7 +105,7 @@ export function AnimatedButton({
           end={{ x: 1, y: 1 }}
           style={[styles.gradient, sizeStyles[size], disabled && styles.disabled]}
         >
-          {icon && <Text style={styles.icon}>{icon}</Text>}
+          {renderIcon()}
           <Text style={[styles.textPrimary, textSizes[size], textStyle]}>{label}</Text>
         </LinearGradient>
       </AnimatedTouchable>
@@ -123,7 +128,7 @@ export function AnimatedButton({
           end={{ x: 1, y: 1 }}
           style={[styles.gradient, sizeStyles[size], disabled && styles.disabled]}
         >
-          {icon && <Text style={styles.icon}>{icon}</Text>}
+          {renderIcon()}
           <Text style={[styles.textPrimary, textSizes[size], textStyle]}>{label}</Text>
         </LinearGradient>
       </AnimatedTouchable>
@@ -147,7 +152,7 @@ export function AnimatedButton({
         disabled={disabled}
         activeOpacity={1}
       >
-        {icon && <Text style={styles.icon}>{icon}</Text>}
+        {renderIcon()}
         <Text style={[styles.textSecondary, textSizes[size], textStyle]}>{label}</Text>
       </AnimatedTouchable>
     );
@@ -163,8 +168,31 @@ export function AnimatedButton({
         disabled={disabled}
         activeOpacity={1}
       >
-        {icon && <Text style={styles.icon}>{icon}</Text>}
+        {renderIcon()}
         <Text style={[styles.textGhost, textSizes[size], textStyle]}>{label}</Text>
+      </AnimatedTouchable>
+    );
+  }
+
+  if (variant === 'danger') {
+    return (
+      <AnimatedTouchable
+        style={[
+          animatedStyle,
+          styles.danger,
+          sizeStyles[size],
+          fullWidth && styles.fullWidth,
+          disabled && styles.disabled,
+          style,
+        ]}
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled}
+        activeOpacity={1}
+      >
+        {renderIcon()}
+        <Text style={[styles.textDanger, textSizes[size], textStyle]}>{label}</Text>
       </AnimatedTouchable>
     );
   }
@@ -193,6 +221,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  danger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.dangerLight,
+    borderWidth: 1.5,
+    borderColor: COLORS.danger,
+    ...SHADOWS.sm,
+  },
   textPrimary: {
     color: COLORS.white,
     letterSpacing: 0.3,
@@ -204,6 +241,11 @@ const styles = StyleSheet.create({
   textGhost: {
     color: COLORS.sage,
     letterSpacing: 0.3,
+  },
+  textDanger: {
+    color: COLORS.dangerDark,
+    letterSpacing: 0.3,
+    fontWeight: '700',
   },
   icon: {
     fontSize: 18,

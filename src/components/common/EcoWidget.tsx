@@ -193,49 +193,49 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: COLORS.textPrimary,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   labelWhite: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.85)',
+    color: COLORS.white,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   glassLabel: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: COLORS.textPrimary,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   glassLabelDark: {
-    color: 'rgba(255,255,255,0.75)',
+    color: COLORS.white,
   },
   minimalLabel: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: COLORS.textPrimary,
   },
   sublabel: {
     fontSize: 10,
-    color: COLORS.textLight,
+    color: COLORS.textPrimary,
     marginTop: 2,
   },
   sublabelWhite: {
     fontSize: 10,
-    color: 'rgba(255,255,255,0.7)',
+    color: COLORS.white,
     marginTop: 2,
   },
   glassSublabel: {
     fontSize: 10,
-    color: COLORS.textLight,
+    color: COLORS.textPrimary,
     marginTop: 2,
   },
   glassSublabelDark: {
-    color: 'rgba(255,255,255,0.55)',
+    color: COLORS.white,
   },
 });
 
@@ -261,7 +261,7 @@ const streakStyles = StyleSheet.create({
   },
   label: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.85)',
+    color: COLORS.white,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,

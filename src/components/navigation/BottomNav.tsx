@@ -31,16 +31,15 @@ export type TabName = 'Home' | 'Forest' | 'Plant' | 'Map' | 'Community';
 interface TabItem {
   name: TabName;
   icon: string;
-  activeIcon: string;
   label: string;
 }
 
 const TABS: TabItem[] = [
-  { name: 'Home', icon: '🏡', activeIcon: '🏡', label: 'Home' },
-  { name: 'Forest', icon: '🌲', activeIcon: '🌲', label: 'Forest' },
-  { name: 'Plant', icon: '➕', activeIcon: '➕', label: 'Plant' },
-  { name: 'Map', icon: '🗺️', activeIcon: '🗺️', label: 'Map' },
-  { name: 'Community', icon: '👥', activeIcon: '👥', label: 'Community' },
+  { name: 'Home', icon: '🏡', label: 'Home' },
+  { name: 'Forest', icon: '🌲', label: 'Forest' },
+  { name: 'Plant', icon: '➕', label: 'Plant' },
+  { name: 'Map', icon: '🗺️', label: 'Map' },
+  { name: 'Community', icon: '👥', label: 'Community' },
 ];
 
 interface BottomNavProps {
@@ -218,7 +217,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   activeIconContainer: {
-    backgroundColor: 'rgba(135, 168, 120, 0.15)',
+    backgroundColor: COLORS.glassSageSubtle,
   },
   tabIcon: {
     fontSize: 20,
@@ -228,9 +227,9 @@ const styles = StyleSheet.create({
     opacity: 1,
   },
   tabLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '500',
-    color: COLORS.textMuted,
+    color: COLORS.textPrimary,
     marginTop: 2,
     letterSpacing: 0.2,
   },

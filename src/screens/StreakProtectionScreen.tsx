@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
   },
   dismissText: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.5)',
+    color: COLORS.white,
     fontWeight: '500',
   },
   mascotSection: {
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
   },
   messageBody: {
     fontSize: 15,
-    color: 'rgba(255,255,255,0.7)',
+    color: COLORS.white,
     textAlign: 'center',
     lineHeight: 23,
   },
@@ -436,11 +436,11 @@ const styles = StyleSheet.create({
   streakCountLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.9)',
+    color: COLORS.white,
   },
   streakCountSublabel: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
+    color: COLORS.white,
     marginTop: 2,
   },
   recordCard: {
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
   },
   recordTitle: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.65)',
+    color: COLORS.white,
     fontWeight: '500',
   },
   recordValue: {
@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
   },
   optionSubtitle: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.6)',
+    color: COLORS.white,
     lineHeight: 17,
   },
   optionCheck: {
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
   },
   savedSubtitle: {
     fontSize: 16,
-    color: 'rgba(255,255,255,0.7)',
+    color: COLORS.white,
     textAlign: 'center',
     lineHeight: 24,
   },

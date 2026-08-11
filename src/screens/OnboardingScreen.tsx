@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   },
   pageSubtitle: {
     fontSize: 16,
-    color: 'rgba(255,255,255,0.75)',
+    color: COLORS.white,
     textAlign: 'center',
     lineHeight: 25,
     fontWeight: '400',
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   },
   skipText: {
     fontSize: 15,
-    color: 'rgba(255,255,255,0.5)',
+    color: COLORS.white,
     fontWeight: '500',
   },
   ctaButton: {

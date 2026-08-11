@@ -1,0 +1,143 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ARTH — warm editorial palette */
+    --background: 42 55% 95%;              /* #F8F4EC warm beige */
+    --foreground: 24 25% 18%;              /* deep earth ink */
+    --card: 42 45% 97%;
+    --card-foreground: 24 25% 18%;
+    --popover: 42 45% 97%;
+    --popover-foreground: 24 25% 18%;
+    --primary: 106 22% 69%;                /* #A8C3A0 sage */
+    --primary-foreground: 42 55% 95%;
+    --secondary: 38 32% 88%;               /* warm beige card */
+    --secondary-foreground: 24 25% 22%;
+    --muted: 40 30% 90%;
+    --muted-foreground: 25 14% 40%;
+    --accent: 24 22% 35%;                  /* #6E5847 earth brown */
+    --accent-foreground: 42 55% 95%;
+    --olive: 65 22% 42%;                   /* soft olive */
+    --destructive: 14 42% 52%;             /* muted terracotta */
+    --destructive-foreground: 42 55% 95%;
+    --success: 130 26% 34%;
+    --border: 36 22% 82%;
+    --input: 36 22% 84%;
+    --ring: 106 22% 69%;
+    --chart-1: 106 22% 69%;
+    --chart-2: 24 22% 35%;
+    --chart-3: 65 22% 42%;
+    --chart-4: 38 32% 78%;
+    --chart-5: 14 42% 52%;
+    --radius: 1.1rem;
+    --sidebar-background: 42 55% 95%;
+    --sidebar-foreground: 24 25% 18%;
+    --sidebar-primary: 106 22% 69%;
+    --sidebar-primary-foreground: 42 55% 95%;
+    --sidebar-accent: 40 30% 90%;
+    --sidebar-accent-foreground: 24 25% 18%;
+    --sidebar-border: 36 22% 82%;
+    --sidebar-ring: 106 22% 69%;
+  }
+  .dark {
+    --background: 24 18% 10%;
+    --foreground: 42 40% 92%;
+    --card: 24 18% 13%;
+    --card-foreground: 42 40% 92%;
+    --popover: 24 18% 13%;
+    --popover-foreground: 42 40% 92%;
+    --primary: 106 22% 72%;
+    --primary-foreground: 24 18% 10%;
+    --secondary: 24 18% 18%;
+    --secondary-foreground: 42 40% 92%;
+    --muted: 24 18% 18%;
+    --muted-foreground: 42 20% 65%;
+    --accent: 24 22% 55%;
+    --accent-foreground: 24 18% 10%;
+    --olive: 65 22% 55%;
+    --destructive: 14 42% 55%;
+    --destructive-foreground: 42 40% 92%;
+    --success: 130 26% 45%;
+    --border: 24 18% 22%;
+    --input: 24 18% 22%;
+    --ring: 106 22% 72%;
+    --sidebar-background: 24 18% 10%;
+    --sidebar-foreground: 42 40% 92%;
+    --sidebar-primary: 106 22% 72%;
+    --sidebar-primary-foreground: 24 18% 10%;
+    --sidebar-accent: 24 18% 18%;
+    --sidebar-accent-foreground: 42 40% 92%;
+    --sidebar-border: 24 18% 22%;
+    --sidebar-ring: 106 22% 72%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  html { scroll-behavior: smooth; overflow-x: hidden; }
+  body {
+    @apply bg-background text-foreground;
+    overflow-x: hidden;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'ss01', 'cv11';
+  }
+  h1, h2, h3, h4, h5, .font-serif {
+    font-family: 'Fraunces', ui-serif, Georgia, serif;
+    font-optical-sizing: auto;
+    letter-spacing: -0.02em;
+  }
+  ::selection { background: hsl(var(--primary) / 0.35); color: hsl(var(--foreground)); }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+  .text-olive { color: hsl(var(--olive)); }
+  .bg-olive { background-color: hsl(var(--olive)); }
+  .text-earth { color: hsl(var(--accent)); }
+  .bg-earth { background-color: hsl(var(--accent)); }
+  .display { font-family: 'Fraunces', serif; font-weight: 300; letter-spacing: -0.035em; line-height: 0.92; }
+  .display em { font-style: italic; font-weight: 400; }
+  .eyebrow { font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
+  .paper-grain {
+    background-image:
+      radial-gradient(hsl(var(--accent) / 0.05) 1px, transparent 1px),
+      radial-gradient(hsl(var(--primary) / 0.05) 1px, transparent 1px);
+    background-size: 22px 22px, 34px 34px;
+    background-position: 0 0, 11px 17px;
+  }
+  .soft-shadow { box-shadow: 0 1px 2px hsl(24 25% 18% / 0.04), 0 20px 60px -30px hsl(24 25% 18% / 0.22); }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .rule { border-color: hsl(var(--foreground) / 0.15); }
+  .cursor-none-important, .cursor-none-important * { cursor: none !important; }
+}
+
+@keyframes float-slow { 0%,100% { transform: translateY(0) translateX(0); } 50% { transform: translateY(-14px) translateX(6px); } }
+@keyframes drift { 0% { transform: translate3d(-10vw, 0, 0); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translate3d(110vw, -40px, 0); opacity: 0; } }
+@keyframes leaf-sway { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+@keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+@keyframes rain-fall { 0% { transform: translateY(-10%); opacity: 0; } 12% { opacity: 0.75; } 88% { opacity: 0.65; } 100% { transform: translateY(120%); opacity: 0; } }
+@keyframes leaf-drop { 0% { transform: translateY(-10%) translateX(0) rotate(0deg); opacity: 0; } 12% { opacity: 0.9; } 88% { opacity: 0.8; } 100% { transform: translateY(120%) translateX(46px) rotate(220deg); opacity: 0; } }
+@keyframes pulse-glow { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.65; } }
+@keyframes wing-flap { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.5); } }
+
+.animate-float-slow { animation: float-slow 7s ease-in-out infinite; }
+.animate-leaf-sway { animation: leaf-sway 4s ease-in-out infinite; transform-origin: top center; }
+.animate-marquee { animation: marquee 40s linear infinite; }
+.animate-marquee-slow { animation: marquee 80s linear infinite; }
+.animate-rain-fall { animation-name: rain-fall; animation-timing-function: linear; animation-iteration-count: infinite; }
+.animate-leaf-drop { animation-name: leaf-drop; animation-timing-function: ease-in; animation-iteration-count: infinite; }
+.animate-pulse-glow { animation: pulse-glow 6s ease-in-out infinite; }
+.animate-wing-flap { animation: wing-flap 0.4s ease-in-out infinite; transform-origin: center; }
+
+@media (hover: hover) and (pointer: fine) {
+  body { cursor: none; }
+  a, button, [role='button'] { cursor: none; }
+}

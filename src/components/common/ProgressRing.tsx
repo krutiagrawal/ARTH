@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   },
   sublabel: {
     fontSize: 10,
-    color: COLORS.textMuted,
+    color: COLORS.textPrimary,
     fontWeight: '500',
     marginTop: 1,
   },

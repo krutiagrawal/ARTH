@@ -18,6 +18,7 @@ import { COLORS } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
 import { GlassCard } from '../components/common/GlassCard';
 import { ProgressRing } from '../components/common/ProgressRing';
+import { EmptyState } from '../components/common/EmptyState';
 import { useSlideUp, useFadeIn } from '../hooks/useAnimations';
 import {
   useFriends,
@@ -142,12 +143,16 @@ function FriendRequestRow({ request }: { request: ApiFriendRequest }) {
         <TouchableOpacity
           style={styles.requestAccept}
           onPress={() => respondMutation.mutate({ id: request.id, action: 'accept' })}
+          accessibilityRole="button"
+          accessibilityLabel={`Accept friend request from ${request.from.name}`}
         >
           <Text style={styles.requestAcceptText}>✓</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.requestDecline}
           onPress={() => respondMutation.mutate({ id: request.id, action: 'decline' })}
+          accessibilityRole="button"
+          accessibilityLabel={`Decline friend request from ${request.from.name}`}
         >
           <Text style={styles.requestDeclineText}>✕</Text>
         </TouchableOpacity>
@@ -173,7 +178,7 @@ function AddFriendPanel({ onClose }: { onClose: () => void }) {
           onChangeText={setQuery}
           autoCapitalize="none"
         />
-        <TouchableOpacity onPress={onClose}>
+        <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel="Close search">
           <Text style={styles.addFriendCloseDark}>✕</Text>
         </TouchableOpacity>
       </View>
@@ -468,42 +473,63 @@ export function CommunityScreen({ navigation }: any) {
               </>
             )}
             <Text style={styles.sectionTitleDark}>Your Squad</Text>
-            {friends.length === 0 && (
-              <Text style={styles.emptyTextDark}>No friends yet — search above to add some!</Text>
+            {friends.length === 0 ? (
+              <EmptyState
+                icon="🌲"
+                title="Your forest is better with friends"
+                body="Search above to find people and grow together."
+                tint="dark"
+              />
+            ) : (
+              friends.map((friend, i) => (
+                <FriendCard key={friend.id} friend={friend} index={i} onPress={() => setSelectedFriendId(friend.id)} />
+              ))
             )}
-            {friends.map((friend, i) => (
-              <FriendCard key={friend.id} friend={friend} index={i} onPress={() => setSelectedFriendId(friend.id)} />
-            ))}
           </View>
         )}
 
         {activeTab === 'feed' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitleDark}>Friend Activity</Text>
-            {feed.length === 0 && (
-              <Text style={styles.emptyTextDark}>No activity yet — plant a tree or add friends to see updates here!</Text>
+            {feed.length === 0 ? (
+              <EmptyState
+                icon="📰"
+                title="No activity yet"
+                body="Plant a tree or add friends to start seeing updates here."
+                tint="dark"
+              />
+            ) : (
+              feed.map((activity, i) => (
+                <ActivityFeedItem key={activity.id} activity={activity} index={i} />
+              ))
             )}
-            {feed.map((activity, i) => (
-              <ActivityFeedItem key={activity.id} activity={activity} index={i} />
-            ))}
           </View>
         )}
 
         {activeTab === 'challenges' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitleDark}>Active Challenges</Text>
-            {challenges.map((challenge, i) => (
-              <ChallengeCard
-                key={challenge.id}
-                challenge={challenge}
-                index={i}
-                joined={joinedIds.has(challenge.id)}
-                onJoin={() => {
-                  joinChallengeMutation.mutate(challenge.id);
-                  setJoinedIds(prev => new Set(prev).add(challenge.id));
-                }}
+            {challenges.length === 0 ? (
+              <EmptyState
+                icon="⚔️"
+                title="No challenges right now"
+                body="New community challenges will show up here when they open."
+                tint="dark"
               />
-            ))}
+            ) : (
+              challenges.map((challenge, i) => (
+                <ChallengeCard
+                  key={challenge.id}
+                  challenge={challenge}
+                  index={i}
+                  joined={joinedIds.has(challenge.id)}
+                  onJoin={() => {
+                    joinChallengeMutation.mutate(challenge.id);
+                    setJoinedIds(prev => new Set(prev).add(challenge.id));
+                  }}
+                />
+              ))
+            )}
           </View>
         )}
 
@@ -518,9 +544,18 @@ export function CommunityScreen({ navigation }: any) {
             </GlassCard>
 
             <Text style={styles.sectionTitleDark}>Top Planters</Text>
-            {(leaderboard?.entries ?? []).map((entry, i) => (
-              <LeaderboardRow key={entry.rank} entry={entry} index={i} />
-            ))}
+            {(leaderboard?.entries ?? []).length === 0 ? (
+              <EmptyState
+                icon="🏆"
+                title="The leaderboard is still filling in"
+                body="Plant a tree to claim your spot."
+                tint="dark"
+              />
+            ) : (
+              (leaderboard?.entries ?? []).map((entry, i) => (
+                <LeaderboardRow key={entry.id} entry={entry} index={i} />
+              ))
+            )}
           </View>
         )}
       </ScrollView>
@@ -582,7 +617,7 @@ const styles = StyleSheet.create({
   tabTextDark: {
     fontSize: 12,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.6)',
+    color: COLORS.white,
   },
   tabTextActive: {
     color: COLORS.white,
@@ -616,7 +651,7 @@ const styles = StyleSheet.create({
   },
   globalCounterSub: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.65)',
+    color: COLORS.white,
     fontWeight: '500',
   },
   globalCounterBar: {
@@ -633,7 +668,7 @@ const styles = StyleSheet.create({
   },
   globalCounterGoal: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.6)',
+    color: COLORS.white,
     fontWeight: '500',
   },
   section: {
@@ -690,11 +725,11 @@ const styles = StyleSheet.create({
   },
   friendStatsDark: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
+    color: COLORS.white,
   },
   friendActiveDark: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.5)',
+    color: COLORS.white,
   },
   friendRight: {
     alignItems: 'center',
@@ -712,7 +747,7 @@ const styles = StyleSheet.create({
   },
   friendArrowDark: {
     fontSize: 22,
-    color: 'rgba(255,255,255,0.4)',
+    color: COLORS.white,
     fontWeight: '300',
   },
   challengeCard: {
@@ -735,7 +770,7 @@ const styles = StyleSheet.create({
   },
   challengeDescDark: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
+    color: COLORS.white,
     marginTop: 2,
     lineHeight: 18,
   },
@@ -754,7 +789,7 @@ const styles = StyleSheet.create({
   },
   challengeStatTextDark: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
+    color: COLORS.white,
     fontWeight: '500',
   },
   xpReward: {
@@ -793,7 +828,7 @@ const styles = StyleSheet.create({
   },
   yourRankOfDark: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.6)',
+    color: COLORS.white,
   },
   yourRankTrend: {
     fontSize: 13,
@@ -830,14 +865,14 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   rankTextPlainDark: {
     fontSize: 13,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.7)',
+    color: COLORS.white,
   },
   leaderAvatar: {
     width: 36,
@@ -860,7 +895,7 @@ const styles = StyleSheet.create({
   },
   leaderStreakDark: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.55)',
+    color: COLORS.white,
     marginTop: 1,
   },
   leaderTreeCount: {
@@ -873,44 +908,38 @@ const styles = StyleSheet.create({
   },
   leaderTreeLabelDark: {
     fontSize: 10,
-    color: 'rgba(255,255,255,0.5)',
+    color: COLORS.white,
     fontWeight: '500',
-  },
-  emptyTextDark: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.6)',
-    fontStyle: 'italic',
-    paddingVertical: 8,
   },
   requestActions: {
     flexDirection: 'row',
     gap: 8,
   },
   requestAccept: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: COLORS.sage,
     alignItems: 'center',
     justifyContent: 'center',
   },
   requestAcceptText: {
+    fontSize: 18,
     color: COLORS.white,
-    fontSize: 14,
     fontWeight: '700',
   },
   requestDecline: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(200,200,200,0.3)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.14)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   requestDeclineText: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 16,
+    color: COLORS.white,
+    fontWeight: '600',
   },
   addFriendPanel: {
     gap: 8,
@@ -931,8 +960,9 @@ const styles = StyleSheet.create({
   },
   addFriendCloseDark: {
     fontSize: 16,
-    color: 'rgba(255,255,255,0.6)',
-    padding: 4,
+    color: COLORS.white,
+    fontWeight: '600',
+    paddingHorizontal: 4,
   },
   searchResultRow: {
     flexDirection: 'row',
@@ -1013,7 +1043,7 @@ const styles = StyleSheet.create({
   },
   profileModalStoryHint: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.6)',
+    color: COLORS.white,
     marginBottom: 8,
   },
   profileModalAvatarEmoji: {
@@ -1026,7 +1056,7 @@ const styles = StyleSheet.create({
   },
   profileModalHandleDark: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.6)',
+    color: COLORS.white,
     marginTop: 2,
   },
   profileModalStats: {
@@ -1046,7 +1076,7 @@ const styles = StyleSheet.create({
   },
   profileModalStatLabelDark: {
     fontSize: 10,
-    color: 'rgba(255,255,255,0.55)',
+    color: COLORS.white,
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -1080,7 +1110,7 @@ const styles = StyleSheet.create({
   },
   activityTimeDark: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.5)',
+    color: COLORS.white,
     marginTop: 2,
   },
   activityCheerButton: {

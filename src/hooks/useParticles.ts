@@ -9,6 +9,7 @@ import {
   Easing,
   runOnJS,
 } from 'react-native-reanimated';
+import { useReduceMotion } from './useReduceMotion';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -73,8 +74,15 @@ export function useParticleAnimation(speed: number, delay: number, travelDistanc
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(0);
   const rotate = useSharedValue(0);
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
+    if (reduceMotion) {
+      // Settle to a single static, gently-visible frame instead of an endless falling loop.
+      opacity.value = withTiming(0.45, { duration: 400 });
+      return;
+    }
+
     const startAnimations = () => {
       translateY.value = withDelay(
         delay,
@@ -126,7 +134,7 @@ export function useParticleAnimation(speed: number, delay: number, travelDistanc
     };
 
     startAnimations();
-  }, []);
+  }, [reduceMotion]);
 
   return { translateY, translateX, opacity, rotate };
 }

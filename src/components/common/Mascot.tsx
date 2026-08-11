@@ -16,6 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import LottieView from 'lottie-react-native';
 import { useTimeTheme, type MascotOutfit } from '../../hooks/useTimeTheme';
+import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { COLORS } from '../../constants/colors';
 
 type MascotImageMode = 'sleepy' | 'windingUp' | null;
@@ -31,9 +32,10 @@ function mascotOutfitToImageMode(mascotOutfit: MascotOutfit): MascotImageMode {
  * beside a moving character. */
 function useFloatBounce(animate: boolean, amplitude = 8, duration = 2800) {
   const floatY = useSharedValue(0);
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
-    if (animate) {
+    if (animate && !reduceMotion) {
       floatY.value = withRepeat(
         withSequence(
           withTiming(-amplitude, { duration, easing: Easing.inOut(Easing.sin) }),
@@ -45,7 +47,7 @@ function useFloatBounce(animate: boolean, amplitude = 8, duration = 2800) {
       floatY.value = withTiming(0, { duration: 200 });
     }
     return () => cancelAnimation(floatY);
-  }, [animate]);
+  }, [animate, reduceMotion]);
 
   return useAnimatedStyle(() => ({
     transform: [{ translateY: floatY.value }],
@@ -76,6 +78,7 @@ export function Mascot({
   talking: _talking = false,
 }: MascotProps) {
   const theme = useTimeTheme();
+  const reduceMotion = useReduceMotion();
   const imageMode = mascotOutfitToImageMode(theme.mascotOutfit);
   const floatStyle = useFloatBounce(animate);
 
@@ -105,8 +108,8 @@ export function Mascot({
       {imageMode === null && (
         <LottieView
           source={require('../../../assets/ollie and roots.json')}
-          autoPlay={animate}
-          loop
+          autoPlay={animate && !reduceMotion}
+          loop={!reduceMotion}
           style={{ width: size, height: size }}
         />
       )}

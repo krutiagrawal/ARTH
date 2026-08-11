@@ -10,6 +10,7 @@ import {
   Easing,
 } from 'react-native-reanimated';
 import { ANIMATION } from '../constants/theme';
+import { useReduceMotion } from './useReduceMotion';
 
 export function useFadeIn(delay = 0, duration = ANIMATION.normal) {
   const opacity = useSharedValue(0);
@@ -40,8 +41,13 @@ export function useSlideUp(delay = 0, distance = 30, duration = ANIMATION.normal
 
 export function useBreathing(min = 0.95, max = 1.05, duration = 3000) {
   const scale = useSharedValue(1);
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
+    if (reduceMotion) {
+      scale.value = withTiming(1, { duration: ANIMATION.fast });
+      return;
+    }
     scale.value = withRepeat(
       withSequence(
         withTiming(max, { duration, easing: Easing.inOut(Easing.sin) }),
@@ -50,7 +56,7 @@ export function useBreathing(min = 0.95, max = 1.05, duration = 3000) {
       -1,
       true
     );
-  }, []);
+  }, [reduceMotion]);
 
   const style = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -60,8 +66,13 @@ export function useBreathing(min = 0.95, max = 1.05, duration = 3000) {
 
 export function useFloat(amplitude = 8, duration = 2500) {
   const translateY = useSharedValue(0);
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
+    if (reduceMotion) {
+      translateY.value = withTiming(0, { duration: ANIMATION.fast });
+      return;
+    }
     translateY.value = withRepeat(
       withSequence(
         withTiming(-amplitude, { duration, easing: Easing.inOut(Easing.sin) }),
@@ -70,7 +81,7 @@ export function useFloat(amplitude = 8, duration = 2500) {
       -1,
       true
     );
-  }, []);
+  }, [reduceMotion]);
 
   const style = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
@@ -80,8 +91,13 @@ export function useFloat(amplitude = 8, duration = 2500) {
 
 export function usePulse(minScale = 0.97, maxScale = 1.03, duration = 1500) {
   const scale = useSharedValue(1);
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
+    if (reduceMotion) {
+      scale.value = withTiming(1, { duration: ANIMATION.fast });
+      return;
+    }
     scale.value = withRepeat(
       withSequence(
         withTiming(maxScale, { duration: duration / 2, easing: Easing.inOut(Easing.quad) }),
@@ -90,7 +106,7 @@ export function usePulse(minScale = 0.97, maxScale = 1.03, duration = 1500) {
       -1,
       true
     );
-  }, []);
+  }, [reduceMotion]);
 
   const style = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -100,14 +116,19 @@ export function usePulse(minScale = 0.97, maxScale = 1.03, duration = 1500) {
 
 export function useShimmer(duration = 2000) {
   const progress = useSharedValue(0);
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
+    if (reduceMotion) {
+      progress.value = withTiming(0.5, { duration: ANIMATION.fast });
+      return;
+    }
     progress.value = withRepeat(
       withTiming(1, { duration, easing: Easing.linear }),
       -1,
       false
     );
-  }, []);
+  }, [reduceMotion]);
 
   return progress;
 }
@@ -142,14 +163,19 @@ export function useSpringPress() {
 
 export function useRotate(duration = 8000, clockwise = true) {
   const rotation = useSharedValue(0);
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
+    if (reduceMotion) {
+      rotation.value = withTiming(0, { duration: ANIMATION.fast });
+      return;
+    }
     rotation.value = withRepeat(
       withTiming(clockwise ? 360 : -360, { duration, easing: Easing.linear }),
       -1,
       false
     );
-  }, []);
+  }, [reduceMotion]);
 
   const style = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],
@@ -159,8 +185,13 @@ export function useRotate(duration = 8000, clockwise = true) {
 
 export function useWave(amplitude = 15, duration = 3000, delay = 0) {
   const rotation = useSharedValue(0);
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
+    if (reduceMotion) {
+      rotation.value = withTiming(0, { duration: ANIMATION.fast });
+      return;
+    }
     rotation.value = withDelay(
       delay,
       withRepeat(
@@ -172,7 +203,7 @@ export function useWave(amplitude = 15, duration = 3000, delay = 0) {
         true
       )
     );
-  }, []);
+  }, [reduceMotion]);
 
   const style = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],

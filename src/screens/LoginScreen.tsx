@@ -53,7 +53,7 @@ export function LoginScreen({ navigation }: any) {
         style={StyleSheet.absoluteFill}
       />
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <Text style={styles.logo}>PLANT</Text>
+        <Text style={styles.logo}>ARTH</Text>
         <Text style={styles.tagline}>grow your world</Text>
 
         <BlurCard tint="dark" intensity={40} style={styles.card}>
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.85)',
+    color: COLORS.white,
     letterSpacing: 3,
     textTransform: 'uppercase',
     fontWeight: '600',
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
   },
   switchText: {
     ...TYPOGRAPHY.bodySmall,
-    color: 'rgba(255,255,255,0.75)',
+    color: COLORS.white,
     textAlign: 'center',
   },
   switchLink: {

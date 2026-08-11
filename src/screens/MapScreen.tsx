@@ -26,7 +26,8 @@ import { useTimeTheme } from '../hooks/useTimeTheme';
 import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
 import { useAuth } from '../context/AuthContext';
 import { useTrees } from '../hooks/useApiQueries';
-import { AnimatedButton } from '../components/common/AnimatedButton';
+import { EmptyState } from '../components/common/EmptyState';
+import { StatDisplay } from '../components/common/StatDisplay';
 import type { ApiTree } from '../api/trees';
 
 const { width: SW } = Dimensions.get('window');
@@ -40,6 +41,25 @@ const INDIA = {
 
 const GROWTH_EMOJI = ['🌱', '🌿', '🌳', '🌲', '🎋'];
 const GROWTH_COLOR = ['#5BA847', '#3E8A2E', '#2D6B20', '#1E5214', '#0E3A0A'];
+
+/**
+ * Only "own tree" markers (TreeMarker below) exist today — no adoptable/NGO-drive/nursery data
+ * model exists in the backend yet, so nothing else is rendered. This reserves the visual
+ * convention those marker types should follow once that data exists, so a future integration
+ * doesn't have to invent a visual language from scratch:
+ *   - own tree      → solid filled pin bubble, growth-stage color + emoji (current TreeMarker)
+ *   - adoptable tree → outline-only pin bubble (unfilled center), sage accent
+ *   - NGO drive      → banner/flag-shaped marker, golden accent
+ *   - nursery        → house/leaf-shaped marker, earth-brown accent
+ * Intentionally not wired to any render logic — no fake map data.
+ */
+
+const MARKER_STYLES = {
+  ownTree: { shape: 'filledPin', accent: 'growthColor' },
+  adoptableTree: { shape: 'outlinePin', accent: COLORS.sage },
+  ngoDrive: { shape: 'flagPin', accent: COLORS.golden },
+  nursery: { shape: 'housePin', accent: COLORS.earth },
+} as const;
 
 const MAP_STYLE = [
   { featureType: 'all', elementType: 'geometry', stylers: [{ saturation: -15 }] },
@@ -95,9 +115,10 @@ function TreeMarker({ tree, onPress, selected }: {
   );
 }
 
-function TreeInfoCard({ tree, onClose }: {
+function TreeInfoCard({ tree, onClose, isNight }: {
   tree: ApiTree | null;
   onClose: () => void;
+  isNight: boolean;
 }) {
   const translateY = useSharedValue(300);
   const opacity = useSharedValue(0);
@@ -123,10 +144,16 @@ function TreeInfoCard({ tree, onClose }: {
 
   return (
     <Animated.View style={[styles.infoCardWrap, cardStyle]}>
-      <BlurView intensity={55} tint="light" style={styles.infoCard}>
-        <View style={styles.infoCardHandle} />
-        <TouchableOpacity style={styles.infoCardClose} onPress={onClose}>
-          <Text style={styles.infoCardCloseText}>✕</Text>
+      <BlurView intensity={isNight ? 70 : 55} tint={isNight ? 'dark' : 'light'} style={styles.infoCard}>
+        <View style={[styles.infoCardHandle, isNight && styles.infoCardHandleDark]} />
+        <TouchableOpacity
+          style={[styles.infoCardClose, isNight && styles.infoCardCloseDark]}
+          onPress={onClose}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="Close tree details"
+        >
+          <Text style={[styles.infoCardCloseText, isNight && styles.lightText]}>✕</Text>
         </TouchableOpacity>
 
         <View style={styles.infoCardHeader}>
@@ -134,8 +161,8 @@ function TreeInfoCard({ tree, onClose }: {
             <Text style={styles.infoCardEmoji}>{GROWTH_EMOJI[tree.growthStage - 1]}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.infoCardNickname}>{tree.nickname}</Text>
-            <Text style={styles.infoCardSpecies}>{tree.species}</Text>
+            <Text style={[styles.infoCardNickname, isNight && styles.lightText]}>{tree.nickname}</Text>
+            <Text style={[styles.infoCardSpecies, isNight && styles.lightSubText]}>{tree.species}</Text>
           </View>
           <View style={[styles.infoCardStageBadge, { backgroundColor: GROWTH_COLOR[tree.growthStage - 1] + '22' }]}>
             <Text style={[styles.infoCardStageText, { color: GROWTH_COLOR[tree.growthStage - 1] }]}>
@@ -144,31 +171,33 @@ function TreeInfoCard({ tree, onClose }: {
           </View>
         </View>
 
-        <View style={styles.infoCardStats}>
+        <View style={[styles.infoCardStats, isNight && styles.infoCardStatsDark]}>
           <View style={styles.infoCardStat}>
-            <Text style={styles.infoCardStatVal}>{tree.co2Absorbed}kg</Text>
-            <Text style={styles.infoCardStatLabel}>CO₂</Text>
+            <Text style={[styles.infoCardStatVal, isNight && styles.lightText]}>{tree.co2Absorbed}kg</Text>
+            <Text style={[styles.infoCardStatLabel, isNight && styles.lightSubText]}>CO₂</Text>
           </View>
-          <View style={styles.infoCardDivider} />
+          <View style={[styles.infoCardDivider, isNight && styles.infoCardDividerDark]} />
           <View style={styles.infoCardStat}>
-            <Text style={styles.infoCardStatVal}>+{tree.xpEarned}</Text>
-            <Text style={styles.infoCardStatLabel}>XP</Text>
+            <Text style={[styles.infoCardStatVal, isNight && styles.lightText]}>+{tree.xpEarned}</Text>
+            <Text style={[styles.infoCardStatLabel, isNight && styles.lightSubText]}>XP</Text>
           </View>
-          <View style={styles.infoCardDivider} />
+          <View style={[styles.infoCardDivider, isNight && styles.infoCardDividerDark]} />
           <View style={styles.infoCardStat}>
-            <Text style={styles.infoCardStatVal}>{plantDate}</Text>
-            <Text style={styles.infoCardStatLabel}>Planted</Text>
+            <Text style={[styles.infoCardStatVal, isNight && styles.lightText]}>{plantDate}</Text>
+            <Text style={[styles.infoCardStatLabel, isNight && styles.lightSubText]}>Planted</Text>
           </View>
         </View>
 
-        <View style={styles.infoCardLocation}>
+        <View style={[styles.infoCardLocation, isNight && styles.infoCardLocationDark]}>
           <Text style={styles.infoCardLocationIcon}>📍</Text>
-          <Text style={styles.infoCardLocationText}>{tree.location ?? 'Unknown location'}</Text>
+          <Text style={[styles.infoCardLocationText, isNight && styles.lightText]}>
+            {tree.location ?? 'Unknown location'}
+          </Text>
         </View>
 
         <View style={styles.growthBarRow}>
-          <Text style={styles.growthBarLabel}>Growth</Text>
-          <View style={styles.growthBarBg}>
+          <Text style={[styles.growthBarLabel, isNight && styles.lightSubText]}>Growth</Text>
+          <View style={[styles.growthBarBg, isNight && styles.growthBarBgDark]}>
             <View style={[styles.growthBarFill, {
               width: `${(tree.growthStage / 5) * 100}%` as any,
               backgroundColor: GROWTH_COLOR[tree.growthStage - 1],
@@ -341,7 +370,12 @@ export function MapScreen({ navigation }: any) {
 
       {/* GPS button */}
       <View style={[styles.gpsBtn, { bottom: (selectedTree ? 260 : 160) + insets.bottom }]}>
-        <TouchableOpacity onPress={flyToMe} disabled={!location}>
+        <TouchableOpacity
+          onPress={flyToMe}
+          disabled={!location}
+          accessibilityRole="button"
+          accessibilityLabel="Center map on my location"
+        >
           <BlurView intensity={55} tint={isNight ? 'dark' : 'light'} style={styles.gpsBtnBlur}>
             {locationPending ? (
               <ActivityIndicator size="small" color={COLORS.sage} />
@@ -358,15 +392,20 @@ export function MapScreen({ navigation }: any) {
           <BlurView intensity={isNight ? 65 : 45} tint={isNight ? 'dark' : 'light'} style={styles.statsBarInner}>
             {[
               { val: user?.treesPlantedCount ?? 0, label: 'Trees' },
-              { val: `${(user?.totalCo2Absorbed ?? 0).toFixed(1)}kg`, label: 'CO₂' },
+              { val: `${(user?.totalCo2Absorbed ?? 0).toFixed(1)}kg`, label: 'Estimated CO₂' },
               { val: statesCount, label: 'States' },
             ].map((s, i) => (
               <React.Fragment key={i}>
-                {i > 0 && <View style={styles.statsDiv} />}
-                <View style={styles.statItem}>
-                  <Text style={[styles.statVal, isNight && styles.lightText]}>{s.val}</Text>
-                  <Text style={[styles.statLabel, isNight && styles.lightSubText]}>{s.label}</Text>
-                </View>
+                {i > 0 && <View style={[styles.statsDiv, isNight && styles.statsDivDark]} />}
+                <StatDisplay
+                  value={s.val}
+                  label={s.label}
+                  size="sm"
+                  align="center"
+                  color={isNight ? COLORS.white : COLORS.textPrimary}
+                  labelColor={isNight ? COLORS.white : COLORS.textPrimary}
+                  style={styles.statItem}
+                />
               </React.Fragment>
             ))}
           </BlurView>
@@ -379,17 +418,14 @@ export function MapScreen({ navigation }: any) {
           <BlurView intensity={isNight ? 70 : 55} tint={isNight ? 'dark' : 'light'} style={styles.bottomBlur}>
             <Text style={[styles.bottomTitle, isNight && styles.lightText]}>Your Trees</Text>
             {trees.length === 0 ? (
-              <View style={styles.emptyTrees}>
-                <Text style={[styles.emptyTreesText, isNight && styles.lightSubText]}>
-                  No trees planted yet — start your forest!
-                </Text>
-                <AnimatedButton
-                  label="🌱 Plant a Tree"
-                  onPress={() => navigation.navigate('PlantTree')}
-                  variant="primary"
-                  size="sm"
-                />
-              </View>
+              <EmptyState
+                icon="🌱"
+                title="Your map is waiting"
+                body="Plant your first tree and it'll show up here."
+                actionLabel="Plant a Tree"
+                onAction={() => navigation.navigate('PlantTree')}
+                tint={isNight ? 'dark' : 'light'}
+              />
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.treeListContent}>
@@ -398,7 +434,9 @@ export function MapScreen({ navigation }: any) {
                     <View style={styles.treeChip}>
                       <Text style={styles.treeChipEmoji}>{GROWTH_EMOJI[tree.growthStage - 1]}</Text>
                       <View>
-                        <Text style={[styles.treeChipName, isNight && styles.lightText]}>{tree.nickname}</Text>
+                        {/* Chip surface is always a near-solid light card (even at night), so its
+                            text stays fixed-dark — never swapped to light — regardless of isNight. */}
+                        <Text style={styles.treeChipName}>{tree.nickname}</Text>
                         <Text style={styles.treeChipLoc}>{tree.location?.split(',')[0] ?? 'Unknown'}</Text>
                       </View>
                     </View>
@@ -411,7 +449,7 @@ export function MapScreen({ navigation }: any) {
       )}
 
       {/* Tree info card */}
-      <TreeInfoCard tree={selectedTree} onClose={() => setSelectedTree(null)} />
+      <TreeInfoCard tree={selectedTree} onClose={() => setSelectedTree(null)} isNight={isNight} />
     </View>
   );
 }
@@ -426,7 +464,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12,
   },
   headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary },
-  headerSub: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
+  headerSub: { fontSize: 12, color: COLORS.textPrimary, marginTop: 2 },
   indiaBtn: { backgroundColor: COLORS.sage, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 },
   indiaBtnText: { fontSize: 13, fontWeight: '600', color: 'white' },
 
@@ -462,14 +500,13 @@ const styles = StyleSheet.create({
 
   statsBar: { position: 'absolute', left: 16, right: 16 },
   statsBarInner: { borderRadius: 18, overflow: 'hidden', flexDirection: 'row', paddingVertical: 12 },
-  statItem: { flex: 1, alignItems: 'center' },
-  statVal: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary },
-  statLabel: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
+  statItem: { flex: 1 },
   statsDiv: { width: 1, height: 32, backgroundColor: 'rgba(0,0,0,0.1)', alignSelf: 'center' },
+  statsDivDark: { backgroundColor: 'rgba(255,255,255,0.15)' },
 
   bottomSheet: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   bottomBlur: { borderTopLeftRadius: 22, borderTopRightRadius: 22, overflow: 'hidden', paddingTop: 14, paddingBottom: 8 },
-  bottomTitle: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted, paddingHorizontal: 16, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6 },
+  bottomTitle: { fontSize: 12, fontWeight: '600', color: COLORS.textPrimary, paddingHorizontal: 16, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6 },
   treeListContent: { paddingHorizontal: 12, paddingBottom: 4, gap: 8 },
   treeChip: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -478,56 +515,51 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(90,140,80,0.18)',
     ...SHADOWS.sm,
   },
-  emptyTrees: {
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  emptyTreesText: {
-    fontSize: 13,
-    color: COLORS.textMuted,
-    textAlign: 'center',
-  },
   treeChipEmoji: { fontSize: 22 },
   treeChipName: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary },
-  treeChipLoc: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
+  treeChipLoc: { fontSize: 11, color: COLORS.textPrimary, marginTop: 1 },
 
   infoCardWrap: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   infoCard: { borderTopLeftRadius: 26, borderTopRightRadius: 26, overflow: 'hidden', padding: 20, paddingBottom: 36 },
   infoCardHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(0,0,0,0.14)', alignSelf: 'center', marginBottom: 18 },
   infoCardClose: {
     position: 'absolute', top: 20, right: 20,
-    width: 28, height: 28, borderRadius: 14,
+    width: 32, height: 32, borderRadius: 16,
     backgroundColor: 'rgba(0,0,0,0.08)', alignItems: 'center', justifyContent: 'center',
   },
-  infoCardCloseText: { fontSize: 13, color: COLORS.textMuted },
+  infoCardCloseText: { fontSize: 13, color: COLORS.textPrimary },
+  infoCardCloseDark: { backgroundColor: 'rgba(255,255,255,0.14)' },
+  infoCardHandleDark: { backgroundColor: 'rgba(255,255,255,0.25)' },
   infoCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   infoCardIcon: { width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center' },
   infoCardEmoji: { fontSize: 28 },
   infoCardNickname: { fontSize: 20, fontWeight: '700', color: COLORS.textPrimary },
-  infoCardSpecies: { fontSize: 14, color: COLORS.textMuted, marginTop: 2 },
+  infoCardSpecies: { fontSize: 14, color: COLORS.textPrimary, marginTop: 2 },
   infoCardStageBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 },
   infoCardStageText: { fontSize: 12, fontWeight: '600' },
   infoCardStats: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.55)', borderRadius: 16, padding: 14, marginBottom: 12,
   },
+  infoCardStatsDark: { backgroundColor: 'rgba(255,255,255,0.1)' },
   infoCardStat: { flex: 1, alignItems: 'center' },
   infoCardStatVal: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary },
-  infoCardStatLabel: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
+  infoCardStatLabel: { fontSize: 11, color: COLORS.textPrimary, marginTop: 2 },
   infoCardDivider: { width: 1, height: 32, backgroundColor: 'rgba(0,0,0,0.08)' },
+  infoCardDividerDark: { backgroundColor: 'rgba(255,255,255,0.15)' },
   infoCardLocation: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: 'rgba(80,140,70,0.1)', borderRadius: 12, padding: 10, marginBottom: 14,
   },
+  infoCardLocationDark: { backgroundColor: 'rgba(135,168,120,0.18)' },
   infoCardLocationIcon: { fontSize: 14 },
   infoCardLocationText: { fontSize: 13, color: COLORS.forestDeep, fontWeight: '500', flex: 1 },
   growthBarRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  growthBarLabel: { fontSize: 12, color: COLORS.textMuted, width: 46 },
+  growthBarLabel: { fontSize: 12, color: COLORS.textPrimary, width: 46 },
   growthBarBg: { flex: 1, height: 6, backgroundColor: 'rgba(0,0,0,0.08)', borderRadius: 3, overflow: 'hidden' },
+  growthBarBgDark: { backgroundColor: 'rgba(255,255,255,0.15)' },
   growthBarFill: { height: '100%', borderRadius: 3 },
 
   lightText: { color: 'white' },
-  lightSubText: { color: 'rgba(255,255,255,0.65)' },
+  lightSubText: { color: COLORS.white },
 });

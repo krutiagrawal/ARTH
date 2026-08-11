@@ -126,12 +126,12 @@ const styles = StyleSheet.create({
   },
   close: {
     fontSize: 18,
-    color: 'rgba(255,255,255,0.6)',
+    color: COLORS.white,
     padding: 4,
   },
   subtitle: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.55)',
+    color: COLORS.white,
     marginTop: 4,
     marginBottom: 14,
   },
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   optionName: {
     fontSize: 11,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.85)',
+    color: COLORS.white,
     textAlign: 'center',
     lineHeight: 14,
   },

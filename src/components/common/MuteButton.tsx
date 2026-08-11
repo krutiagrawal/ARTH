@@ -11,7 +11,13 @@ export function MuteButton({ style }: MuteButtonProps) {
   const { isMuted, toggleMute } = useSoundSystem();
 
   return (
-    <TouchableOpacity onPress={toggleMute} style={[styles.wrapper, style]} activeOpacity={0.75}>
+    <TouchableOpacity
+      onPress={toggleMute}
+      style={[styles.wrapper, style]}
+      activeOpacity={0.75}
+      accessibilityRole="button"
+      accessibilityLabel={isMuted ? 'Unmute ambient sound' : 'Mute ambient sound'}
+    >
       <BlurView intensity={40} tint="dark" style={styles.blur}>
         <Text style={styles.icon}>{isMuted ? '🔇' : '🔊'}</Text>
       </BlurView>
@@ -21,9 +27,9 @@ export function MuteButton({ style }: MuteButtonProps) {
 
 const styles = StyleSheet.create({
   wrapper: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

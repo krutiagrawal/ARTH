@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
   },
   uploadAreaSubtitle: {
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: COLORS.textPrimary,
   },
   uploadDashedBorder: {
     position: 'absolute',
@@ -572,7 +572,7 @@ const styles = StyleSheet.create({
   },
   orText: {
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: COLORS.textPrimary,
     fontWeight: '500',
   },
   tipCard: {
@@ -585,7 +585,7 @@ const styles = StyleSheet.create({
   },
   tipText: {
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: COLORS.textPrimary,
     lineHeight: 21,
   },
   scanningContainer: {
@@ -659,7 +659,7 @@ const styles = StyleSheet.create({
   },
   scanningSubtext: {
     fontSize: 14,
-    color: COLORS.textMuted,
+    color: COLORS.textPrimary,
     textAlign: 'center',
   },
   detailsContent: {
@@ -719,13 +719,13 @@ const styles = StyleSheet.create({
   },
   aiResultConfidence: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.6)',
+    color: COLORS.white,
     marginTop: 2,
   },
   detailsLabel: {
     fontSize: 14,
     fontWeight: '700',
-    color: COLORS.textSecondary,
+    color: COLORS.textPrimary,
     letterSpacing: 0.3,
   },
   speciesGrid: {
@@ -778,7 +778,7 @@ const styles = StyleSheet.create({
   },
   locationTitle: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: COLORS.textPrimary,
     fontWeight: '500',
   },
   locationValue: {
@@ -823,7 +823,7 @@ const styles = StyleSheet.create({
   },
   successSubtitle: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: COLORS.textPrimary,
     textAlign: 'center',
   },
   successXp: {
