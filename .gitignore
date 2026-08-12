@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.next/
+out/
+apps/mobile/.expo/
+apps/mobile/web-build/
+
+# Env files (NOTE: files already tracked before this .gitignore existed remain
+# tracked until explicitly untracked with `git rm --cached` -- this only stops
+# NEW/untracked env files from being committed by accident going forward)
+.env
+.env.*
+!.env.example
+
+# Logs & caches
+*.log
+npm-debug.log*
+.eslintcache
+.turbo/
+
+# Uploads (backend-generated content, not source)
+services/api/uploads/*
+!services/api/uploads/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Misc
+*.pem
+.metro-health-check*
