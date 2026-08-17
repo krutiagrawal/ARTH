@@ -6,30 +6,42 @@ import { Button } from '@/components/ui/button'
 
 const AMOUNTS = [500, 1500, 5000]
 
-export default function DonateClient({ ngoOptions, initialPledges }) {
+const STATUS_LABEL = { pending: 'Pending', paid: 'Paid', failed: 'Failed' }
+
+export default function DonateClient({ ngoOptions, initialPledges, stripeEnabled }) {
   const [mine, setMine] = useState(initialPledges)
   const [ngo, setNgo] = useState(ngoOptions[0] ?? '')
   const [amount, setAmount] = useState(AMOUNTS[1])
   const [message, setMessage] = useState('')
   const [justPledged, setJustPledged] = useState(null)
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   const submit = async (e) => {
     e.preventDefault()
     setError('')
-    const res = await fetch('/api/pledges', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ngo, amount, message }),
-    })
-    const data = await res.json()
-    if (!res.ok) {
-      setError(data.error || 'Something went wrong.')
-      return
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/pledges', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ngo, amount, message }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Something went wrong.')
+        return
+      }
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl
+        return
+      }
+      setMine((m) => [data.pledge, ...m])
+      setJustPledged(data.pledge)
+      setMessage('')
+    } finally {
+      setSubmitting(false)
     }
-    setMine((m) => [data.pledge, ...m])
-    setJustPledged(data.pledge)
-    setMessage('')
   }
 
   return (
@@ -38,7 +50,11 @@ export default function DonateClient({ ngoOptions, initialPledges }) {
         <Link href="/" className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Back</Link>
         <p className="eyebrow text-primary">Donate to an NGO</p>
         <h1 className="font-serif text-4xl md:text-6xl leading-[1.02] mt-4 text-balance">Support the hands that <em className="not-italic text-primary">plant</em>.</h1>
-        <p className="mt-5 text-muted-foreground max-w-lg">This is a pledge, not a live payment — ARTH doesn't process real donations yet. We'll follow up once giving is enabled.</p>
+        <p className="mt-5 text-muted-foreground max-w-lg">
+          {stripeEnabled
+            ? "You'll be taken to Stripe to complete a secure payment."
+            : "This is a pledge, not a live payment yet — donations aren't enabled on this deployment. We'll follow up once giving is live."}
+        </p>
 
         {justPledged && (
           <div className="mt-10 rounded-3xl border border-primary/30 bg-primary/5 p-6 flex items-start gap-4">
@@ -71,8 +87,8 @@ export default function DonateClient({ ngoOptions, initialPledges }) {
             <textarea value={message} onChange={e => setMessage(e.target.value)} rows={3} placeholder="Say a little about why this matters to you." className="mt-2 w-full rounded-3xl border border-border bg-background px-5 py-4 outline-none focus:ring-2 focus:ring-primary/40" />
           </label>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" disabled={!ngo || amount <= 0} className="rounded-full h-12 px-6">
-            Pledge ₹{amount.toLocaleString('en-IN')} <ArrowRight className="h-4 w-4" />
+          <Button type="submit" disabled={!ngo || amount <= 0 || submitting} className="rounded-full h-12 px-6">
+            {submitting ? 'Redirecting…' : <>{stripeEnabled ? 'Donate' : 'Pledge'} ₹{amount.toLocaleString('en-IN')} <ArrowRight className="h-4 w-4" /></>}
           </Button>
         </form>
 
@@ -83,7 +99,14 @@ export default function DonateClient({ ngoOptions, initialPledges }) {
               {mine.map(p => (
                 <div key={p.id} className="rounded-2xl border border-border/70 bg-card p-4 flex items-center justify-between">
                   <p className="text-sm">{p.ngo}</p>
-                  <p className="font-serif text-lg">₹{p.amount.toLocaleString('en-IN')}</p>
+                  <div className="flex items-center gap-3">
+                    {stripeEnabled && (
+                      <span className={`text-xs rounded-full px-2.5 py-1 ${p.status === 'paid' ? 'bg-primary/15 text-primary' : p.status === 'failed' ? 'bg-destructive/15 text-destructive' : 'bg-secondary text-muted-foreground'}`}>
+                        {STATUS_LABEL[p.status] || p.status}
+                      </span>
+                    )}
+                    <p className="font-serif text-lg">₹{p.amount.toLocaleString('en-IN')}</p>
+                  </div>
                 </div>
               ))}
             </div>

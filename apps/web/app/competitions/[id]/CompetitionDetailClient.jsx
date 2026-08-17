@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Calendar, Trophy, Heart } from 'lucide-react'
+import { ArrowLeft, Calendar, Trophy, Heart, Plus, X } from 'lucide-react'
 import SectionWrapper from '@/components/site/SectionWrapper'
 import { Button } from '@/components/ui/button'
 
@@ -16,14 +16,47 @@ function useCountdown(deadline) {
   return { d, h, m, s }
 }
 
-export default function CompetitionDetailClient({ comp, forestImages }) {
+export default function CompetitionDetailClient({ comp, initialEntries, isLoggedIn }) {
   const { d, h, m, s } = useCountdown(comp.deadline)
-  const entries = Array.from({ length: 6 }).map((_, i) => ({
-    id: i,
-    img: forestImages[i % forestImages.length],
-    title: [`Morning oak`, `Under the mango`, `A quiet arjuna`, `The village grove`, `First rain`, `The old banyan`][i],
-    votes: 900 - i * 120 - Math.floor(Math.random() * 90),
-  }))
+  const [entries, setEntries] = useState(initialEntries)
+  const [showForm, setShowForm] = useState(false)
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [imageUrl, setImageUrl] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  const submit = async (e) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/competitions/${comp.id}/entries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description, imageUrl: imageUrl || undefined }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Something went wrong.')
+        return
+      }
+      setEntries((es) => [{ ...data.entry, user: { name: 'You' }, hasVoted: false }, ...es])
+      setShowForm(false)
+      setTitle('')
+      setDescription('')
+      setImageUrl('')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const vote = async (entryId) => {
+    const res = await fetch(`/api/competitions/${comp.id}/entries/${entryId}/vote`, { method: 'POST' })
+    if (!res.ok) return
+    setEntries((es) => es.map((e) => (e.id === entryId ? { ...e, votes: e.votes + 1, hasVoted: true } : e)))
+  }
+
   return (
     <div>
       <section className="relative h-[60vh] min-h-[480px]">
@@ -45,27 +78,61 @@ export default function CompetitionDetailClient({ comp, forestImages }) {
         </div>
       </section>
 
-      <SectionWrapper eyebrow="Top entries" title="Cast a vote. Grow the movement.">
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {entries.map((e, i) => (
-            <div key={e.id} className="group overflow-hidden rounded-3xl border border-border/70 bg-card leaf-shadow">
-              <div className="relative aspect-[4/3] overflow-hidden">
-                <img src={e.img} alt={e.title} className="h-full w-full object-cover transition-transform duration-[1200ms] group-hover:scale-105" />
-                {i === 0 && <span className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground px-2.5 py-1 text-[10px] uppercase tracking-widest"><Trophy className="h-3 w-3" /> Leading</span>}
-              </div>
-              <div className="p-5 flex items-center justify-between">
-                <div>
-                  <h3 className="font-serif text-lg">{e.title}</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">{e.votes} votes</p>
+      <SectionWrapper eyebrow="Entries" title="Cast a vote. Grow the movement.">
+        {entries.length === 0 && !showForm && (
+          <p className="text-muted-foreground mb-8">No entries yet — be the first to submit one.</p>
+        )}
+        {entries.length > 0 && (
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {entries.map((e, i) => (
+              <div key={e.id} className="group overflow-hidden rounded-3xl border border-border/70 bg-card leaf-shadow">
+                <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
+                  {e.imageUrl && <img src={e.imageUrl} alt={e.title} className="h-full w-full object-cover transition-transform duration-[1200ms] group-hover:scale-105" />}
+                  {i === 0 && <span className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground px-2.5 py-1 text-[10px] uppercase tracking-widest"><Trophy className="h-3 w-3" /> Leading</span>}
                 </div>
-                <button className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm hover:bg-secondary"><Heart className="h-3.5 w-3.5 text-destructive" /> Vote</button>
+                <div className="p-5 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="font-serif text-lg truncate">{e.title}</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">by {e.user.name} · {e.votes} votes</p>
+                  </div>
+                  <button onClick={() => vote(e.id)} disabled={!isLoggedIn || e.hasVoted} className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm hover:bg-secondary disabled:opacity-50 disabled:hover:bg-transparent">
+                    <Heart className={`h-3.5 w-3.5 ${e.hasVoted ? 'fill-destructive text-destructive' : 'text-destructive'}`} /> {e.hasVoted ? 'Voted' : 'Vote'}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-10 flex flex-wrap gap-3">
-          <Button asChild className="rounded-full"><Link href="/login">Submit your entry</Link></Button>
-          <Button asChild variant="outline" className="rounded-full"><Link href="/competitions">Browse other competitions</Link></Button>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-10">
+          {isLoggedIn ? (
+            showForm ? (
+              <form onSubmit={submit} className="max-w-lg rounded-3xl border border-border/70 bg-card p-6 leaf-shadow space-y-3">
+                <label className="block">
+                  <span className="eyebrow">Title *</span>
+                  <input required value={title} onChange={(e) => setTitle(e.target.value)} className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+                </label>
+                <label className="block">
+                  <span className="eyebrow">Description *</span>
+                  <textarea required rows={3} value={description} onChange={(e) => setDescription(e.target.value)} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 outline-none focus:ring-2 focus:ring-primary/40" />
+                </label>
+                <label className="block">
+                  <span className="eyebrow">Image URL (optional)</span>
+                  <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://…" className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+                </label>
+                {error && <p className="text-sm text-destructive">{error}</p>}
+                <div className="flex gap-2">
+                  <Button disabled={submitting} type="submit" className="rounded-full">{submitting ? 'Submitting…' : 'Submit entry'}</Button>
+                  <Button type="button" variant="outline" className="rounded-full" onClick={() => setShowForm(false)}><X className="h-4 w-4" /> Cancel</Button>
+                </div>
+              </form>
+            ) : (
+              <Button onClick={() => setShowForm(true)} className="rounded-full"><Plus className="h-4 w-4" /> Submit your entry</Button>
+            )
+          ) : (
+            <Button asChild className="rounded-full"><Link href={`/login?next=/competitions/${comp.id}`}>Sign in to submit an entry</Link></Button>
+          )}
+          <Button asChild variant="outline" className="rounded-full ml-3"><Link href="/competitions">Browse other competitions</Link></Button>
         </div>
       </SectionWrapper>
     </div>

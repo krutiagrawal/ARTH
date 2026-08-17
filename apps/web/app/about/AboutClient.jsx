@@ -87,7 +87,7 @@ export default function AboutClient({ timeline }) {
             <Reveal delay={0.1}>
               <p className="mt-8 font-serif italic text-2xl leading-relaxed max-w-md">&ldquo;My grandfather planted a banyan the year my father was born. It is still standing. That tree taught me that the best things we make in a lifetime, we do not live to sit fully under.&rdquo;</p>
               <p className="mt-6 eyebrow">Founder, ARTH</p>
-              <Link href="/login" className="mt-10 group inline-flex items-center gap-2 rounded-full bg-foreground text-background pl-5 pr-2 py-2 text-sm">Join the movement<span className="grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground transition-transform group-hover:translate-x-0.5"><ArrowRight className="h-3.5 w-3.5" /></span></Link>
+              <Link href="/register" className="mt-10 group inline-flex items-center gap-2 rounded-full bg-foreground text-background pl-5 pr-2 py-2 text-sm">Join the movement<span className="grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground transition-transform group-hover:translate-x-0.5"><ArrowRight className="h-3.5 w-3.5" /></span></Link>
             </Reveal>
           </div>
         </div>

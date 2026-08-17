@@ -6,23 +6,29 @@ import AnimatedCounter from '@/components/site/AnimatedCounter'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/site/AuthProvider'
 
-const PROFILES = {
-  individual: { name: 'Ananya Rao', role: 'Planter', place: 'Bengaluru', stats: [{l:'Your trees', v:14},{l:'Species',v:6},{l:'Communities',v:2},{l:'Streak (weeks)',v:38}] },
-  community: { name: 'Yellapur Greens', role: 'Community', place: 'Karnataka', stats: [{l:'Members',v:214},{l:'Trees planted',v:24810},{l:'Drives held',v:41},{l:'Species',v:37}] },
-  ngo: { name: 'Groves & Grains Trust', role: 'NGO', place: 'India', stats: [{l:'Drives run',v:312},{l:'Forests',v:8},{l:'Trees',v:128400},{l:'Volunteers',v:6410}] },
-  nursery: { name: 'The Native Nursery', role: 'Nursery', place: 'Bengaluru', stats: [{l:'Saplings ready',v:14210},{l:'Species',v:82},{l:'Orders (mo)',v:126},{l:'Partners',v:24}] },
-  organisation: { name: 'Terra Textiles', role: 'CSR Partner', place: 'India', stats: [{l:'Trees funded',v:48720},{l:'Forests adopted',v:5},{l:'NGO partners',v:11},{l:'Employees planted',v:840}] },
+const ROLE_LABEL = {
+  individual: 'Planter',
+  community: 'Community',
+  ngo: 'NGO',
+  nursery: 'Nursery',
+  organisation: 'CSR Partner',
 }
 
-export default function DashboardClient({ type, forests, blogs }) {
+export default function DashboardClient({ type, forests, blogs, stats, activity }) {
   const { user } = useAuth()
-  const p = PROFILES[type]
-  const firstName = user?.name?.split(' ')[0] || p.name.split(' ')[0]
-  const place = user?.place || p.place
+  const role = ROLE_LABEL[type]
+  const firstName = user?.name?.split(' ')[0] || 'there'
+  const place = user?.place || '—'
+  const statCards = [
+    { l: 'Trees planted', v: stats.treesPlanted },
+    { l: 'Trees adopted', v: stats.treesAdopted },
+    { l: 'Drives joined', v: stats.drivesJoined },
+    { l: 'Pledged (₹)', v: stats.pledgedAmount },
+  ]
   return (
     <div className="pt-32">
       <section className="container">
-        <p className="text-xs uppercase tracking-[0.22em] text-primary">Dashboard · {p.role}</p>
+        <p className="text-xs uppercase tracking-[0.22em] text-primary">Dashboard · {role}</p>
         <div className="mt-4 flex flex-wrap items-end justify-between gap-6">
           <div>
             <h1 className="font-serif text-5xl md:text-7xl leading-[1] text-balance">Welcome back, {firstName}.</h1>
@@ -30,12 +36,12 @@ export default function DashboardClient({ type, forests, blogs }) {
           </div>
           <div className="flex flex-wrap gap-3">
             <Button asChild variant="outline" className="rounded-full"><Link href="/explore">Explore</Link></Button>
-            <Button asChild className="rounded-full"><Link href="/forests">Plant today</Link></Button>
+            <Button asChild className="rounded-full"><Link href="/plant">Plant today</Link></Button>
           </div>
         </div>
 
         <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-5">
-          {p.stats.map(s => (
+          {statCards.map(s => (
             <div key={s.l} className="rounded-3xl border border-border/70 bg-card p-6 leaf-shadow">
               <div className="text-xs uppercase tracking-widest text-muted-foreground">{s.l}</div>
               <div className="font-serif text-4xl mt-2"><AnimatedCounter value={s.v} /></div>
@@ -61,19 +67,22 @@ export default function DashboardClient({ type, forests, blogs }) {
         </div>
       </SectionWrapper>
 
-      <SectionWrapper eyebrow="Upcoming" title="This week in the movement.">
-        <div className="grid gap-5 md:grid-cols-2">
-          {[{t:'Community drive · Aravali Grove',d:'Saturday · 06:30 AM',n:'32 volunteers already going'},{t:'Nursery pickup · Native Nursery',d:'Sunday · 10:00 AM',n:'12 native species available'},{t:'Legacy story submission · due',d:'Monday · 11:59 PM',n:'Best Legacy Quote competition'},{t:'Impact review with Terra Textiles',d:'Wednesday · 04:00 PM',n:'Quarterly CSR report'}].map(x => (
-            <div key={x.t} className="rounded-3xl border border-border/70 bg-card p-6 leaf-shadow flex items-start gap-4">
-              <span className="h-11 w-11 grid place-items-center rounded-full bg-primary/15 text-primary"><Sparkles className="h-4 w-4" /></span>
-              <div className="flex-1">
-                <div className="font-serif text-lg">{x.t}</div>
-                <div className="text-xs text-muted-foreground">{x.d}</div>
-                <div className="text-xs mt-2">{x.n}</div>
+      <SectionWrapper eyebrow="Live" title="This week in the movement.">
+        {activity.length === 0 ? (
+          <p className="text-muted-foreground">No activity yet — be the first to plant, adopt, join a drive or pledge.</p>
+        ) : (
+          <div className="grid gap-5 md:grid-cols-2">
+            {activity.map(x => (
+              <div key={x.id} className="rounded-3xl border border-border/70 bg-card p-6 leaf-shadow flex items-start gap-4">
+                <span className="h-11 w-11 grid place-items-center rounded-full bg-primary/15 text-primary"><Sparkles className="h-4 w-4" /></span>
+                <div className="flex-1">
+                  <div className="font-serif text-lg">{x.text}</div>
+                  <div className="text-xs text-muted-foreground">{x.sub}</div>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </SectionWrapper>
 
       <SectionWrapper eyebrow="Reading" title="From the journal.">

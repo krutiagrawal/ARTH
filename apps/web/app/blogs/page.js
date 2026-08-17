@@ -1,6 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import BlogsClient from './BlogsClient'
 
+export const metadata = {
+  title: 'Journal',
+  description: 'Field notes, essays and updates from the ARTH movement.',
+}
+
 export default async function Page() {
   const blogs = await prisma.blog.findMany({ orderBy: { id: 'asc' } })
   const featured = blogs.find((b) => b.id === 'why-native-species-matter') ?? blogs[0]

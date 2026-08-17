@@ -1,10 +1,11 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Search, MapPin, ArrowUpRight } from 'lucide-react'
 
 const FILTERS = ['All', 'Forests', 'Trees', 'Stories', 'Competitions']
+const PAGE_SIZE = 24
 
 function Reveal({ children, delay = 0, className }) {
   return <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.9, delay, ease: [0.22, 1, 0.36, 1] }} className={className}>{children}</motion.div>
@@ -13,10 +14,15 @@ function Reveal({ children, delay = 0, className }) {
 export default function ExploreClient({ items: allItems }) {
   const [q, setQ] = useState('')
   const [f, setF] = useState('All')
+  const [visible, setVisible] = useState(PAGE_SIZE)
 
-  const items = useMemo(() => {
+  const filtered = useMemo(() => {
     return allItems.filter(i => (f === 'All' || i.type === f) && (q.trim() === '' || (i.title + ' ' + i.sub).toLowerCase().includes(q.toLowerCase())))
   }, [allItems, q, f])
+
+  useEffect(() => { setVisible(PAGE_SIZE) }, [q, f])
+
+  const items = filtered.slice(0, visible)
 
   return (
     <div>
@@ -45,7 +51,7 @@ export default function ExploreClient({ items: allItems }) {
               <button key={x} onClick={() => setF(x)} className={`rounded-full border px-3 py-1 text-xs transition ${f === x ? 'bg-foreground text-background border-foreground' : 'border-foreground/25 hover:bg-foreground/5'}`}>{x}</button>
             ))}
           </div>
-          <span className="eyebrow md:ml-auto">{items.length} results</span>
+          <span className="eyebrow md:ml-auto">{filtered.length} results</span>
         </div>
       </section>
 
@@ -68,6 +74,13 @@ export default function ExploreClient({ items: allItems }) {
             </Reveal>
           ))}
         </div>
+        {visible < filtered.length && (
+          <div className="mt-10 text-center">
+            <button onClick={() => setVisible(v => v + PAGE_SIZE)} className="rounded-full border border-foreground/25 px-6 py-2.5 text-sm hover:bg-foreground/5 transition">
+              Load more
+            </button>
+          </div>
+        )}
       </section>
     </div>
   )

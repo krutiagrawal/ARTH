@@ -2,6 +2,11 @@ import { prisma } from '@/lib/prisma'
 import { getServerUser } from '@/lib/session'
 import AdoptClient from './AdoptClient'
 
+export const metadata = {
+  title: 'Adopt a tree',
+  description: 'Adopt a legacy tree and follow its story — real trees, cared for by real people.',
+}
+
 export default async function Page() {
   const [user, trees] = await Promise.all([
     getServerUser(),

@@ -5,6 +5,17 @@ import { prisma } from '@/lib/prisma'
 import SectionWrapper from '@/components/site/SectionWrapper'
 import { Button } from '@/components/ui/button'
 
+export async function generateMetadata({ params }) {
+  const { id } = await params
+  const t = await prisma.legacyTree.findUnique({ where: { id } })
+  if (!t) return {}
+  return {
+    title: t.name,
+    description: t.quote,
+    openGraph: { title: t.name, description: t.quote, images: [t.imageUrl] },
+  }
+}
+
 export default async function App({ params }) {
   const { id } = await params
   const t = await prisma.legacyTree.findUnique({ where: { id } })
@@ -42,7 +53,7 @@ export default async function App({ params }) {
             </li>
           ))}
         </ol>
-        <div className="mt-10"><Button asChild className="rounded-full"><Link href="/login">Add your own legacy tree</Link></Button></div>
+        <div className="mt-10"><Button asChild className="rounded-full"><Link href="/plant">Add your own legacy tree</Link></Button></div>
       </SectionWrapper>
 
       <SectionWrapper eyebrow="Other legacies" title="Trees people love.">

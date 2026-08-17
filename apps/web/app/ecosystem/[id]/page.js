@@ -8,6 +8,13 @@ import { Button } from '@/components/ui/button'
 
 const ICONS = { individuals: Heart, communities: Users, ngos: Sprout, nurseries: TreePine, organisations: Building2 }
 
+export async function generateMetadata({ params }) {
+  const { id } = await params
+  const e = await prisma.ecosystemEntry.findUnique({ where: { id } })
+  if (!e) return {}
+  return { title: e.title, description: e.description }
+}
+
 export default async function App({ params }) {
   const { id } = await params
   const e = await prisma.ecosystemEntry.findUnique({ where: { id } })
@@ -37,7 +44,7 @@ export default async function App({ params }) {
           </div>
         </div>
         <div className="mt-14 flex flex-wrap gap-3">
-          <Button asChild className="rounded-full"><Link href="/login">Join as {e.title}</Link></Button>
+          <Button asChild className="rounded-full"><Link href="/register">Join as {e.title}</Link></Button>
           <Button asChild variant="outline" className="rounded-full"><Link href="/how-it-works">How it works</Link></Button>
         </div>
       </SectionWrapper>

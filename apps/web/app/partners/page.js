@@ -1,6 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import SectionWrapper from '@/components/site/SectionWrapper'
 
+export const metadata = {
+  title: 'Partners',
+  description: 'The NGOs, nurseries and organisations working with ARTH on the ground.',
+}
+
 export default async function App() {
   const partners = await prisma.partner.findMany({ orderBy: [{ group: 'asc' }, { name: 'asc' }] })
   const groups = []

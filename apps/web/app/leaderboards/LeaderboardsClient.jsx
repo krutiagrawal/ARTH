@@ -39,39 +39,43 @@ export default function LeaderboardsClient({ leaderboards }) {
 
       {/* Editorial split: number 01 hero + list */}
       <section className="px-5 md:px-10 py-16 md:py-24">
-        <div className="grid grid-cols-12 gap-6 md:gap-14">
-          <div className="col-span-12 md:col-span-4">
-            <Reveal>
-              <p className="eyebrow">Leading {tab.toLowerCase()}</p>
-              <div className="flex items-end gap-4 mt-6">
-                <span className="font-serif italic text-primary text-6xl md:text-7xl">01</span>
-                <Trophy className="h-6 w-6 text-primary mb-3" />
-              </div>
-              <h2 className="font-serif text-4xl md:text-6xl mt-5 leading-[1]">{rows[0].name}</h2>
-              <p className="eyebrow mt-3">{rows[0].place}</p>
-              <div className="mt-8 border-t border-foreground/15 pt-6">
-                <p className="eyebrow">Score</p>
-                <p className="font-serif text-5xl md:text-6xl mt-2">{rows[0].score.toLocaleString()}</p>
-              </div>
-            </Reveal>
+        {rows.length === 0 ? (
+          <p className="text-muted-foreground">No {tab.toLowerCase()} on the board yet — be the first to show up here.</p>
+        ) : (
+          <div className="grid grid-cols-12 gap-6 md:gap-14">
+            <div className="col-span-12 md:col-span-4">
+              <Reveal>
+                <p className="eyebrow">Leading {tab.toLowerCase()}</p>
+                <div className="flex items-end gap-4 mt-6">
+                  <span className="font-serif italic text-primary text-6xl md:text-7xl">01</span>
+                  <Trophy className="h-6 w-6 text-primary mb-3" />
+                </div>
+                <h2 className="font-serif text-4xl md:text-6xl mt-5 leading-[1]">{rows[0].name}</h2>
+                <p className="eyebrow mt-3">{rows[0].place}</p>
+                <div className="mt-8 border-t border-foreground/15 pt-6">
+                  <p className="eyebrow">Score</p>
+                  <p className="font-serif text-5xl md:text-6xl mt-2">{rows[0].score.toLocaleString()}</p>
+                </div>
+              </Reveal>
+            </div>
+            <div className="col-span-12 md:col-span-8">
+              <AnimatePresence mode="wait">
+                <motion.ol key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.35 }}>
+                  {rows.slice(1).map((r, i) => (
+                    <li key={r.name} className="grid grid-cols-12 items-baseline gap-4 py-6 border-t border-foreground/15 first:border-0">
+                      <span className="col-span-1 font-serif italic text-muted-foreground">{String(i + 2).padStart(2, '0')}</span>
+                      <div className="col-span-7 md:col-span-8">
+                        <p className="font-serif text-2xl md:text-3xl">{r.name}</p>
+                        <p className="eyebrow mt-1">{r.place}</p>
+                      </div>
+                      <span className="col-span-4 md:col-span-3 text-right font-serif text-xl md:text-2xl">{r.score.toLocaleString()}</span>
+                    </li>
+                  ))}
+                </motion.ol>
+              </AnimatePresence>
+            </div>
           </div>
-          <div className="col-span-12 md:col-span-8">
-            <AnimatePresence mode="wait">
-              <motion.ol key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.35 }}>
-                {rows.slice(1).map((r, i) => (
-                  <li key={r.name} className="grid grid-cols-12 items-baseline gap-4 py-6 border-t border-foreground/15 first:border-0">
-                    <span className="col-span-1 font-serif italic text-muted-foreground">{String(i + 2).padStart(2, '0')}</span>
-                    <div className="col-span-7 md:col-span-8">
-                      <p className="font-serif text-2xl md:text-3xl">{r.name}</p>
-                      <p className="eyebrow mt-1">{r.place}</p>
-                    </div>
-                    <span className="col-span-4 md:col-span-3 text-right font-serif text-xl md:text-2xl">{r.score.toLocaleString()}</span>
-                  </li>
-                ))}
-              </motion.ol>
-            </AnimatePresence>
-          </div>
-        </div>
+        )}
       </section>
     </div>
   )

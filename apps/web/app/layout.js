@@ -5,9 +5,25 @@ import Footer from '@/components/site/Footer'
 import BackgroundAmbience from '@/components/site/BackgroundAmbience'
 import CustomCursor from '@/components/site/CustomCursor'
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+const DEFAULT_TITLE = 'ARTH — Leave More Than Footprints.'
+const DEFAULT_DESCRIPTION = 'A global environmental movement. Plant, track and leave a living legacy for the earth.'
+
 export const metadata = {
-  title: 'ARTH — Leave More Than Footprints.',
-  description: 'A global environmental movement. Plant, track and leave a living legacy for the earth.',
+  metadataBase: new URL(SITE_URL),
+  title: { default: DEFAULT_TITLE, template: '%s · ARTH' },
+  description: DEFAULT_DESCRIPTION,
+  openGraph: {
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    siteName: 'ARTH',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+  },
 }
 
 export default function RootLayout({ children }) {

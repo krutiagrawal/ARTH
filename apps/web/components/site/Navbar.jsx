@@ -2,11 +2,17 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { Menu, X, Moon, Sun } from 'lucide-react'
+import { Menu, X, Moon, Sun, ChevronDown } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/components/site/AuthProvider'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const LINKS = [
   { href: '/', label: 'Home' },
@@ -19,6 +25,14 @@ const LINKS = [
   { href: '/blogs', label: 'Journal' },
   { href: '/partners', label: 'Partners' },
   { href: '/contact', label: 'Contact' },
+]
+
+const ACTION_LINKS = [
+  { href: '/plant', label: 'Plant a tree' },
+  { href: '/adopt', label: 'Adopt a tree' },
+  { href: '/donate', label: 'Donate' },
+  { href: '/drives', label: 'Join a drive' },
+  { href: '/how-it-works', label: 'How it works' },
 ]
 
 export default function Navbar() {
@@ -77,6 +91,19 @@ export default function Navbar() {
                 {l.label}
               </Link>
             ))}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="inline-flex items-center gap-0.5 px-3 py-1.5 text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap outline-none">
+                Take action
+                <ChevronDown className="h-3 w-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {ACTION_LINKS.map(l => (
+                  <DropdownMenuItem key={l.href} asChild>
+                    <Link href={l.href}>{l.label}</Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </nav>
 
           <div className="ml-auto flex items-center gap-1">
@@ -96,10 +123,15 @@ export default function Navbar() {
                 </button>
               </div>
             ) : (
-              <Link href="/login" className="hidden sm:inline-flex items-center gap-2 rounded-full bg-foreground text-background px-4 py-2 text-[13px] hover:opacity-90 transition">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                Start Planting
-              </Link>
+              <div className="hidden sm:flex items-center gap-2">
+                <Link href="/login" className="rounded-full px-3 py-2 text-[13px] text-muted-foreground hover:text-foreground hover:bg-secondary transition">
+                  Log in
+                </Link>
+                <Link href="/register" className="inline-flex items-center gap-2 rounded-full bg-foreground text-background px-4 py-2 text-[13px] hover:opacity-90 transition">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  Get started
+                </Link>
+              </div>
             )}
             <button onClick={() => setOpen(v => !v)} aria-label="Menu" className="lg:hidden h-9 w-9 rounded-full grid place-items-center hover:bg-secondary">
               {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
@@ -114,13 +146,20 @@ export default function Navbar() {
                 {LINKS.map(l => (
                   <li key={l.href}><Link onClick={() => setOpen(false)} href={l.href} className={cn('block rounded-xl px-3 py-2 text-muted-foreground hover:bg-secondary hover:text-foreground', pathname === l.href && 'bg-secondary text-foreground')}>{l.label}</Link></li>
                 ))}
+                <li className="col-span-2 pt-2 pb-1 px-3"><span className="eyebrow">Take action</span></li>
+                {ACTION_LINKS.map(l => (
+                  <li key={l.href}><Link onClick={() => setOpen(false)} href={l.href} className={cn('block rounded-xl px-3 py-2 text-muted-foreground hover:bg-secondary hover:text-foreground', pathname === l.href && 'bg-secondary text-foreground')}>{l.label}</Link></li>
+                ))}
                 {user ? (
                   <>
                     <li className="col-span-2 pt-1"><Link onClick={() => setOpen(false)} href={`/dashboard/${user.accountType}`} className="block rounded-full bg-foreground text-background text-center py-2.5 text-sm">Dashboard</Link></li>
                     <li className="col-span-2"><button onClick={() => { setOpen(false); logout() }} className="w-full rounded-full border border-border text-center py-2.5 text-sm">Logout</button></li>
                   </>
                 ) : (
-                  <li className="col-span-2 pt-1"><Link onClick={() => setOpen(false)} href="/login" className="block rounded-full bg-foreground text-background text-center py-2.5 text-sm">Start Planting</Link></li>
+                  <>
+                    <li className="col-span-2 pt-1"><Link onClick={() => setOpen(false)} href="/register" className="block rounded-full bg-foreground text-background text-center py-2.5 text-sm">Get started</Link></li>
+                    <li className="col-span-2"><Link onClick={() => setOpen(false)} href="/login" className="block rounded-full border border-border text-center py-2.5 text-sm">Log in</Link></li>
+                  </>
                 )}
               </ul>
             </motion.div>

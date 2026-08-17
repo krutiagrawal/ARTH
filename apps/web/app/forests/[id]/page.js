@@ -5,6 +5,17 @@ import { prisma } from '@/lib/prisma'
 import SectionWrapper from '@/components/site/SectionWrapper'
 import { Button } from '@/components/ui/button'
 
+export async function generateMetadata({ params }) {
+  const { id } = await params
+  const forest = await prisma.forest.findUnique({ where: { id } })
+  if (!forest) return {}
+  return {
+    title: forest.name,
+    description: forest.story,
+    openGraph: { title: forest.name, description: forest.story, images: [forest.imageUrl] },
+  }
+}
+
 export default async function App({ params }) {
   const { id } = await params
   const forest = await prisma.forest.findUnique({ where: { id } })
@@ -52,7 +63,7 @@ export default async function App({ params }) {
           </div>
         </div>
         <div className="mt-12 flex flex-wrap gap-3">
-          <Button asChild className="rounded-full"><Link href="/login">Plant here</Link></Button>
+          <Button asChild className="rounded-full"><Link href="/plant">Plant here</Link></Button>
           <Button asChild variant="outline" className="rounded-full"><Link href="/explore">Explore more forests</Link></Button>
         </div>
       </SectionWrapper>

@@ -2,6 +2,11 @@ import { prisma } from '@/lib/prisma'
 import { getServerUser } from '@/lib/session'
 import DrivesClient from './DrivesClient'
 
+export const metadata = {
+  title: 'Drives',
+  description: 'Join a plantation drive near you — RSVP and show up with your hands.',
+}
+
 export default async function Page() {
   const [user, drives] = await Promise.all([
     getServerUser(),

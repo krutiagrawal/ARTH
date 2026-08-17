@@ -1,6 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import ExploreClient from './ExploreClient'
 
+export const metadata = {
+  title: 'Explore',
+  description: 'Everything on ARTH in one place — forests, trees, competitions and journal entries.',
+}
+
 export default async function Page() {
   const [forests, trees, competitions, blogs] = await Promise.all([
     prisma.forest.findMany(),
