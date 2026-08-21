@@ -27,7 +27,13 @@ async function handle(request, { params }, method) {
     return response
   }
 
-  const response = NextResponse.json(result.data, { status: result.status })
+  // apiClient's apiRequest() returns a plain string for any non-JSON response
+  // (e.g. the donations CSV export) — wrapping that in NextResponse.json would
+  // double-encode it as a quoted JSON string instead of a real downloadable file.
+  const response =
+    result.status < 400 && typeof result.data === 'string'
+      ? new NextResponse(result.data, { status: result.status, headers: { 'Content-Type': 'text/csv' } })
+      : NextResponse.json(result.data, { status: result.status })
   if (result.newTokens) setAuthCookies(response, ROLE, result.newTokens)
   if (result.clearCookies) clearAuthCookies(response, ROLE)
   return response

@@ -4,6 +4,7 @@ import { setAccessToken, setRefreshToken, clearTokens, getRefreshToken } from '.
 
 export interface ApiUser {
   id: string;
+  role: 'user' | 'ngo' | 'admin';
   email: string;
   name: string;
   handle: string;
@@ -36,6 +37,24 @@ export async function persistAuthResponse(response: AuthResponse): Promise<ApiUs
 
 export async function register(input: { email: string; password: string; name: string; handle: string }) {
   const response = await apiFetch<AuthResponse>('/api/auth/register', {
+    method: 'POST',
+    body: { ...input, deviceInfo },
+    auth: false,
+  });
+  return persistAuthResponse(response);
+}
+
+export async function registerNgo(input: {
+  email: string;
+  password: string;
+  name: string;
+  handle: string;
+  orgName: string;
+  description: string;
+  website?: string;
+  contactPhone?: string;
+}) {
+  const response = await apiFetch<AuthResponse>('/api/auth/register-ngo', {
     method: 'POST',
     body: { ...input, deviceInfo },
     auth: false,

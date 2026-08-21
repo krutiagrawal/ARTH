@@ -6,7 +6,7 @@ export default function LegacyTreeCard({ tree }) {
   return (
     <motion.article
       whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 220, damping: 22 }}
-      className="relative overflow-hidden rounded-3xl border border-border/70 bg-card leaf-shadow"
+      className="relative overflow-hidden rounded-3xl border border-border/70 bg-card soft-shadow"
     >
       <Link href={`/trees/${tree.id}`} className="grid md:grid-cols-2">
         <div className="relative aspect-[4/5] md:aspect-auto">

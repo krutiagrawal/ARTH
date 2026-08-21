@@ -24,7 +24,15 @@ export async function apiRequest(path, { method = 'GET', body, token, isForm = f
     }
   }
 
-  const res = await fetch(`${API_URL}${path}`, { method, headers, body: payload })
+  let res
+  try {
+    res = await fetch(`${API_URL}${path}`, { method, headers, body: payload })
+  } catch {
+    // The backend is unreachable (down, wrong port, etc.) — distinct from a
+    // real API error response, and specifically NOT a 401, so callers like
+    // NgoProfileContext don't mistake "server is down" for "you're logged out".
+    throw new ApiError(503, 'Could not reach the API server.', 'API_UNREACHABLE')
+  }
 
   if (res.status === 204) return null
 

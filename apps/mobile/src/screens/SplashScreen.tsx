@@ -38,9 +38,9 @@ export function SplashScreen({ navigation }: any) {
   const particleOpacity = useSharedValue(0);
   const bgOpacity = useSharedValue(1);
 
-  const { isLoading: authLoading, isAuthenticated } = useAuth();
-  const authStateRef = useRef({ authLoading, isAuthenticated });
-  authStateRef.current = { authLoading, isAuthenticated };
+  const { isLoading: authLoading, isAuthenticated, user } = useAuth();
+  const authStateRef = useRef({ authLoading, isAuthenticated, user });
+  authStateRef.current = { authLoading, isAuthenticated, user };
 
   const navigateNext = async () => {
     // Wait for the auth check to settle (usually already done by the time the intro finishes).
@@ -49,7 +49,7 @@ export function SplashScreen({ navigation }: any) {
     }
 
     if (authStateRef.current.isAuthenticated) {
-      navigation.replace('Main');
+      navigation.replace(authStateRef.current.user?.role === 'ngo' ? 'NgoHome' : 'Main');
       return;
     }
 

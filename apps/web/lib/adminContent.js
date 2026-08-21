@@ -51,6 +51,7 @@ export const ADMIN_CONTENT_MODELS = {
     fields: [
       { name: 'group', type: 'text', required: true },
       { name: 'name', type: 'text', required: true },
+      { name: 'logoUrl', type: 'text', required: false },
     ],
   },
   ecosystemEntries: {

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { env } from '../config/env';
+import { BadRequestError } from '../utils/errors';
 
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic']);
 
@@ -13,7 +14,7 @@ interface PhotoInput {
 
 async function saveImage(photo: PhotoInput, subdir: string): Promise<string> {
   if (!ALLOWED_MIME_TYPES.has(photo.mimetype)) {
-    throw new Error('Unsupported image type');
+    throw new BadRequestError('Unsupported image type. Please upload a JPEG, PNG, WEBP, or HEIC file.');
   }
 
   const extension = path.extname(photo.filename) || '.jpg';
@@ -33,4 +34,36 @@ export function saveTreePhoto(photo: PhotoInput): Promise<string> {
 
 export function saveStorySnapshot(photo: PhotoInput): Promise<string> {
   return saveImage(photo, 'stories');
+}
+
+export function saveDrivePhoto(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'drives');
+}
+
+export function saveAdoptableTreePhoto(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'adoptable-trees');
+}
+
+export function saveCampaignPhoto(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'campaigns');
+}
+
+export function saveNgoLogo(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'ngo-logos');
+}
+
+export function saveUpdatePhoto(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'ngo-updates');
+}
+
+export function saveStaffPhoto(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'staff');
+}
+
+export function saveHealthCheckPhoto(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'health-checks');
+}
+
+export function savePlantedTreePhoto(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'planted-trees');
 }

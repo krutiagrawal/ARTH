@@ -76,6 +76,24 @@ export const COLORS = {
   shadowWarm: 'rgba(212, 168, 83, 0.3)',
 };
 
+// Semantic text-on-surface tokens. Prefer these over reaching for `COLORS.white`/`textPrimary`
+// directly next to a background color pick — several screens picked the wrong one because a raw
+// palette gives no signal about which surface a color is meant to sit on (e.g. text styles named
+// "...Dark" ended up meaning "dark text" in one file and "text for a dark surface" in another,
+// and the latter sometimes landed on a light background by mistake). Pick the surface this text
+// actually sits on, not the aesthetic you're going for.
+export const ON_LIGHT_SURFACE = {
+  primary: COLORS.textPrimary,
+  secondary: COLORS.textSecondary,
+  muted: COLORS.textMuted,
+};
+
+export const ON_DARK_SURFACE = {
+  primary: COLORS.textWhite,
+  secondary: 'rgba(255, 255, 255, 0.7)',
+  muted: 'rgba(255, 255, 255, 0.5)',
+};
+
 export const GRADIENTS = {
   sageToForest: ['#A8C499', '#2D5A27'],
   creamToSand: ['#FFF8ED', '#E8D5B0'],

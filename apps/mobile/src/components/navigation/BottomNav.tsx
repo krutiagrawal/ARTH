@@ -26,6 +26,22 @@ import { hexToRgba } from '../../utils/color';
 
 const { width: SW } = Dimensions.get('window');
 
+/** Rendered height of BottomNav's own content (container padding + tab icon/label stack),
+ * excluding the bottom safe-area inset it also pads itself by. Keep in sync with `styles.container`
+ * paddingVertical (8+8) + `styles.tabContent` paddingVertical (4+4) + icon height (36) + label
+ * line height/margin (~16) below. Screens under the floating nav should size their scroll-content
+ * bottom padding off `useBottomNavClearance()` instead of guessing their own magic number — three
+ * screens previously each hardcoded a different guess and content ended up hidden behind the nav. */
+export const BOTTOM_NAV_CONTENT_HEIGHT = 76;
+
+/** Bottom padding a screen under the floating BottomNav should reserve so its last piece of
+ * content clears the nav bar (plus a bit of breathing room). `extra` adds further gap on top of
+ * that if a screen wants more spacing. */
+export function useBottomNavClearance(extra = 16) {
+  const insets = useSafeAreaInsets();
+  return BOTTOM_NAV_CONTENT_HEIGHT + insets.bottom + extra;
+}
+
 export type TabName = 'Home' | 'Forest' | 'Plant' | 'Map' | 'Community';
 
 interface TabItem {

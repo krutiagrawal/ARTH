@@ -8,8 +8,18 @@ interface AuthContextValue {
   user: ApiUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<ApiUser>;
   register: (input: { email: string; password: string; name: string; handle: string }) => Promise<void>;
+  registerNgo: (input: {
+    email: string;
+    password: string;
+    name: string;
+    handle: string;
+    orgName: string;
+    description: string;
+    website?: string;
+    contactPhone?: string;
+  }) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   setUser: React.Dispatch<React.SetStateAction<ApiUser | null>>;
@@ -19,8 +29,9 @@ const AuthContext = createContext<AuthContextValue>({
   user: null,
   isLoading: true,
   isAuthenticated: false,
-  login: async () => {},
+  login: async () => { throw new Error('AuthProvider not mounted'); },
   register: async () => {},
+  registerNgo: async () => {},
   logout: async () => {},
   refreshUser: async () => {},
   setUser: () => {},
@@ -61,11 +72,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const loggedInUser = await authApi.login({ email, password });
     setUser(loggedInUser);
+    return loggedInUser;
   }, []);
 
   const register = useCallback(
     async (input: { email: string; password: string; name: string; handle: string }) => {
       const registeredUser = await authApi.register(input);
+      setUser(registeredUser);
+    },
+    []
+  );
+
+  const registerNgo = useCallback(
+    async (input: {
+      email: string;
+      password: string;
+      name: string;
+      handle: string;
+      orgName: string;
+      description: string;
+      website?: string;
+      contactPhone?: string;
+    }) => {
+      const registeredUser = await authApi.registerNgo(input);
       setUser(registeredUser);
     },
     []
@@ -83,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, isAuthenticated: Boolean(user), login, register, logout, refreshUser, setUser }}
+      value={{ user, isLoading, isAuthenticated: Boolean(user), login, register, registerNgo, logout, refreshUser, setUser }}
     >
       {children}
     </AuthContext.Provider>

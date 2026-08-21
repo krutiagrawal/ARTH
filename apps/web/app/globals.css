@@ -22,6 +22,10 @@
     --accent: 24 22% 35%;                  /* #6E5847 earth brown */
     --accent-foreground: 42 55% 95%;
     --olive: 65 22% 42%;                   /* soft olive */
+    --forest-deep: 152 42% 14%;            /* deep saturated forest green — Impact snapshot panel bg */
+    --forest-deep-foreground: 42 40% 92%;  /* warm cream text on the dark panel */
+    --sand: 38 48% 68%;                    /* light gold/sand — alternate stat-tile tone */
+    --sand-foreground: 24 25% 18%;
     --destructive: 14 42% 52%;             /* muted terracotta */
     --destructive-foreground: 42 55% 95%;
     --success: 130 26% 34%;
@@ -59,6 +63,10 @@
     --accent: 24 22% 55%;
     --accent-foreground: 24 18% 10%;
     --olive: 65 22% 55%;
+    --forest-deep: 152 34% 20%;
+    --forest-deep-foreground: 42 40% 92%;
+    --sand: 38 34% 48%;
+    --sand-foreground: 42 40% 92%;
     --destructive: 14 42% 55%;
     --destructive-foreground: 42 40% 92%;
     --success: 130 26% 45%;
@@ -115,6 +123,16 @@
   .soft-shadow { box-shadow: 0 1px 2px hsl(24 25% 18% / 0.04), 0 20px 60px -30px hsl(24 25% 18% / 0.22); }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .modern-scrollbar { scrollbar-width: thin; scrollbar-color: hsl(var(--primary) / 0.35) transparent; }
+  .modern-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+  .modern-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .modern-scrollbar::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--primary) / 0.35);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  .modern-scrollbar::-webkit-scrollbar-thumb:hover { background-color: hsl(var(--primary) / 0.55); }
   .rule { border-color: hsl(var(--foreground) / 0.15); }
   .cursor-none-important, .cursor-none-important * { cursor: none !important; }
 }
@@ -138,6 +156,16 @@
 .animate-wing-flap { animation: wing-flap 0.4s ease-in-out infinite; transform-origin: center; }
 
 @media (hover: hover) and (pointer: fine) {
-  body { cursor: none; }
-  a, button, [role='button'] { cursor: none; }
+  /* Scoped to the marketing site only (see app/(marketing)/layout.js) — the
+     NGO/admin dashboards render outside this subtree and keep the normal
+     system cursor, since CustomCursor (the visual replacement) is only
+     mounted on marketing pages. A bare `body` rule here would hide the
+     cursor everywhere with nothing rendered to replace it on dashboard
+     routes. */
+  .marketing-cursor-none,
+  .marketing-cursor-none a,
+  .marketing-cursor-none button,
+  .marketing-cursor-none [role='button'] {
+    cursor: none;
+  }
 }

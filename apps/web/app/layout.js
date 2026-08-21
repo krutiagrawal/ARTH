@@ -1,9 +1,5 @@
 import './globals.css'
 import { Providers } from './providers'
-import Navbar from '@/components/site/Navbar'
-import Footer from '@/components/site/Footer'
-import BackgroundAmbience from '@/components/site/BackgroundAmbience'
-import CustomCursor from '@/components/site/CustomCursor'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 const DEFAULT_TITLE = 'ARTH — Leave More Than Footprints.'
@@ -33,13 +29,7 @@ export default function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{__html:'window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);'}} />
       </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
-        <Providers>
-          <CustomCursor />
-          <BackgroundAmbience />
-          <Navbar />
-          <main className="relative">{children}</main>
-          <Footer />
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

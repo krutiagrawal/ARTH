@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Switch,
   Dimensions,
   Alert,
   Linking,
@@ -19,6 +18,7 @@ import { COLORS } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
 import Constants from 'expo-constants';
 import { GlassCard } from '../components/common/GlassCard';
+import { Toggle } from '../components/common/Toggle';
 import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
 import { useReduceMotionContext } from '../context/ReduceMotionContext';
 import { useAuth } from '../context/AuthContext';
@@ -202,11 +202,11 @@ export function SettingsScreen({ navigation }: any) {
             sublabel="Immersive background sounds & animations"
             accent={COLORS.golden}
             rightElement={
-              <Switch
+              <Toggle
                 value={settings.ambientMode}
                 onValueChange={() => toggle('ambientMode')}
-                trackColor={{ false: COLORS.sand, true: COLORS.golden }}
-                thumbColor={COLORS.white}
+                offColor={COLORS.sand}
+                onColor={COLORS.golden}
               />
             }
           />
@@ -217,11 +217,11 @@ export function SettingsScreen({ navigation }: any) {
             sublabel="Ambient forest & rain sounds"
             accent={COLORS.sage}
             rightElement={
-              <Switch
+              <Toggle
                 value={settings.sounds}
                 onValueChange={() => toggle('sounds')}
-                trackColor={{ false: COLORS.sand, true: COLORS.sage }}
-                thumbColor={COLORS.white}
+                offColor={COLORS.sand}
+                onColor={COLORS.sage}
               />
             }
           />
@@ -232,11 +232,11 @@ export function SettingsScreen({ navigation }: any) {
             sublabel="Tactile responses on interactions"
             accent={COLORS.earth}
             rightElement={
-              <Switch
+              <Toggle
                 value={settings.haptics}
                 onValueChange={() => toggle('haptics')}
-                trackColor={{ false: COLORS.sand, true: COLORS.earth }}
-                thumbColor={COLORS.white}
+                offColor={COLORS.sand}
+                onColor={COLORS.earth}
               />
             }
           />
@@ -247,11 +247,11 @@ export function SettingsScreen({ navigation }: any) {
             sublabel="Calmer visuals — pauses ambient animation"
             accent={COLORS.textMuted}
             rightElement={
-              <Switch
+              <Toggle
                 value={reduceMotionOverride === true}
                 onValueChange={(v) => setReduceMotionOverride(v ? true : null)}
-                trackColor={{ false: COLORS.sand, true: COLORS.textMuted }}
-                thumbColor={COLORS.white}
+                offColor={COLORS.sand}
+                onColor={COLORS.textMuted}
               />
             }
           />
@@ -288,11 +288,11 @@ export function SettingsScreen({ navigation }: any) {
             sublabel="Daily reminders and achievements"
             accent={COLORS.xpBlue}
             rightElement={
-              <Switch
+              <Toggle
                 value={settings.notifications}
                 onValueChange={() => toggle('notifications')}
-                trackColor={{ false: COLORS.sand, true: COLORS.xpBlue }}
-                thumbColor={COLORS.white}
+                offColor={COLORS.sand}
+                onColor={COLORS.xpBlue}
               />
             }
           />
@@ -303,11 +303,11 @@ export function SettingsScreen({ navigation }: any) {
             sublabel="Get reminded before your streak breaks"
             accent={COLORS.streakFire}
             rightElement={
-              <Switch
+              <Toggle
                 value={settings.streakReminders}
                 onValueChange={() => toggle('streakReminders')}
-                trackColor={{ false: COLORS.sand, true: COLORS.streakFire }}
-                thumbColor={COLORS.white}
+                offColor={COLORS.sand}
+                onColor={COLORS.streakFire}
               />
             }
           />
@@ -322,11 +322,11 @@ export function SettingsScreen({ navigation }: any) {
             sublabel="Tag your planted trees with location"
             accent={COLORS.earth}
             rightElement={
-              <Switch
+              <Toggle
                 value={settings.locationTracking}
                 onValueChange={() => toggle('locationTracking')}
-                trackColor={{ false: COLORS.sand, true: COLORS.earth }}
-                thumbColor={COLORS.white}
+                offColor={COLORS.sand}
+                onColor={COLORS.earth}
               />
             }
           />
@@ -337,11 +337,11 @@ export function SettingsScreen({ navigation }: any) {
             sublabel="Let others see your forest and stats"
             accent={COLORS.sage}
             rightElement={
-              <Switch
+              <Toggle
                 value={settings.publicProfile}
                 onValueChange={() => toggle('publicProfile')}
-                trackColor={{ false: COLORS.sand, true: COLORS.sage }}
-                thumbColor={COLORS.white}
+                offColor={COLORS.sand}
+                onColor={COLORS.sage}
               />
             }
           />
@@ -352,11 +352,11 @@ export function SettingsScreen({ navigation }: any) {
             sublabel="Help improve the app"
             accent={COLORS.textMuted}
             rightElement={
-              <Switch
+              <Toggle
                 value={settings.analyticsEnabled}
                 onValueChange={() => toggle('analyticsEnabled')}
-                trackColor={{ false: COLORS.sand, true: COLORS.sage }}
-                thumbColor={COLORS.white}
+                offColor={COLORS.sand}
+                onColor={COLORS.sage}
               />
             }
           />
@@ -501,7 +501,9 @@ const styles = StyleSheet.create({
   sectionHeaderDark: {
     fontSize: 13,
     fontWeight: '700',
-    color: COLORS.white,
+    // Sits directly on the page's cream gradient background, NOT inside a GlassCard — must use
+    // dark text (was COLORS.white, invisible on cream).
+    color: COLORS.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginTop: 8,

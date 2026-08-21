@@ -1,8 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Sprout } from 'lucide-react'
 
 const initialForm = {
   email: '',
@@ -15,11 +14,36 @@ const initialForm = {
   contactPhone: '',
 }
 
+function ConfirmationView({ orgName }) {
+  return (
+    <div className="mt-10 rounded-3xl border border-primary/30 bg-primary/5 p-8 text-center">
+      <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground">
+        <Sprout className="h-6 w-6" />
+      </span>
+      <h2 className="font-serif text-2xl md:text-3xl mt-6">Thank you, {orgName}. 🌱</h2>
+      <p className="mt-3 text-muted-foreground max-w-md mx-auto">
+        Your application has been submitted, and it&rsquo;s now in front of our team. We read every one closely —
+        expect to hear from us soon, and we&rsquo;ll email you the moment there&rsquo;s a decision. We&rsquo;re
+        grateful you want to grow this with us.
+      </p>
+      <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+        <Link href="/ngo/dashboard" className="inline-flex items-center gap-2 rounded-full bg-foreground text-background px-5 h-11 text-sm hover:opacity-90 transition">
+          Go to your dashboard
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+        <Link href="/" className="inline-flex items-center gap-2 rounded-full px-5 h-11 text-sm text-muted-foreground hover:text-foreground transition">
+          Back to home
+        </Link>
+      </div>
+    </div>
+  )
+}
+
 export default function NgoRegisterPage() {
-  const router = useRouter()
   const [form, setForm] = useState(initialForm)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [submittedOrgName, setSubmittedOrgName] = useState(null)
 
   const set = (key) => (e) => setForm((s) => ({ ...s, [key]: e.target.value }))
 
@@ -38,15 +62,16 @@ export default function NgoRegisterPage() {
         setError(data.error || 'Something went wrong.')
         return
       }
-      router.push('/ngo/dashboard')
+      setSubmittedOrgName(form.orgName)
+    } catch {
+      setError('Could not reach the server. Please check your connection and try again.')
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <div className="pt-32 md:pt-40 pb-24">
-      <div className="container max-w-xl">
+    <div className="w-full max-w-xl mx-auto">
         <p className="eyebrow text-primary">Register your organization</p>
         <h1 className="font-serif text-4xl md:text-5xl mt-4 leading-tight">
           Bring your NGO to <em className="italic text-primary">ARTH</em>.
@@ -56,6 +81,9 @@ export default function NgoRegisterPage() {
           every organization before it goes live.
         </p>
 
+        {submittedOrgName ? (
+          <ConfirmationView orgName={submittedOrgName} />
+        ) : (
         <form onSubmit={submit} className="mt-10 space-y-3">
           <label className="block">
             <span className="eyebrow">Organization name</span>
@@ -104,7 +132,7 @@ export default function NgoRegisterPage() {
           </button>
           <p className="text-xs text-center text-muted-foreground">Already registered? <Link href="/ngo/login" className="text-primary">Sign in</Link></p>
         </form>
-      </div>
+        )}
     </div>
   )
 }

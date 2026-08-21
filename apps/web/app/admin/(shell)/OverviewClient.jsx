@@ -1,0 +1,149 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { Users, ShieldCheck, CalendarDays, Sprout, IndianRupee, Heart, FileStack, Mail, LogIn } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import StatTile from '@/components/dashboard/StatTile'
+import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
+
+function SignInPrompt({ label, href }) {
+  return (
+    <div className="rounded-3xl border border-dashed border-border/70 p-8 text-center">
+      <p className="font-serif text-lg">{label}</p>
+      <p className="mt-1.5 text-sm text-muted-foreground">Sign in to that admin to see these numbers.</p>
+      <Button asChild variant="outline" className="mt-4 rounded-full">
+        <Link href={href}>
+          <LogIn className="h-4 w-4" /> Sign in
+        </Link>
+      </Button>
+    </div>
+  )
+}
+
+export default function OverviewClient() {
+  const [platform, setPlatform] = useState({ loading: true, signedIn: true, data: null })
+  const [content, setContent] = useState({ loading: true, signedIn: true, data: null })
+
+  useEffect(() => {
+    fetch('/api/admin/proxy/admin/overview')
+      .then(async (res) => {
+        if (!res.ok) return setPlatform({ loading: false, signedIn: false, data: null })
+        setPlatform({ loading: false, signedIn: true, data: await res.json() })
+      })
+      .catch(() => setPlatform({ loading: false, signedIn: false, data: null }))
+
+    fetch('/api/admin/overview')
+      .then(async (res) => {
+        if (!res.ok) return setContent({ loading: false, signedIn: false, data: null })
+        setContent({ loading: false, signedIn: true, data: await res.json() })
+      })
+      .catch(() => setContent({ loading: false, signedIn: false, data: null }))
+  }, [])
+
+  return (
+    <DashboardPageShell className="space-y-10">
+      <div>
+        <p className="eyebrow text-primary">Admin</p>
+        <h1 className="font-serif text-3xl md:text-4xl mt-2">Overview</h1>
+        <p className="mt-2 text-sm text-muted-foreground max-w-2xl">
+          Two independent admin identities feed this page — the NGO-approvals admin (services/api) and the
+          content/CMS admin (your ARTH account). You&rsquo;ll see numbers from whichever you&rsquo;re signed into.
+        </p>
+      </div>
+
+      <section>
+        <h2 className="eyebrow mb-4">Platform — NGOs, drives, donations</h2>
+        {platform.loading ? (
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <StatTile key={i} loading />
+            ))}
+          </div>
+        ) : !platform.signedIn ? (
+          <SignInPrompt label="Platform stats are hidden" href="/admin/login" />
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">
+            <StatTile
+              label="Total users"
+              value={Object.values(platform.data.usersByRole).reduce((a, b) => a + b, 0)}
+              description="Across all roles"
+              icon={Users}
+              tone="primary"
+            />
+            <StatTile
+              label="NGOs"
+              value={`${platform.data.ngosByStatus.approved ?? 0} approved`}
+              description="Currently publishing"
+              icon={ShieldCheck}
+              tone="sand"
+              href="/admin/ngos"
+            />
+            <StatTile label="Drives" value={platform.data.drivesCount} description="Created all-time" icon={CalendarDays} tone="primary" />
+            <StatTile label="Trees adopted" value={platform.data.adoptedTreesCount} description="Across all NGOs" icon={Sprout} tone="sand" />
+            <StatTile
+              label="Total donated"
+              value={`₹${(platform.data.totalDonatedCents / 100).toLocaleString()}`}
+              description="Succeeded donations"
+              icon={IndianRupee}
+              tone="primary"
+            />
+          </div>
+        )}
+        {platform.signedIn && platform.data && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            NGOs by status: {Object.entries(platform.data.ngosByStatus).map(([k, v]) => `${v} ${k}`).join(' · ') || 'none yet'}
+          </p>
+        )}
+      </section>
+
+      <section>
+        <h2 className="eyebrow mb-4">Content — ARTH site</h2>
+        {content.loading ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <StatTile key={i} loading />
+            ))}
+          </div>
+        ) : !content.signedIn ? (
+          <SignInPrompt label="Content stats are hidden" href="/login" />
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+            <StatTile
+              label="Registered users"
+              value={Object.values(content.data.usersByAccountType).reduce((a, b) => a + b, 0)}
+              description="Individuals, communities & more"
+              icon={Users}
+              tone="primary"
+            />
+            <StatTile
+              label="Pledges"
+              value={`₹${content.data.pledgesTotalAmount.toLocaleString()}`}
+              description="Paid pledges total"
+              icon={Heart}
+              tone="sand"
+            />
+            <StatTile
+              label="Competition entries"
+              value={content.data.competitionEntries}
+              description="All-time submissions"
+              icon={FileStack}
+              tone="primary"
+              href="/admin/competitions"
+            />
+            <StatTile label="Newsletter subscribers" value={content.data.newsletterSubscribers} description="Opted in" icon={Mail} tone="sand" />
+          </div>
+        )}
+      </section>
+
+      <div className="flex flex-wrap gap-3">
+        <Button asChild variant="outline" className="rounded-full">
+          <Link href="/admin/ngos">Review NGOs</Link>
+        </Button>
+        <Button asChild variant="outline" className="rounded-full">
+          <Link href="/admin/content">Manage content</Link>
+        </Button>
+      </div>
+    </DashboardPageShell>
+  )
+}

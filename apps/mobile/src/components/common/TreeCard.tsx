@@ -34,7 +34,9 @@ export function TreeCard({ tree, size = 'chip', onPress, theme, style }: TreeCar
   const accentColor = theme?.accentColor ?? COLORS.sageLight;
   const accentSoft = theme?.accentColorSoft ?? 'rgba(255,255,255,0.15)';
   const borderColor = theme?.cardBorder ?? 'rgba(255,255,255,0.18)';
-  const bgTint = theme?.cardBackground ? hexToRgba(theme.cardBackground, 0.4) : 'rgba(13,35,24,0.4)';
+  const bgTint = theme?.cardBackground
+    ? hexToRgba(theme.cardBackground, theme.cardOverlayAlpha ?? 0.4)
+    : 'rgba(13,35,24,0.4)';
   const stageIndex = tree.growthStage - 1;
 
   const Wrapper = onPress ? TouchableOpacity : View;

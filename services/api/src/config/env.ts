@@ -10,6 +10,10 @@ const envSchema = z.object({
   UPLOAD_DIR: z.string().default('./uploads'),
   CORS_ORIGIN: z.string().default('*'),
   OWM_API_KEY: z.string().min(1),
+  // Optional so the whole API doesn't fail to boot before Stripe is configured —
+  // donation endpoints throw a clear 503 instead (see lib/stripe.ts).
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

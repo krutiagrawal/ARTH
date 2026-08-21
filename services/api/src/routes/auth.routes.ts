@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { registerSchema, loginSchema, refreshSchema } from '../schemas/auth.schema';
+import { registerSchema, registerNgoSchema, loginSchema, refreshSchema } from '../schemas/auth.schema';
 import * as authService from '../services/auth.service';
 import { BadRequestError } from '../utils/errors';
 
@@ -9,6 +9,19 @@ export default async function authRoutes(fastify: FastifyInstance) {
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
 
     const result = await authService.register(fastify.prisma, {
+      ...parsed.data,
+      email: parsed.data.email.toLowerCase(),
+      handle: parsed.data.handle.toLowerCase(),
+    });
+
+    reply.status(201).send(result);
+  });
+
+  fastify.post('/register-ngo', async (request, reply) => {
+    const parsed = registerNgoSchema.safeParse(request.body);
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    const result = await authService.registerNgo(fastify.prisma, {
       ...parsed.data,
       email: parsed.data.email.toLowerCase(),
       handle: parsed.data.handle.toLowerCase(),

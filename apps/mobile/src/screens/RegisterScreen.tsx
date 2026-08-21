@@ -116,6 +116,11 @@ export function RegisterScreen({ navigation }: any) {
               Already have an account? <Text style={styles.switchLink}>Log in</Text>
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.replace('NgoRegister')}>
+            <Text style={styles.switchText}>
+              Are you an NGO? <Text style={styles.switchLink}>Register as an NGO instead</Text>
+            </Text>
+          </TouchableOpacity>
         </BlurCard>
       </ScrollView>
     </KeyboardAvoidingView>

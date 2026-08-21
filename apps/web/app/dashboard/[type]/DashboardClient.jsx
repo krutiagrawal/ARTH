@@ -42,7 +42,7 @@ export default function DashboardClient({ type, forests, blogs, stats, activity 
 
         <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-5">
           {statCards.map(s => (
-            <div key={s.l} className="rounded-3xl border border-border/70 bg-card p-6 leaf-shadow">
+            <div key={s.l} className="rounded-3xl border border-border/70 bg-card p-6 soft-shadow">
               <div className="text-xs uppercase tracking-widest text-muted-foreground">{s.l}</div>
               <div className="font-serif text-4xl mt-2"><AnimatedCounter value={s.v} /></div>
             </div>
@@ -53,7 +53,7 @@ export default function DashboardClient({ type, forests, blogs, stats, activity 
       <SectionWrapper eyebrow="Your forests" title="Places you have touched.">
         <div className="grid gap-6 md:grid-cols-3">
           {forests.map(f => (
-            <Link key={f.id} href={`/forests/${f.id}`} className="group overflow-hidden rounded-3xl border border-border/70 bg-card leaf-shadow">
+            <Link key={f.id} href={`/forests/${f.id}`} className="group overflow-hidden rounded-3xl border border-border/70 bg-card soft-shadow">
               <div className="relative aspect-[4/3] overflow-hidden">
                 <img src={f.imageUrl} alt={f.name} className="h-full w-full object-cover transition-transform duration-[1200ms] group-hover:scale-105" />
               </div>
@@ -73,7 +73,7 @@ export default function DashboardClient({ type, forests, blogs, stats, activity 
         ) : (
           <div className="grid gap-5 md:grid-cols-2">
             {activity.map(x => (
-              <div key={x.id} className="rounded-3xl border border-border/70 bg-card p-6 leaf-shadow flex items-start gap-4">
+              <div key={x.id} className="rounded-3xl border border-border/70 bg-card p-6 soft-shadow flex items-start gap-4">
                 <span className="h-11 w-11 grid place-items-center rounded-full bg-primary/15 text-primary"><Sparkles className="h-4 w-4" /></span>
                 <div className="flex-1">
                   <div className="font-serif text-lg">{x.text}</div>
@@ -88,7 +88,7 @@ export default function DashboardClient({ type, forests, blogs, stats, activity 
       <SectionWrapper eyebrow="Reading" title="From the journal.">
         <div className="grid gap-6 md:grid-cols-3">
           {blogs.map(b => (
-            <Link key={b.id} href={`/blogs/${b.id}`} className="group overflow-hidden rounded-3xl border border-border/70 bg-card leaf-shadow">
+            <Link key={b.id} href={`/blogs/${b.id}`} className="group overflow-hidden rounded-3xl border border-border/70 bg-card soft-shadow">
               <div className="relative aspect-[4/3] overflow-hidden"><img src={b.imageUrl} alt={b.title} className="h-full w-full object-cover transition-transform duration-[1200ms] group-hover:scale-105" /></div>
               <div className="p-5">
                 <p className="text-[10px] uppercase tracking-widest text-primary">{b.category}</p>

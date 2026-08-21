@@ -52,6 +52,14 @@ export interface TimeTheme {
   // Card tinting (text/backgrounds for surfaces sitting ON a themed card)
   cardBackground: string;
   cardBackgroundAlt: string;
+  /** Alpha for the translucent `cardBackground` wash painted over each card's BlurView. Card
+   * text color is chosen assuming the card reads as a fully opaque `cardBackground` swatch, but
+   * the wash is composited over whatever's behind it — a 40% wash of a light tint over a dark sky
+   * backdrop blends dark, silently breaking that assumption (this happened at Night: the light
+   * lavender card washed to a muddy dark tone, leaving textPrimaryOnCard's dark navy nearly
+   * invisible). Periods with a dark backdrop behind a light-tinted card need a higher alpha so the
+   * wash actually dominates the backdrop. */
+  cardOverlayAlpha: number;
   cardBorder: string;
   textPrimaryOnCard: string;
   textSecondaryOnCard: string;
@@ -100,6 +108,7 @@ function getThemeForHour(hour: number): TimeTheme {
       warmth: 0.55,
       cardBackground: '#F6F0FF',
       cardBackgroundAlt: '#FFD6E7',
+      cardOverlayAlpha: 0.4,
       cardBorder: 'rgba(125,107,255,0.28)',
       textPrimaryOnCard: '#4A3B6B',
       textSecondaryOnCard: 'rgba(74,59,107,0.65)',
@@ -144,6 +153,7 @@ function getThemeForHour(hour: number): TimeTheme {
       warmth: 0.5,
       cardBackground: '#FFFFFF',
       cardBackgroundAlt: '#D6F5E3',
+      cardOverlayAlpha: 0.4,
       cardBorder: 'rgba(77,182,172,0.28)',
       textPrimaryOnCard: '#1D5A4A',
       textSecondaryOnCard: 'rgba(29,90,74,0.6)',
@@ -188,6 +198,7 @@ function getThemeForHour(hour: number): TimeTheme {
       warmth: 0.65,
       cardBackground: '#FFFFFF',
       cardBackgroundAlt: '#D8F1D6',
+      cardOverlayAlpha: 0.4,
       cardBorder: 'rgba(103,196,140,0.28)',
       textPrimaryOnCard: '#1B5E3F',
       textSecondaryOnCard: 'rgba(27,94,63,0.6)',
@@ -230,11 +241,17 @@ function getThemeForHour(hour: number): TimeTheme {
       cardTint: 'light',
       statusBarStyle: 'light',
       warmth: 1.0,
-      cardBackground: '#FFE7D6',
-      cardBackgroundAlt: '#FFD1B5',
+      // Softened from '#FFE7D6'/'#FFD1B5' — the original card tones were more saturated than
+      // every other period's, which combined with the low-opacity secondary text below to read as
+      // visually heavy/tiring. Paler now; still warm, just less intense.
+      cardBackground: '#FFF3EA',
+      cardBackgroundAlt: '#FFE4D2',
+      cardOverlayAlpha: 0.4,
       cardBorder: 'rgba(255,142,110,0.28)',
       textPrimaryOnCard: '#7A3520',
-      textSecondaryOnCard: 'rgba(122,53,32,0.65)',
+      // Raised from 0.65 — was the weakest-reading secondary text relative to how saturated this
+      // period's card used to be; strengthened so mission/eco-fact body copy doesn't feel thin.
+      textSecondaryOnCard: 'rgba(122,53,32,0.82)',
       accentColor: '#FF8E6E',
       accentColorSoft: 'rgba(255,142,110,0.15)',
       hillColors: ['#FFC4A3', '#FFB38A', '#FF8E6E'],
@@ -280,6 +297,7 @@ function getThemeForHour(hour: number): TimeTheme {
       warmth: 0.85,
       cardBackground: '#FFECF2',
       cardBackgroundAlt: '#FFD9E4',
+      cardOverlayAlpha: 0.4,
       cardBorder: 'rgba(255,154,162,0.3)',
       textPrimaryOnCard: '#7A3040',
       textSecondaryOnCard: 'rgba(122,48,64,0.65)',
@@ -328,6 +346,10 @@ function getThemeForHour(hour: number): TimeTheme {
       warmth: 0.25,
       cardBackground: '#E6D6FF',
       cardBackgroundAlt: '#D8B4FE',
+      // Blue Hour's sky/hills are a moderately dark saturated blue-purple — not as dark as
+      // Night's, but darker than the pastel-sky periods above — so a plain 0.4 wash risks the
+      // same (if milder) dark-on-light-card-text erosion Night had. Bumped as a safety margin.
+      cardOverlayAlpha: 0.55,
       cardBorder: 'rgba(108,124,231,0.28)',
       textPrimaryOnCard: '#4A3B7A',
       textSecondaryOnCard: 'rgba(74,59,122,0.65)',
@@ -372,6 +394,10 @@ function getThemeForHour(hour: number): TimeTheme {
       warmth: 0.1,
       cardBackground: '#A8B4FF',
       cardBackgroundAlt: '#8E7CF6',
+      // Night's sky/ground is dark navy — a 0.4 wash of the light lavender cardBackground blends
+      // dark against it, which is what made textPrimaryOnCard's dark navy nearly invisible on
+      // Home/Forest cards at night. Raised so the lavender tint actually dominates the backdrop.
+      cardOverlayAlpha: 0.85,
       cardBorder: 'rgba(91,96,198,0.3)',
       textPrimaryOnCard: '#3B2F72',
       textSecondaryOnCard: 'rgba(59,47,114,0.65)',
@@ -415,6 +441,7 @@ function getThemeForHour(hour: number): TimeTheme {
     warmth: 0.0,
     cardBackground: '#162451',
     cardBackgroundAlt: '#1F2F6B',
+    cardOverlayAlpha: 0.4,
     cardBorder: 'rgba(107,120,214,0.3)',
     textPrimaryOnCard: '#FFFFFF',
     textSecondaryOnCard: 'rgba(214,218,255,0.65)',

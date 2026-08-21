@@ -30,6 +30,17 @@ import streaksRoutes from './routes/streaks.routes';
 import xpRoutes from './routes/xp.routes';
 import feedRoutes from './routes/feed.routes';
 import storiesRoutes from './routes/stories.routes';
+import ngoRoutes from './routes/ngo.routes';
+import adminRoutes from './routes/admin.routes';
+import drivesRoutes from './routes/drives.routes';
+import adoptionsRoutes from './routes/adoptions.routes';
+import donationsRoutes from './routes/donations.routes';
+import donationsWebhookRoutes from './routes/donationsWebhook.routes';
+import ngosPublicRoutes from './routes/ngos.public.routes';
+import followRoutes from './routes/follow.routes';
+import ngoUpdatesRoutes from './routes/ngoUpdates.routes';
+import staffRoutes from './routes/staff.routes';
+import plantedTreesRoutes from './routes/plantedTrees.routes';
 
 export async function buildApp() {
   const app = Fastify({ logger: true });
@@ -62,6 +73,8 @@ export async function buildApp() {
   await app.register(challengesPublicRoutes, { prefix: '/api/challenges' });
   await app.register(usersPublicRoutes, { prefix: '/api/users' });
   await app.register(weatherRoutes, { prefix: '/api/weather' });
+  await app.register(donationsWebhookRoutes, { prefix: '/api/donations' });
+  await app.register(ngosPublicRoutes, { prefix: '/api/ngos' });
 
   // Protected routes (JWT required)
   await app.register(async (instance) => {
@@ -81,6 +94,15 @@ export async function buildApp() {
     await instance.register(xpRoutes, { prefix: '/api/xp' });
     await instance.register(feedRoutes, { prefix: '/api/feed' });
     await instance.register(storiesRoutes, { prefix: '/api/stories' });
+    await instance.register(ngoRoutes, { prefix: '/api/ngo' });
+    await instance.register(adminRoutes, { prefix: '/api/admin' });
+    await instance.register(drivesRoutes, { prefix: '/api/drives' });
+    await instance.register(adoptionsRoutes, { prefix: '/api/adoptable-trees' });
+    await instance.register(donationsRoutes, { prefix: '/api/campaigns' });
+    await instance.register(followRoutes, { prefix: '/api/follows' });
+    await instance.register(ngoUpdatesRoutes, { prefix: '/api/ngo/updates' });
+    await instance.register(staffRoutes, { prefix: '/api/ngo/staff' });
+    await instance.register(plantedTreesRoutes, { prefix: '/api/ngo/planted-trees' });
   });
 
   return app;

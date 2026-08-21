@@ -20,6 +20,7 @@
     "typecheck:api": "tsc --noEmit -p services/api/tsconfig.json",
     "typecheck": "npm run typecheck:mobile && npm run typecheck:api",
     "prisma:generate:api": "npm run prisma:generate --workspace=services/api",
-    "prisma:migrate:api": "npm run prisma:migrate --workspace=services/api"
+    "prisma:migrate:api": "npm run prisma:migrate --workspace=services/api",
+    "test:e2e": "npm run test:e2e --workspace=apps/web"
   }
 }

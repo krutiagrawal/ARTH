@@ -35,8 +35,8 @@ export function LoginScreen({ navigation }: any) {
     }
     setIsSubmitting(true);
     try {
-      await login(email.trim().toLowerCase(), password);
-      navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+      const loggedInUser = await login(email.trim().toLowerCase(), password);
+      navigation.reset({ index: 0, routes: [{ name: loggedInUser.role === 'ngo' ? 'NgoHome' : 'Main' }] });
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
     } finally {
@@ -89,6 +89,11 @@ export function LoginScreen({ navigation }: any) {
           <TouchableOpacity onPress={() => navigation.replace('Register')}>
             <Text style={styles.switchText}>
               Don't have an account? <Text style={styles.switchLink}>Sign up</Text>
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.replace('NgoRegister')}>
+            <Text style={styles.switchText}>
+              Are you an NGO? <Text style={styles.switchLink}>Register as an NGO instead</Text>
             </Text>
           </TouchableOpacity>
         </BlurCard>

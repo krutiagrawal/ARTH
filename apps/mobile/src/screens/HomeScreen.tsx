@@ -52,6 +52,7 @@ import type { ApiWeather } from '../api/weather';
 import { getForestLevelLabel, getXpProgress } from '../constants/forestLevels';
 import { LEAF_COLORS } from '../hooks/useParticles';
 import { hexToRgba } from '../utils/color';
+import { useBottomNavClearance } from '../components/navigation/BottomNav';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const RAIN_FALL_GROUND_Y = SH - 200;
@@ -466,7 +467,7 @@ function HeroSection({
         style={styles.forestStats}
         pointerEvents="none"
       >
-        <View style={[styles.forestStatsOverlay, { backgroundColor: hexToRgba(theme.cardBackground, 0.4) }]} />
+        <View style={[styles.forestStatsOverlay, { backgroundColor: hexToRgba(theme.cardBackground, theme.cardOverlayAlpha) }]} />
         <View style={styles.forestStatRow}>
           <View style={styles.forestStat}>
             <Text style={[styles.forestStatNum, { color: theme.textPrimaryOnCard }]}>{user?.treesPlantedCount ?? 0}</Text>
@@ -515,7 +516,7 @@ function MissionCard({ missions, navigation }: { missions: ApiDailyMission[]; na
         style={[styles.missionCard, { borderColor: theme.cardBorder, borderWidth: 1 }]}
       >
         <LinearGradient
-          colors={[hexToRgba(theme.cardBackground, 0.4), hexToRgba(theme.cardBackgroundAlt, 0.4)]}
+          colors={[hexToRgba(theme.cardBackground, theme.cardOverlayAlpha), hexToRgba(theme.cardBackgroundAlt, theme.cardOverlayAlpha)]}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.missionHeader}>
@@ -606,7 +607,7 @@ function EcoFactCard({ fact }: { fact: string }) {
         style={[styles.ecoFactCard, { borderColor: theme.cardBorder, borderWidth: 1 }]}
       >
         <LinearGradient
-          colors={[hexToRgba(theme.cardBackground, 0.4), hexToRgba(theme.cardBackgroundAlt, 0.4)]}
+          colors={[hexToRgba(theme.cardBackground, theme.cardOverlayAlpha), hexToRgba(theme.cardBackgroundAlt, theme.cardOverlayAlpha)]}
           style={StyleSheet.absoluteFill}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -675,24 +676,13 @@ const GROW_ACTIONS: GrowAction[] = [
   { key: 'donate', icon: '💚', title: 'Donate to an NGO', subtitle: 'Support verified tree-planting organizations' },
 ];
 
-const COMING_SOON_COPY: Record<Exclude<GrowAction['key'], 'plant'>, { title: string; body: string }> = {
-  adopt: {
-    title: 'Adopt a Tree',
-    body: "Adopting a tree already growing near you is coming soon to ARTH. We're building partnerships with local nurseries and land partners so you can care for a real tree without planting a new one — we'll let you know the moment it's ready.",
-  },
-  ngo: {
-    title: 'NGO Drives',
-    body: "Joining a local planting drive is coming soon to ARTH. We're partnering with NGOs and community groups so you can show up and plant alongside others near you — we'll open this up as soon as drives go live in your area.",
-  },
-  donate: {
-    title: 'Donate to an NGO',
-    body: "Giving directly to verified tree-planting organizations is coming soon to ARTH. We're setting up secure donation partnerships so every contribution reaches real planting work on the ground. Thank you for wanting to help.",
-  },
+const GROW_ACTION_ROUTES: Record<Exclude<GrowAction['key'], 'plant'>, string> = {
+  adopt: 'AdoptTreeList',
+  ngo: 'Drives',
+  donate: 'Campaigns',
 };
 
-/** The four contribution paths behind HomeGrowCTA. Only "Plant by myself" is a built flow today;
- * the other three route to an honest, on-brand "coming soon" placeholder rather than pretending
- * to be functional — per the brief, this is a navigation/UI pass, not new backend work. */
+/** The four contribution paths behind HomeGrowCTA — all real, backend-connected flows. */
 function GrowActionSheet({
   visible,
   onClose,
@@ -711,8 +701,7 @@ function GrowActionSheet({
       navigation.navigate('PlantTree');
       return;
     }
-    const copy = COMING_SOON_COPY[key];
-    navigation.navigate('StaticContent', { title: copy.title, body: copy.body });
+    navigation.navigate(GROW_ACTION_ROUTES[key]);
   };
 
   return (
@@ -738,6 +727,7 @@ function GrowActionSheet({
 
 export function HomeScreen({ navigation, onNavigateTab }: any) {
   const theme = useTimeTheme();
+  const bottomNavClearance = useBottomNavClearance();
   const { user } = useAuth();
   const { weather } = useDeviceWeather();
   const sceneryMode = getSceneryMode(weather);
@@ -757,7 +747,7 @@ export function HomeScreen({ navigation, onNavigateTab }: any) {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavClearance }]}
       >
         {/* Illustrated hero — header, stat row, scenery, and stats pill all scroll together as
             one normal-flow block instead of a fixed backdrop the rest of the page scrolls over. */}
@@ -785,7 +775,7 @@ export function HomeScreen({ navigation, onNavigateTab }: any) {
             experimentalBlurMethod="dimezisBlurView"
             style={[styles.xpCard, { borderColor: theme.cardBorder, borderWidth: 1 }]}
           >
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: hexToRgba(theme.cardBackground, 0.4) }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: hexToRgba(theme.cardBackground, theme.cardOverlayAlpha) }]} />
             <View style={styles.xpContent}>
               <View>
                 <Text style={[styles.xpLevel, { color: theme.accentColor }]}>{forestLevelLabel}</Text>
@@ -1235,6 +1225,7 @@ const styles = StyleSheet.create({
   },
   missionItemDesc: {
     fontSize: 11,
+    fontWeight: '500',
     color: COLORS.white,
     marginTop: 1,
   },

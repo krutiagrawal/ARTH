@@ -131,9 +131,10 @@ model Blog {
 }
 
 model Partner {
-  id    Int    @id @default(autoincrement())
-  group String
-  name  String
+  id      Int     @id @default(autoincrement())
+  group   String
+  name    String
+  logoUrl String?
 }
 
 model EcosystemEntry {

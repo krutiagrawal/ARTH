@@ -37,3 +37,8 @@ Thumbs.db
 # Misc
 *.pem
 .metro-health-check*
+
+# Playwright
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/playwright/.cache/

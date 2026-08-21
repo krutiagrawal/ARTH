@@ -7,7 +7,7 @@ export default function ForestCard({ forest, priority }) {
   return (
     <motion.div
       whileHover={{ y: -4, rotate: -0.2 }} transition={{ type: 'spring', stiffness: 250, damping: 20 }}
-      className="group relative overflow-hidden rounded-3xl border border-border/70 bg-card leaf-shadow"
+      className="group relative overflow-hidden rounded-3xl border border-border/70 bg-card soft-shadow"
     >
       <Link href={`/forests/${forest.id}`} className="block">
         <div className="relative aspect-[4/3] overflow-hidden">

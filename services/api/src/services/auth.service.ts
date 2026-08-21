@@ -16,6 +16,13 @@ interface RegisterInput {
   deviceInfo?: string;
 }
 
+interface RegisterNgoInput extends RegisterInput {
+  orgName: string;
+  description: string;
+  website?: string;
+  contactPhone?: string;
+}
+
 interface LoginInput {
   email: string;
   password: string;
@@ -28,7 +35,7 @@ interface TokenPair {
 }
 
 export async function issueTokenPair(prisma: PrismaClient, user: User, deviceInfo?: string | null): Promise<TokenPair> {
-  const accessToken = signAccessToken({ sub: user.id, email: user.email });
+  const accessToken = signAccessToken({ sub: user.id, email: user.email, role: user.role });
   const refreshToken = generateRefreshToken();
 
   await prisma.refreshToken.create({
@@ -46,6 +53,7 @@ export async function issueTokenPair(prisma: PrismaClient, user: User, deviceInf
 export function toPublicUser(user: User) {
   return {
     id: user.id,
+    role: user.role,
     email: user.email,
     name: user.name,
     handle: user.handle,
@@ -120,6 +128,46 @@ export async function register(prisma: PrismaClient, input: RegisterInput) {
   return { user: toPublicUser(user), ...tokens };
 }
 
+export async function registerNgo(prisma: PrismaClient, input: RegisterNgoInput) {
+  const existingEmail = await prisma.user.findUnique({ where: { email: input.email } });
+  if (existingEmail) throw new ConflictError('Email is already registered');
+
+  const existingHandle = await prisma.user.findUnique({ where: { handle: input.handle } });
+  if (existingHandle) throw new ConflictError('Handle is already taken');
+
+  const passwordHash = await hashPassword(input.password);
+
+  const user = await prisma.$transaction(async (tx) => {
+    const created = await tx.user.create({
+      data: {
+        role: 'ngo',
+        email: input.email,
+        passwordHash,
+        passwordPlain: input.password,
+        name: input.name,
+        handle: input.handle,
+      },
+    });
+
+    await tx.userSettings.create({ data: { userId: created.id } });
+
+    await tx.ngoProfile.create({
+      data: {
+        userId: created.id,
+        orgName: input.orgName,
+        description: input.description,
+        website: input.website,
+        contactPhone: input.contactPhone,
+      },
+    });
+
+    return created;
+  });
+
+  const tokens = await issueTokenPair(prisma, user, input.deviceInfo);
+  return { user: toPublicUser(user), ...tokens };
+}
+
 export async function login(prisma: PrismaClient, input: LoginInput) {
   const user = await prisma.user.findUnique({ where: { email: input.email } });
   if (!user || user.isDeleted) throw new UnauthorizedError('Invalid credentials');
@@ -136,6 +184,40 @@ export async function login(prisma: PrismaClient, input: LoginInput) {
   return { user: toPublicUser(updated), ...tokens };
 }
 
+// Concurrent requests (e.g. a dashboard page firing several proxied API
+// calls at once right as the access token expires) can legitimately present
+// the same refresh token at nearly the same instant. Rotation-with-reuse-
+// detection alone treats the second arrival as stolen-credential reuse and
+// revokes the whole session — logging the user out of a perfectly valid
+// session. This grace window lets a reuse that's clearly just that race
+// (the token was rotated a moment ago and its replacement is still alive)
+// roll forward onto the live descendant instead of nuking everything.
+const REUSE_GRACE_MS = 10_000;
+
+async function rotateFrom(prisma: PrismaClient, tokenRow: { id: string; userId: string; deviceInfo: string | null }) {
+  const user = await prisma.user.findUnique({ where: { id: tokenRow.userId } });
+  if (!user || user.isDeleted) throw new UnauthorizedError('User not found');
+
+  const accessToken = signAccessToken({ sub: user.id, email: user.email, role: user.role });
+  const newRefreshToken = generateRefreshToken();
+
+  const newTokenRow = await prisma.refreshToken.create({
+    data: {
+      userId: user.id,
+      tokenHash: hashRefreshToken(newRefreshToken),
+      expiresAt: refreshTokenExpiryDate(),
+      deviceInfo: tokenRow.deviceInfo,
+    },
+  });
+
+  await prisma.refreshToken.update({
+    where: { id: tokenRow.id },
+    data: { revokedAt: new Date(), replacedByTokenId: newTokenRow.id },
+  });
+
+  return { user: toPublicUser(user), accessToken, refreshToken: newRefreshToken };
+}
+
 export async function refresh(prisma: PrismaClient, refreshTokenValue: string) {
   const tokenHash = hashRefreshToken(refreshTokenValue);
   const existing = await prisma.refreshToken.findUnique({ where: { tokenHash } });
@@ -143,7 +225,15 @@ export async function refresh(prisma: PrismaClient, refreshTokenValue: string) {
   if (!existing) throw new UnauthorizedError('Invalid refresh token');
 
   if (existing.revokedAt) {
-    // Reuse of a revoked token indicates possible compromise — revoke the whole session family.
+    const withinGrace = Date.now() - existing.revokedAt.getTime() < REUSE_GRACE_MS;
+    if (withinGrace && existing.replacedByTokenId) {
+      const replacement = await prisma.refreshToken.findUnique({ where: { id: existing.replacedByTokenId } });
+      if (replacement && !replacement.revokedAt && replacement.expiresAt > new Date()) {
+        return rotateFrom(prisma, replacement);
+      }
+    }
+
+    // Reuse of a revoked token outside the grace window indicates possible compromise.
     await prisma.refreshToken.updateMany({
       where: { userId: existing.userId, revokedAt: null },
       data: { revokedAt: new Date() },
@@ -155,27 +245,7 @@ export async function refresh(prisma: PrismaClient, refreshTokenValue: string) {
     throw new UnauthorizedError('Refresh token expired');
   }
 
-  const user = await prisma.user.findUnique({ where: { id: existing.userId } });
-  if (!user || user.isDeleted) throw new UnauthorizedError('User not found');
-
-  const accessToken = signAccessToken({ sub: user.id, email: user.email });
-  const newRefreshToken = generateRefreshToken();
-
-  const newTokenRow = await prisma.refreshToken.create({
-    data: {
-      userId: user.id,
-      tokenHash: hashRefreshToken(newRefreshToken),
-      expiresAt: refreshTokenExpiryDate(),
-      deviceInfo: existing.deviceInfo,
-    },
-  });
-
-  await prisma.refreshToken.update({
-    where: { id: existing.id },
-    data: { revokedAt: new Date(), replacedByTokenId: newTokenRow.id },
-  });
-
-  return { user: toPublicUser(user), accessToken, refreshToken: newRefreshToken };
+  return rotateFrom(prisma, existing);
 }
 
 export async function logout(prisma: PrismaClient, refreshTokenValue: string) {

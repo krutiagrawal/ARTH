@@ -43,7 +43,14 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.plant.ecoapp",
+          "enableGooglePay": false
+        }
+      ]
     ],
     "extra": {
       "eas": {

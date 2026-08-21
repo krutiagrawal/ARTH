@@ -25,10 +25,12 @@ import { SHADOWS } from '../constants/theme';
 import { useTimeTheme } from '../hooks/useTimeTheme';
 import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
 import { useAuth } from '../context/AuthContext';
-import { useTrees } from '../hooks/useApiQueries';
+import { useTrees, useAdoptableTrees, useDrives } from '../hooks/useApiQueries';
 import { EmptyState } from '../components/common/EmptyState';
 import { StatDisplay } from '../components/common/StatDisplay';
 import type { ApiTree } from '../api/trees';
+import type { ApiAdoptableTree } from '../api/adoptions';
+import type { ApiDrive } from '../api/drives';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -43,15 +45,15 @@ const GROWTH_EMOJI = ['🌱', '🌿', '🌳', '🌲', '🎋'];
 const GROWTH_COLOR = ['#5BA847', '#3E8A2E', '#2D6B20', '#1E5214', '#0E3A0A'];
 
 /**
- * Only "own tree" markers (TreeMarker below) exist today — no adoptable/NGO-drive/nursery data
- * model exists in the backend yet, so nothing else is rendered. This reserves the visual
- * convention those marker types should follow once that data exists, so a future integration
- * doesn't have to invent a visual language from scratch:
- *   - own tree      → solid filled pin bubble, growth-stage color + emoji (current TreeMarker)
- *   - adoptable tree → outline-only pin bubble (unfilled center), sage accent
- *   - NGO drive      → banner/flag-shaped marker, golden accent
- *   - nursery        → house/leaf-shaped marker, earth-brown accent
- * Intentionally not wired to any render logic — no fake map data.
+ * Visual language for each marker type sharing this map:
+ *   - own tree      → solid filled pin bubble, growth-stage color + emoji (TreeMarker)
+ *   - adoptable tree → outline-only pin bubble (unfilled center), sage accent (AdoptableTreeMarker)
+ *   - NGO drive      → rounded golden-accent bubble, flag emoji (NgoDriveMarker)
+ *   - nursery        → house/leaf-shaped marker, earth-brown accent — still unreserved, no
+ *                       nursery data model exists yet
+ * Tapping an adoptable-tree/drive marker navigates straight to its detail screen (where the
+ * adopt/RSVP action lives) rather than opening an in-map info card like TreeMarker's, since
+ * those are read-only "this is mine" cards and these need a real action surface.
  */
 
 const MARKER_STYLES = {
@@ -111,6 +113,32 @@ function TreeMarker({ tree, onPress, selected }: {
           borderTopColor: selected ? GROWTH_COLOR[tree.growthStage - 1] : COLORS.white,
         }]} />
       </Animated.View>
+    </Marker>
+  );
+}
+
+function AdoptableTreeMarker({ tree, onPress }: { tree: ApiAdoptableTree & { lat: number; lng: number }; onPress: () => void }) {
+  return (
+    <Marker coordinate={{ latitude: tree.lat, longitude: tree.lng }} onPress={onPress} anchor={{ x: 0.5, y: 1 }}>
+      <View style={styles.markerContainer}>
+        <View style={[styles.markerBubble, styles.outlineBubble]}>
+          <Text style={styles.markerEmoji}>🌳</Text>
+        </View>
+        <View style={[styles.markerPin, { borderTopColor: COLORS.sage }]} />
+      </View>
+    </Marker>
+  );
+}
+
+function NgoDriveMarker({ drive, onPress }: { drive: ApiDrive & { lat: number; lng: number }; onPress: () => void }) {
+  return (
+    <Marker coordinate={{ latitude: drive.lat, longitude: drive.lng }} onPress={onPress} anchor={{ x: 0.5, y: 1 }}>
+      <View style={styles.markerContainer}>
+        <View style={[styles.markerBubble, styles.flagBubble]}>
+          <Text style={styles.markerEmoji}>🤝</Text>
+        </View>
+        <View style={[styles.markerPin, { borderTopColor: COLORS.golden }]} />
+      </View>
     </Marker>
   );
 }
@@ -220,6 +248,8 @@ export function MapScreen({ navigation }: any) {
   const headerSlide = useSlideUp(0, 20, 350);
   const { user } = useAuth();
   const { data: trees = [] } = useTrees();
+  const { data: adoptableTrees = [] } = useAdoptableTrees();
+  const { data: drives = [] } = useDrives();
 
   const isNight = theme.mascotOutfit === 'night';
   const statesCount = new Set(
@@ -322,6 +352,26 @@ export function MapScreen({ navigation }: any) {
               strokeWidth={1.5}
             />
           ))}
+
+          {adoptableTrees
+            .filter((tree): tree is ApiAdoptableTree & { lat: number; lng: number } => tree.lat != null && tree.lng != null)
+            .map(tree => (
+              <AdoptableTreeMarker
+                key={`adopt_${tree.id}`}
+                tree={tree}
+                onPress={() => navigation.navigate('AdoptTreeDetail', { treeId: tree.id })}
+              />
+            ))}
+
+          {drives
+            .filter((drive): drive is ApiDrive & { lat: number; lng: number } => drive.lat != null && drive.lng != null)
+            .map(drive => (
+              <NgoDriveMarker
+                key={`drive_${drive.id}`}
+                drive={drive}
+                onPress={() => navigation.navigate('DriveDetail', { driveId: drive.id })}
+              />
+            ))}
 
           {location && (
             <>
@@ -476,6 +526,15 @@ const styles = StyleSheet.create({
   },
   markerBubbleSelected: { borderWidth: 3, borderColor: 'white' },
   markerEmoji: { fontSize: 20 },
+  outlineBubble: {
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    borderWidth: 2.5,
+    borderColor: COLORS.sage,
+  },
+  flagBubble: {
+    backgroundColor: COLORS.golden,
+    borderColor: 'rgba(255,255,255,0.85)',
+  },
   markerPin: {
     width: 0, height: 0,
     borderLeftWidth: 5, borderRightWidth: 5, borderTopWidth: 9,

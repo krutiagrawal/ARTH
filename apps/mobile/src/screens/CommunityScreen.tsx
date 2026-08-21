@@ -19,6 +19,7 @@ import { RADIUS, SHADOWS } from '../constants/theme';
 import { GlassCard } from '../components/common/GlassCard';
 import { ProgressRing } from '../components/common/ProgressRing';
 import { EmptyState } from '../components/common/EmptyState';
+import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useSlideUp, useFadeIn } from '../hooks/useAnimations';
 import {
   useFriends,
@@ -415,6 +416,7 @@ export function CommunityScreen({ navigation }: any) {
   const [joinedIds, setJoinedIds] = useState<Set<string>>(new Set());
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
+  const bottomNavClearance = useBottomNavClearance();
 
   const { data: friends = [] } = useFriends();
   const { data: friendRequests = [] } = useFriendRequests();
@@ -431,11 +433,16 @@ export function CommunityScreen({ navigation }: any) {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.headerTitleDark}>Community 🌱</Text>
-        <TouchableOpacity style={styles.addFriendButton} onPress={() => setShowAddFriend(prev => !prev)}>
-          <LinearGradient colors={[COLORS.sageLight, COLORS.sage]} style={styles.addFriendGradient}>
-            <Text style={styles.addFriendText}>{showAddFriend ? 'Close' : '+ Add Friend'}</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TouchableOpacity style={styles.ngoButton} onPress={() => navigation.navigate('NgoDirectory')}>
+            <Text style={styles.ngoButtonText}>🌿 NGOs</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.addFriendButton} onPress={() => setShowAddFriend(prev => !prev)}>
+            <LinearGradient colors={[COLORS.sageLight, COLORS.sage]} style={styles.addFriendGradient}>
+              <Text style={styles.addFriendText}>{showAddFriend ? 'Close' : '+ Add Friend'}</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Tab bar */}
@@ -454,7 +461,7 @@ export function CommunityScreen({ navigation }: any) {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavClearance }]}
         showsVerticalScrollIndicator={false}
       >
         <GlobalCounter />
@@ -478,7 +485,7 @@ export function CommunityScreen({ navigation }: any) {
                 icon="🌲"
                 title="Your forest is better with friends"
                 body="Search above to find people and grow together."
-                tint="dark"
+                tint="light"
               />
             ) : (
               friends.map((friend, i) => (
@@ -496,7 +503,7 @@ export function CommunityScreen({ navigation }: any) {
                 icon="📰"
                 title="No activity yet"
                 body="Plant a tree or add friends to start seeing updates here."
-                tint="dark"
+                tint="light"
               />
             ) : (
               feed.map((activity, i) => (
@@ -514,7 +521,7 @@ export function CommunityScreen({ navigation }: any) {
                 icon="⚔️"
                 title="No challenges right now"
                 body="New community challenges will show up here when they open."
-                tint="dark"
+                tint="light"
               />
             ) : (
               challenges.map((challenge, i) => (
@@ -549,7 +556,7 @@ export function CommunityScreen({ navigation }: any) {
                 icon="🏆"
                 title="The leaderboard is still filling in"
                 body="Plant a tree to claim your spot."
-                tint="dark"
+                tint="light"
               />
             ) : (
               (leaderboard?.entries ?? []).map((entry, i) => (
@@ -580,6 +587,20 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: COLORS.textPrimary,
+  },
+  ngoButton: {
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(45,90,39,0.1)',
+    borderWidth: 1,
+    borderColor: COLORS.sage,
+    justifyContent: 'center',
+  },
+  ngoButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.forest,
   },
   addFriendButton: {
     ...SHADOWS.sage,
@@ -677,12 +698,11 @@ const styles = StyleSheet.create({
   sectionTitleDark: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.white,
+    // Sits directly on the page's cream gradient background, NOT inside a GlassCard — must use
+    // dark text (was COLORS.white with only a faint shadow, still nearly invisible on cream).
+    color: COLORS.textPrimary,
     marginBottom: 4,
     marginTop: 4,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
   },
   friendCard: {
     flexDirection: 'row',

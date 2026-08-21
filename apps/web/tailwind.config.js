@@ -58,6 +58,14 @@ module.exports = {
             '4': 'hsl(var(--chart-4))',
             '5': 'hsl(var(--chart-5))'
           },
+          forest: {
+            DEFAULT: 'hsl(var(--forest-deep))',
+            foreground: 'hsl(var(--forest-deep-foreground))'
+          },
+          sand: {
+            DEFAULT: 'hsl(var(--sand))',
+            foreground: 'hsl(var(--sand-foreground))'
+          },
           sidebar: {
             DEFAULT: 'hsl(var(--sidebar-background))',
             foreground: 'hsl(var(--sidebar-foreground))',

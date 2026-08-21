@@ -1,4 +1,4 @@
-import NgoDashboardClient from './NgoDashboardClient'
+import OverviewClient from './OverviewClient'
 
 export const metadata = {
   title: 'NGO dashboard',
@@ -6,5 +6,5 @@ export const metadata = {
 }
 
 export default function Page() {
-  return <NgoDashboardClient />
+  return <OverviewClient />
 }

@@ -3,7 +3,7 @@
     "version": "0.1.0",
     "private": true,
     "scripts": {
-        "dev": "cross-env NODE_OPTIONS=--max-old-space-size=512 next dev --hostname 0.0.0.0 --port 3000",
+        "dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 next dev --hostname 0.0.0.0 --port 3000",
         "dev:no-reload": "next dev --hostname 0.0.0.0 --port 3000",
         "dev:webpack": "next dev --hostname 0.0.0.0 --port 3000",
         "build": "next build",
@@ -11,7 +11,8 @@
         "postinstall": "prisma generate",
         "db:migrate": "prisma migrate dev",
         "db:seed": "prisma db seed",
-        "db:studio": "prisma studio"
+        "db:studio": "prisma studio",
+        "test:e2e": "playwright test"
     },
     "prisma": {
         "seed": "node prisma/seed.js"
@@ -46,6 +47,8 @@
         "@radix-ui/react-toggle": "1.1.9",
         "@radix-ui/react-toggle-group": "1.1.10",
         "@radix-ui/react-tooltip": "1.2.7",
+        "@stripe/react-stripe-js": "^6.8.2",
+        "@stripe/stripe-js": "^9.14.0",
         "@tanstack/react-query": "5.56.2",
         "@tanstack/react-table": "8.21.3",
         "axios": "1.18.0",
@@ -81,6 +84,7 @@
         "zod": "3.25.67"
     },
     "devDependencies": {
+        "@playwright/test": "^1.62.1",
         "@types/lodash": "4.17.24",
         "autoprefixer": "10.4.19",
         "cross-env": "^10.1.0",

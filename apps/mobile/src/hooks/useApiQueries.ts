@@ -44,6 +44,60 @@ import {
   postStory,
   deleteStory,
 } from '../api/stories';
+import {
+  fetchDrives,
+  fetchDrive,
+  joinDrive,
+  leaveDrive,
+  sponsorPlant,
+  fetchMyDrives,
+  createDrive,
+  CreateDriveInput,
+} from '../api/drives';
+import {
+  fetchAdoptableTrees,
+  fetchAdoptableTree,
+  adoptTree,
+  fetchMyAdoptableTrees,
+  createAdoptableTree,
+  CreateAdoptableTreeInput,
+} from '../api/adoptions';
+import {
+  fetchCampaigns,
+  fetchCampaign,
+  createDonationIntent,
+  fetchMyCampaigns,
+  createCampaign,
+  closeCampaign,
+  reopenCampaign,
+  CreateCampaignInput,
+} from '../api/donations';
+import {
+  fetchNgoProfile,
+  updateNgoProfile,
+  resubmitNgoProfile,
+  fetchNgoStats,
+  fetchNgoReports,
+  fetchNgoDonations,
+  fetchNgoDonationsSummary,
+  fetchNgoVolunteers,
+  UpdateNgoProfileInput,
+  DonationsFilter,
+} from '../api/ngo';
+import { fetchStaff, createStaff, updateStaff, deleteStaff, CreateStaffInput, UpdateStaffInput } from '../api/staff';
+import {
+  fetchPlantedTrees,
+  bulkCreatePlantedTrees,
+  logHealthCheck,
+  logBulkHealthChecks,
+  fetchSurvivalStats,
+  ListPlantedTreesFilter,
+  BulkCreatePlantedTreesInput,
+  TreeHealthStatus,
+} from '../api/plantedTrees';
+import { fetchMyUpdates, createUpdate, deleteUpdate, CreateUpdateInput } from '../api/ngoUpdates';
+import { browseNgos, fetchNgoPublicProfile } from '../api/ngosPublic';
+import { followNgo, unfollowNgo, fetchFollowedNgos, fetchFollowingFeed } from '../api/follow';
 
 export function useTrees(limit?: number) {
   const { isAuthenticated } = useAuth();
@@ -398,6 +452,414 @@ export function useDeleteStory() {
   return useMutation({
     mutationFn: (id: string) => deleteStory(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['stories'] }),
+  });
+}
+
+export function useDrives(lat?: number, lng?: number) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['drives', lat, lng],
+    queryFn: () => fetchDrives({ lat, lng }),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useDrive(id: string | null) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['drives', id],
+    queryFn: () => fetchDrive(id as string),
+    enabled: isAuthenticated && !!id,
+  });
+}
+
+export function useJoinDrive() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => joinDrive(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['drives'] }),
+  });
+}
+
+export function useLeaveDrive() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => leaveDrive(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['drives'] }),
+  });
+}
+
+export function useAdoptableTrees(lat?: number, lng?: number) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['adoptable-trees', lat, lng],
+    queryFn: () => fetchAdoptableTrees({ lat, lng }),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useAdoptableTree(id: string | null) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['adoptable-trees', id],
+    queryFn: () => fetchAdoptableTree(id as string),
+    enabled: isAuthenticated && !!id,
+  });
+}
+
+export function useAdoptTree() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, message }: { id: string; message?: string }) => adoptTree(id, message),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] }),
+  });
+}
+
+export function useSponsorPlant() {
+  return useMutation({
+    mutationFn: ({ driveId, plantId }: { driveId: string; plantId: string }) => sponsorPlant(driveId, plantId),
+  });
+}
+
+// ---------- NGO-facing ----------
+
+export function useMyDrives() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['drives', 'mine'],
+    queryFn: fetchMyDrives,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useCreateDrive() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateDriveInput) => createDrive(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['drives'] }),
+  });
+}
+
+export function useMyAdoptableTrees() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['adoptable-trees', 'mine'],
+    queryFn: fetchMyAdoptableTrees,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useCreateAdoptableTree() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateAdoptableTreeInput) => createAdoptableTree(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] }),
+  });
+}
+
+export function useCampaigns() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['campaigns'],
+    queryFn: fetchCampaigns,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useCampaign(id: string | null) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['campaigns', id],
+    queryFn: () => fetchCampaign(id as string),
+    enabled: isAuthenticated && !!id,
+  });
+}
+
+export function useCreateDonationIntent() {
+  return useMutation({
+    mutationFn: ({ campaignId, amountCents }: { campaignId: string; amountCents: number }) =>
+      createDonationIntent(campaignId, amountCents),
+  });
+}
+
+export function useMyCampaigns() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['campaigns', 'mine'],
+    queryFn: fetchMyCampaigns,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useCreateCampaign() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateCampaignInput) => createCampaign(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['campaigns'] }),
+  });
+}
+
+export function useCloseCampaign() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => closeCampaign(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['campaigns'] }),
+  });
+}
+
+export function useReopenCampaign() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => reopenCampaign(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['campaigns'] }),
+  });
+}
+
+// ---------- NGO profile / stats / reports / donations / volunteers ----------
+
+export function useNgoProfile() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'profile'],
+    queryFn: fetchNgoProfile,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useUpdateNgoProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateNgoProfileInput) => updateNgoProfile(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ngo', 'profile'] }),
+  });
+}
+
+export function useResubmitNgoProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => resubmitNgoProfile(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ngo', 'profile'] }),
+  });
+}
+
+export function useNgoStats() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'stats'],
+    queryFn: fetchNgoStats,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useNgoReports() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'reports'],
+    queryFn: fetchNgoReports,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useNgoDonations(filter: DonationsFilter = {}) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'donations', filter],
+    queryFn: () => fetchNgoDonations(filter),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useNgoDonationsSummary() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'donations', 'summary'],
+    queryFn: fetchNgoDonationsSummary,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useNgoVolunteers() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'volunteers'],
+    queryFn: fetchNgoVolunteers,
+    enabled: isAuthenticated,
+  });
+}
+
+// ---------- Staff roster ----------
+
+export function useStaff() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'staff'],
+    queryFn: fetchStaff,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useCreateStaff() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateStaffInput) => createStaff(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ngo', 'staff'] }),
+  });
+}
+
+export function useUpdateStaff() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...input }: { id: string } & UpdateStaffInput) => updateStaff(id, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ngo', 'staff'] }),
+  });
+}
+
+export function useDeleteStaff() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteStaff(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ngo', 'staff'] }),
+  });
+}
+
+// ---------- Planted trees / health checks ----------
+
+export function usePlantedTrees(filter: ListPlantedTreesFilter = {}) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'planted-trees', filter],
+    queryFn: () => fetchPlantedTrees(filter),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useBulkCreatePlantedTrees() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: BulkCreatePlantedTreesInput) => bulkCreatePlantedTrees(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'planted-trees'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'survival-stats'] });
+    },
+  });
+}
+
+export function useLogHealthCheck() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ plantedTreeId, status, notes }: { plantedTreeId: string; status: TreeHealthStatus; notes?: string }) =>
+      logHealthCheck(plantedTreeId, { status, notes }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'planted-trees'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'survival-stats'] });
+    },
+  });
+}
+
+export function useLogBulkHealthChecks() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { plantedTreeIds: string[]; status: TreeHealthStatus; notes?: string }) => logBulkHealthChecks(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'planted-trees'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'survival-stats'] });
+    },
+  });
+}
+
+export function useSurvivalStats(driveId?: string) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'survival-stats', driveId],
+    queryFn: () => fetchSurvivalStats(driveId),
+    enabled: isAuthenticated,
+  });
+}
+
+// ---------- NGO updates ----------
+
+export function useMyUpdates() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'updates'],
+    queryFn: fetchMyUpdates,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useCreateUpdate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateUpdateInput) => createUpdate(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ngo', 'updates'] }),
+  });
+}
+
+export function useDeleteUpdate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteUpdate(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ngo', 'updates'] }),
+  });
+}
+
+// ---------- Public NGO directory / follow ----------
+
+export function useBrowseNgos(params: { q?: string; city?: string } = {}) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngos', 'browse', params],
+    queryFn: () => browseNgos(params),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useNgoPublicProfile(id: string | null) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngos', 'public', id],
+    queryFn: () => fetchNgoPublicProfile(id as string),
+    enabled: isAuthenticated && !!id,
+  });
+}
+
+export function useFollowNgo() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ngoId: string) => followNgo(ngoId),
+    onSuccess: (_data, ngoId) => {
+      queryClient.invalidateQueries({ queryKey: ['ngos', 'public', ngoId] });
+      queryClient.invalidateQueries({ queryKey: ['follows'] });
+    },
+  });
+}
+
+export function useUnfollowNgo() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ngoId: string) => unfollowNgo(ngoId),
+    onSuccess: (_data, ngoId) => {
+      queryClient.invalidateQueries({ queryKey: ['ngos', 'public', ngoId] });
+      queryClient.invalidateQueries({ queryKey: ['follows'] });
+    },
+  });
+}
+
+export function useFollowedNgos() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['follows'],
+    queryFn: fetchFollowedNgos,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useFollowingFeed() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['follows', 'feed'],
+    queryFn: fetchFollowingFeed,
+    enabled: isAuthenticated,
   });
 }
 

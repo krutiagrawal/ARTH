@@ -91,10 +91,11 @@ function Calendar({
         range_start: cn("bg-accent rounded-l-md", defaultClassNames.range_start),
         range_middle: cn("rounded-none", defaultClassNames.range_middle),
         range_end: cn("bg-accent rounded-r-md", defaultClassNames.range_end),
-        today: cn(
-          "bg-accent text-accent-foreground rounded-md data-[selected=true]:rounded-none",
-          defaultClassNames.today
-        ),
+        // No background here — when today is also the selected day (the
+        // only way this app uses the calendar), the DayButton's own
+        // data-[selected-single] circle already marks it; adding a second
+        // fill at the cell level stacked a dark square behind that circle.
+        today: cn(defaultClassNames.today),
         outside: cn(
           "text-muted-foreground aria-selected:text-muted-foreground",
           defaultClassNames.outside

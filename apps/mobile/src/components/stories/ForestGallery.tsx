@@ -93,7 +93,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.white,
+    // Renders directly on ProfileScreen's cream background, not inside a dark card — must use
+    // dark text (was COLORS.white, invisible on cream).
+    color: COLORS.textPrimary,
   },
   liveBadge: {
     backgroundColor: COLORS.forest,

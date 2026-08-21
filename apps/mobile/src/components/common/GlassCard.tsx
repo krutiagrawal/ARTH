@@ -1,17 +1,30 @@
 import React from 'react';
 import { StyleSheet, View, ViewStyle, StyleProp } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { COLORS } from '../../constants/colors';
+import { COLORS, ON_DARK_SURFACE, ON_LIGHT_SURFACE } from '../../constants/colors';
 import { RADIUS, SHADOWS, SPACING } from '../../constants/theme';
+
+export type GlassCardVariant = 'light' | 'dark' | 'sage' | 'golden' | 'warm';
 
 interface GlassCardProps {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
-  variant?: 'light' | 'dark' | 'sage' | 'golden' | 'warm';
+  variant?: GlassCardVariant;
   intensity?: number;
   borderRadius?: number;
   noPadding?: boolean;
   animated?: boolean;
+}
+
+/**
+ * Which text tokens (primary/secondary/muted) read legibly on a given `GlassCard` variant.
+ * `dark` is the only variant dark enough to need light text — the rest (`light`/`sage`/
+ * `golden`/`warm`) are all pale/cream-ish washes that need the app's normal dark text. Screens
+ * should pull text color from this instead of independently guessing `COLORS.white` vs.
+ * `textPrimary` next to a `variant=` prop, which is how several headers ended up white-on-cream.
+ */
+export function getTextColorForVariant(variant: GlassCardVariant) {
+  return variant === 'dark' ? ON_DARK_SURFACE : ON_LIGHT_SURFACE;
 }
 
 export function GlassCard({

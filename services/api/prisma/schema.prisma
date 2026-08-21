@@ -75,10 +75,65 @@ enum TreeVerificationStatus {
   rejected
 }
 
+enum UserRole {
+  user
+  ngo
+  admin
+}
+
+enum NgoApprovalStatus {
+  pending
+  approved
+  rejected
+  suspended
+}
+
+enum DriveStatus {
+  upcoming
+  cancelled
+  completed
+}
+
+enum DriveTransportMode {
+  self_arrange
+  ngo_provided
+}
+
+enum RsvpStatus {
+  confirmed
+  cancelled
+}
+
+enum AdoptableTreeStatus {
+  available
+  adopted
+  removed
+}
+
+enum CampaignStatus {
+  active
+  closed
+}
+
+enum DonationStatus {
+  pending
+  succeeded
+  failed
+  refunded
+}
+
+enum TreeHealthStatus {
+  healthy
+  struggling
+  dead
+  removed
+}
+
 // ---------- Core ----------
 
 model User {
   id                     String    @id @default(uuid())
+  role                   UserRole  @default(user)
   email                  String    @unique
   passwordHash           String    @map("password_hash")
   // DEV-ONLY: plaintext mirror of the current password, for local debugging via pgAdmin only.
@@ -94,7 +149,7 @@ model User {
   streakFreezesAvailable Int       @default(2) @map("streak_freezes_available")
   treesPlantedCount      Int       @default(0) @map("trees_planted_count")
   totalCo2Absorbed       Decimal   @default(0) @map("total_co2_absorbed") @db.Decimal(10, 2)
-  badgesCount             Int       @default(0) @map("badges_count")
+  badgesCount            Int       @default(0) @map("badges_count")
   selectedForestThemeId  String?   @map("selected_forest_theme_id")
   lastActiveAt           DateTime? @map("last_active_at")
   createdAt              DateTime  @default(now()) @map("created_at")
@@ -107,8 +162,8 @@ model User {
   refreshTokens         RefreshToken[]
   trees                 Tree[]
   userAchievements      UserAchievement[]
-  friendshipsRequested  Friendship[]        @relation("FriendshipRequester")
-  friendshipsReceived   Friendship[]        @relation("FriendshipAddressee")
+  friendshipsRequested  Friendship[]            @relation("FriendshipRequester")
+  friendshipsReceived   Friendship[]            @relation("FriendshipAddressee")
   challengeParticipants ChallengeParticipant[]
   userDailyMissions     UserDailyMission[]
   userForestThemes      UserForestTheme[]
@@ -118,6 +173,13 @@ model User {
   activityReactions     ActivityReaction[]
   decorationPlacements  DecorationPlacement[]
   stories               Story[]
+  ngoProfile            NgoProfile?
+  driveRsvps            DriveRsvp[]
+  adoptions             Adoption[]
+  donations             Donation[]
+  plantSponsorships     DrivePlantSponsorship[]
+  adminActionLogs       AdminActionLog[]
+  following             Follow[]
 
   @@map("users")
 }
@@ -131,14 +193,14 @@ model ForestLevelTier {
 }
 
 model RefreshToken {
-  id                 String    @id @default(uuid())
-  userId             String    @map("user_id")
-  tokenHash          String    @unique @map("token_hash")
-  expiresAt          DateTime  @map("expires_at")
-  revokedAt          DateTime? @map("revoked_at")
-  replacedByTokenId  String?   @map("replaced_by_token_id")
-  deviceInfo         String?   @map("device_info")
-  createdAt          DateTime  @default(now()) @map("created_at")
+  id                String    @id @default(uuid())
+  userId            String    @map("user_id")
+  tokenHash         String    @unique @map("token_hash")
+  expiresAt         DateTime  @map("expires_at")
+  revokedAt         DateTime? @map("revoked_at")
+  replacedByTokenId String?   @map("replaced_by_token_id")
+  deviceInfo        String?   @map("device_info")
+  createdAt         DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -148,17 +210,17 @@ model RefreshToken {
 }
 
 model UserSettings {
-  userId            String  @id @map("user_id")
-  haptics           Boolean @default(true)
-  notifications     Boolean @default(true)
-  ambientMode       Boolean @default(false) @map("ambient_mode")
-  sounds            Boolean @default(true)
-  darkMode          Boolean @default(false) @map("dark_mode")
-  streakReminders   Boolean @default(true) @map("streak_reminders")
-  locationTracking  Boolean @default(true) @map("location_tracking")
-  publicProfile     Boolean @default(true) @map("public_profile")
-  analyticsEnabled  Boolean @default(true) @map("analytics_enabled")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  userId           String   @id @map("user_id")
+  haptics          Boolean  @default(true)
+  notifications    Boolean  @default(true)
+  ambientMode      Boolean  @default(false) @map("ambient_mode")
+  sounds           Boolean  @default(true)
+  darkMode         Boolean  @default(false) @map("dark_mode")
+  streakReminders  Boolean  @default(true) @map("streak_reminders")
+  locationTracking Boolean  @default(true) @map("location_tracking")
+  publicProfile    Boolean  @default(true) @map("public_profile")
+  analyticsEnabled Boolean  @default(true) @map("analytics_enabled")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -168,14 +230,14 @@ model UserSettings {
 // ---------- Species / Trees ----------
 
 model TreeSpecies {
-  id             String  @id @default(uuid())
-  key            String  @unique
-  commonName     String  @map("common_name")
-  emoji          String
-  co2KgPerYear   Decimal? @map("co2_kg_per_year") @db.Decimal(6, 2)
-  description    String?
-  isActive       Boolean @default(true) @map("is_active")
-  sortOrder      Int     @default(0) @map("sort_order")
+  id           String   @id @default(uuid())
+  key          String   @unique
+  commonName   String   @map("common_name")
+  emoji        String
+  co2KgPerYear Decimal? @map("co2_kg_per_year") @db.Decimal(6, 2)
+  description  String?
+  isActive     Boolean  @default(true) @map("is_active")
+  sortOrder    Int      @default(0) @map("sort_order")
 
   trees Tree[]
 
@@ -183,22 +245,22 @@ model TreeSpecies {
 }
 
 model Tree {
-  id                    String                  @id @default(uuid())
-  userId                String                  @map("user_id")
-  speciesId             String                  @map("species_id")
-  nickname              String
-  plantedAt             DateTime                @default(now()) @map("planted_at")
-  locationLabel         String?                 @map("location_label")
-  lat                   Decimal                 @db.Decimal(9, 6)
-  lng                   Decimal                 @db.Decimal(9, 6)
-  growthStage           Int                     @default(1) @map("growth_stage")
-  photoUrl              String?                 @map("photo_url")
-  co2Absorbed           Decimal                 @default(0) @map("co2_absorbed") @db.Decimal(6, 2)
-  xpEarned              Int                     @default(0) @map("xp_earned")
-  aiVerificationStatus  TreeVerificationStatus  @default(unverified) @map("ai_verification_status")
-  isDeleted             Boolean                 @default(false) @map("is_deleted")
-  createdAt             DateTime                @default(now()) @map("created_at")
-  updatedAt             DateTime                @updatedAt @map("updated_at")
+  id                   String                 @id @default(uuid())
+  userId               String                 @map("user_id")
+  speciesId            String                 @map("species_id")
+  nickname             String
+  plantedAt            DateTime               @default(now()) @map("planted_at")
+  locationLabel        String?                @map("location_label")
+  lat                  Decimal                @db.Decimal(9, 6)
+  lng                  Decimal                @db.Decimal(9, 6)
+  growthStage          Int                    @default(1) @map("growth_stage")
+  photoUrl             String?                @map("photo_url")
+  co2Absorbed          Decimal                @default(0) @map("co2_absorbed") @db.Decimal(6, 2)
+  xpEarned             Int                    @default(0) @map("xp_earned")
+  aiVerificationStatus TreeVerificationStatus @default(unverified) @map("ai_verification_status")
+  isDeleted            Boolean                @default(false) @map("is_deleted")
+  createdAt            DateTime               @default(now()) @map("created_at")
+  updatedAt            DateTime               @updatedAt @map("updated_at")
 
   user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   species TreeSpecies @relation(fields: [speciesId], references: [id])
@@ -213,15 +275,15 @@ model Tree {
 // ---------- Achievements ----------
 
 model Achievement {
-  id            String                   @id @default(uuid())
-  key           String                   @unique
-  title         String
-  description   String
-  icon          String
-  rarity        Rarity
-  criteriaType  AchievementCriteriaType  @map("criteria_type")
+  id             String                  @id @default(uuid())
+  key            String                  @unique
+  title          String
+  description    String
+  icon           String
+  rarity         Rarity
+  criteriaType   AchievementCriteriaType @map("criteria_type")
   criteriaTarget Int?                    @map("criteria_target")
-  sortOrder     Int                      @default(0) @map("sort_order")
+  sortOrder      Int                     @default(0) @map("sort_order")
 
   userAchievements UserAchievement[]
 
@@ -247,12 +309,12 @@ model UserAchievement {
 // ---------- Social ----------
 
 model Friendship {
-  id            String            @id @default(uuid())
-  requesterId   String            @map("requester_id")
-  addresseeId   String            @map("addressee_id")
-  status        FriendshipStatus  @default(pending)
-  createdAt     DateTime          @default(now()) @map("created_at")
-  respondedAt   DateTime?         @map("responded_at")
+  id          String           @id @default(uuid())
+  requesterId String           @map("requester_id")
+  addresseeId String           @map("addressee_id")
+  status      FriendshipStatus @default(pending)
+  createdAt   DateTime         @default(now()) @map("created_at")
+  respondedAt DateTime?        @map("responded_at")
 
   requester User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
   addressee User @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
@@ -302,14 +364,14 @@ model ChallengeParticipant {
 // ---------- Daily Missions ----------
 
 model DailyMission {
-  id        String      @id @default(uuid())
-  key       String      @unique
-  title     String
+  id          String      @id @default(uuid())
+  key         String      @unique
+  title       String
   description String
-  icon      String
-  xpReward  Int         @map("xp_reward")
-  type      MissionType
-  isActive  Boolean     @default(true) @map("is_active")
+  icon        String
+  xpReward    Int         @map("xp_reward")
+  type        MissionType
+  isActive    Boolean     @default(true) @map("is_active")
 
   userDailyMissions UserDailyMission[]
 
@@ -317,12 +379,12 @@ model DailyMission {
 }
 
 model UserDailyMission {
-  id           String    @id @default(uuid())
-  userId       String    @map("user_id")
-  missionId    String    @map("mission_id")
-  missionDate  DateTime  @map("mission_date") @db.Date
-  completed    Boolean   @default(false)
-  completedAt  DateTime? @map("completed_at")
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  missionId   String    @map("mission_id")
+  missionDate DateTime  @map("mission_date") @db.Date
+  completed   Boolean   @default(false)
+  completedAt DateTime? @map("completed_at")
 
   user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   mission DailyMission @relation(fields: [missionId], references: [id], onDelete: Cascade)
@@ -335,13 +397,13 @@ model UserDailyMission {
 // ---------- Forest Themes ----------
 
 model ForestTheme {
-  id                  String  @id @default(uuid())
-  key                 String  @unique
-  name                String
-  previewEmoji        String  @map("preview_emoji")
-  isDefaultUnlocked   Boolean @default(false) @map("is_default_unlocked")
-  unlockCriteria      String? @map("unlock_criteria")
-  sortOrder           Int     @default(0) @map("sort_order")
+  id                String  @id @default(uuid())
+  key               String  @unique
+  name              String
+  previewEmoji      String  @map("preview_emoji")
+  isDefaultUnlocked Boolean @default(false) @map("is_default_unlocked")
+  unlockCriteria    String? @map("unlock_criteria")
+  sortOrder         Int     @default(0) @map("sort_order")
 
   userForestThemes UserForestTheme[]
   selectedByUsers  User[]            @relation("SelectedTheme")
@@ -428,12 +490,12 @@ model Story {
 // ---------- Streaks / XP / Activity ----------
 
 model StreakHistory {
-  id            String              @id @default(uuid())
-  userId        String              @map("user_id")
-  activityDate  DateTime            @map("activity_date") @db.Date
-  planted       Boolean             @default(false)
-  protectedBy   StreakProtectedBy?  @map("protected_by")
-  createdAt     DateTime            @default(now()) @map("created_at")
+  id           String             @id @default(uuid())
+  userId       String             @map("user_id")
+  activityDate DateTime           @map("activity_date") @db.Date
+  planted      Boolean            @default(false)
+  protectedBy  StreakProtectedBy? @map("protected_by")
+  createdAt    DateTime           @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -506,4 +568,316 @@ model AppConfig {
   value String
 
   @@map("app_config")
+}
+
+// ---------- NGO / Community Actions ----------
+
+model NgoProfile {
+  id                     String            @id @default(uuid())
+  userId                 String            @unique @map("user_id")
+  orgName                String            @map("org_name")
+  description            String
+  website                String?
+  contactPhone           String?           @map("contact_phone")
+  logoUrl                String?           @map("logo_url")
+  city                   String?
+  foundedYear            Int?              @map("founded_year")
+  volunteerCountEstimate Int?              @map("volunteer_count_estimate")
+  // Array of { title, year, issuer } — validated at the Zod layer, not DB-constrained.
+  awards                 Json?
+  status                 NgoApprovalStatus @default(pending)
+  rejectionReason        String?           @map("rejection_reason")
+  approvedAt             DateTime?         @map("approved_at")
+  approvedByUserId       String?           @map("approved_by_user_id")
+  createdAt              DateTime          @default(now()) @map("created_at")
+  updatedAt              DateTime          @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  drives         Drive[]
+  adoptableTrees AdoptableTree[]
+  campaigns      DonationCampaign[]
+  follows        Follow[]
+  updates        NgoUpdate[]
+  staff          StaffMember[]
+  plantedTrees   PlantedTree[]
+
+  @@index([status])
+  @@map("ngo_profiles")
+}
+
+model Drive {
+  id              String             @id @default(uuid())
+  ngoId           String             @map("ngo_id")
+  title           String
+  description     String
+  photoUrl        String?            @map("photo_url")
+  address         String?
+  city            String?
+  lat             Decimal?           @db.Decimal(9, 6)
+  lng             Decimal?           @db.Decimal(9, 6)
+  transportMode   DriveTransportMode @default(self_arrange) @map("transport_mode")
+  instructions    String?
+  startsAt        DateTime           @map("starts_at")
+  durationMinutes Int?               @map("duration_minutes")
+  capacity        Int?
+  status          DriveStatus        @default(upcoming)
+  // NGO-curated flag for highlighting a completed drive on its public profile "past drives" showcase.
+  featured        Boolean            @default(false)
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  ngo          NgoProfile         @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  rsvps        DriveRsvp[]
+  pickupPoints DrivePickupPoint[]
+  plants       DrivePlant[]
+  updates      NgoUpdate[]
+  plantedTrees PlantedTree[]
+
+  @@index([ngoId])
+  @@index([lat, lng])
+  @@index([startsAt])
+  @@map("drives")
+}
+
+model DrivePickupPoint {
+  id        String   @id @default(uuid())
+  driveId   String   @map("drive_id")
+  address   String
+  arrivalBy DateTime @map("arrival_by")
+  order     Int
+
+  drive Drive @relation(fields: [driveId], references: [id], onDelete: Cascade)
+
+  @@index([driveId])
+  @@map("drive_pickup_points")
+}
+
+model DrivePlant {
+  id          String @id @default(uuid())
+  driveId     String @map("drive_id")
+  speciesName String @map("species_name")
+  priceCents  Int    @map("price_cents")
+  order       Int
+
+  drive        Drive                   @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  sponsorships DrivePlantSponsorship[]
+
+  @@index([driveId])
+  @@map("drive_plants")
+}
+
+model DrivePlantSponsorship {
+  id                    String         @id @default(uuid())
+  drivePlantId          String         @map("drive_plant_id")
+  userId                String         @map("user_id")
+  amountCents           Int            @map("amount_cents")
+  currency              String         @default("inr")
+  stripePaymentIntentId String         @unique @map("stripe_payment_intent_id")
+  status                DonationStatus @default(pending)
+  createdAt             DateTime       @default(now()) @map("created_at")
+
+  drivePlant DrivePlant @relation(fields: [drivePlantId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([drivePlantId])
+  @@index([userId])
+  @@map("drive_plant_sponsorships")
+}
+
+model DriveRsvp {
+  id        String     @id @default(uuid())
+  driveId   String     @map("drive_id")
+  userId    String     @map("user_id")
+  status    RsvpStatus @default(confirmed)
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  drive Drive @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([driveId, userId])
+  @@index([driveId])
+  @@index([userId])
+  @@map("drive_rsvps")
+}
+
+model AdoptableTree {
+  id            String              @id @default(uuid())
+  ngoId         String              @map("ngo_id")
+  nickname      String
+  speciesName   String              @map("species_name")
+  description   String
+  photoUrl      String?             @map("photo_url")
+  locationLabel String?             @map("location_label")
+  city          String?
+  instructions  String?
+  lat           Decimal?            @db.Decimal(9, 6)
+  lng           Decimal?            @db.Decimal(9, 6)
+  status        AdoptableTreeStatus @default(available)
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+
+  ngo      NgoProfile @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  adoption Adoption?
+
+  @@index([ngoId])
+  @@index([lat, lng])
+  @@map("adoptable_trees")
+}
+
+model Adoption {
+  id              String   @id @default(uuid())
+  adoptableTreeId String   @unique @map("adoptable_tree_id")
+  userId          String   @map("user_id")
+  message         String?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  adoptableTree AdoptableTree @relation(fields: [adoptableTreeId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("adoptions")
+}
+
+model DonationCampaign {
+  id              String         @id @default(uuid())
+  ngoId           String         @map("ngo_id")
+  title           String
+  description     String
+  goalAmountCents Int?           @map("goal_amount_cents")
+  coverPhotoUrl   String?        @map("cover_photo_url")
+  status          CampaignStatus @default(active)
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  ngo       NgoProfile @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  donations Donation[]
+
+  @@index([ngoId])
+  @@map("donation_campaigns")
+}
+
+model Donation {
+  id                    String         @id @default(uuid())
+  campaignId            String         @map("campaign_id")
+  userId                String         @map("user_id")
+  amountCents           Int            @map("amount_cents")
+  currency              String         @default("inr")
+  stripePaymentIntentId String         @unique @map("stripe_payment_intent_id")
+  status                DonationStatus @default(pending)
+  createdAt             DateTime       @default(now()) @map("created_at")
+  updatedAt             DateTime       @updatedAt @map("updated_at")
+
+  campaign DonationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([userId])
+  @@map("donations")
+}
+
+model AdminActionLog {
+  id          String   @id @default(uuid())
+  actorUserId String   @map("actor_user_id")
+  action      String // 'ngo.approved' | 'ngo.rejected' | 'ngo.suspended' | 'ngo.reinstated'
+  targetType  String   @map("target_type") // 'NgoProfile'
+  targetId    String   @map("target_id")
+  reason      String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  actor User @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+
+  @@index([targetType, targetId])
+  @@index([createdAt(sort: Desc)])
+  @@map("admin_action_logs")
+}
+
+// ---------- Follow / Updates / Staff / Survival tracking ----------
+
+model Follow {
+  id         String   @id @default(uuid())
+  followerId String   @map("follower_id")
+  ngoId      String   @map("ngo_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  follower User       @relation(fields: [followerId], references: [id], onDelete: Cascade)
+  ngo      NgoProfile @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, ngoId])
+  @@index([ngoId])
+  @@index([followerId])
+  @@map("follows")
+}
+
+model NgoUpdate {
+  id        String   @id @default(uuid())
+  ngoId     String   @map("ngo_id")
+  driveId   String?  @map("drive_id")
+  caption   String?
+  photoUrl  String?  @map("photo_url")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  ngo   NgoProfile @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  drive Drive?     @relation(fields: [driveId], references: [id], onDelete: SetNull)
+
+  @@index([ngoId, createdAt(sort: Desc)])
+  @@index([driveId])
+  @@map("ngo_updates")
+}
+
+model StaffMember {
+  id           String   @id @default(uuid())
+  ngoId        String   @map("ngo_id")
+  name         String
+  role         String
+  contactEmail String?  @map("contact_email")
+  contactPhone String?  @map("contact_phone")
+  photoUrl     String?  @map("photo_url")
+  sortOrder    Int      @default(0) @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  ngo NgoProfile @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+
+  @@index([ngoId])
+  @@map("staff_members")
+}
+
+// Post-event, actual planted-tree records for survival/impact tracking — distinct from
+// DrivePlant (pre-event sponsorable slots) and from Tree (the personal user-planting model).
+model PlantedTree {
+  id            String   @id @default(uuid())
+  ngoId         String   @map("ngo_id")
+  driveId       String?  @map("drive_id")
+  speciesName   String   @map("species_name")
+  label         String?
+  plantedAt     DateTime @default(now()) @map("planted_at")
+  locationLabel String?  @map("location_label")
+  lat           Decimal? @db.Decimal(9, 6)
+  lng           Decimal? @db.Decimal(9, 6)
+  photoUrl      String?  @map("photo_url")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  ngo          NgoProfile        @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  drive        Drive?            @relation(fields: [driveId], references: [id], onDelete: SetNull)
+  healthChecks TreeHealthCheck[]
+
+  @@index([ngoId])
+  @@index([driveId])
+  @@index([plantedAt])
+  @@map("planted_trees")
+}
+
+model TreeHealthCheck {
+  id            String            @id @default(uuid())
+  plantedTreeId String            @map("planted_tree_id")
+  status        TreeHealthStatus
+  notes         String?
+  photoUrl      String?           @map("photo_url")
+  checkedAt     DateTime          @default(now()) @map("checked_at")
+
+  plantedTree PlantedTree @relation(fields: [plantedTreeId], references: [id], onDelete: Cascade)
+
+  @@index([plantedTreeId, checkedAt(sort: Desc)])
+  @@map("tree_health_checks")
 }

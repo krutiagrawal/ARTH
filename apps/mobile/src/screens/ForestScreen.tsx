@@ -59,6 +59,7 @@ import { DecorationOverlay } from '../components/forest/DecorationOverlay';
 import { DecorationPickerSheet } from '../components/forest/DecorationPickerSheet';
 import { StoryPreviewModal } from '../components/forest/StoryPreviewModal';
 import type { ApiDecorationType } from '../api/decorations';
+import { useBottomNavClearance } from '../components/navigation/BottomNav';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const FOREST_HEIGHT = SH;
@@ -301,6 +302,7 @@ export function ForestScreen({ navigation }: any) {
   const theme = useTimeTheme();
   const isNight = theme.mascotOutfit === 'night';
   const insets = useSafeAreaInsets();
+  const bottomNavClearance = useBottomNavClearance();
   const { user } = useAuth();
   const { data: themes = [] } = useThemes();
   const selectThemeMutation = useSelectTheme();
@@ -586,7 +588,7 @@ export function ForestScreen({ navigation }: any) {
             </View>
           </GestureDetector>
           <ScrollView
-            contentContainerStyle={[styles.bottomContent, { paddingBottom: insets.bottom + 110 }]}
+            contentContainerStyle={[styles.bottomContent, { paddingBottom: bottomNavClearance }]}
             showsVerticalScrollIndicator={false}
           >
         {/* Forest name */}
@@ -670,7 +672,7 @@ export function ForestScreen({ navigation }: any) {
       {/* Reopen pill — shown once the panel is fully closed, so the user can pick their next item */}
       {!panelOpen && (
         <TouchableOpacity
-          style={[styles.reopenPill, { bottom: insets.bottom + 96 }]}
+          style={[styles.reopenPill, { bottom: bottomNavClearance }]}
           activeOpacity={0.85}
           onPress={openSheet}
         >
