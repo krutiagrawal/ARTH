@@ -45,6 +45,30 @@ async function seedAchievements() {
   }
 }
 
+async function seedNgoAchievements() {
+  const achievements = [
+    // Milestones
+    { key: 'ngo_first_drive', title: 'First Drive', description: 'Host your first planting drive', icon: '🌱', rarity: 'common', criteriaType: 'drives_hosted', criteriaTarget: 1, sortOrder: 1 },
+    { key: 'ngo_grove_builder', title: 'Grove Builder', description: 'Host 10 planting drives', icon: '🌳', rarity: 'rare', criteriaType: 'drives_hosted', criteriaTarget: 10, sortOrder: 2 },
+    { key: 'ngo_100_trees', title: '100 Trees Planted', description: 'Log 100 planted trees', icon: '🌲', rarity: 'common', criteriaType: 'trees_planted', criteriaTarget: 100, sortOrder: 3 },
+    { key: 'ngo_1000_trees', title: '1,000 Trees Planted', description: 'Log 1,000 planted trees', icon: '🌴', rarity: 'epic', criteriaType: 'trees_planted', criteriaTarget: 1000, sortOrder: 4 },
+    { key: 'ngo_fundraiser', title: 'Fundraiser', description: 'Raise ₹50,000 across your campaigns', icon: '💰', rarity: 'rare', criteriaType: 'funds_raised_cents', criteriaTarget: 5000000, sortOrder: 5 },
+    { key: 'ngo_major_fundraiser', title: 'Major Fundraiser', description: 'Raise ₹5,00,000 across your campaigns', icon: '💎', rarity: 'legendary', criteriaType: 'funds_raised_cents', criteriaTarget: 50000000, sortOrder: 6 },
+    // Consistency
+    { key: 'ngo_active_voice', title: 'Active Voice', description: 'Post an update for 4 weeks in a row', icon: '📣', rarity: 'common', criteriaType: 'streak_weeks', criteriaTarget: 4, sortOrder: 7 },
+    { key: 'ngo_steady_presence', title: 'Steady Presence', description: 'Post an update for 12 weeks in a row', icon: '🔥', rarity: 'rare', criteriaType: 'streak_weeks', criteriaTarget: 12, sortOrder: 8 },
+    { key: 'ngo_year_round_presence', title: 'Year-Round Presence', description: 'Post an update for 52 weeks in a row', icon: '⭐', rarity: 'legendary', criteriaType: 'streak_weeks', criteriaTarget: 52, sortOrder: 9 },
+    // Community reach
+    { key: 'ngo_growing_circle', title: 'Growing Circle', description: 'Reach 50 volunteers across your drives', icon: '🤝', rarity: 'common', criteriaType: 'volunteers_reached', criteriaTarget: 50, sortOrder: 10 },
+    { key: 'ngo_community_favorite', title: 'Community Favorite', description: 'Reach 100 followers', icon: '❤️', rarity: 'rare', criteriaType: 'followers_count', criteriaTarget: 100, sortOrder: 11 },
+    { key: 'ngo_movement_builder', title: 'Movement Builder', description: 'Reach 500 followers', icon: '🚀', rarity: 'epic', criteriaType: 'followers_count', criteriaTarget: 500, sortOrder: 12 },
+  ] as const;
+
+  for (const a of achievements) {
+    await prisma.ngoAchievement.upsert({ where: { key: a.key }, update: a, create: a });
+  }
+}
+
 async function seedForestThemes() {
   const themes = [
     { key: 'classic', name: 'Classic Grove', previewEmoji: '🌳', isDefaultUnlocked: true, sortOrder: 1 },
@@ -273,6 +297,7 @@ async function seedForestLevelTiers() {
 async function main() {
   await seedSpecies();
   await seedAchievements();
+  await seedNgoAchievements();
   await seedForestThemes();
   await seedDecorationTypes();
   await seedDailyMissions();

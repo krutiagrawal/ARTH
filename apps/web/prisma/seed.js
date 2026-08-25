@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client')
+const { PrismaClient } = require('@plant/db')
 
 const prisma = new PrismaClient()
 
@@ -55,16 +55,16 @@ const LEGACY_TREES = [
 ]
 
 const COMPETITIONS = [
-  { id: 'best-looking-tree', title: 'Best Looking Tree', tagline: 'The most beautiful tree, chosen by the world.', deadline: '2025-08-14', entries: 12480, img: 1 },
-  { id: 'best-legacy-quote', title: 'Best Legacy Quote', tagline: 'One sentence that outlives us.', deadline: '2025-07-30', entries: 8721, img: 2 },
-  { id: 'greenest-school', title: 'Greenest School', tagline: 'Where the next generation grows a forest.', deadline: '2025-09-05', entries: 342, img: 3 },
-  { id: 'greenest-company', title: 'Greenest Company', tagline: 'Beyond CSR — measurable impact.', deadline: '2025-09-20', entries: 268, img: 4 },
-  { id: 'greenest-city', title: 'Greenest City', tagline: 'Cities that breathe again.', deadline: '2025-10-01', entries: 96, img: 5 },
-  { id: 'most-active-ngo', title: 'Most Active NGO', tagline: 'The tireless hands behind the movement.', deadline: '2025-08-28', entries: 214, img: 0 },
-  { id: 'most-active-community', title: 'Most Active Community', tagline: 'Neighbourhoods that plant together.', deadline: '2025-08-25', entries: 1128, img: 1 },
-  { id: 'best-nature-photograph', title: 'Best Nature Photograph', tagline: 'A single frame. A whole story.', deadline: '2025-07-18', entries: 24810, img: 2 },
-  { id: 'best-biodiversity-spot', title: 'Best Biodiversity Spot', tagline: 'Where life crowds joyfully together.', deadline: '2025-09-12', entries: 812, img: 3 },
-  { id: 'most-inspiring-story', title: 'Most Inspiring Story', tagline: 'The story that plants a seed in someone else.', deadline: '2025-10-10', entries: 4210, img: 4 },
+  { id: 'best-looking-tree', title: 'Best Looking Tree', tagline: 'The most beautiful tree, chosen by the world.', deadline: '2025-08-14', entriesCount: 12480, img: 1 },
+  { id: 'best-legacy-quote', title: 'Best Legacy Quote', tagline: 'One sentence that outlives us.', deadline: '2025-07-30', entriesCount: 8721, img: 2 },
+  { id: 'greenest-school', title: 'Greenest School', tagline: 'Where the next generation grows a forest.', deadline: '2025-09-05', entriesCount: 342, img: 3 },
+  { id: 'greenest-company', title: 'Greenest Company', tagline: 'Beyond CSR — measurable impact.', deadline: '2025-09-20', entriesCount: 268, img: 4 },
+  { id: 'greenest-city', title: 'Greenest City', tagline: 'Cities that breathe again.', deadline: '2025-10-01', entriesCount: 96, img: 5 },
+  { id: 'most-active-ngo', title: 'Most Active NGO', tagline: 'The tireless hands behind the movement.', deadline: '2025-08-28', entriesCount: 214, img: 0 },
+  { id: 'most-active-community', title: 'Most Active Community', tagline: 'Neighbourhoods that plant together.', deadline: '2025-08-25', entriesCount: 1128, img: 1 },
+  { id: 'best-nature-photograph', title: 'Best Nature Photograph', tagline: 'A single frame. A whole story.', deadline: '2025-07-18', entriesCount: 24810, img: 2 },
+  { id: 'best-biodiversity-spot', title: 'Best Biodiversity Spot', tagline: 'Where life crowds joyfully together.', deadline: '2025-09-12', entriesCount: 812, img: 3 },
+  { id: 'most-inspiring-story', title: 'Most Inspiring Story', tagline: 'The story that plants a seed in someone else.', deadline: '2025-10-10', entriesCount: 4210, img: 4 },
 ]
 
 const LEADERBOARDS = {
@@ -160,14 +160,6 @@ const MAP_POINTS = [
   { x: 60, y: 70, label: 'Coral Coast' },
 ]
 
-const DRIVES = [
-  { id: 'aravali-monsoon-drive', title: 'Aravali Monsoon Drive', ngo: 'Groves & Grains Trust', location: 'Aravali Grove, Rajasthan', date: '2025-08-16', spots: 40, spotsLeft: 12 },
-  { id: 'whispering-ghats-restoration', title: 'Whispering Ghats Restoration', ngo: 'Wildroot Foundation', location: 'Whispering Ghats, Kerala', date: '2025-08-23', spots: 60, spotsLeft: 27 },
-  { id: 'sundarbans-mangrove-day', title: 'Sundarbans Mangrove Day', ngo: 'Blue Ridge Restoration', location: 'Mangrove Mile, Sundarbans', date: '2025-09-06', spots: 35, spotsLeft: 8 },
-  { id: 'himalayan-cradle-planting', title: 'Himalayan Cradle Planting', ngo: 'One Tree Circle', location: 'Himalayan Cradle, Uttarakhand', date: '2025-09-14', spots: 25, spotsLeft: 25 },
-  { id: 'meghalaya-canopy-walk', title: 'Meghalaya Canopy Walk & Plant', ngo: 'Deccan Dryland Trust', location: 'Monsoon Canopy, Meghalaya', date: '2025-09-21', spots: 30, spotsLeft: 19 },
-]
-
 const TIMELINE = [
   { year: '2016', title: 'A single sapling', text: 'Two friends plant one banyan on a dry Aravali hill. They agree to come back every year.' },
   { year: '2018', title: 'A hundred hands', text: 'Neighbours join. The hill wears its first green shawl.' },
@@ -177,6 +169,9 @@ const TIMELINE = [
 ]
 
 async function main() {
+  // NOTE: prisma.competition.deleteMany() below cascades onto real CompetitionEntry/
+  // CompetitionEntryVote rows submitted by real users (see packages/db/prisma/schema.prisma) —
+  // this wipe-and-reseed script is meant for fresh/dev databases, not a populated one.
   await prisma.stat.deleteMany()
   await prisma.timelineEntry.deleteMany()
   await prisma.mapPoint.deleteMany()
@@ -185,7 +180,6 @@ async function main() {
   await prisma.ecosystemEntry.deleteMany()
   await prisma.blog.deleteMany()
   await prisma.competition.deleteMany()
-  await prisma.drive.deleteMany()
   await prisma.legacyTree.deleteMany()
   await prisma.forest.deleteMany()
 
@@ -219,10 +213,6 @@ async function main() {
     data: Object.entries(LEADERBOARDS).flatMap(([category, entries]) =>
       entries.map((e) => ({ category, ...e }))
     ),
-  })
-
-  await prisma.drive.createMany({
-    data: DRIVES.map(({ date, ...d }) => ({ ...d, date: new Date(date) })),
   })
 
   await prisma.stat.createMany({ data: STATS })

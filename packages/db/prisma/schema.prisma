@@ -78,6 +78,14 @@ enum TreeVerificationStatus {
 enum UserRole {
   user
   ngo
+  // community/nursery/organisation are ngo-equivalent account types migrated in from
+  // apps/web's old standalone Arth schema — they get the same NgoProfile-backed feature
+  // set (approval workflow, drives, staff, campaigns, streaks) as `ngo`. Anywhere the
+  // codebase gates on "has an org profile" it must check all four of these roles, not
+  // just `ngo`, e.g. via `ngoProfile != null` rather than `role === 'ngo'`.
+  community
+  nursery
+  organisation
   admin
 }
 
@@ -127,6 +135,71 @@ enum TreeHealthStatus {
   struggling
   dead
   removed
+}
+
+enum NgoAchievementCriteriaType {
+  drives_hosted
+  trees_planted
+  funds_raised_cents
+  volunteers_reached
+  followers_count
+  streak_weeks
+}
+
+// Whether an NGO auto-accepts followers or vets each one. Set per NGO in its settings.
+enum FollowPolicy {
+  open
+  approval
+}
+
+enum FollowStatus {
+  pending
+  accepted
+}
+
+enum PostAuthorType {
+  user
+  ngo
+}
+
+enum PostVisibility {
+  public
+  friends
+}
+
+enum ReportTargetType {
+  post
+  story
+  user
+  ngo
+  portfolio_entry
+}
+
+enum ReportReason {
+  spam
+  harassment
+  hate
+  misinformation
+  nudity
+  violence
+  other
+}
+
+enum ReportStatus {
+  open
+  actioned
+  dismissed
+}
+
+enum NotificationType {
+  follow_request
+  follow_accepted
+  new_follower
+  post_like
+  new_post_from_followed
+  drive_reminder
+  report_resolved
+  moderation_action
 }
 
 // ---------- Core ----------
@@ -180,6 +253,20 @@ model User {
   plantSponsorships     DrivePlantSponsorship[]
   adminActionLogs       AdminActionLog[]
   following             Follow[]
+  posts                 Post[]
+  postLikes             PostLike[]
+  savedPosts            SavedPost[]
+  storyViews            StoryView[]
+  reportsFiled          ContentReport[]         @relation("ReportReporter")
+  reportsReviewed       ContentReport[]         @relation("ReportReviewer")
+  blocksMade            Block[]                 @relation("Blocker")
+  blocksReceived        Block[]                 @relation("BlockedUser")
+  notifications         Notification[]          @relation("NotificationRecipient")
+  notificationsTriggered Notification[]         @relation("NotificationActor")
+  pushTokens            PushToken[]
+  passwordResetTokens   PasswordResetToken[]
+  competitionEntries    CompetitionEntry[]
+  competitionEntryVotes CompetitionEntryVote[]
 
   @@map("users")
 }
@@ -264,6 +351,7 @@ model Tree {
 
   user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   species TreeSpecies @relation(fields: [speciesId], references: [id])
+  posts   Post[]
 
   @@index([userId])
   @@index([plantedAt(sort: Desc)])
@@ -473,18 +561,41 @@ model DecorationPlacement {
 }
 
 model Story {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  imageUrl  String   @map("image_url")
-  caption   String?
-  createdAt DateTime @default(now()) @map("created_at")
-  expiresAt DateTime @map("expires_at")
+  id         String         @id @default(uuid())
+  // Exactly one of userId / ngoId is set, keyed by authorType — enforced in the service layer,
+  // the same way NgoProfile.awards is validated at the Zod layer rather than in the DB.
+  authorType PostAuthorType @default(user) @map("author_type")
+  userId     String?        @map("user_id")
+  ngoId      String?        @map("ngo_id")
+  imageUrl   String         @map("image_url")
+  caption    String?
+  createdAt  DateTime       @default(now()) @map("created_at")
+  expiresAt  DateTime       @map("expires_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ngo  NgoProfile? @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+
+  views StoryView[]
 
   @@index([userId])
+  @@index([ngoId])
   @@index([expiresAt])
   @@map("stories")
+}
+
+// Seen/unseen state for the stories tray's ring. Rows die with their story.
+model StoryView {
+  id       String   @id @default(uuid())
+  storyId  String   @map("story_id")
+  userId   String   @map("user_id")
+  viewedAt DateTime @default(now()) @map("viewed_at")
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, userId])
+  @@index([userId])
+  @@map("story_views")
 }
 
 // ---------- Streaks / XP / Activity ----------
@@ -572,6 +683,9 @@ model AppConfig {
 
 // ---------- NGO / Community Actions ----------
 
+// Despite the name, this now backs any org-type account (role ngo/community/nursery/
+// organisation), not just NGOs strictly speaking — kept as NgoProfile/ngo_profiles to
+// avoid a repo-wide rename across ~30 mobile API files and every NGO route/service.
 model NgoProfile {
   id                     String            @id @default(uuid())
   userId                 String            @unique @map("user_id")
@@ -586,21 +700,33 @@ model NgoProfile {
   // Array of { title, year, issuer } — validated at the Zod layer, not DB-constrained.
   awards                 Json?
   status                 NgoApprovalStatus @default(pending)
+  // `open` = anyone follows instantly; `approval` = each follow lands in the NGO's request
+  // inbox first. Existing NGOs keep the historical instant-follow behaviour.
+  followPolicy           FollowPolicy      @default(open) @map("follow_policy")
   rejectionReason        String?           @map("rejection_reason")
   approvedAt             DateTime?         @map("approved_at")
   approvedByUserId       String?           @map("approved_by_user_id")
+  streakCurrent          Int               @default(0) @map("streak_current")
+  streakMax              Int               @default(0) @map("streak_max")
+  badgesCount            Int               @default(0) @map("badges_count")
   createdAt              DateTime          @default(now()) @map("created_at")
   updatedAt              DateTime          @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  drives         Drive[]
-  adoptableTrees AdoptableTree[]
-  campaigns      DonationCampaign[]
-  follows        Follow[]
-  updates        NgoUpdate[]
-  staff          StaffMember[]
-  plantedTrees   PlantedTree[]
+  drives             Drive[]
+  adoptableTrees     AdoptableTree[]
+  campaigns          DonationCampaign[]
+  follows            Follow[]
+  posts              Post[]
+  stories            Story[]
+  portfolio          NgoPortfolioEntry[]
+  blockedBy          Block[]
+  notificationsTriggered Notification[]     @relation("NotificationActorNgo")
+  staff              StaffMember[]
+  plantedTrees       PlantedTree[]
+  streakHistory      NgoStreakHistory[]
+  achievementUnlocks NgoAchievementUnlock[]
 
   @@index([status])
   @@map("ngo_profiles")
@@ -631,7 +757,7 @@ model Drive {
   rsvps        DriveRsvp[]
   pickupPoints DrivePickupPoint[]
   plants       DrivePlant[]
-  updates      NgoUpdate[]
+  posts        Post[]
   plantedTrees PlantedTree[]
 
   @@index([ngoId])
@@ -795,34 +921,231 @@ model AdminActionLog {
 // ---------- Follow / Updates / Staff / Survival tracking ----------
 
 model Follow {
-  id         String   @id @default(uuid())
-  followerId String   @map("follower_id")
-  ngoId      String   @map("ngo_id")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id         String       @id @default(uuid())
+  followerId String       @map("follower_id")
+  ngoId      String       @map("ngo_id")
+  // `pending` only ever exists for NGOs whose followPolicy is `approval`. Every follower that
+  // predates this column was implicitly accepted, and the migration backfills them as such.
+  status     FollowStatus @default(accepted)
+  respondedAt DateTime?   @map("responded_at")
+  createdAt  DateTime     @default(now()) @map("created_at")
 
   follower User       @relation(fields: [followerId], references: [id], onDelete: Cascade)
   ngo      NgoProfile @relation(fields: [ngoId], references: [id], onDelete: Cascade)
 
   @@unique([followerId, ngoId])
-  @@index([ngoId])
+  @@index([ngoId, status])
   @@index([followerId])
   @@map("follows")
 }
 
-model NgoUpdate {
-  id        String   @id @default(uuid())
-  ngoId     String   @map("ngo_id")
-  driveId   String?  @map("drive_id")
-  caption   String?
-  photoUrl  String?  @map("photo_url")
-  createdAt DateTime @default(now()) @map("created_at")
+// The single social post, authored either by a planter or by an NGO. Replaces the old
+// single-photo, like-less NgoUpdate — the `/api/ngo/updates` and `/api/follows/feed` endpoints
+// still exist and still return their original keys, they just read from here now.
+model Post {
+  id         String         @id @default(uuid())
+  // Exactly one of userId / ngoId is set, keyed by authorType. Enforced in post.service.ts.
+  authorType PostAuthorType @map("author_type")
+  userId     String?        @map("user_id")
+  ngoId      String?        @map("ngo_id")
+  caption    String?
+  driveId    String?        @map("drive_id")
+  treeId     String?        @map("tree_id")
+  visibility PostVisibility @default(public)
+  // Denormalised so feeds don't need a count subquery per row; kept in step with PostLike
+  // inside the same transaction as every like/unlike.
+  likeCount  Int            @default(0) @map("like_count")
+  // Flipped automatically once a post reaches the open-report threshold, and by admin action.
+  // The author still sees their own hidden post (marked "under review"); nobody else does.
+  isHidden   Boolean        @default(false) @map("is_hidden")
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
 
-  ngo   NgoProfile @relation(fields: [ngoId], references: [id], onDelete: Cascade)
-  drive Drive?     @relation(fields: [driveId], references: [id], onDelete: SetNull)
+  user  User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ngo   NgoProfile? @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  drive Drive?      @relation(fields: [driveId], references: [id], onDelete: SetNull)
+  tree  Tree?       @relation(fields: [treeId], references: [id], onDelete: SetNull)
+
+  media         PostMedia[]
+  likes         PostLike[]
+  saves         SavedPost[]
+  reports       ContentReport[]
+  notifications Notification[]
 
   @@index([ngoId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
   @@index([driveId])
-  @@map("ngo_updates")
+  @@map("posts")
+}
+
+// Up to 6 per post; `order` is the carousel sequence. A separate table rather than a String[] so
+// one image can be replaced or reordered without rewriting the row.
+model PostMedia {
+  id     String @id @default(uuid())
+  postId String @map("post_id")
+  url    String
+  order  Int    @default(0)
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId, order])
+  @@map("post_media")
+}
+
+model PostLike {
+  id        String   @id @default(uuid())
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@map("post_likes")
+}
+
+model SavedPost {
+  id        String   @id @default(uuid())
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("saved_posts")
+}
+
+// Work an NGO did before it joined the platform, shown as "Past work" on its public profile.
+// Deliberately NOT a backdated Drive: a Drive carries RSVPs, capacity, pickup points and status,
+// and letting archive rows into those queries would corrupt attendee counts and upcoming lists.
+model NgoPortfolioEntry {
+  id                 String   @id @default(uuid())
+  ngoId              String   @map("ngo_id")
+  title              String
+  description        String?
+  happenedOn         DateTime @map("happened_on")
+  locationLabel      String?  @map("location_label")
+  city               String?
+  treesPlanted       Int?     @map("trees_planted")
+  volunteersInvolved Int?     @map("volunteers_involved")
+  partnerOrgs        String?  @map("partner_orgs")
+  sortOrder          Int      @default(0) @map("sort_order")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  ngo   NgoProfile          @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  media NgoPortfolioMedia[]
+
+  @@index([ngoId, happenedOn(sort: Desc)])
+  @@map("ngo_portfolio_entries")
+}
+
+model NgoPortfolioMedia {
+  id      String  @id @default(uuid())
+  entryId String  @map("entry_id")
+  url     String
+  order   Int     @default(0)
+  caption String?
+
+  entry NgoPortfolioEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([entryId, order])
+  @@map("ngo_portfolio_media")
+}
+
+// ---------- Moderation ----------
+
+// One queue covers posts, stories, profiles and portfolio entries, so targetId cannot be a
+// foreign key to any single table — the admin queue resolves each target by targetType at read
+// time and shows "content deleted" when it no longer exists. postId is a redundant real FK kept
+// only so a deleted post takes its reports with it (by far the commonest target).
+model ContentReport {
+  id               String           @id @default(uuid())
+  reporterId       String           @map("reporter_id")
+  targetType       ReportTargetType @map("target_type")
+  targetId         String           @map("target_id")
+  postId           String?          @map("post_id")
+  reason           ReportReason
+  details          String?
+  status           ReportStatus     @default(open)
+  reviewedByUserId String?          @map("reviewed_by_user_id")
+  reviewedAt       DateTime?        @map("reviewed_at")
+  createdAt        DateTime         @default(now()) @map("created_at")
+
+  reporter   User  @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation("ReportReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  post       Post? @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  // One report per person per thing — stops a single user inflating the auto-hide threshold.
+  @@unique([reporterId, targetType, targetId])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([targetType, targetId])
+  @@map("content_reports")
+}
+
+// A viewer hiding someone. Filtered in both directions at read time, so neither party sees the
+// other's posts or stories once a block exists.
+model Block {
+  id            String   @id @default(uuid())
+  blockerId     String   @map("blocker_id")
+  blockedUserId String?  @map("blocked_user_id")
+  blockedNgoId  String?  @map("blocked_ngo_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  blocker     User        @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedUser User?       @relation("BlockedUser", fields: [blockedUserId], references: [id], onDelete: Cascade)
+  blockedNgo  NgoProfile? @relation(fields: [blockedNgoId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedUserId])
+  @@unique([blockerId, blockedNgoId])
+  @@index([blockerId])
+  @@map("blocks")
+}
+
+// ---------- Notifications ----------
+
+model Notification {
+  id          String           @id @default(uuid())
+  userId      String           @map("user_id")
+  type        NotificationType
+  actorUserId String?          @map("actor_user_id")
+  actorNgoId  String?          @map("actor_ngo_id")
+  postId      String?          @map("post_id")
+  followId    String?          @map("follow_id")
+  // Free-form extras the row's one-line summary needs (drive title, report reason, ...) without
+  // another join. Shape is owned by notification.service.ts.
+  data        Json?
+  readAt      DateTime?        @map("read_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  user      User        @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actorUser User?       @relation("NotificationActor", fields: [actorUserId], references: [id], onDelete: Cascade)
+  actorNgo  NgoProfile? @relation("NotificationActorNgo", fields: [actorNgoId], references: [id], onDelete: Cascade)
+  post      Post?       @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+model PushToken {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  token      String   @unique
+  platform   String
+  createdAt  DateTime @default(now()) @map("created_at")
+  lastSeenAt DateTime @default(now()) @map("last_seen_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_tokens")
 }
 
 model StaffMember {
@@ -869,15 +1192,243 @@ model PlantedTree {
 }
 
 model TreeHealthCheck {
-  id            String            @id @default(uuid())
-  plantedTreeId String            @map("planted_tree_id")
+  id            String           @id @default(uuid())
+  plantedTreeId String           @map("planted_tree_id")
   status        TreeHealthStatus
   notes         String?
-  photoUrl      String?           @map("photo_url")
-  checkedAt     DateTime          @default(now()) @map("checked_at")
+  photoUrl      String?          @map("photo_url")
+  checkedAt     DateTime         @default(now()) @map("checked_at")
 
   plantedTree PlantedTree @relation(fields: [plantedTreeId], references: [id], onDelete: Cascade)
 
   @@index([plantedTreeId, checkedAt(sort: Desc)])
   @@map("tree_health_checks")
+}
+
+// ---------- NGO gamification (streak / achievements) ----------
+// Weekly analog of StreakHistory — an NGO's cadence is "posted an update this week",
+// not a daily action, so this is keyed by weekStart (Monday) instead of a calendar day.
+model NgoStreakHistory {
+  id        String   @id @default(uuid())
+  ngoId     String   @map("ngo_id")
+  weekStart DateTime @map("week_start") @db.Date
+  posted    Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  ngo NgoProfile @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+
+  @@unique([ngoId, weekStart])
+  @@index([ngoId, weekStart(sort: Desc)])
+  @@map("ngo_streak_history")
+}
+
+// Definition table, mirrors Achievement — fixed, seeded list, not user/ngo-editable.
+model NgoAchievement {
+  id             String                     @id @default(uuid())
+  key            String                     @unique
+  title          String
+  description    String
+  icon           String
+  rarity         Rarity
+  criteriaType   NgoAchievementCriteriaType @map("criteria_type")
+  criteriaTarget Int?                       @map("criteria_target")
+  sortOrder      Int                        @default(0) @map("sort_order")
+
+  unlocks NgoAchievementUnlock[]
+
+  @@map("ngo_achievements")
+}
+
+// Per-NGO unlock state, mirrors UserAchievement.
+model NgoAchievementUnlock {
+  id            String    @id @default(uuid())
+  ngoId         String    @map("ngo_id")
+  achievementId String    @map("achievement_id")
+  unlocked      Boolean   @default(false)
+  progress      Int       @default(0)
+  unlockedAt    DateTime? @map("unlocked_at")
+
+  ngo         NgoProfile     @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  achievement NgoAchievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([ngoId, achievementId])
+  @@index([ngoId])
+  @@map("ngo_achievement_unlocks")
+}
+
+// ---------- Password Reset ----------
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// ---------- Competitions (migrated in from apps/web's old Arth schema) ----------
+
+model Competition {
+  id           String   @id @default(uuid())
+  title        String
+  tagline      String
+  deadline     DateTime
+  imageUrl     String?  @map("image_url")
+  entriesCount Int      @default(0) @map("entries_count")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  submissions CompetitionEntry[]
+
+  @@map("competitions")
+}
+
+model CompetitionEntry {
+  id            String   @id @default(uuid())
+  competitionId String   @map("competition_id")
+  userId        String   @map("user_id")
+  title         String
+  description   String
+  imageUrl      String?  @map("image_url")
+  votesCount    Int      @default(0) @map("votes_count")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  competition Competition            @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  voters      CompetitionEntryVote[]
+
+  @@index([competitionId])
+  @@map("competition_entries")
+}
+
+model CompetitionEntryVote {
+  id        String   @id @default(uuid())
+  entryId   String   @map("entry_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  entry CompetitionEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, userId])
+  @@map("competition_entry_votes")
+}
+
+// ---------- Marketing content (migrated in from apps/web's old Arth schema) ----------
+// Pure content, no User FK, no shared business logic — apps/web reads/writes these
+// directly via @plant/db instead of going through services/api's REST API.
+
+model Forest {
+  id          String @id
+  name        String
+  location    String
+  trees       Int
+  volunteers  Int
+  species     Int
+  established String
+  imageUrl    String @map("image_url")
+  story       String
+
+  @@map("forests")
+}
+
+// Curated storytelling content (a handful of hand-picked, long-lived trees with a
+// story/quote) — distinct from the real adoption system (AdoptableTree/Adoption
+// above), which apps/web's /adopt page now uses instead of this.
+model LegacyTree {
+  id       String @id
+  name     String
+  species  String
+  owner    String
+  years    Int
+  location String
+  imageUrl String @map("image_url")
+  quote    String
+
+  @@map("legacy_trees")
+}
+
+model Blog {
+  id       String @id
+  title    String
+  category String
+  author   String
+  date     String
+  minutes  Int
+  imageUrl String @map("image_url")
+  excerpt  String
+
+  @@map("blogs")
+}
+
+model Partner {
+  id      Int     @id @default(autoincrement())
+  group   String
+  name    String
+  logoUrl String? @map("logo_url")
+
+  @@map("partners")
+}
+
+model EcosystemEntry {
+  id          String @id
+  title       String
+  description String
+  long        String
+
+  @@map("ecosystem_entries")
+}
+
+model Stat {
+  id     Int    @id @default(autoincrement())
+  label  String
+  value  Int
+  suffix String
+
+  @@map("stats")
+}
+
+model TimelineEntry {
+  id    Int    @id @default(autoincrement())
+  year  String
+  title String
+  text  String
+
+  @@map("timeline_entries")
+}
+
+model MapPoint {
+  id    Int    @id @default(autoincrement())
+  x     Int
+  y     Int
+  label String
+
+  @@map("map_points")
+}
+
+// Seeded leaderboard rows for categories with no live equivalent yet (NGOs, Cities,
+// Schools, Companies, Forests) — Individuals/Communities are computed live from
+// User.treesPlantedCount instead, see apps/web/app/(marketing)/leaderboards/page.js.
+model LeaderboardEntry {
+  id       Int    @id @default(autoincrement())
+  category String
+  name     String
+  place    String
+  score    Int
+
+  @@map("leaderboard_entries")
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("newsletter_subscribers")
 }
