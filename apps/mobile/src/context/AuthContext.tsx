@@ -20,6 +20,35 @@ interface AuthContextValue {
     website?: string;
     contactPhone?: string;
   }) => Promise<void>;
+  registerGroup: (input: {
+    email: string;
+    password: string;
+    name: string;
+    handle: string;
+    groupName: string;
+    groupType: 'family' | 'school' | 'club' | 'other';
+    description: string;
+  }) => Promise<void>;
+  registerNursery: (input: {
+    email: string;
+    password: string;
+    name: string;
+    handle: string;
+    nurseryName: string;
+    description: string;
+    city?: string;
+    contactPhone?: string;
+  }) => Promise<void>;
+  registerCorporate: (input: {
+    email: string;
+    password: string;
+    name: string;
+    handle: string;
+    companyName: string;
+    description: string;
+    industry?: string;
+    city?: string;
+  }) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   setUser: React.Dispatch<React.SetStateAction<ApiUser | null>>;
@@ -32,6 +61,9 @@ const AuthContext = createContext<AuthContextValue>({
   login: async () => { throw new Error('AuthProvider not mounted'); },
   register: async () => {},
   registerNgo: async () => {},
+  registerGroup: async () => {},
+  registerNursery: async () => {},
+  registerCorporate: async () => {},
   logout: async () => {},
   refreshUser: async () => {},
   setUser: () => {},
@@ -100,6 +132,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const registerGroup = useCallback(
+    async (input: {
+      email: string;
+      password: string;
+      name: string;
+      handle: string;
+      groupName: string;
+      groupType: 'family' | 'school' | 'club' | 'other';
+      description: string;
+    }) => {
+      const registeredUser = await authApi.registerGroup(input);
+      setUser(registeredUser);
+    },
+    []
+  );
+
+  const registerNursery = useCallback(
+    async (input: {
+      email: string;
+      password: string;
+      name: string;
+      handle: string;
+      nurseryName: string;
+      description: string;
+      city?: string;
+      contactPhone?: string;
+    }) => {
+      const registeredUser = await authApi.registerNursery(input);
+      setUser(registeredUser);
+    },
+    []
+  );
+
+  const registerCorporate = useCallback(
+    async (input: {
+      email: string;
+      password: string;
+      name: string;
+      handle: string;
+      companyName: string;
+      description: string;
+      industry?: string;
+      city?: string;
+    }) => {
+      const registeredUser = await authApi.registerCorporate(input);
+      setUser(registeredUser);
+    },
+    []
+  );
+
   const logout = useCallback(async () => {
     await authApi.logout();
     setUser(null);
@@ -112,7 +194,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, isAuthenticated: Boolean(user), login, register, registerNgo, logout, refreshUser, setUser }}
+      value={{
+        user,
+        isLoading,
+        isAuthenticated: Boolean(user),
+        login,
+        register,
+        registerNgo,
+        registerGroup,
+        registerNursery,
+        registerCorporate,
+        logout,
+        refreshUser,
+        setUser,
+      }}
     >
       {children}
     </AuthContext.Provider>

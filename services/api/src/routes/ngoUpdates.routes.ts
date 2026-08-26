@@ -1,33 +1,26 @@
 import { FastifyInstance } from 'fastify';
+import { ORG_ROLES } from '../constants/roles';
 import * as ngoUpdateService from '../services/ngoUpdate.service';
 import { saveUpdatePhoto } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
 import { createUpdateSchema, paginationQuerySchema } from '../schemas/ngoUpdates.schema';
 import { BadRequestError } from '../utils/errors';
 
-function serializeUpdate(u: any) {
-  return {
-    id: u.id,
-    ngoId: u.ngoId,
-    ngoName: u.ngo?.orgName,
-    ngoLogoUrl: u.ngo?.logoUrl,
-    driveId: u.driveId,
-    driveTitle: u.drive?.title ?? null,
-    caption: u.caption,
-    photoUrl: u.photoUrl,
-    createdAt: u.createdAt,
-  };
-}
-
+/**
+ * Legacy endpoint kept for apps/web's NGO dashboard "Updates" page.
+ *
+ * NGO updates are ordinary NGO-authored Posts now; the service layer returns them already
+ * serialized with the original key names (`photoUrl`, `ngoName`, ...) plus the new ones
+ * (`media`, `likeCount`). New clients should use /api/posts and /api/social/feed instead.
+ */
 export default async function ngoUpdatesRoutes(fastify: FastifyInstance) {
-  fastify.addHook('preHandler', fastify.requireRole('ngo'));
+  fastify.addHook('preHandler', fastify.requireRole(...ORG_ROLES));
 
   fastify.get('/', async (request, reply) => {
     const parsed = paginationQuerySchema.safeParse(request.query);
     if (!parsed.success) throw new BadRequestError('Invalid query parameters');
 
-    const updates = await ngoUpdateService.listOwnUpdates(fastify.prisma, request.user!.id, parsed.data);
-    reply.send(updates.map(serializeUpdate));
+    reply.send(await ngoUpdateService.listOwnUpdates(fastify.prisma, request.user!.id, parsed.data));
   });
 
   fastify.post('/', async (request, reply) => {
@@ -46,7 +39,7 @@ export default async function ngoUpdatesRoutes(fastify: FastifyInstance) {
     }
 
     const update = await ngoUpdateService.createUpdate(fastify.prisma, request.user!.id, { ...parsed.data, photoUrl });
-    reply.status(201).send(serializeUpdate(update));
+    reply.status(201).send(update);
   });
 
   fastify.delete<{ Params: { id: string } }>('/:id', async (request, reply) => {
@@ -54,5 +47,3 @@ export default async function ngoUpdatesRoutes(fastify: FastifyInstance) {
     reply.status(204).send();
   });
 }
-
-export { serializeUpdate };

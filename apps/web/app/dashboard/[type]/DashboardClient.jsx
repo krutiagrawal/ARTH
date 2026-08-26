@@ -1,30 +1,40 @@
 'use client'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { MapPin, Sparkles } from 'lucide-react'
+import { MapPin } from 'lucide-react'
 import SectionWrapper from '@/components/site/SectionWrapper'
 import AnimatedCounter from '@/components/site/AnimatedCounter'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/site/AuthProvider'
+import { proxy } from '../../app/proxy'
 
 const ROLE_LABEL = {
   individual: 'Planter',
-  community: 'Community',
+  group: 'Group',
   ngo: 'NGO',
   nursery: 'Nursery',
-  organisation: 'CSR Partner',
+  corporate: 'CSR Partner',
 }
 
-export default function DashboardClient({ type, forests, blogs, stats, activity }) {
+export default function DashboardClient({ type, forests, blogs }) {
   const { user } = useAuth()
   const role = ROLE_LABEL[type]
   const firstName = user?.name?.split(' ')[0] || 'there'
-  const place = user?.place || '—'
+  const [drivesJoined, setDrivesJoined] = useState(null)
+
+  useEffect(() => {
+    proxy('/drives')
+      .then((drives) => setDrivesJoined(drives.filter((d) => d.isRsvped).length))
+      .catch(() => setDrivesJoined(0))
+  }, [])
+
   const statCards = [
-    { l: 'Trees planted', v: stats.treesPlanted },
-    { l: 'Trees adopted', v: stats.treesAdopted },
-    { l: 'Drives joined', v: stats.drivesJoined },
-    { l: 'Pledged (₹)', v: stats.pledgedAmount },
+    { l: 'Trees planted', v: user?.treesPlantedCount ?? 0 },
+    { l: 'XP', v: user?.xp ?? 0 },
+    { l: 'Level', v: user?.level ?? 1 },
+    { l: 'Drives joined', v: drivesJoined ?? 0 },
   ]
+
   return (
     <div className="pt-32">
       <section className="container">
@@ -32,7 +42,7 @@ export default function DashboardClient({ type, forests, blogs, stats, activity 
         <div className="mt-4 flex flex-wrap items-end justify-between gap-6">
           <div>
             <h1 className="font-serif text-5xl md:text-7xl leading-[1] text-balance">Welcome back, {firstName}.</h1>
-            <p className="mt-3 text-muted-foreground flex items-center gap-2"><MapPin className="h-4 w-4" /> {place}</p>
+            <p className="mt-3 text-muted-foreground flex items-center gap-2"><MapPin className="h-4 w-4" /> {user?.handle ? `@${user.handle}` : '—'}</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Button asChild variant="outline" className="rounded-full"><Link href="/explore">Explore</Link></Button>
@@ -65,24 +75,6 @@ export default function DashboardClient({ type, forests, blogs, stats, activity 
             </Link>
           ))}
         </div>
-      </SectionWrapper>
-
-      <SectionWrapper eyebrow="Live" title="This week in the movement.">
-        {activity.length === 0 ? (
-          <p className="text-muted-foreground">No activity yet — be the first to plant, adopt, join a drive or pledge.</p>
-        ) : (
-          <div className="grid gap-5 md:grid-cols-2">
-            {activity.map(x => (
-              <div key={x.id} className="rounded-3xl border border-border/70 bg-card p-6 soft-shadow flex items-start gap-4">
-                <span className="h-11 w-11 grid place-items-center rounded-full bg-primary/15 text-primary"><Sparkles className="h-4 w-4" /></span>
-                <div className="flex-1">
-                  <div className="font-serif text-lg">{x.text}</div>
-                  <div className="text-xs text-muted-foreground">{x.sub}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </SectionWrapper>
 
       <SectionWrapper eyebrow="Reading" title="From the journal.">

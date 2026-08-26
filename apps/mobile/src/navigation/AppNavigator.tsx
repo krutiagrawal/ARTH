@@ -1,13 +1,44 @@
-import React, { useState, useCallback, Suspense } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useState, useCallback, useEffect, useRef, Suspense } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { Text } from '../components/common/AppText';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useAuth } from '../context/AuthContext';
 
 import { SplashScreen } from '../screens/SplashScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
+import { AccountTypeScreen } from '../screens/AccountTypeScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
+import { GroupRegisterScreen } from '../screens/GroupRegisterScreen';
+import { GroupDashboardScreen } from '../screens/GroupDashboardScreen';
+import { GroupManageScreen } from '../screens/GroupManageScreen';
+import { GroupCreateChallengeScreen } from '../screens/GroupCreateChallengeScreen';
+import { GroupSettingsScreen } from '../screens/GroupSettingsScreen';
+import { GroupProfileScreen } from '../screens/GroupProfileScreen';
+import { GroupMembersStandaloneScreen } from '../screens/GroupMembersStandaloneScreen';
+import { EditGroupProfileScreen } from '../screens/EditGroupProfileScreen';
+import { GroupStreakScreen } from '../screens/GroupStreakScreen';
+import { GroupActivityScreen } from '../screens/GroupActivityScreen';
+import { GroupsScreen } from '../screens/GroupsScreen';
+import { GroupDetailScreen } from '../screens/GroupDetailScreen';
+import { NurseryRegisterScreen } from '../screens/NurseryRegisterScreen';
+import { NurseryDashboardScreen } from '../screens/NurseryDashboardScreen';
+import { NurserySettingsScreen } from '../screens/NurserySettingsScreen';
+import { NurseryProfileScreen } from '../screens/NurseryProfileScreen';
+import { NurseryStockScreen } from '../screens/NurseryStockScreen';
+import { NurseryStreakBadgesScreen } from '../screens/NurseryStreakBadgesScreen';
+import { NurseryReservationsScreen } from '../screens/NurseryReservationsScreen';
+import { NurseryStockAnalyticsScreen } from '../screens/NurseryStockAnalyticsScreen';
+import { NurseryDirectoryScreen } from '../screens/NurseryDirectoryScreen';
+import { NurseryPublicProfileScreen } from '../screens/NurseryPublicProfileScreen';
+import { SaplingReservationScreen } from '../screens/SaplingReservationScreen';
+import { MySaplingReservationsScreen } from '../screens/MySaplingReservationsScreen';
+import { CorporateRegisterScreen } from '../screens/CorporateRegisterScreen';
+import { CorporateDashboardScreen } from '../screens/CorporateDashboardScreen';
+import { CorporateSettingsScreen } from '../screens/CorporateSettingsScreen';
+import { CorporateSponsorshipsScreen } from '../screens/CorporateSponsorshipsScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ForestScreen } from '../screens/ForestScreen';
 import { PlantTreeScreen } from '../screens/PlantTreeScreen';
@@ -23,28 +54,88 @@ import { DrivesListScreen } from '../screens/DrivesListScreen';
 import { AdoptTreeListScreen } from '../screens/AdoptTreeListScreen';
 import { AdoptTreeDetailScreen } from '../screens/AdoptTreeDetailScreen';
 import { CampaignsListScreen } from '../screens/CampaignsListScreen';
-import { NgoHomeScreen } from '../screens/NgoHomeScreen';
-import { NgoDrivesScreen } from '../screens/NgoDrivesScreen';
+import { NgoDashboardScreen } from '../screens/NgoDashboardScreen';
+import { NgoProfileScreen } from '../screens/NgoProfileScreen';
+import { NgoMoreScreen } from '../screens/NgoMoreScreen';
+import { NgoManageScreen } from '../screens/NgoManageScreen';
 import { NgoCreateDriveScreen } from '../screens/NgoCreateDriveScreen';
-import { NgoTreesScreen } from '../screens/NgoTreesScreen';
 import { NgoCreateAdoptableTreeScreen } from '../screens/NgoCreateAdoptableTreeScreen';
 import { NgoRegisterScreen } from '../screens/NgoRegisterScreen';
 import { NgoSettingsScreen } from '../screens/NgoSettingsScreen';
 import { NgoStaffScreen } from '../screens/NgoStaffScreen';
-import { NgoCampaignsScreen } from '../screens/NgoCampaignsScreen';
 import { NgoCreateCampaignScreen } from '../screens/NgoCreateCampaignScreen';
 import { NgoReportsScreen } from '../screens/NgoReportsScreen';
 import { NgoDonationsScreen } from '../screens/NgoDonationsScreen';
 import { NgoVolunteersScreen } from '../screens/NgoVolunteersScreen';
 import { NgoLogPlantedTreesScreen } from '../screens/NgoLogPlantedTreesScreen';
 import { NgoHealthCheckScreen } from '../screens/NgoHealthCheckScreen';
-import { NgoPostUpdateScreen } from '../screens/NgoPostUpdateScreen';
+import { PostComposerScreen } from '../screens/PostComposerScreen';
+import { NgoCommunityScreen } from '../screens/NgoCommunityScreen';
+import { NgoPortfolioScreen } from '../screens/NgoPortfolioScreen';
+import { NgoPortfolioEntryScreen } from '../screens/NgoPortfolioEntryScreen';
+import { NotificationsScreen } from '../screens/NotificationsScreen';
+import { PostDetailScreen } from '../screens/PostDetailScreen';
+import { PostLikesScreen } from '../screens/PostLikesScreen';
+import { BlockedAccountsScreen } from '../screens/BlockedAccountsScreen';
 import { NgoDirectoryScreen } from '../screens/NgoDirectoryScreen';
 import { NgoPublicProfileScreen } from '../screens/NgoPublicProfileScreen';
 import { FollowingFeedScreen } from '../screens/FollowingFeedScreen';
+import { AdminHomeScreen, PANEL_BG } from '../screens/AdminHomeScreen';
+import { AdminNgoApprovalsScreen } from '../screens/AdminNgoApprovalsScreen';
+import { AdminNgoApprovalDetailScreen } from '../screens/AdminNgoApprovalDetailScreen';
+import { AdminAuditLogScreen } from '../screens/AdminAuditLogScreen';
+import { AdminReportsScreen } from '../screens/AdminReportsScreen';
 
-import { BottomNav, TabName } from '../components/navigation/BottomNav';
+import { BottomNav, NavSurface, TabName, TabItem, USER_TABS } from '../components/navigation/BottomNav';
 import { useTimeTheme } from '../hooks/useTimeTheme';
+import { usePushRegistration } from '../hooks/usePushRegistration';
+
+export type NgoTabName = 'Home' | 'Community' | 'Post' | 'Manage' | 'More';
+export type AdminTabName = 'Overview' | 'NGOs' | 'Reports' | 'AuditLog';
+export type GroupTabName = 'Home' | 'Manage' | 'Activity' | 'Settings';
+
+const GROUP_TABS: TabItem[] = [
+  { name: 'Home', icon: '🏡', label: 'Home' },
+  { name: 'Manage', icon: '👥', label: 'Manage', raised: true },
+  { name: 'Activity', icon: '📣', label: 'Activity' },
+  { name: 'Settings', icon: '⚙️', label: 'Settings' },
+];
+
+export type NurseryTabName = 'Home' | 'Stock' | 'Settings';
+
+const NURSERY_TABS: TabItem[] = [
+  { name: 'Home', icon: '🏡', label: 'Home' },
+  { name: 'Stock', icon: '📦', label: 'Stock', raised: true },
+  { name: 'Settings', icon: '⚙️', label: 'Settings' },
+];
+
+export type CorporateTabName = 'Home' | 'Sponsorships' | 'Settings';
+
+const CORPORATE_TABS: TabItem[] = [
+  { name: 'Home', icon: '🏡', label: 'Home' },
+  { name: 'Sponsorships', icon: '🤝', label: 'Sponsor', raised: true },
+  { name: 'Settings', icon: '⚙️', label: 'Settings' },
+];
+
+// Post takes the centre as a raised FAB, mirroring the user app's Plant button — posting is the
+// action an NGO repeats most, and its weekly streak depends on it. Map moved into More: an NGO
+// browsing the map is rare next to managing its own drives and community.
+const NGO_TABS: TabItem[] = [
+  { name: 'Home', icon: '🏡', label: 'Home' },
+  { name: 'Community', icon: '👥', label: 'Community' },
+  { name: 'Post', icon: '➕', label: 'Post', raised: true },
+  { name: 'Manage', icon: '📋', label: 'Manage' },
+  { name: 'More', icon: '⚙️', label: 'More' },
+];
+
+// NGO approvals is the action admins repeat most (AdminHomeScreen's own mascot line nags about
+// pending count), so it takes the raised centre slot — same treatment as Post/Plant above.
+const ADMIN_TABS: TabItem[] = [
+  { name: 'Overview', icon: '📊', label: 'Overview' },
+  { name: 'NGOs', icon: '🏢', label: 'NGOs', raised: true },
+  { name: 'Reports', icon: '🚩', label: 'Reports' },
+  { name: 'AuditLog', icon: '📜', label: 'Audit Log' },
+];
 
 // react-native-maps has no Android native module in Expo Go, so it must load
 // lazily behind a Suspense/error boundary instead of App.tsx's eager import chain
@@ -104,6 +195,32 @@ class DonateErrorBoundary extends React.Component<
   }
 }
 
+/** Pushable Map, for the NGO "More" menu now that Map no longer owns a tab slot. Wrapped in the
+ * same lazy + boundary pair as the tab version, since react-native-maps has no Expo Go module. */
+function NgoMapScreen({ navigation }: any) {
+  return (
+    <MapErrorBoundary>
+      <Suspense fallback={<View style={styles.mainContainer} />}>
+        <MapScreen navigation={navigation} mode="ngo" />
+      </Suspense>
+    </MapErrorBoundary>
+  );
+}
+
+/** Pushable Map for a nursery to see how it shows up alongside every other nursery on the same
+ * map planters browse — the default ('user') mode, not 'ngo' mode, since 'ngo' mode hides the
+ * nurseries layer entirely. A nursery had no way to reach this screen at all before this route
+ * existed; there was no "Map" tab on its own bottom nav the way the regular User role has. */
+function NurseryMapScreen({ navigation }: any) {
+  return (
+    <MapErrorBoundary>
+      <Suspense fallback={<View style={styles.mainContainer} />}>
+        <MapScreen navigation={navigation} />
+      </Suspense>
+    </MapErrorBoundary>
+  );
+}
+
 function CampaignDetailScreen(props: any) {
   return (
     <DonateErrorBoundary>
@@ -133,8 +250,36 @@ function DriveDetailScreen(props: any) {
 export type RootStackParamList = {
   Splash: undefined;
   Onboarding: undefined;
+  AccountType: undefined;
   Login: undefined;
   Register: undefined;
+  GroupRegister: undefined;
+  GroupMain: undefined;
+  GroupCreateChallenge: undefined;
+  GroupProfile: undefined;
+  GroupSettings: undefined;
+  GroupMembers: undefined;
+  EditGroupProfile: undefined;
+  GroupStreak: undefined;
+  GroupActivity: { groupId: string } | undefined;
+  GroupPostUpdate: { groupId: string } | undefined;
+  Groups: undefined;
+  GroupDetail: { groupId: string };
+  NurseryRegister: undefined;
+  NurseryMain: undefined;
+  NurseryStock: undefined;
+  NurseryProfile: undefined;
+  NurseryStreakBadges: undefined;
+  NurseryReservations: undefined;
+  NurseryStockAnalytics: undefined;
+  NurseryMap: undefined;
+  NurseryDirectory: undefined;
+  NurseryPublicProfile: { nurseryId: string };
+  SaplingReservation: { nurseryId: string; stockId: string };
+  MySaplingReservations: undefined;
+  CorporateRegister: undefined;
+  CorporateMain: undefined;
+  CorporateSponsorships: undefined;
   Main: undefined;
   PlantTree: undefined;
   StreakProtection: undefined;
@@ -150,15 +295,13 @@ export type RootStackParamList = {
   AdoptTreeDetail: { treeId: string };
   Campaigns: undefined;
   CampaignDetail: { campaignId: string };
-  NgoHome: undefined;
-  NgoDrives: undefined;
+  NgoMain: undefined;
+  NgoProfile: undefined;
   NgoCreateDrive: undefined;
-  NgoTrees: undefined;
   NgoCreateAdoptableTree: undefined;
   NgoRegister: undefined;
   NgoSettings: undefined;
   NgoStaff: undefined;
-  NgoCampaigns: undefined;
   NgoCreateCampaign: undefined;
   NgoReports: undefined;
   NgoDonations: undefined;
@@ -166,12 +309,44 @@ export type RootStackParamList = {
   NgoLogPlantedTrees: undefined;
   NgoHealthCheck: undefined;
   NgoPostUpdate: undefined;
+  NgoCommunity: undefined;
+  Map: undefined;
+  NgoPortfolio: undefined;
+  NgoPortfolioEntry: { entry?: any } | undefined;
+  Notifications: undefined;
+  PostDetail: { postId: string };
+  PostLikes: { postId: string };
+  BlockedAccounts: undefined;
   NgoDirectory: undefined;
   NgoPublicProfile: { ngoId: string };
   FollowingFeed: undefined;
+  AdminMain: undefined;
+  AdminNgoApprovalDetail: { ngo: import('../api/admin').ApiAdminNgo };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
+
+const navigationRef = createNavigationContainerRef<RootStackParamList>();
+
+/**
+ * Resets the stack back to Login whenever `logout()` actually finishes — nothing else does. The
+ * Splash screen only ever picks a starting route once, on the app's first mount; once a role's
+ * `Main` stack (User/NGO/Admin) is showing, clearing `user` in AuthContext doesn't by itself pop
+ * back to any screen, so "Sign out" looked like a dead button while the user was actually already
+ * logged out underneath the still-visible NGO/Admin/User chrome.
+ */
+function useLogoutRedirect() {
+  const { isLoading, isAuthenticated } = useAuth();
+  const wasAuthenticated = useRef(false);
+
+  useEffect(() => {
+    if (isAuthenticated) wasAuthenticated.current = true;
+    if (!isLoading && !isAuthenticated && wasAuthenticated.current && navigationRef.isReady()) {
+      wasAuthenticated.current = false;
+      navigationRef.reset({ index: 0, routes: [{ name: 'Login' }] });
+    }
+  }, [isLoading, isAuthenticated]);
+}
 
 function MainApp({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<TabName>('Home');
@@ -205,15 +380,189 @@ function MainApp({ navigation }: any) {
   return (
     <View style={styles.mainContainer}>
       {renderScreen()}
-      <BottomNav activeTab={activeTab} onTabPress={setActiveTab} theme={activeTab === 'Home' ? homeTheme : null} />
+      <BottomNav tabs={USER_TABS} activeTab={activeTab} onTabPress={setActiveTab} theme={activeTab === 'Home' ? homeTheme : null} />
+    </View>
+  );
+}
+
+function NgoMainApp({ navigation }: any) {
+  const [activeTab, setActiveTab] = useState<NgoTabName>('Home');
+  // Same shape as MainApp: always called (Rules of Hooks), only handed to BottomNav on the
+  // dashboard tab, which is the one screen here that paints itself from the time-of-day theme.
+  const dashboardTheme = useTimeTheme();
+
+  const renderScreen = useCallback(() => {
+    switch (activeTab) {
+      case 'Home':
+        return <NgoDashboardScreen navigation={navigation} onNavigateTab={setActiveTab} />;
+      case 'Community':
+        return <NgoCommunityScreen navigation={navigation} />;
+      case 'Manage':
+        return <NgoManageScreen navigation={navigation} />;
+      case 'Post':
+        return <PostComposerScreen navigation={navigation} />;
+      case 'More':
+        return <NgoMoreScreen navigation={navigation} />;
+      default:
+        return <NgoDashboardScreen navigation={navigation} onNavigateTab={setActiveTab} />;
+    }
+  }, [activeTab, navigation]);
+
+  return (
+    <View style={styles.mainContainer}>
+      {renderScreen()}
+      <BottomNav
+        tabs={NGO_TABS}
+        activeTab={activeTab}
+        onTabPress={setActiveTab as (t: TabName) => void}
+        theme={activeTab === 'Home' ? dashboardTheme : null}
+      />
+    </View>
+  );
+}
+
+function GroupMainApp({ navigation }: any) {
+  const [activeTab, setActiveTab] = useState<GroupTabName>('Home');
+  const dashboardTheme = useTimeTheme();
+
+  const renderScreen = useCallback(() => {
+    switch (activeTab) {
+      case 'Home':
+        return <GroupDashboardScreen navigation={navigation} onNavigateTab={setActiveTab} />;
+      case 'Manage':
+        return <GroupManageScreen navigation={navigation} />;
+      case 'Activity':
+        return <GroupActivityScreen navigation={navigation} />;
+      case 'Settings':
+        return <GroupSettingsScreen navigation={navigation} />;
+      default:
+        return <GroupDashboardScreen navigation={navigation} onNavigateTab={setActiveTab} />;
+    }
+  }, [activeTab, navigation]);
+
+  return (
+    <View style={styles.mainContainer}>
+      {renderScreen()}
+      <BottomNav
+        tabs={GROUP_TABS}
+        activeTab={activeTab}
+        onTabPress={setActiveTab as (t: TabName) => void}
+        theme={activeTab === 'Home' ? dashboardTheme : null}
+      />
+    </View>
+  );
+}
+
+function NurseryMainApp({ navigation }: any) {
+  const [activeTab, setActiveTab] = useState<NurseryTabName>('Home');
+  const dashboardTheme = useTimeTheme();
+
+  const renderScreen = useCallback(() => {
+    switch (activeTab) {
+      case 'Home':
+        return <NurseryDashboardScreen navigation={navigation} onNavigateTab={setActiveTab} />;
+      case 'Stock':
+        return <NurseryStockScreen navigation={navigation} />;
+      case 'Settings':
+        return <NurserySettingsScreen navigation={navigation} />;
+      default:
+        return <NurseryDashboardScreen navigation={navigation} onNavigateTab={setActiveTab} />;
+    }
+  }, [activeTab, navigation]);
+
+  return (
+    <View style={styles.mainContainer}>
+      {renderScreen()}
+      <BottomNav
+        tabs={NURSERY_TABS}
+        activeTab={activeTab}
+        onTabPress={setActiveTab as (t: TabName) => void}
+        theme={activeTab === 'Home' ? dashboardTheme : null}
+      />
+    </View>
+  );
+}
+
+function CorporateMainApp({ navigation }: any) {
+  const [activeTab, setActiveTab] = useState<CorporateTabName>('Home');
+  const dashboardTheme = useTimeTheme();
+
+  const renderScreen = useCallback(() => {
+    switch (activeTab) {
+      case 'Home':
+        return <CorporateDashboardScreen navigation={navigation} onNavigateTab={setActiveTab} />;
+      case 'Sponsorships':
+        return <CorporateSponsorshipsScreen navigation={navigation} />;
+      case 'Settings':
+        return <CorporateSettingsScreen navigation={navigation} />;
+      default:
+        return <CorporateDashboardScreen navigation={navigation} onNavigateTab={setActiveTab} />;
+    }
+  }, [activeTab, navigation]);
+
+  return (
+    <View style={styles.mainContainer}>
+      {renderScreen()}
+      <BottomNav
+        tabs={CORPORATE_TABS}
+        activeTab={activeTab}
+        onTabPress={setActiveTab as (t: TabName) => void}
+        theme={activeTab === 'Home' ? dashboardTheme : null}
+      />
+    </View>
+  );
+}
+
+/** Admin chrome is deliberately outside the time-of-day system — Overview paints a fixed dark
+ * panel, the other two lay a `nightSky` gradient over the page. The floating nav takes whichever
+ * tone its tab actually ends on so it reads as part of the page rather than a cream slab. */
+const ADMIN_NAV_SURFACE: Record<AdminTabName, NavSurface> = {
+  Overview: { background: PANEL_BG, tint: 'dark' },
+  // Bottom stop of GRADIENTS.nightSky, which is what sits behind the bar on these two screens.
+  NGOs: { background: '#2C3E6B', tint: 'dark' },
+  Reports: { background: '#2C3E6B', tint: 'dark' },
+  AuditLog: { background: '#2C3E6B', tint: 'dark' },
+};
+
+function AdminMainApp({ navigation }: any) {
+  const [activeTab, setActiveTab] = useState<AdminTabName>('Overview');
+
+  const renderScreen = useCallback(() => {
+    switch (activeTab) {
+      case 'Overview':
+        return <AdminHomeScreen navigation={navigation} onNavigateTab={setActiveTab} />;
+      case 'NGOs':
+        return <AdminNgoApprovalsScreen navigation={navigation} />;
+      case 'Reports':
+        return <AdminReportsScreen />;
+      case 'AuditLog':
+        return <AdminAuditLogScreen navigation={navigation} />;
+      default:
+        return <AdminHomeScreen navigation={navigation} />;
+    }
+  }, [activeTab, navigation]);
+
+  return (
+    <View style={styles.mainContainer}>
+      {renderScreen()}
+      <BottomNav
+        tabs={ADMIN_TABS}
+        activeTab={activeTab}
+        onTabPress={setActiveTab as (t: TabName) => void}
+        surface={ADMIN_NAV_SURFACE[activeTab]}
+      />
     </View>
   );
 }
 
 export function AppNavigator() {
+  // Registers this device for push once signed in. A silent no-op in Expo Go — see the hook.
+  usePushRegistration();
+  useLogoutRedirect();
+
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         <Stack.Navigator
           initialRouteName="Splash"
           screenOptions={{
@@ -235,8 +584,32 @@ export function AppNavigator() {
         >
           <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+          <Stack.Screen name="AccountType" component={AccountTypeScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="GroupRegister" component={GroupRegisterScreen} />
+          <Stack.Screen name="GroupMain" component={GroupMainApp} />
+          <Stack.Screen name="GroupCreateChallenge" component={GroupCreateChallengeScreen} />
+          <Stack.Screen name="GroupProfile" component={GroupProfileScreen} />
+          <Stack.Screen name="GroupSettings" component={GroupSettingsScreen} />
+          <Stack.Screen name="GroupMembers" component={GroupMembersStandaloneScreen} />
+          <Stack.Screen name="EditGroupProfile" component={EditGroupProfileScreen} />
+          <Stack.Screen name="GroupStreak" component={GroupStreakScreen} />
+          <Stack.Screen name="GroupActivity" component={GroupActivityScreen} />
+          <Stack.Screen name="GroupPostUpdate" component={PostComposerScreen} />
+          <Stack.Screen name="NurseryRegister" component={NurseryRegisterScreen} />
+          <Stack.Screen name="NurseryMain" component={NurseryMainApp} />
+          <Stack.Screen name="NurseryStock" component={NurseryStockScreen} />
+          <Stack.Screen name="NurseryProfile" component={NurseryProfileScreen} />
+          <Stack.Screen name="NurseryStreakBadges" component={NurseryStreakBadgesScreen} />
+          <Stack.Screen name="NurseryReservations" component={NurseryReservationsScreen} />
+          <Stack.Screen name="NurseryStockAnalytics" component={NurseryStockAnalyticsScreen} />
+          <Stack.Screen name="NurseryMap" component={NurseryMapScreen} />
+          <Stack.Screen name="CorporateRegister" component={CorporateRegisterScreen} />
+          <Stack.Screen name="CorporateMain" component={CorporateMainApp} />
+          <Stack.Screen name="CorporateSponsorships" component={CorporateSponsorshipsScreen} />
+          <Stack.Screen name="Groups" component={GroupsScreen} />
+          <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
           <Stack.Screen name="Main" component={MainApp} />
           <Stack.Screen
             name="PlantTree"
@@ -269,25 +642,37 @@ export function AppNavigator() {
           <Stack.Screen name="AdoptTreeList" component={AdoptTreeListScreen} />
           <Stack.Screen name="AdoptTreeDetail" component={AdoptTreeDetailScreen} />
           <Stack.Screen name="Campaigns" component={CampaignsListScreen} />
-          <Stack.Screen name="NgoHome" component={NgoHomeScreen} />
-          <Stack.Screen name="NgoDrives" component={NgoDrivesScreen} />
+          <Stack.Screen name="NgoMain" component={NgoMainApp} />
+          <Stack.Screen name="NgoProfile" component={NgoProfileScreen} />
           <Stack.Screen name="NgoCreateDrive" component={NgoCreateDriveScreen} />
-          <Stack.Screen name="NgoTrees" component={NgoTreesScreen} />
           <Stack.Screen name="NgoCreateAdoptableTree" component={NgoCreateAdoptableTreeScreen} />
           <Stack.Screen name="NgoRegister" component={NgoRegisterScreen} />
           <Stack.Screen name="NgoSettings" component={NgoSettingsScreen} />
           <Stack.Screen name="NgoStaff" component={NgoStaffScreen} />
-          <Stack.Screen name="NgoCampaigns" component={NgoCampaignsScreen} />
           <Stack.Screen name="NgoCreateCampaign" component={NgoCreateCampaignScreen} />
           <Stack.Screen name="NgoReports" component={NgoReportsScreen} />
           <Stack.Screen name="NgoDonations" component={NgoDonationsScreen} />
           <Stack.Screen name="NgoVolunteers" component={NgoVolunteersScreen} />
           <Stack.Screen name="NgoLogPlantedTrees" component={NgoLogPlantedTreesScreen} />
           <Stack.Screen name="NgoHealthCheck" component={NgoHealthCheckScreen} />
-          <Stack.Screen name="NgoPostUpdate" component={NgoPostUpdateScreen} />
+          <Stack.Screen name="NgoPostUpdate" component={PostComposerScreen} />
+          <Stack.Screen name="NgoCommunity" component={NgoCommunityScreen} />
+          <Stack.Screen name="Map" component={NgoMapScreen} />
+          <Stack.Screen name="NgoPortfolio" component={NgoPortfolioScreen} />
+          <Stack.Screen name="NgoPortfolioEntry" component={NgoPortfolioEntryScreen} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} />
+          <Stack.Screen name="PostDetail" component={PostDetailScreen} />
+          <Stack.Screen name="PostLikes" component={PostLikesScreen} />
+          <Stack.Screen name="BlockedAccounts" component={BlockedAccountsScreen} />
           <Stack.Screen name="NgoDirectory" component={NgoDirectoryScreen} />
           <Stack.Screen name="NgoPublicProfile" component={NgoPublicProfileScreen} />
+          <Stack.Screen name="NurseryDirectory" component={NurseryDirectoryScreen} />
+          <Stack.Screen name="NurseryPublicProfile" component={NurseryPublicProfileScreen} />
+          <Stack.Screen name="SaplingReservation" component={SaplingReservationScreen} />
+          <Stack.Screen name="MySaplingReservations" component={MySaplingReservationsScreen} />
           <Stack.Screen name="FollowingFeed" component={FollowingFeedScreen} />
+          <Stack.Screen name="AdminMain" component={AdminMainApp} />
+          <Stack.Screen name="AdminNgoApprovalDetail" component={AdminNgoApprovalDetailScreen} />
           <Stack.Screen
             name="CampaignDetail"
             component={CampaignDetailScreen}

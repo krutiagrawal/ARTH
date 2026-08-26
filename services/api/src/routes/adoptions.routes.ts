@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { ORG_ROLES } from '../constants/roles';
 import {
   createAdoptableTreeSchema,
   updateAdoptableTreeSchema,
@@ -51,7 +52,7 @@ export default async function adoptionsRoutes(fastify: FastifyInstance) {
     reply.send(results.map((t) => serializeAdoptableTree(t)));
   });
 
-  fastify.get('/mine', { preHandler: [fastify.requireRole('ngo')] }, async (request, reply) => {
+  fastify.get('/mine', { preHandler: [fastify.requireRole(...ORG_ROLES)] }, async (request, reply) => {
     const parsed = ownedListQuerySchema.safeParse(request.query);
     if (!parsed.success) throw new BadRequestError('Invalid query parameters');
 
@@ -64,7 +65,7 @@ export default async function adoptionsRoutes(fastify: FastifyInstance) {
     reply.send(serializeAdoptableTree(tree));
   });
 
-  fastify.post('/', { preHandler: [fastify.requireRole('ngo')] }, async (request, reply) => {
+  fastify.post('/', { preHandler: [fastify.requireRole(...ORG_ROLES)] }, async (request, reply) => {
     const { fields, file } = splitMultipartBody(request.body as any);
 
     const parsed = createAdoptableTreeSchema.safeParse(fields);
@@ -85,7 +86,7 @@ export default async function adoptionsRoutes(fastify: FastifyInstance) {
 
   fastify.patch<{ Params: { id: string } }>(
     '/:id',
-    { preHandler: [fastify.requireRole('ngo')] },
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
     async (request, reply) => {
       const isMultipart = (request.headers['content-type'] ?? '').includes('multipart/form-data');
       const { fields, file } = isMultipart
@@ -111,7 +112,7 @@ export default async function adoptionsRoutes(fastify: FastifyInstance) {
 
   fastify.delete<{ Params: { id: string } }>(
     '/:id',
-    { preHandler: [fastify.requireRole('ngo')] },
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
     async (request, reply) => {
       const tree = await adoptionService.removeAdoptableTree(fastify.prisma, request.user!.id, request.params.id);
       reply.send(serializeAdoptableTree(tree));
@@ -120,7 +121,7 @@ export default async function adoptionsRoutes(fastify: FastifyInstance) {
 
   fastify.post<{ Params: { id: string } }>(
     '/:id/release',
-    { preHandler: [fastify.requireRole('ngo')] },
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
     async (request, reply) => {
       const parsed = releaseAdoptionSchema.safeParse(request.body ?? {});
       if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');

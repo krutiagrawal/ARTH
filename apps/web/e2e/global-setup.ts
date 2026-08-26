@@ -30,6 +30,9 @@ export const TEST_DONOR = { email: 'donor.e2e@example.com', password: 'DonorPass
 
 const API_URL = process.env.API_URL || 'http://localhost:4000'
 const apiDir = path.resolve(__dirname, '../../../services/api')
+// The Prisma schema/migrations now live in the shared packages/db workspace —
+// see packages/db/prisma/schema.prisma — services/api itself no longer has one.
+const dbDir = path.resolve(__dirname, '../../../packages/db')
 
 async function registerNgo(ngo: typeof TEST_NGO) {
   const res = await fetch(`${API_URL}/api/auth/register-ngo`, {
@@ -54,7 +57,7 @@ export default async function globalSetup() {
     'npx',
     ['prisma', 'db', 'execute', '--schema', 'prisma/schema.prisma', '--stdin'],
     {
-      cwd: apiDir,
+      cwd: dbDir,
       input: `
         UPDATE ngo_profiles SET status = 'approved' WHERE user_id = (SELECT id FROM users WHERE email = '${TEST_NGO.email}');
         UPDATE ngo_profiles SET status = 'pending', rejection_reason = NULL, approved_at = NULL, approved_by_user_id = NULL WHERE user_id = (SELECT id FROM users WHERE email = '${PENDING_NGO.email}');

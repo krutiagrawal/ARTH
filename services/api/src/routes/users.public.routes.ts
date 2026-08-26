@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { NotFoundError } from '../utils/errors';
+import { listActiveUserStories } from '../services/story.service';
 
 export default async function usersPublicRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
@@ -37,20 +38,8 @@ export default async function usersPublicRoutes(fastify: FastifyInstance) {
       throw new NotFoundError('User not found');
     }
 
-    const stories = await fastify.prisma.story.findMany({
-      where: { userId: user.id, expiresAt: { gt: new Date() } },
-      orderBy: { createdAt: 'asc' },
-    });
-
-    reply.send(
-      stories.map((story) => ({
-        id: story.id,
-        userId: story.userId,
-        imageUrl: story.imageUrl,
-        caption: story.caption,
-        createdAt: story.createdAt,
-        expiresAt: story.expiresAt,
-      }))
-    );
+    // Explicitly user-authored only: an NGO operator's org stories are not part of their
+    // personal profile, even though both hang off the same login.
+    reply.send(await listActiveUserStories(fastify.prisma, user.id));
   });
 }

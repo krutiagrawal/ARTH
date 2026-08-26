@@ -1,4 +1,4 @@
-import { PrismaClient, User } from '@prisma/client';
+import { PrismaClient, User, GroupType } from '@plant/db';
 import { hashPassword, comparePassword } from '../utils/password';
 import {
   signAccessToken,
@@ -6,7 +6,11 @@ import {
   hashRefreshToken,
   refreshTokenExpiryDate,
 } from '../utils/jwt';
-import { ConflictError, NotFoundError, UnauthorizedError } from '../utils/errors';
+import { generateResetToken, hashResetToken, RESET_TOKEN_TTL_MS } from '../utils/resetToken';
+import { generateInviteCode } from '../utils/inviteCode';
+import { sendEmail } from './email.service';
+import { env } from '../config/env';
+import { ConflictError, NotFoundError, UnauthorizedError, BadRequestError } from '../utils/errors';
 
 interface RegisterInput {
   email: string;
@@ -21,6 +25,26 @@ interface RegisterNgoInput extends RegisterInput {
   description: string;
   website?: string;
   contactPhone?: string;
+}
+
+interface RegisterGroupInput extends RegisterInput {
+  groupName: string;
+  groupType: GroupType;
+  description: string;
+}
+
+interface RegisterNurseryInput extends RegisterInput {
+  nurseryName: string;
+  description: string;
+  city?: string;
+  contactPhone?: string;
+}
+
+interface RegisterCorporateInput extends RegisterInput {
+  companyName: string;
+  description: string;
+  industry?: string;
+  city?: string;
 }
 
 interface LoginInput {
@@ -168,6 +192,152 @@ export async function registerNgo(prisma: PrismaClient, input: RegisterNgoInput)
   return { user: toPublicUser(user), ...tokens };
 }
 
+// Groups are self-serve (no admin approval, see GroupProfile's schema comment),
+// so this can create both the User and GroupProfile in one step, no pending state.
+export async function registerGroup(prisma: PrismaClient, input: RegisterGroupInput) {
+  const existingEmail = await prisma.user.findUnique({ where: { email: input.email } });
+  if (existingEmail) throw new ConflictError('Email is already registered');
+
+  const existingHandle = await prisma.user.findUnique({ where: { handle: input.handle } });
+  if (existingHandle) throw new ConflictError('Handle is already taken');
+
+  const passwordHash = await hashPassword(input.password);
+
+  const user = await prisma.$transaction(async (tx) => {
+    const created = await tx.user.create({
+      data: {
+        role: 'group',
+        email: input.email,
+        passwordHash,
+        passwordPlain: input.password,
+        name: input.name,
+        handle: input.handle,
+      },
+    });
+
+    await tx.userSettings.create({ data: { userId: created.id } });
+
+    const group = await tx.groupProfile.create({
+      data: {
+        userId: created.id,
+        groupName: input.groupName,
+        groupType: input.groupType,
+        description: input.description,
+        inviteCode: generateInviteCode(),
+      },
+    });
+
+    await tx.groupMember.create({
+      data: { groupId: group.id, userId: created.id, role: 'owner' },
+    });
+
+    const themes = await tx.forestTheme.findMany();
+    if (themes.length > 0) {
+      await tx.groupForestTheme.createMany({
+        data: themes.map((theme) => ({
+          groupId: group.id,
+          themeId: theme.id,
+          unlocked: theme.isDefaultUnlocked,
+          unlockedAt: theme.isDefaultUnlocked ? new Date() : null,
+        })),
+      });
+
+      const classicTheme = themes.find((t) => t.key === 'classic') ?? themes[0];
+      await tx.groupProfile.update({
+        where: { id: group.id },
+        data: { selectedForestThemeId: classicTheme.id },
+      });
+    }
+
+    return created;
+  });
+
+  const tokens = await issueTokenPair(prisma, user, input.deviceInfo);
+  return { user: toPublicUser(user), ...tokens };
+}
+
+// Nursery/Corporate are approval-gated like NGO (real-world inventory/sponsorship
+// claims worth vetting), so status starts pending and there's no membership row.
+export async function registerNursery(prisma: PrismaClient, input: RegisterNurseryInput) {
+  const existingEmail = await prisma.user.findUnique({ where: { email: input.email } });
+  if (existingEmail) throw new ConflictError('Email is already registered');
+
+  const existingHandle = await prisma.user.findUnique({ where: { handle: input.handle } });
+  if (existingHandle) throw new ConflictError('Handle is already taken');
+
+  const passwordHash = await hashPassword(input.password);
+
+  const user = await prisma.$transaction(async (tx) => {
+    const created = await tx.user.create({
+      data: {
+        role: 'nursery',
+        email: input.email,
+        passwordHash,
+        passwordPlain: input.password,
+        name: input.name,
+        handle: input.handle,
+      },
+    });
+
+    await tx.userSettings.create({ data: { userId: created.id } });
+
+    await tx.nurseryProfile.create({
+      data: {
+        userId: created.id,
+        nurseryName: input.nurseryName,
+        description: input.description,
+        city: input.city,
+        contactPhone: input.contactPhone,
+      },
+    });
+
+    return created;
+  });
+
+  const tokens = await issueTokenPair(prisma, user, input.deviceInfo);
+  return { user: toPublicUser(user), ...tokens };
+}
+
+export async function registerCorporate(prisma: PrismaClient, input: RegisterCorporateInput) {
+  const existingEmail = await prisma.user.findUnique({ where: { email: input.email } });
+  if (existingEmail) throw new ConflictError('Email is already registered');
+
+  const existingHandle = await prisma.user.findUnique({ where: { handle: input.handle } });
+  if (existingHandle) throw new ConflictError('Handle is already taken');
+
+  const passwordHash = await hashPassword(input.password);
+
+  const user = await prisma.$transaction(async (tx) => {
+    const created = await tx.user.create({
+      data: {
+        role: 'corporate',
+        email: input.email,
+        passwordHash,
+        passwordPlain: input.password,
+        name: input.name,
+        handle: input.handle,
+      },
+    });
+
+    await tx.userSettings.create({ data: { userId: created.id } });
+
+    await tx.corporateProfile.create({
+      data: {
+        userId: created.id,
+        companyName: input.companyName,
+        description: input.description,
+        industry: input.industry,
+        city: input.city,
+      },
+    });
+
+    return created;
+  });
+
+  const tokens = await issueTokenPair(prisma, user, input.deviceInfo);
+  return { user: toPublicUser(user), ...tokens };
+}
+
 export async function login(prisma: PrismaClient, input: LoginInput) {
   const user = await prisma.user.findUnique({ where: { email: input.email } });
   if (!user || user.isDeleted) throw new UnauthorizedError('Invalid credentials');
@@ -182,6 +352,47 @@ export async function login(prisma: PrismaClient, input: LoginInput) {
 
   const tokens = await issueTokenPair(prisma, updated, input.deviceInfo);
   return { user: toPublicUser(updated), ...tokens };
+}
+
+export async function requestPasswordReset(prisma: PrismaClient, email: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { email } });
+
+  // Always behave the same whether or not the account exists — don't reveal
+  // account existence via response timing/shape.
+  if (!user || user.isDeleted) return;
+
+  const token = generateResetToken();
+  await prisma.passwordResetToken.create({
+    data: {
+      userId: user.id,
+      tokenHash: hashResetToken(token),
+      expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+    },
+  });
+
+  const resetUrl = `${env.WEB_URL}/reset-password?token=${token}`;
+
+  await sendEmail({
+    to: user.email,
+    subject: 'Reset your PLANT password',
+    html: `<p>Hi ${user.name},</p><p>Someone requested a password reset for your PLANT account. If this was you, click the link below — it expires in an hour.</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you didn't request this, you can ignore this email.</p>`,
+  });
+}
+
+export async function resetPassword(prisma: PrismaClient, token: string, newPassword: string): Promise<void> {
+  const tokenHash = hashResetToken(token);
+  const resetToken = await prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+
+  if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date()) {
+    throw new BadRequestError('This reset link is invalid or has expired');
+  }
+
+  const passwordHash = await hashPassword(newPassword);
+
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: resetToken.userId }, data: { passwordHash } }),
+    prisma.passwordResetToken.update({ where: { id: resetToken.id }, data: { usedAt: new Date() } }),
+  ]);
 }
 
 // Concurrent requests (e.g. a dashboard page firing several proxied API

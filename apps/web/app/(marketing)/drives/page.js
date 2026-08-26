@@ -1,20 +1,10 @@
-import { prisma } from '@/lib/prisma'
-import { getServerUser } from '@/lib/session'
-import DrivesClient from './DrivesClient'
+import DrivesListClient from '../../app/(guarded)/drives/DrivesListClient'
 
 export const metadata = {
   title: 'Drives',
   description: 'Join a plantation drive near you — RSVP and show up with your hands.',
 }
 
-export default async function Page() {
-  const [user, drives] = await Promise.all([
-    getServerUser(),
-    prisma.drive.findMany({ orderBy: { date: 'asc' } }),
-  ])
-  const mine = user ? await prisma.rsvp.findMany({ where: { userId: user.id } }) : []
-
-  const serialisedDrives = drives.map((d) => ({ ...d, date: d.date.toISOString().slice(0, 10) }))
-
-  return <DrivesClient initialDrives={serialisedDrives} initialJoinedIds={mine.map((r) => r.driveId)} />
+export default function Page() {
+  return <DrivesListClient />
 }

@@ -2,12 +2,29 @@ import 'react-native-gesture-handler';
 import './global.css';
 import React, { Suspense } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { useFonts } from 'expo-font';
+// Per-face subpath imports, not the package roots. Importing from the root pulls that package's
+// index, which requires every .ttf it ships — including all the italics we never use — and Metro
+// then bundles ~1.8 MB of dead font data.
+import { Baloo2_500Medium } from '@expo-google-fonts/baloo-2/500Medium';
+import { Baloo2_600SemiBold } from '@expo-google-fonts/baloo-2/600SemiBold';
+import { Baloo2_700Bold } from '@expo-google-fonts/baloo-2/700Bold';
+import { Baloo2_800ExtraBold } from '@expo-google-fonts/baloo-2/800ExtraBold';
+import { NunitoSans_200ExtraLight } from '@expo-google-fonts/nunito-sans/200ExtraLight';
+import { NunitoSans_300Light } from '@expo-google-fonts/nunito-sans/300Light';
+import { NunitoSans_400Regular } from '@expo-google-fonts/nunito-sans/400Regular';
+import { NunitoSans_500Medium } from '@expo-google-fonts/nunito-sans/500Medium';
+import { NunitoSans_600SemiBold } from '@expo-google-fonts/nunito-sans/600SemiBold';
+import { NunitoSans_700Bold } from '@expo-google-fonts/nunito-sans/700Bold';
+import { NunitoSans_800ExtraBold } from '@expo-google-fonts/nunito-sans/800ExtraBold';
+import { NunitoSans_900Black } from '@expo-google-fonts/nunito-sans/900Black';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { SoundProvider } from './src/context/SoundContext';
 import { AuthProvider } from './src/context/AuthContext';
 import { ReduceMotionProvider } from './src/context/ReduceMotionContext';
+import { COLORS } from './src/constants/colors';
 
 const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '';
 
@@ -47,13 +64,43 @@ function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <StripeErrorBoundary fallback={<>{children}</>}>
       <Suspense fallback={<>{children}</>}>
-        <LazyStripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>{children}</LazyStripeProvider>
+        {/* Wrapped in a fragment: StripeProvider types its children as ReactElement, not ReactNode. */}
+        <LazyStripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}><>{children}</></LazyStripeProvider>
       </Suspense>
     </StripeErrorBoundary>
   );
 }
 
+/** Every face AppText can map a weight onto, plus the four Baloo 2 display faces.
+ * All of them must be registered up front: a weight whose face isn't loaded silently falls back
+ * to the system font, which shows up as one stray paragraph in the wrong typeface. */
+const FONT_MAP = {
+  Baloo2_500Medium,
+  Baloo2_600SemiBold,
+  Baloo2_700Bold,
+  Baloo2_800ExtraBold,
+  NunitoSans_200ExtraLight,
+  NunitoSans_300Light,
+  NunitoSans_400Regular,
+  NunitoSans_500Medium,
+  NunitoSans_600SemiBold,
+  NunitoSans_700Bold,
+  NunitoSans_800ExtraBold,
+  NunitoSans_900Black,
+};
+
 export default function App() {
+  const [fontsLoaded, fontError] = useFonts(FONT_MAP);
+
+  // A font failure must not brick the app — log it and render in the system face instead.
+  if (fontError) console.warn('[App] font loading failed, falling back to system fonts:', fontError);
+
+  // No expo-splash-screen in this project, so hold on a plain cream field rather than letting
+  // the whole UI paint once in Roboto/SF and then reflow into Nunito.
+  if (!fontsLoaded && !fontError) {
+    return <View style={[styles.root, styles.bootScreen]} />;
+  }
+
   return (
     <GestureHandlerRootView style={styles.root}>
       <QueryClientProvider client={queryClient}>
@@ -74,5 +121,8 @@ export default function App() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+  },
+  bootScreen: {
+    backgroundColor: COLORS.cream,
   },
 });

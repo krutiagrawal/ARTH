@@ -78,15 +78,33 @@ enum TreeVerificationStatus {
 enum UserRole {
   user
   ngo
-  // community/nursery/organisation are ngo-equivalent account types migrated in from
-  // apps/web's old standalone Arth schema — they get the same NgoProfile-backed feature
-  // set (approval workflow, drives, staff, campaigns, streaks) as `ngo`. Anywhere the
-  // codebase gates on "has an org profile" it must check all four of these roles, not
-  // just `ngo`, e.g. via `ngoProfile != null` rather than `role === 'ngo'`.
-  community
+  // group/nursery/corporate each have their own dedicated profile model
+  // (GroupProfile/NurseryProfile/CorporateProfile) and dashboard — NOT
+  // NgoProfile-backed. Renamed from the old community/organisation names
+  // (2026-08-25) once each got a real, distinct feature set instead of
+  // reusing NGO's.
+  group
   nursery
-  organisation
+  corporate
   admin
+}
+
+enum GroupType {
+  family
+  school
+  club
+  other
+}
+
+enum GroupMemberRole {
+  owner
+  co_admin
+  member
+}
+
+enum GroupStatus {
+  active
+  suspended
 }
 
 enum NgoApprovalStatus {
@@ -146,6 +164,35 @@ enum NgoAchievementCriteriaType {
   streak_weeks
 }
 
+enum GroupAchievementCriteriaType {
+  trees_planted
+  member_count
+  streak_days
+  co2_absorbed
+  challenges_completed
+}
+
+enum NurseryAchievementCriteriaType {
+  species_listed
+  saplings_given_out
+  reservations_fulfilled
+  streak_days
+}
+
+enum ReservationStatus {
+  pending
+  fulfilled
+  declined
+  cancelled
+}
+
+enum StockLedgerReason {
+  manual_add
+  manual_adjust
+  manual_remove
+  reservation_fulfilled
+}
+
 // Whether an NGO auto-accepts followers or vets each one. Set per NGO in its settings.
 enum FollowPolicy {
   open
@@ -160,6 +207,7 @@ enum FollowStatus {
 enum PostAuthorType {
   user
   ngo
+  group
 }
 
 enum PostVisibility {
@@ -200,6 +248,9 @@ enum NotificationType {
   drive_reminder
   report_resolved
   moderation_action
+  reservation_requested
+  reservation_fulfilled
+  reservation_declined
 }
 
 // ---------- Core ----------
@@ -231,42 +282,49 @@ model User {
 
   selectedForestTheme ForestTheme? @relation("SelectedTheme", fields: [selectedForestThemeId], references: [id])
 
-  settings              UserSettings?
-  refreshTokens         RefreshToken[]
-  trees                 Tree[]
-  userAchievements      UserAchievement[]
-  friendshipsRequested  Friendship[]            @relation("FriendshipRequester")
-  friendshipsReceived   Friendship[]            @relation("FriendshipAddressee")
-  challengeParticipants ChallengeParticipant[]
-  userDailyMissions     UserDailyMission[]
-  userForestThemes      UserForestTheme[]
-  streakHistory         StreakHistory[]
-  xpTransactions        XpTransaction[]
-  activityFeed          ActivityFeed[]
-  activityReactions     ActivityReaction[]
-  decorationPlacements  DecorationPlacement[]
-  stories               Story[]
-  ngoProfile            NgoProfile?
-  driveRsvps            DriveRsvp[]
-  adoptions             Adoption[]
-  donations             Donation[]
-  plantSponsorships     DrivePlantSponsorship[]
-  adminActionLogs       AdminActionLog[]
-  following             Follow[]
-  posts                 Post[]
-  postLikes             PostLike[]
-  savedPosts            SavedPost[]
-  storyViews            StoryView[]
-  reportsFiled          ContentReport[]         @relation("ReportReporter")
-  reportsReviewed       ContentReport[]         @relation("ReportReviewer")
-  blocksMade            Block[]                 @relation("Blocker")
-  blocksReceived        Block[]                 @relation("BlockedUser")
-  notifications         Notification[]          @relation("NotificationRecipient")
-  notificationsTriggered Notification[]         @relation("NotificationActor")
-  pushTokens            PushToken[]
-  passwordResetTokens   PasswordResetToken[]
-  competitionEntries    CompetitionEntry[]
-  competitionEntryVotes CompetitionEntryVote[]
+  settings               UserSettings?
+  refreshTokens          RefreshToken[]
+  trees                  Tree[]
+  userAchievements       UserAchievement[]
+  friendshipsRequested   Friendship[]                @relation("FriendshipRequester")
+  friendshipsReceived    Friendship[]                @relation("FriendshipAddressee")
+  challengeParticipants  ChallengeParticipant[]
+  userDailyMissions      UserDailyMission[]
+  userForestThemes       UserForestTheme[]
+  streakHistory          StreakHistory[]
+  xpTransactions         XpTransaction[]
+  activityFeed           ActivityFeed[]
+  activityReactions      ActivityReaction[]
+  decorationPlacements   DecorationPlacement[]
+  stories                Story[]
+  ngoProfile             NgoProfile?
+  groupProfile           GroupProfile?
+  nurseryProfile         NurseryProfile?
+  corporateProfile       CorporateProfile?
+  groupMemberships       GroupMember[]
+  groupChallengesCreated GroupChallenge[]            @relation("GroupChallengeCreator")
+  groupChallengeEntries  GroupChallengeParticipant[]
+  driveRsvps             DriveRsvp[]
+  adoptions              Adoption[]
+  saplingReservations    SaplingReservation[]
+  donations              Donation[]
+  plantSponsorships      DrivePlantSponsorship[]
+  adminActionLogs        AdminActionLog[]
+  following              Follow[]
+  posts                  Post[]
+  postLikes              PostLike[]
+  savedPosts             SavedPost[]
+  storyViews             StoryView[]
+  reportsFiled           ContentReport[]             @relation("ReportReporter")
+  reportsReviewed        ContentReport[]             @relation("ReportReviewer")
+  blocksMade             Block[]                     @relation("Blocker")
+  blocksReceived         Block[]                     @relation("BlockedUser")
+  notifications          Notification[]              @relation("NotificationRecipient")
+  notificationsTriggered Notification[]              @relation("NotificationActor")
+  pushTokens             PushToken[]
+  passwordResetTokens    PasswordResetToken[]
+  competitionEntries     CompetitionEntry[]
+  competitionEntryVotes  CompetitionEntryVote[]
 
   @@map("users")
 }
@@ -413,6 +471,283 @@ model Friendship {
   @@map("friendships")
 }
 
+// ---------- Groups ----------
+// A Group is a self-serve, non-approved account type (family/school/club/other) —
+// unlike NgoProfile/NurseryProfile/CorporateProfile it has no admin approval gate,
+// since forming a group involves no money or public org presence.
+
+model GroupProfile {
+  id                    String      @id @default(uuid())
+  userId                String      @unique @map("user_id")
+  groupName             String      @map("group_name")
+  groupType             GroupType   @default(other) @map("group_type")
+  description           String
+  logoUrl               String?     @map("logo_url")
+  city                  String?
+  inviteCode            String      @unique @map("invite_code")
+  status                GroupStatus @default(active)
+  streakCurrent         Int         @default(0) @map("streak_current")
+  streakMax             Int         @default(0) @map("streak_max")
+  badgesCount           Int         @default(0) @map("badges_count")
+  handle                String?     @unique
+  avatarEmoji           String?     @map("avatar_emoji")
+  selectedForestThemeId String?     @map("selected_forest_theme_id")
+  createdAt             DateTime    @default(now()) @map("created_at")
+  updatedAt             DateTime    @updatedAt @map("updated_at")
+
+  user                User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  selectedForestTheme ForestTheme?             @relation("GroupSelectedTheme", fields: [selectedForestThemeId], references: [id])
+  members             GroupMember[]
+  challenges          GroupChallenge[]
+  posts               Post[]
+  stories             Story[]
+  streakHistory       GroupStreakHistory[]
+  achievementUnlocks  GroupAchievementUnlock[]
+  groupForestThemes   GroupForestTheme[]
+
+  @@index([status])
+  @@map("group_profiles")
+}
+
+model GroupMember {
+  id       String          @id @default(uuid())
+  groupId  String          @map("group_id")
+  userId   String          @map("user_id")
+  role     GroupMemberRole @default(member)
+  joinedAt DateTime        @default(now()) @map("joined_at")
+
+  group GroupProfile @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@index([userId])
+  @@map("group_members")
+}
+
+model GroupChallenge {
+  id          String            @id @default(uuid())
+  groupId     String            @map("group_id")
+  createdById String            @map("created_by_id")
+  title       String
+  description String
+  goalType    ChallengeGoalType @map("goal_type")
+  goalTotal   Int               @map("goal_total")
+  startsAt    DateTime          @map("starts_at")
+  endsAt      DateTime          @map("ends_at")
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  group        GroupProfile                @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy    User                        @relation("GroupChallengeCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  participants GroupChallengeParticipant[]
+
+  @@index([groupId])
+  @@map("group_challenges")
+}
+
+model GroupChallengeParticipant {
+  id          String    @id @default(uuid())
+  challengeId String    @map("challenge_id")
+  userId      String    @map("user_id")
+  progress    Int       @default(0)
+  joinedAt    DateTime  @default(now()) @map("joined_at")
+  completedAt DateTime? @map("completed_at")
+
+  challenge GroupChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId])
+  @@index([userId])
+  @@map("group_challenge_participants")
+}
+
+// ---------- Nursery ----------
+// A Nursery sells/donates sapling stock — approval-gated like NgoProfile, since an
+// inventory claim is a real-world commitment worth an admin vetting before it goes live.
+model NurseryProfile {
+  id               String            @id @default(uuid())
+  userId           String            @unique @map("user_id")
+  nurseryName      String            @map("nursery_name")
+  description      String
+  logoUrl          String?           @map("logo_url")
+  city             String?
+  contactPhone     String?           @map("contact_phone")
+  lat              Decimal?          @db.Decimal(9, 6)
+  lng              Decimal?          @db.Decimal(9, 6)
+  status           NgoApprovalStatus @default(pending)
+  rejectionReason  String?           @map("rejection_reason")
+  approvedAt       DateTime?         @map("approved_at")
+  approvedByUserId String?           @map("approved_by_user_id")
+  streakCurrent    Int               @default(0) @map("streak_current")
+  streakMax        Int               @default(0) @map("streak_max")
+  badgesCount      Int               @default(0) @map("badges_count")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  user               User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  saplingStock       SaplingStock[]
+  reservations       SaplingReservation[]
+  stockLedger        SaplingStockLedger[]
+  streakHistory      NurseryStreakHistory[]
+  achievementUnlocks NurseryAchievementUnlock[]
+
+  @@index([status])
+  @@map("nursery_profiles")
+}
+
+model SaplingStock {
+  id         String   @id @default(uuid())
+  nurseryId  String   @map("nursery_id")
+  species    String
+  quantity   Int      @default(0)
+  isFree     Boolean  @default(true) @map("is_free")
+  priceCents Int?     @map("price_cents")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  nursery            NurseryProfile       @relation(fields: [nurseryId], references: [id], onDelete: Cascade)
+  reservations       SaplingReservation[]
+  SaplingStockLedger SaplingStockLedger[]
+
+  @@index([nurseryId])
+  @@map("sapling_stock")
+}
+
+// A user's request to claim saplings from a nursery's stock — unlike Adoption's instant-claim,
+// this needs the nursery to actively fulfil/decline since a quantity commitment is a real ask
+// on their stock (not a single already-earmarked item).
+model SaplingReservation {
+  id          String            @id @default(uuid())
+  stockId     String            @map("stock_id")
+  nurseryId   String            @map("nursery_id")
+  userId      String            @map("user_id")
+  quantity    Int
+  status      ReservationStatus @default(pending)
+  message     String?
+  createdAt   DateTime          @default(now()) @map("created_at")
+  respondedAt DateTime?         @map("responded_at")
+
+  stock   SaplingStock   @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  nursery NurseryProfile @relation(fields: [nurseryId], references: [id], onDelete: Cascade)
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([nurseryId, status])
+  @@index([userId])
+  @@map("sapling_reservations")
+}
+
+// Append-only stock history backing the analytics page. `species` is denormalized so history
+// survives a stock item being deleted (stockId goes null but the row still tells its story).
+model SaplingStockLedger {
+  id        String            @id @default(uuid())
+  nurseryId String            @map("nursery_id")
+  stockId   String?           @map("stock_id")
+  species   String
+  delta     Int
+  reason    StockLedgerReason
+  createdAt DateTime          @default(now()) @map("created_at")
+
+  nursery NurseryProfile @relation(fields: [nurseryId], references: [id], onDelete: Cascade)
+  stock   SaplingStock?  @relation(fields: [stockId], references: [id], onDelete: SetNull)
+
+  @@index([nurseryId, createdAt(sort: Desc)])
+  @@map("sapling_stock_ledger")
+}
+
+// Daily analog of StreakHistory/GroupStreakHistory — a nursery's streak reflects "was there any
+// stock/reservation activity today" (added stock or fulfilled a request).
+model NurseryStreakHistory {
+  id           String   @id @default(uuid())
+  nurseryId    String   @map("nursery_id")
+  activityDate DateTime @map("activity_date") @db.Date
+  planted      Boolean  @default(false)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  nursery NurseryProfile @relation(fields: [nurseryId], references: [id], onDelete: Cascade)
+
+  @@unique([nurseryId, activityDate])
+  @@index([nurseryId, activityDate(sort: Desc)])
+  @@map("nursery_streak_history")
+}
+
+// Definition table, mirrors GroupAchievement — fixed, seeded list of nursery milestones.
+model NurseryAchievement {
+  id             String                         @id @default(uuid())
+  key            String                         @unique
+  title          String
+  description    String
+  icon           String
+  rarity         Rarity
+  criteriaType   NurseryAchievementCriteriaType @map("criteria_type")
+  criteriaTarget Int?                           @map("criteria_target")
+  sortOrder      Int                            @default(0) @map("sort_order")
+
+  unlocks NurseryAchievementUnlock[]
+
+  @@map("nursery_achievements")
+}
+
+// Per-nursery unlock state, mirrors GroupAchievementUnlock.
+model NurseryAchievementUnlock {
+  id            String    @id @default(uuid())
+  nurseryId     String    @map("nursery_id")
+  achievementId String    @map("achievement_id")
+  unlocked      Boolean   @default(false)
+  progress      Int       @default(0)
+  unlockedAt    DateTime? @map("unlocked_at")
+
+  nursery     NurseryProfile     @relation(fields: [nurseryId], references: [id], onDelete: Cascade)
+  achievement NurseryAchievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([nurseryId, achievementId])
+  @@index([nurseryId])
+  @@map("nursery_achievement_unlocks")
+}
+
+// ---------- Corporate ----------
+// A Corporate account sponsors drives/trees as CSR spend — approval-gated for the same
+// reason as NurseryProfile: a sponsorship claim is a real-world commitment.
+model CorporateProfile {
+  id               String            @id @default(uuid())
+  userId           String            @unique @map("user_id")
+  companyName      String            @map("company_name")
+  description      String
+  logoUrl          String?           @map("logo_url")
+  city             String?
+  industry         String?
+  status           NgoApprovalStatus @default(pending)
+  rejectionReason  String?           @map("rejection_reason")
+  approvedAt       DateTime?         @map("approved_at")
+  approvedByUserId String?           @map("approved_by_user_id")
+  streakCurrent    Int               @default(0) @map("streak_current")
+  streakMax        Int               @default(0) @map("streak_max")
+  badgesCount      Int               @default(0) @map("badges_count")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sponsorships CsrSponsorship[]
+
+  @@index([status])
+  @@map("corporate_profiles")
+}
+
+model CsrSponsorship {
+  id          String   @id @default(uuid())
+  corporateId String   @map("corporate_id")
+  driveId     String?  @map("drive_id")
+  amountCents Int      @map("amount_cents")
+  note        String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  corporate CorporateProfile @relation(fields: [corporateId], references: [id], onDelete: Cascade)
+  drive     Drive?           @relation(fields: [driveId], references: [id], onDelete: SetNull)
+
+  @@index([corporateId])
+  @@index([driveId])
+  @@map("csr_sponsorships")
+}
+
 // ---------- Challenges ----------
 
 model Challenge {
@@ -493,8 +828,10 @@ model ForestTheme {
   unlockCriteria    String? @map("unlock_criteria")
   sortOrder         Int     @default(0) @map("sort_order")
 
-  userForestThemes UserForestTheme[]
-  selectedByUsers  User[]            @relation("SelectedTheme")
+  userForestThemes  UserForestTheme[]
+  groupForestThemes GroupForestTheme[]
+  selectedByUsers   User[]             @relation("SelectedTheme")
+  selectedByGroups  GroupProfile[]     @relation("GroupSelectedTheme")
 
   @@map("forest_themes")
 }
@@ -512,6 +849,21 @@ model UserForestTheme {
   @@unique([userId, themeId])
   @@index([userId])
   @@map("user_forest_themes")
+}
+
+model GroupForestTheme {
+  id         String    @id @default(uuid())
+  groupId    String    @map("group_id")
+  themeId    String    @map("theme_id")
+  unlocked   Boolean   @default(false)
+  unlockedAt DateTime? @map("unlocked_at")
+
+  group GroupProfile @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  theme ForestTheme  @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, themeId])
+  @@index([groupId])
+  @@map("group_forest_themes")
 }
 
 // ---------- Forest Decorations ----------
@@ -562,23 +914,26 @@ model DecorationPlacement {
 
 model Story {
   id         String         @id @default(uuid())
-  // Exactly one of userId / ngoId is set, keyed by authorType — enforced in the service layer,
-  // the same way NgoProfile.awards is validated at the Zod layer rather than in the DB.
+  // Exactly one of userId / ngoId / groupId is set, keyed by authorType — enforced in the service
+  // layer, the same way NgoProfile.awards is validated at the Zod layer rather than in the DB.
   authorType PostAuthorType @default(user) @map("author_type")
   userId     String?        @map("user_id")
   ngoId      String?        @map("ngo_id")
+  groupId    String?        @map("group_id")
   imageUrl   String         @map("image_url")
   caption    String?
   createdAt  DateTime       @default(now()) @map("created_at")
   expiresAt  DateTime       @map("expires_at")
 
-  user User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ngo  NgoProfile? @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  user  User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ngo   NgoProfile?   @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  group GroupProfile? @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   views StoryView[]
 
   @@index([userId])
   @@index([ngoId])
+  @@index([groupId])
   @@index([expiresAt])
   @@map("stories")
 }
@@ -714,19 +1069,19 @@ model NgoProfile {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  drives             Drive[]
-  adoptableTrees     AdoptableTree[]
-  campaigns          DonationCampaign[]
-  follows            Follow[]
-  posts              Post[]
-  stories            Story[]
-  portfolio          NgoPortfolioEntry[]
-  blockedBy          Block[]
-  notificationsTriggered Notification[]     @relation("NotificationActorNgo")
-  staff              StaffMember[]
-  plantedTrees       PlantedTree[]
-  streakHistory      NgoStreakHistory[]
-  achievementUnlocks NgoAchievementUnlock[]
+  drives                 Drive[]
+  adoptableTrees         AdoptableTree[]
+  campaigns              DonationCampaign[]
+  follows                Follow[]
+  posts                  Post[]
+  stories                Story[]
+  portfolio              NgoPortfolioEntry[]
+  blockedBy              Block[]
+  notificationsTriggered Notification[]         @relation("NotificationActorNgo")
+  staff                  StaffMember[]
+  plantedTrees           PlantedTree[]
+  streakHistory          NgoStreakHistory[]
+  achievementUnlocks     NgoAchievementUnlock[]
 
   @@index([status])
   @@map("ngo_profiles")
@@ -753,12 +1108,13 @@ model Drive {
   createdAt       DateTime           @default(now()) @map("created_at")
   updatedAt       DateTime           @updatedAt @map("updated_at")
 
-  ngo          NgoProfile         @relation(fields: [ngoId], references: [id], onDelete: Cascade)
-  rsvps        DriveRsvp[]
-  pickupPoints DrivePickupPoint[]
-  plants       DrivePlant[]
-  posts        Post[]
-  plantedTrees PlantedTree[]
+  ngo             NgoProfile         @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  rsvps           DriveRsvp[]
+  pickupPoints    DrivePickupPoint[]
+  plants          DrivePlant[]
+  posts           Post[]
+  plantedTrees    PlantedTree[]
+  csrSponsorships CsrSponsorship[]
 
   @@index([ngoId])
   @@index([lat, lng])
@@ -921,14 +1277,14 @@ model AdminActionLog {
 // ---------- Follow / Updates / Staff / Survival tracking ----------
 
 model Follow {
-  id         String       @id @default(uuid())
-  followerId String       @map("follower_id")
-  ngoId      String       @map("ngo_id")
+  id          String       @id @default(uuid())
+  followerId  String       @map("follower_id")
+  ngoId       String       @map("ngo_id")
   // `pending` only ever exists for NGOs whose followPolicy is `approval`. Every follower that
   // predates this column was implicitly accepted, and the migration backfills them as such.
-  status     FollowStatus @default(accepted)
-  respondedAt DateTime?   @map("responded_at")
-  createdAt  DateTime     @default(now()) @map("created_at")
+  status      FollowStatus @default(accepted)
+  respondedAt DateTime?    @map("responded_at")
+  createdAt   DateTime     @default(now()) @map("created_at")
 
   follower User       @relation(fields: [followerId], references: [id], onDelete: Cascade)
   ngo      NgoProfile @relation(fields: [ngoId], references: [id], onDelete: Cascade)
@@ -951,6 +1307,9 @@ model Post {
   caption    String?
   driveId    String?        @map("drive_id")
   treeId     String?        @map("tree_id")
+  // Optional tag for a member's own post being shared to one of their groups' activity
+  // timelines — unlike ngoId, this never changes authorship; the post stays user-authored.
+  groupId    String?        @map("group_id")
   visibility PostVisibility @default(public)
   // Denormalised so feeds don't need a count subquery per row; kept in step with PostLike
   // inside the same transaction as every like/unlike.
@@ -961,10 +1320,11 @@ model Post {
   createdAt  DateTime       @default(now()) @map("created_at")
   updatedAt  DateTime       @updatedAt @map("updated_at")
 
-  user  User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ngo   NgoProfile? @relation(fields: [ngoId], references: [id], onDelete: Cascade)
-  drive Drive?      @relation(fields: [driveId], references: [id], onDelete: SetNull)
-  tree  Tree?       @relation(fields: [treeId], references: [id], onDelete: SetNull)
+  user  User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ngo   NgoProfile?   @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  drive Drive?        @relation(fields: [driveId], references: [id], onDelete: SetNull)
+  tree  Tree?         @relation(fields: [treeId], references: [id], onDelete: SetNull)
+  group GroupProfile? @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
   media         PostMedia[]
   likes         PostLike[]
@@ -976,6 +1336,7 @@ model Post {
   @@index([userId, createdAt(sort: Desc)])
   @@index([createdAt(sort: Desc)])
   @@index([driveId])
+  @@index([groupId, createdAt(sort: Desc)])
   @@map("posts")
 }
 
@@ -1254,6 +1615,58 @@ model NgoAchievementUnlock {
   @@unique([ngoId, achievementId])
   @@index([ngoId])
   @@map("ngo_achievement_unlocks")
+}
+
+// ---------- Group gamification (streak / achievements) ----------
+// Daily analog of StreakHistory — unlike an NGO's weekly "posted an update" cadence, a
+// group's streak reflects "did any member plant a tree today", so it's keyed by day.
+model GroupStreakHistory {
+  id           String   @id @default(uuid())
+  groupId      String   @map("group_id")
+  activityDate DateTime @map("activity_date") @db.Date
+  planted      Boolean  @default(false)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  group GroupProfile @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, activityDate])
+  @@index([groupId, activityDate(sort: Desc)])
+  @@map("group_streak_history")
+}
+
+// Definition table, mirrors Achievement/NgoAchievement — fixed, seeded list of collective
+// group milestones, distinct from any individual member's own achievements.
+model GroupAchievement {
+  id             String                       @id @default(uuid())
+  key            String                       @unique
+  title          String
+  description    String
+  icon           String
+  rarity         Rarity
+  criteriaType   GroupAchievementCriteriaType @map("criteria_type")
+  criteriaTarget Int?                         @map("criteria_target")
+  sortOrder      Int                          @default(0) @map("sort_order")
+
+  unlocks GroupAchievementUnlock[]
+
+  @@map("group_achievements")
+}
+
+// Per-group unlock state, mirrors UserAchievement/NgoAchievementUnlock.
+model GroupAchievementUnlock {
+  id            String    @id @default(uuid())
+  groupId       String    @map("group_id")
+  achievementId String    @map("achievement_id")
+  unlocked      Boolean   @default(false)
+  progress      Int       @default(0)
+  unlockedAt    DateTime? @map("unlocked_at")
+
+  group       GroupProfile     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  achievement GroupAchievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, achievementId])
+  @@index([groupId])
+  @@map("group_achievement_unlocks")
 }
 
 // ---------- Password Reset ----------

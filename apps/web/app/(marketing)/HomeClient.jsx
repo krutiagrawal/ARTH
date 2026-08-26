@@ -497,12 +497,11 @@ function GrowthStatus({ glass = 'dark' }) {
   const [tree, setTree] = useState(undefined) // undefined = not checked yet
   useEffect(() => {
     let cancelled = false
-    fetch('/api/planted-trees')
-      .then((res) => (res.ok ? res.json() : { trees: [] }))
-      .then((data) => {
+    fetch('/api/member/proxy/trees')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((all) => {
         if (cancelled) return
-        const all = data.trees || []
-        setTree(all.length ? all[0] : null)
+        setTree(Array.isArray(all) && all.length ? all[0] : null)
       })
       .catch(() => { if (!cancelled) setTree(null) })
     return () => { cancelled = true }
@@ -549,8 +548,8 @@ const SAPLING_ITEMS = [
 
 const MATURE_ITEMS = [
   { id: 'individual', label: 'Individual', icon: User, description: 'Build your personal grove, maintain care streaks and collect the story of every tree.', links: [{ label: 'Trees', href: '/trees' }, { label: 'Dashboard', href: '/dashboard/individual' }] },
-  { id: 'group', label: 'Group', icon: Users, description: 'Plant with family, friends or communities. Grow a shared forest and complete challenges together.', links: [{ label: 'Competitions', href: '/competitions' }, { label: 'Leaderboards', href: '/leaderboards' }] },
-  { id: 'organisation', label: 'Organisation', icon: Building2, description: 'Run large campaigns, involve employees or students and receive verified impact reports.', links: [{ label: 'Partners', href: '/partners' }, { label: 'Dashboard', href: '/dashboard/organisation' }] },
+  { id: 'group', label: 'Group', icon: Users, description: 'Plant with family, friends or communities. Grow a shared forest and complete challenges together.', links: [{ label: 'Start a group', href: '/group/register' }, { label: 'Leaderboards', href: '/leaderboards' }] },
+  { id: 'organisation', label: 'Organisation', icon: Building2, description: 'Run large campaigns, involve employees or students and receive verified impact reports.', links: [{ label: 'Partners', href: '/partners' }, { label: 'Dashboard', href: '/dashboard/corporate' }] },
 ]
 
 const IMPACT_ITEMS = [
@@ -889,7 +888,7 @@ export default function HomeClient({ namingExample }) {
               )}
 
               <div className="mt-5 flex flex-wrap gap-2">
-                <LinkChip href="/dashboard/community" glass="dark">Start as a group</LinkChip>
+                <LinkChip href="/group/register" glass="dark">Start as a group</LinkChip>
                 <LinkChip href="/partners" glass="dark">Partner as an organisation</LinkChip>
               </div>
             </div>

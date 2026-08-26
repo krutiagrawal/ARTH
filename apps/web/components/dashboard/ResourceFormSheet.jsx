@@ -114,6 +114,7 @@ export default function ResourceFormSheet({
   title,
   description,
   icon,
+  eyebrow = 'NGO Dashboard',
   fields,
   item,
   photoLabel,
@@ -153,7 +154,7 @@ export default function ResourceFormSheet({
       open={open}
       onOpenChange={onOpenChange}
       icon={icon}
-      eyebrow="NGO Dashboard"
+      eyebrow={eyebrow}
       title={title}
       description={description}
       footer={

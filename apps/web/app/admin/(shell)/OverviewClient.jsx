@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Users, ShieldCheck, CalendarDays, Sprout, IndianRupee, Heart, FileStack, Mail, LogIn } from 'lucide-react'
+import { Users, ShieldCheck, CalendarDays, Sprout, IndianRupee, FileStack, Mail, LogIn, Users2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import StatTile from '@/components/dashboard/StatTile'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
@@ -33,7 +33,7 @@ export default function OverviewClient() {
       })
       .catch(() => setPlatform({ loading: false, signedIn: false, data: null }))
 
-    fetch('/api/admin/overview')
+    fetch('/api/admin/content-overview')
       .then(async (res) => {
         if (!res.ok) return setContent({ loading: false, signedIn: false, data: null })
         setContent({ loading: false, signedIn: true, data: await res.json() })
@@ -47,23 +47,23 @@ export default function OverviewClient() {
         <p className="eyebrow text-primary">Admin</p>
         <h1 className="font-serif text-3xl md:text-4xl mt-2">Overview</h1>
         <p className="mt-2 text-sm text-muted-foreground max-w-2xl">
-          Two independent admin identities feed this page — the NGO-approvals admin (services/api) and the
-          content/CMS admin (your ARTH account). You&rsquo;ll see numbers from whichever you&rsquo;re signed into.
+          One admin account covers everything below — NGO approvals and platform stats, plus the ARTH site&rsquo;s
+          own content (blog, competitions, newsletter).
         </p>
       </div>
 
       <section>
         <h2 className="eyebrow mb-4">Platform — NGOs, drives, donations</h2>
         {platform.loading ? (
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">
-            {Array.from({ length: 5 }).map((_, i) => (
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-5">
+            {Array.from({ length: 6 }).map((_, i) => (
               <StatTile key={i} loading />
             ))}
           </div>
         ) : !platform.signedIn ? (
           <SignInPrompt label="Platform stats are hidden" href="/admin/login" />
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-5">
             <StatTile
               label="Total users"
               value={Object.values(platform.data.usersByRole).reduce((a, b) => a + b, 0)}
@@ -79,6 +79,7 @@ export default function OverviewClient() {
               tone="sand"
               href="/admin/ngos"
             />
+            <StatTile label="Groups" value={platform.data.groupsCount ?? 0} description="All-time" icon={Users2} tone="primary" href="/admin/groups" />
             <StatTile label="Drives" value={platform.data.drivesCount} description="Created all-time" icon={CalendarDays} tone="primary" />
             <StatTile label="Trees adopted" value={platform.data.adoptedTreesCount} description="Across all NGOs" icon={Sprout} tone="sand" />
             <StatTile
@@ -100,29 +101,15 @@ export default function OverviewClient() {
       <section>
         <h2 className="eyebrow mb-4">Content — ARTH site</h2>
         {content.loading ? (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-            {Array.from({ length: 4 }).map((_, i) => (
+          <div className="grid grid-cols-2 gap-5">
+            {Array.from({ length: 2 }).map((_, i) => (
               <StatTile key={i} loading />
             ))}
           </div>
         ) : !content.signedIn ? (
-          <SignInPrompt label="Content stats are hidden" href="/login" />
+          <SignInPrompt label="Content stats are hidden" href="/admin/login" />
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-            <StatTile
-              label="Registered users"
-              value={Object.values(content.data.usersByAccountType).reduce((a, b) => a + b, 0)}
-              description="Individuals, communities & more"
-              icon={Users}
-              tone="primary"
-            />
-            <StatTile
-              label="Pledges"
-              value={`₹${content.data.pledgesTotalAmount.toLocaleString()}`}
-              description="Paid pledges total"
-              icon={Heart}
-              tone="sand"
-            />
+          <div className="grid grid-cols-2 gap-5">
             <StatTile
               label="Competition entries"
               value={content.data.competitionEntries}

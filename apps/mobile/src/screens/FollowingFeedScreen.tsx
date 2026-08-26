@@ -1,76 +1,179 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Image } from 'react-native';
-import { BlurView } from 'expo-blur';
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { GlassCard } from '../components/common/GlassCard';
+import { RADIUS, SPACING } from '../constants/theme';
+import { FONTS } from '../constants/typography';
 import { EmptyState } from '../components/common/EmptyState';
-import { useFollowingFeed } from '../hooks/useApiQueries';
+import { PostCard } from '../components/social/PostCard';
+import { ReportSheet } from '../components/social/ReportSheet';
+import { NotificationBell } from '../components/social/NotificationBell';
+import { StoriesTray } from '../components/stories/StoriesTray';
+import { useBottomNavClearance } from '../components/navigation/BottomNav';
+import {
+  useBlockTarget,
+  useDeletePost,
+  useSocialFeed,
+  useToggleLike,
+  useToggleSave,
+} from '../hooks/useSocialQueries';
+import type { ApiPost } from '../api/posts';
 
-export function FollowingFeedScreen({ navigation }: any) {
+interface FollowingFeedScreenProps {
+  navigation: any;
+  /** True when hosted inside the Community tab rather than pushed as its own screen. */
+  embedded?: boolean;
+}
+
+/**
+ * The main social feed: stories on top, then posts from followed NGOs and friends.
+ *
+ * Cursor-paginated through `useSocialFeed`, so new posts landing mid-scroll can't duplicate or
+ * skip rows the way the old page/offset endpoint did.
+ */
+export function FollowingFeedScreen({ navigation, embedded = false }: FollowingFeedScreenProps) {
   const insets = useSafeAreaInsets();
-  const { data, isLoading } = useFollowingFeed();
-  const updates = data?.updates ?? [];
+  const clearance = useBottomNavClearance();
+
+  const {
+    data,
+    isLoading,
+    refetch,
+    isRefetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useSocialFeed();
+
+  const toggleLike = useToggleLike();
+  const toggleSave = useToggleSave();
+  const deletePost = useDeletePost();
+  const blockTarget = useBlockTarget();
+  const [reportTarget, setReportTarget] = useState<ApiPost | null>(null);
+
+  const posts = useMemo(() => data?.pages.flatMap((p) => p.posts) ?? [], [data]);
+
+  const onEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const openAuthor = useCallback(
+    (post: ApiPost) => {
+      if (post.author.kind === 'ngo') {
+        navigation.navigate('NgoPublicProfile', { ngoId: post.author.id });
+      }
+    },
+    [navigation],
+  );
 
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
       <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
 
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+      {!embedded && (
+        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} hitSlop={8}>
             <Text style={styles.backIcon}>←</Text>
-          </BlurView>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Following</Text>
-        <View style={{ width: 40 }} />
-      </View>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Feed</Text>
+          <NotificationBell onPress={() => navigation.navigate('Notifications')} />
+        </View>
+      )}
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
-        {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
-        {!isLoading && updates.length === 0 && (
-          <EmptyState icon="🌿" title="No updates yet" body="Follow NGOs to see their real-time updates here." actionLabel="Browse NGOs" onAction={() => navigation.navigate('NgoDirectory')} />
-        )}
-        {updates.map((u) => (
-          <GlassCard key={u.id} variant="warm" style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              {u.ngoLogoUrl ? (
-                <Image source={{ uri: u.ngoLogoUrl }} style={styles.ngoLogo} />
-              ) : (
-                <View style={styles.ngoLogoPlaceholder}><Text style={{ fontSize: 14 }}>🌿</Text></View>
-              )}
-              <View style={{ flex: 1 }}>
-                <Text style={styles.ngoName}>{u.ngoName}</Text>
-                <Text style={styles.date}>{new Date(u.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}{u.driveTitle ? ` · ${u.driveTitle}` : ''}</Text>
-              </View>
+      {isLoading ? (
+        <View style={styles.centre}>
+          <ActivityIndicator color={COLORS.forest} />
+        </View>
+      ) : (
+        <FlatList
+          data={posts}
+          keyExtractor={(p) => p.id}
+          contentContainerStyle={[styles.list, { paddingBottom: clearance }]}
+          showsVerticalScrollIndicator={false}
+          onRefresh={refetch}
+          refreshing={isRefetching}
+          onEndReached={onEndReached}
+          onEndReachedThreshold={0.6}
+          ListHeaderComponent={
+            <View style={styles.trayWrap}>
+              <StoriesTray tone="onLight" />
             </View>
-            {u.photoUrl && <Image source={{ uri: u.photoUrl }} style={styles.photo} />}
-            {u.caption ? <Text style={styles.caption}>{u.caption}</Text> : null}
-          </GlassCard>
-        ))}
-      </ScrollView>
+          }
+          renderItem={({ item }) => (
+            <PostCard
+              post={item}
+              onToggleLike={(p) => toggleLike.mutate({ id: p.id, liked: p.likedByMe })}
+              onToggleSave={(p) => toggleSave.mutate({ id: p.id, saved: p.savedByMe })}
+              onPressAuthor={openAuthor}
+              onPressLikes={(p) => navigation.navigate('PostLikes', { postId: p.id })}
+              onPressDrive={(p) => p.driveId && navigation.navigate('DriveDetail', { driveId: p.driveId })}
+              onReport={(p) => setReportTarget(p)}
+              onBlock={(p) =>
+                blockTarget.mutate(
+                  p.author.kind === 'ngo' ? { ngoId: p.author.id } : { userId: p.author.id },
+                )
+              }
+              onDelete={(p) => deletePost.mutate(p.id)}
+              isTogglingLike={toggleLike.isPending && toggleLike.variables?.id === item.id}
+            />
+          )}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <ActivityIndicator style={styles.footer} color={COLORS.forest} />
+            ) : null
+          }
+          ListEmptyComponent={
+            <EmptyState
+              icon="🌿"
+              title="Your feed is quiet"
+              body="Follow a few NGOs and add some friends — their drives, photos and milestones land here."
+              actionLabel="Browse NGOs"
+              onAction={() => navigation.navigate('NgoDirectory')}
+            />
+          }
+        />
+      )}
+
+      <ReportSheet
+        visible={reportTarget !== null}
+        onClose={() => setReportTarget(null)}
+        targetType="post"
+        targetId={reportTarget?.id ?? null}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
-  backButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary },
-  scrollContent: { paddingHorizontal: 20 },
-  loader: { marginTop: 40 },
-  card: { marginBottom: 14, gap: 8 },
-  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  ngoLogo: { width: 32, height: 32, borderRadius: 8 },
-  ngoLogoPlaceholder: { width: 32, height: 32, borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.06)', alignItems: 'center', justifyContent: 'center' },
-  ngoName: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
-  date: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
-  photo: { width: '100%', height: 200, borderRadius: 12 },
-  caption: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 19 },
+  centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
+  headerTitle: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 22,
+    lineHeight: 29,
+    color: COLORS.textPrimary,
+  },
+  list: { paddingHorizontal: SPACING.md, paddingTop: SPACING.sm },
+  trayWrap: { marginBottom: SPACING.sm },
+  footer: { marginVertical: SPACING.md },
 });

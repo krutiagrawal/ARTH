@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { getServerUser } from '@/lib/session'
 import CompetitionDetailClient from './CompetitionDetailClient'
 
 export async function generateMetadata({ params }) {
@@ -16,19 +15,21 @@ export async function generateMetadata({ params }) {
 
 export default async function Page({ params }) {
   const { id } = await params
-  const [comp, user] = await Promise.all([
-    prisma.competition.findUnique({ where: { id } }),
-    getServerUser(),
-  ])
+  const comp = await prisma.competition.findUnique({ where: { id } })
   if (!comp) return notFound()
 
   const entries = await prisma.competitionEntry.findMany({
     where: { competitionId: id },
-    include: { user: { select: { name: true } }, voters: user ? { where: { userId: user.id }, select: { id: true } } : false },
-    orderBy: { votes: 'desc' },
+    include: { user: { select: { name: true } } },
+    orderBy: { votesCount: 'desc' },
   })
-  const serialisedEntries = entries.map((e) => ({ ...e, createdAt: e.createdAt.toISOString(), hasVoted: user ? e.voters.length > 0 : false, voters: undefined }))
+  const serialisedEntries = entries.map((e) => ({
+    ...e,
+    createdAt: e.createdAt.toISOString(),
+    votes: e.votesCount,
+    hasVoted: false,
+  }))
 
   const serialisedComp = { ...comp, deadline: comp.deadline.toISOString() }
-  return <CompetitionDetailClient comp={serialisedComp} initialEntries={serialisedEntries} isLoggedIn={Boolean(user)} />
+  return <CompetitionDetailClient comp={serialisedComp} initialEntries={serialisedEntries} />
 }

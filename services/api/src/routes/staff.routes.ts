@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { ORG_ROLES } from '../constants/roles';
 import * as staffService from '../services/staff.service';
 import { saveStaffPhoto } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
@@ -19,7 +20,7 @@ function serializeStaff(s: any) {
 }
 
 export default async function staffRoutes(fastify: FastifyInstance) {
-  fastify.addHook('preHandler', fastify.requireRole('ngo'));
+  fastify.addHook('preHandler', fastify.requireRole(...ORG_ROLES));
 
   fastify.get('/', async (request, reply) => {
     const staff = await staffService.listOwnStaff(fastify.prisma, request.user!.id);

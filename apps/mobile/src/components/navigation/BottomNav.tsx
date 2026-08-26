@@ -1,12 +1,6 @@
 import React, { useCallback } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  Platform,
-} from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Dimensions, Platform } from 'react-native';
+import { Text } from '../common/AppText';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -22,7 +16,8 @@ import { COLORS } from '../../constants/colors';
 import { RADIUS, SHADOWS } from '../../constants/theme';
 import { useHaptics } from '../../hooks/useHaptics';
 import type { TimeTheme } from '../../hooks/useTimeTheme';
-import { hexToRgba } from '../../utils/color';
+import { contrastRatio, hexToRgba, mixHex, relativeLuminance } from '../../utils/color';
+import { getHeroSeamColor, getHeroSeamTextColors } from '../../utils/heroSeam';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -39,44 +34,118 @@ export const BOTTOM_NAV_CONTENT_HEIGHT = 76;
  * that if a screen wants more spacing. */
 export function useBottomNavClearance(extra = 16) {
   const insets = useSafeAreaInsets();
-  return BOTTOM_NAV_CONTENT_HEIGHT + insets.bottom + extra;
+  // Mirror the bar's own `paddingBottom: Math.max(insets.bottom, 8)` below — reserving
+  // only `insets.bottom` under-counts by 8px wherever the inset is 0 (Android 3-button
+  // nav), which ate most of the intended gap and let the bar sit on the last card.
+  return BOTTOM_NAV_CONTENT_HEIGHT + Math.max(insets.bottom, 8) + extra;
 }
 
-export type TabName = 'Home' | 'Forest' | 'Plant' | 'Map' | 'Community';
+export type TabName = string;
 
-interface TabItem {
+export interface TabItem {
   name: TabName;
   icon: string;
   label: string;
+  /** Renders this tab as a raised, gradient-filled FAB (like the user app's center "Plant"
+   * button) instead of a normal icon/label tab. At most one tab per set should set this. */
+  raised?: boolean;
 }
 
-const TABS: TabItem[] = [
+export const USER_TABS: TabItem[] = [
   { name: 'Home', icon: '🏡', label: 'Home' },
   { name: 'Forest', icon: '🌲', label: 'Forest' },
-  { name: 'Plant', icon: '➕', label: 'Plant' },
+  { name: 'Plant', icon: '➕', label: 'Plant', raised: true },
   { name: 'Map', icon: '🗺️', label: 'Map' },
   { name: 'Community', icon: '👥', label: 'Community' },
 ];
 
+/** An explicit background for callers whose screen isn't driven by the time-of-day theme — the
+ * admin console, whose chrome is a fixed dark panel. Pass the same color the screen paints its
+ * page with, so the floating bar reads as part of that page rather than a cream slab on top. */
+export interface NavSurface {
+  /** Opaque '#RRGGBB'. Washed over the blur at 85%, exactly like the themed path. */
+  background: string;
+  border?: string;
+  tint?: 'light' | 'dark';
+}
+
 interface BottomNavProps {
+  tabs: TabItem[];
   activeTab: TabName;
   onTabPress: (tab: TabName) => void;
-  /** Only passed while Home is the active tab — retints the nav to match Home's current
-   * time-of-day period. Every other screen leaves this undefined and gets the static beige/green
-   * look, unchanged. */
+  /** Passed while a time-themed screen (user Home, NGO dashboard) is the active tab — retints the
+   * nav to match that screen's current time-of-day period. Leave undefined for a static
+   * beige/green bar. Ignored when `surface` is also given. */
   theme?: TimeTheme | null;
+  /** Fixed background override, for screens outside the time-of-day system. */
+  surface?: NavSurface | null;
+}
+
+/** Every color the bar needs, resolved from whichever source the caller supplied. */
+interface NavPalette {
+  background: string;
+  border: string;
+  tint: 'light' | 'dark';
+  labelInactive: string;
+  labelActive: string;
+  indicator: string;
+  iconPill: string;
+  fabColors: [string, string];
+}
+
+function paletteFromTheme(theme: TimeTheme): NavPalette {
+  // The bar floats over the *page*, not over a card — so it has to take the seam color the screen
+  // actually paints itself with. `theme.cardBackground` (what this used to use) diverges from it
+  // at afternoon, morning, dawn and night, which is what made the bar look like a foreign object
+  // on exactly those periods.
+  const background = getHeroSeamColor(theme);
+  const text = getHeroSeamTextColors(theme);
+  // Night's accent is a mid indigo on a deep indigo seam; below 3:1 it stops reading as a label
+  // at all, so fall back to the seam's own primary text color.
+  const accent = contrastRatio(theme.accentColor, background) >= 3 ? theme.accentColor : text.primary;
+
+  return {
+    background,
+    border: theme.cardBorder,
+    // Follow the seam's luminance, not `cardTint` — Night keeps light-tinted cards while its seam
+    // is a deep indigo, and a light blur over that muddies into grey.
+    tint: relativeLuminance(background) < 0.4 ? 'dark' : 'light',
+    labelInactive: text.secondary,
+    labelActive: accent,
+    indicator: accent,
+    iconPill: theme.accentColorSoft,
+    // `accentColorSoft` is a ~15% alpha wash — useless as a gradient stop on a solid FAB, so
+    // lighten the accent itself for the top stop to keep the button's sheen.
+    fabColors: [mixHex(theme.accentColor, '#FFFFFF', 0.35), theme.accentColor],
+  };
+}
+
+function paletteFromSurface(surface: NavSurface): NavPalette {
+  const dark = surface.tint ? surface.tint === 'dark' : relativeLuminance(surface.background) < 0.4;
+  const onSurface = dark ? '#FFFFFF' : COLORS.textPrimary;
+
+  return {
+    background: surface.background,
+    border: surface.border ?? (dark ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.4)'),
+    tint: dark ? 'dark' : 'light',
+    labelInactive: hexToRgba(onSurface, 0.6),
+    labelActive: dark ? COLORS.mint : COLORS.forest,
+    indicator: dark ? COLORS.mint : COLORS.sage,
+    iconPill: dark ? 'rgba(255,255,255,0.14)' : COLORS.glassSageSubtle,
+    fabColors: [COLORS.sageLight, COLORS.forest],
+  };
 }
 
 function TabButton({
   tab,
   isActive,
   onPress,
-  theme,
+  palette,
 }: {
   tab: TabItem;
   isActive: boolean;
   onPress: () => void;
-  theme?: TimeTheme | null;
+  palette?: NavPalette | null;
 }) {
   const { selection } = useHaptics();
   const scale = useSharedValue(1);
@@ -101,7 +170,7 @@ function TabButton({
     onPress();
   }, [isActive, onPress]);
 
-  if (tab.name === 'Plant') {
+  if (tab.raised) {
     return (
       <TouchableOpacity
         style={styles.plantButtonWrapper}
@@ -110,12 +179,17 @@ function TabButton({
       >
         <Animated.View style={containerStyle}>
           <LinearGradient
-            colors={[COLORS.sageLight, COLORS.forest]}
+            colors={palette?.fabColors ?? [COLORS.sageLight, COLORS.forest]}
             style={styles.plantButton}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <Animated.Text style={[styles.plantIcon, iconStyle]}>🌱</Animated.Text>
+            {/* A vector plus instead of the '➕' glyph — some Android/Expo Go emoji fonts have no
+                color presentation for it and fall back to a black tofu box that reads as a cross. */}
+            <Animated.View style={[styles.plusIconWrap, iconStyle]}>
+              <View style={styles.plusBarH} />
+              <View style={styles.plusBarV} />
+            </Animated.View>
           </LinearGradient>
         </Animated.View>
       </TouchableOpacity>
@@ -130,13 +204,13 @@ function TabButton({
     >
       <Animated.View style={[styles.tabContent, containerStyle]}>
         {isActive && (
-          <View style={[styles.activeIndicator, theme && { backgroundColor: theme.accentColor }]} />
+          <View style={[styles.activeIndicator, palette && { backgroundColor: palette.indicator }]} />
         )}
         <Animated.View
           style={[
             styles.iconContainer,
             isActive && styles.activeIconContainer,
-            isActive && theme && { backgroundColor: theme.accentColorSoft },
+            isActive && palette && { backgroundColor: palette.iconPill },
             iconStyle,
           ]}
         >
@@ -147,9 +221,9 @@ function TabButton({
         <Text
           style={[
             styles.tabLabel,
-            theme && { color: theme.textSecondaryOnCard },
+            palette && { color: palette.labelInactive },
             isActive && styles.activeTabLabel,
-            isActive && theme && { color: theme.accentColor },
+            isActive && palette && { color: palette.labelActive },
           ]}
         >
           {tab.label}
@@ -159,21 +233,38 @@ function TabButton({
   );
 }
 
-export function BottomNav({ activeTab, onTabPress, theme }: BottomNavProps) {
+export function BottomNav({ tabs, activeTab, onTabPress, theme, surface }: BottomNavProps) {
   const insets = useSafeAreaInsets();
+
+  // `surface` wins: a caller that names an explicit background knows something the time-of-day
+  // theme doesn't (admin's fixed panel).
+  const palette = surface
+    ? paletteFromSurface(surface)
+    : theme
+      ? paletteFromTheme(theme)
+      : null;
 
   return (
     <View style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-      <BlurView intensity={60} tint={theme?.cardTint === 'dark' ? 'dark' : 'light'} style={styles.blurContainer}>
-        <View style={[styles.overlay, theme && { backgroundColor: hexToRgba(theme.cardBackground, 0.85) }]} />
+      <BlurView
+        intensity={60}
+        tint={palette?.tint ?? 'light'}
+        style={[styles.blurContainer, palette && { borderColor: palette.border }]}
+      >
+        <View
+          style={[
+            styles.overlay,
+            palette && { backgroundColor: hexToRgba(palette.background, 0.85) },
+          ]}
+        />
         <View style={styles.container}>
-          {TABS.map(tab => (
+          {tabs.map(tab => (
             <TabButton
               key={tab.name}
               tab={tab}
               isActive={activeTab === tab.name}
               onPress={() => onTabPress(tab.name)}
-              theme={theme}
+              palette={palette}
             />
           ))}
         </View>
@@ -266,7 +357,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...SHADOWS.sage,
   },
-  plantIcon: {
-    fontSize: 26,
+  plusIconWrap: {
+    width: 26,
+    height: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plusBarH: {
+    position: 'absolute',
+    width: 20,
+    height: 3.5,
+    borderRadius: 2,
+    backgroundColor: '#FFFFFF',
+  },
+  plusBarV: {
+    position: 'absolute',
+    width: 3.5,
+    height: 20,
+    borderRadius: 2,
+    backgroundColor: '#FFFFFF',
   },
 });

@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { ArrowLeft, Calendar, Trophy, Heart, Plus, X } from 'lucide-react'
 import SectionWrapper from '@/components/site/SectionWrapper'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/components/site/AuthProvider'
+import { proxy } from '../../../app/proxy'
 
 function useCountdown(deadline) {
   const [now, setNow] = useState(() => Date.now())
@@ -16,7 +18,9 @@ function useCountdown(deadline) {
   return { d, h, m, s }
 }
 
-export default function CompetitionDetailClient({ comp, initialEntries, isLoggedIn }) {
+export default function CompetitionDetailClient({ comp, initialEntries }) {
+  const { user } = useAuth()
+  const isLoggedIn = Boolean(user)
   const { d, h, m, s } = useCountdown(comp.deadline)
   const [entries, setEntries] = useState(initialEntries)
   const [showForm, setShowForm] = useState(false)
@@ -31,30 +35,30 @@ export default function CompetitionDetailClient({ comp, initialEntries, isLogged
     setSubmitting(true)
     setError('')
     try {
-      const res = await fetch(`/api/competitions/${comp.id}/entries`, {
+      const entry = await proxy(`/competitions/${comp.id}/entries`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, description, imageUrl: imageUrl || undefined }),
+        body: { title, description, imageUrl: imageUrl || undefined },
       })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || 'Something went wrong.')
-        return
-      }
-      setEntries((es) => [{ ...data.entry, user: { name: 'You' }, hasVoted: false }, ...es])
+      setEntries((es) => [{ ...entry, votes: entry.votesCount, user: { name: 'You' }, hasVoted: false }, ...es])
       setShowForm(false)
       setTitle('')
       setDescription('')
       setImageUrl('')
+    } catch (err) {
+      setError(err.message || 'Something went wrong.')
     } finally {
       setSubmitting(false)
     }
   }
 
   const vote = async (entryId) => {
-    const res = await fetch(`/api/competitions/${comp.id}/entries/${entryId}/vote`, { method: 'POST' })
-    if (!res.ok) return
-    setEntries((es) => es.map((e) => (e.id === entryId ? { ...e, votes: e.votes + 1, hasVoted: true } : e)))
+    try {
+      await proxy(`/competitions/entries/${entryId}/vote`, { method: 'POST' })
+      setEntries((es) => es.map((e) => (e.id === entryId ? { ...e, votes: e.votes + 1, hasVoted: true } : e)))
+    } catch (err) {
+      // Already voted — reflect that state instead of leaving the button stuck.
+      if (err.status === 409) setEntries((es) => es.map((e) => (e.id === entryId ? { ...e, hasVoted: true } : e)))
+    }
   }
 
   return (

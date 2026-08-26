@@ -8,21 +8,22 @@ export const metadata = {
 
 const CATEGORY_ORDER = ['Individuals', 'Communities', 'NGOs', 'Cities', 'Schools', 'Companies', 'Forests']
 
-// These two categories map cleanly onto the Arth user model (accountType + planted
-// trees) so they're computed live. The rest (NGOs/Cities/Schools/Companies/Forests)
-// have no equivalent real grouping yet and stay on the seeded LeaderboardEntry table.
+// These two categories map cleanly onto the shared services/api user model (role +
+// treesPlantedCount) so they're computed live. The rest (NGOs/Cities/Schools/
+// Companies/Forests) have no equivalent real grouping yet and stay on the seeded
+// LeaderboardEntry table.
 const LIVE_CATEGORIES = {
-  Individuals: 'individual',
-  Communities: 'community',
+  Individuals: 'user',
+  Communities: 'group',
 }
 
-async function loadLiveCategory(accountType) {
+async function loadLiveCategory(role) {
   const users = await prisma.user.findMany({
-    where: { accountType, plantedTrees: { some: {} } },
-    select: { name: true, place: true, _count: { select: { plantedTrees: true } } },
+    where: { role, treesPlantedCount: { gt: 0 } },
+    select: { name: true, handle: true, treesPlantedCount: true },
   })
   return users
-    .map((u) => ({ name: u.name, place: u.place || '—', score: u._count.plantedTrees }))
+    .map((u) => ({ name: u.name, place: `@${u.handle}`, score: u.treesPlantedCount }))
     .sort((a, b) => b.score - a.score)
 }
 

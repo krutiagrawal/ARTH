@@ -31,6 +31,8 @@ export const updateProfileSchema = z.object({
   foundedYear: z.coerce.number().int().min(1800).max(2200).optional(),
   volunteerCountEstimate: z.coerce.number().int().min(0).max(1_000_000).optional(),
   awards: jsonValue(z.array(awardSchema).max(50)).optional(),
+  // 'open' accepts followers instantly; 'approval' routes each one to the request inbox.
+  followPolicy: z.enum(['open', 'approval']).optional(),
 });
 
 export const donationsQuerySchema = z.object({

@@ -1,14 +1,13 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Home, ShieldCheck, FileStack, Flag, ScrollText, LogOut, ShieldAlert } from 'lucide-react'
+import { Home, ShieldCheck, FileStack, Flag, ScrollText, LogOut, ShieldAlert, Users } from 'lucide-react'
 import AppSidebar from '@/components/dashboard/AppSidebar'
 import { Button } from '@/components/ui/button'
 
-const API_ADMIN_REASON = 'Sign in as the NGO-approvals admin to access this.'
-const WEB_ADMIN_REASON = 'Sign in with your ARTH account (isAdmin) to access this.'
+const ADMIN_REASON = 'Sign in as an admin to access this.'
 
-export default function AdminShell({ hasWebAdmin, hasApiAdminCookie, adminName, children }) {
+export default function AdminShell({ hasAdmin, adminName, children }) {
   const router = useRouter()
 
   const sections = [
@@ -19,25 +18,25 @@ export default function AdminShell({ hasWebAdmin, hasApiAdminCookie, adminName, 
     {
       label: 'NGOs',
       items: [
-        { label: 'Approvals', href: '/admin/ngos', icon: ShieldCheck, disabled: !hasApiAdminCookie, disabledReason: API_ADMIN_REASON },
-        { label: 'Audit Log', href: '/admin/audit-log', icon: ScrollText, disabled: !hasApiAdminCookie, disabledReason: API_ADMIN_REASON },
+        { label: 'Approvals', href: '/admin/ngos', icon: ShieldCheck, disabled: !hasAdmin, disabledReason: ADMIN_REASON },
+        { label: 'Audit Log', href: '/admin/audit-log', icon: ScrollText, disabled: !hasAdmin, disabledReason: ADMIN_REASON },
       ],
+    },
+    {
+      label: 'Groups',
+      items: [{ label: 'Groups', href: '/admin/groups', icon: Users, disabled: !hasAdmin, disabledReason: ADMIN_REASON }],
     },
     {
       label: 'Content',
       items: [
-        { label: 'CMS', href: '/admin/content', icon: FileStack, disabled: !hasWebAdmin, disabledReason: WEB_ADMIN_REASON },
-        { label: 'Competitions', href: '/admin/competitions', icon: Flag, disabled: !hasWebAdmin, disabledReason: WEB_ADMIN_REASON },
+        { label: 'CMS', href: '/admin/content', icon: FileStack, disabled: !hasAdmin, disabledReason: ADMIN_REASON },
+        { label: 'Competitions', href: '/admin/competitions', icon: Flag, disabled: !hasAdmin, disabledReason: ADMIN_REASON },
       ],
     },
   ]
 
-  const logoutApiAdmin = async () => {
+  const logout = async () => {
     await fetch('/api/admin/logout', { method: 'POST' })
-    router.refresh()
-  }
-  const logoutWebAdmin = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
     router.refresh()
   }
 
@@ -58,18 +57,12 @@ export default function AdminShell({ hasWebAdmin, hasApiAdminCookie, adminName, 
       }
       footer={
         <div className="flex flex-col gap-1">
-          {hasApiAdminCookie && (
-            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent" onClick={logoutApiAdmin}>
-              <LogOut className="h-4 w-4" /> Sign out (NGO admin)
+          {hasAdmin ? (
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent" onClick={logout}>
+              <LogOut className="h-4 w-4" /> Sign out
             </Button>
-          )}
-          {hasWebAdmin && (
-            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent" onClick={logoutWebAdmin}>
-              <LogOut className="h-4 w-4" /> Sign out (Content admin)
-            </Button>
-          )}
-          {!hasApiAdminCookie && !hasWebAdmin && (
-            <p className="px-2 text-xs text-sidebar-foreground/60">Not signed in to either admin.</p>
+          ) : (
+            <p className="px-2 text-xs text-sidebar-foreground/60">Not signed in.</p>
           )}
         </div>
       }

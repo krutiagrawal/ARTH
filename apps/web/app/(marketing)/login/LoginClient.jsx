@@ -21,7 +21,7 @@ function LoginForm() {
     setError('')
     setSubmitting(true)
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch('/api/member/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -32,7 +32,9 @@ function LoginForm() {
         return
       }
       await refresh()
-      router.push(searchParams.get('next') || `/dashboard/${data.user.accountType}`)
+      // Organisation-type accounts (ngo/community/nursery/organisation) have their
+      // own dashboard + session at /ngo/login — this form is for individual accounts.
+      router.push(searchParams.get('next') || '/dashboard/individual')
     } catch {
       setError('Could not reach the server. Please check your connection and try again.')
     } finally {

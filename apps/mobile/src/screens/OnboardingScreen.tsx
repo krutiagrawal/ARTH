@@ -1,14 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Dimensions,
-  TouchableOpacity,
-  FlatList,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
-} from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableOpacity, FlatList, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { Text } from '../components/common/AppText';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -160,7 +152,7 @@ export function OnboardingScreen({ navigation }: any) {
 
   const finishOnboarding = useCallback(() => {
     AsyncStorage.setItem('plant_onboarded', 'true');
-    navigation.replace('Register');
+    navigation.replace('AccountType');
   }, [navigation]);
 
   const handleNext = useCallback(() => {

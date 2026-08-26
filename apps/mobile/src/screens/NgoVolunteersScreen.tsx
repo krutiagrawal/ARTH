@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { Text } from '../components/common/AppText';
+import Animated from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +10,12 @@ import { COLORS } from '../constants/colors';
 import { GlassCard } from '../components/common/GlassCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useNgoVolunteers } from '../hooks/useApiQueries';
+import { useSlideUp } from '../hooks/useAnimations';
+
+function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
+  const animStyle = useSlideUp(delay, 18);
+  return <Animated.View style={[animStyle, style]}>{children}</Animated.View>;
+}
 
 export function NgoVolunteersScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -34,21 +42,23 @@ export function NgoVolunteersScreen({ navigation }: any) {
         {!isLoading && volunteers.length === 0 && (
           <EmptyState icon="👥" title="No volunteers yet" body="Once people RSVP to your drives, they'll show up here." />
         )}
-        {volunteers.map((v) => (
-          <GlassCard key={v.userId} variant="warm" style={styles.card}>
-            <View style={styles.cardRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.cardTitle}>{v.name}</Text>
-                <Text style={styles.cardMeta}>@{v.handle}</Text>
+        {volunteers.map((v, i) => (
+          <FadeInRow key={v.userId} delay={i * 60}>
+            <GlassCard variant="warm" style={styles.card}>
+              <View style={styles.cardRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>{v.name}</Text>
+                  <Text style={styles.cardMeta}>@{v.handle}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.countText}>{v.drivesAttended} drive{v.drivesAttended === 1 ? '' : 's'}</Text>
+                  {v.lastActiveAt && (
+                    <Text style={styles.dateText}>{new Date(v.lastActiveAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Text>
+                  )}
+                </View>
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.countText}>{v.drivesAttended} drive{v.drivesAttended === 1 ? '' : 's'}</Text>
-                {v.lastActiveAt && (
-                  <Text style={styles.dateText}>{new Date(v.lastActiveAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Text>
-                )}
-              </View>
-            </View>
-          </GlassCard>
+            </GlassCard>
+          </FadeInRow>
         ))}
       </ScrollView>
     </View>

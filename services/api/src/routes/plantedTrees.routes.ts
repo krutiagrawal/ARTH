@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { ORG_ROLES } from '../constants/roles';
 import * as plantedTreeService from '../services/plantedTree.service';
 import { savePlantedTreePhoto, saveHealthCheckPhoto } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
@@ -29,7 +30,7 @@ function serializeTree(t: any) {
 }
 
 export default async function plantedTreesRoutes(fastify: FastifyInstance) {
-  fastify.addHook('preHandler', fastify.requireRole('ngo'));
+  fastify.addHook('preHandler', fastify.requireRole(...ORG_ROLES));
 
   fastify.get('/', async (request, reply) => {
     const parsed = listQuerySchema.safeParse(request.query);

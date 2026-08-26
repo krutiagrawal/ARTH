@@ -1,15 +1,9 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getServerUser } from '@/lib/session'
-
-async function requireAdmin() {
-  const user = await getServerUser()
-  if (!user || !user.isAdmin) return null
-  return user
-}
+import { requireApiAdmin } from '@/lib/requireApiAdmin'
 
 export async function DELETE(request, { params }) {
-  const admin = await requireAdmin()
+  const admin = await requireApiAdmin(request)
   if (!admin) return NextResponse.json({ error: 'Admin sign in required.' }, { status: 401 })
 
   const { id } = await params

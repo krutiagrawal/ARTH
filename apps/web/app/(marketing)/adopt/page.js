@@ -1,19 +1,10 @@
-import { prisma } from '@/lib/prisma'
-import { getServerUser } from '@/lib/session'
-import AdoptClient from './AdoptClient'
+import TreesListClient from '../../app/(guarded)/trees/TreesListClient'
 
 export const metadata = {
   title: 'Adopt a tree',
   description: 'Adopt a legacy tree and follow its story — real trees, cared for by real people.',
 }
 
-export default async function Page() {
-  const [user, trees] = await Promise.all([
-    getServerUser(),
-    prisma.legacyTree.findMany({ orderBy: { id: 'asc' } }),
-  ])
-  const mine = user
-    ? await prisma.adoption.findMany({ where: { userId: user.id } })
-    : []
-  return <AdoptClient trees={trees} initialAdoptedIds={mine.map((a) => a.treeId)} />
+export default function Page() {
+  return <TreesListClient />
 }

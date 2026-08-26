@@ -3,7 +3,7 @@ import * as ngoPublicService from '../services/ngoPublic.service';
 import * as followService from '../services/follow.service';
 import { browseQuerySchema, paginationQuerySchema } from '../schemas/ngosPublic.schema';
 import { BadRequestError } from '../utils/errors';
-import { serializeUpdate } from './ngoUpdates.routes';
+import { listPublicPortfolio } from '../services/portfolio.service';
 
 function serializeNgoSummary(n: any) {
   return { id: n.id, orgName: n.orgName, description: n.description, logoUrl: n.logoUrl, city: n.city };
@@ -27,11 +27,8 @@ export default async function ngosPublicRoutes(fastify: FastifyInstance) {
     { preHandler: [fastify.optionalAuthenticate] },
     async (request, reply) => {
       const profile = await ngoPublicService.getPublicProfile(fastify.prisma, request.params.id, request.user?.id);
-      reply.send({
-        ...profile,
-        featuredDrives: profile.featuredDrives.map(serializeDrive),
-        recentUpdates: profile.recentUpdates.map(serializeUpdate),
-      });
+      // recentUpdates / portfolio / staff arrive already serialized from the service.
+      reply.send({ ...profile, featuredDrives: profile.featuredDrives.map(serializeDrive) });
     },
   );
 
@@ -40,15 +37,22 @@ export default async function ngosPublicRoutes(fastify: FastifyInstance) {
     if (!parsed.success) throw new BadRequestError('Invalid query parameters');
 
     const updates = await ngoPublicService.listPublicUpdatesForNgo(fastify.prisma, request.params.id, parsed.data);
-    reply.send(updates.map(serializeUpdate));
+    reply.send(updates);
+  });
+
+  // Past work, shown on the public profile alongside completed drives.
+  fastify.get<{ Params: { id: string } }>('/:id/portfolio', async (request, reply) => {
+    reply.send(await listPublicPortfolio(fastify.prisma, request.params.id));
   });
 
   fastify.post<{ Params: { id: string } }>(
     '/:id/follow',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      await followService.followNgo(fastify.prisma, request.user!.id, request.params.id);
-      reply.status(204).send();
+      // Returns { status, followersCount } rather than the old bare 204, so the client can
+      // render "Following" vs "Requested" without guessing. apps/web ignores the body, so its
+      // existing follow button is unaffected.
+      reply.send(await followService.followNgo(fastify.prisma, request.user!.id, request.params.id));
     },
   );
 
@@ -56,8 +60,7 @@ export default async function ngosPublicRoutes(fastify: FastifyInstance) {
     '/:id/follow',
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
-      await followService.unfollowNgo(fastify.prisma, request.user!.id, request.params.id);
-      reply.status(204).send();
+      reply.send(await followService.unfollowNgo(fastify.prisma, request.user!.id, request.params.id));
     },
   );
 }

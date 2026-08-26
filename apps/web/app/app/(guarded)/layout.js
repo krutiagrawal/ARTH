@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Leaf, CalendarDays, TreePine, LogOut, WifiOff, Newspaper } from 'lucide-react'
+import { Leaf, CalendarDays, TreePine, LogOut, WifiOff, Newspaper, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { MemberProvider, useMember } from '../MemberContext'
 
 const NAV = [
   { label: 'Drives', href: '/app/drives', icon: CalendarDays },
   { label: 'Adopt a tree', href: '/app/trees', icon: TreePine },
+  { label: 'Groups', href: '/app/groups', icon: Users },
   { label: 'Following', href: '/app/following', icon: Newspaper },
 ]
 

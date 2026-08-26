@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@plant/db';
 import { NotFoundError } from '../utils/errors';
 import { requireNgoProfile } from './ngo.service';
 

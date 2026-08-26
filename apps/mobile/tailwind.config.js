@@ -27,7 +27,8 @@ module.exports = {
         'night-forest': '#0D2318',
       },
       fontFamily: {
-        'display': ['Georgia', 'serif'],
+        'display': ['Baloo2_600SemiBold'],
+        'sans': ['NunitoSans_400Regular'],
       },
     },
   },

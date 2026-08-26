@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle } from 'react-native';
+import { Text } from './AppText';
 import { COLORS } from '../../constants/colors';
-import { TYPOGRAPHY } from '../../constants/typography';
+import { TYPOGRAPHY, FONTS } from '../../constants/typography';
 import { SPACING } from '../../constants/theme';
 import { AnimatedButton } from './AnimatedButton';
 
@@ -12,6 +13,8 @@ import { AnimatedButton } from './AnimatedButton';
 
 interface EmptyStateProps {
   icon?: string;
+  /** A real illustration to render in place of the emoji — an `<Image>` or an SVG component. */
+  illustration?: React.ReactNode;
   title: string;
   body?: string;
   actionLabel?: string;
@@ -22,6 +25,7 @@ interface EmptyStateProps {
 
 export function EmptyState({
   icon = '🌱',
+  illustration,
   title,
   body,
   actionLabel,
@@ -32,7 +36,11 @@ export function EmptyState({
   const isDark = tint === 'dark';
   return (
     <View style={[styles.wrap, style]}>
-      <Text style={styles.icon}>{icon}</Text>
+      {illustration ? (
+        <View style={styles.illustration}>{illustration}</View>
+      ) : (
+        <Text style={styles.icon}>{icon}</Text>
+      )}
       <Text style={[styles.title, { color: isDark ? COLORS.textWhite : COLORS.textPrimary }]}>{title}</Text>
       {body ? (
         <Text style={[styles.body, { color: isDark ? COLORS.textWhite : COLORS.textPrimary }]}>
@@ -63,8 +71,13 @@ const styles = StyleSheet.create({
     fontSize: 40,
     marginBottom: SPACING.sm,
   },
+  illustration: {
+    marginBottom: SPACING.md,
+  },
   title: {
-    ...TYPOGRAPHY.h3,
+    fontFamily: FONTS.displayBold,
+    fontSize: 20,
+    lineHeight: 27,
     textAlign: 'center',
   },
   body: {

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@plant/db';
 import { ConflictError, NotFoundError } from '../utils/errors';
 import { geocodeAddress } from '../utils/geocode';
 import { haversineDistanceKm } from '../utils/geo';

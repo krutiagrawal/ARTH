@@ -2,6 +2,18 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import * as adminService from '../services/admin.service';
 import { BadRequestError } from '../utils/errors';
+import * as reportService from '../services/report.service';
+
+const reportsQuerySchema = z.object({
+  status: z.enum(['open', 'actioned', 'dismissed']).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  take: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+const reportActionSchema = z.object({
+  action: z.enum(['hide', 'unhide', 'delete', 'dismiss']),
+  reason: z.string().max(500).optional(),
+});
 
 function serializeNgo(profile: any) {
   return {
@@ -19,6 +31,45 @@ function serializeNgo(profile: any) {
   };
 }
 
+function serializeNursery(profile: any) {
+  return {
+    id: profile.id,
+    nurseryName: profile.nurseryName,
+    description: profile.description,
+    city: profile.city,
+    contactPhone: profile.contactPhone,
+    status: profile.status,
+    rejectionReason: profile.rejectionReason,
+    createdAt: profile.createdAt,
+    owner: profile.user
+      ? { id: profile.user.id, email: profile.user.email, name: profile.user.name, handle: profile.user.handle }
+      : undefined,
+  };
+}
+
+function serializeCorporate(profile: any) {
+  return {
+    id: profile.id,
+    companyName: profile.companyName,
+    description: profile.description,
+    city: profile.city,
+    industry: profile.industry,
+    status: profile.status,
+    rejectionReason: profile.rejectionReason,
+    createdAt: profile.createdAt,
+    owner: profile.user
+      ? { id: profile.user.id, email: profile.user.email, name: profile.user.name, handle: profile.user.handle }
+      : undefined,
+  };
+}
+
+const listOrgQuerySchema = z.object({
+  status: z.enum(['pending', 'approved', 'rejected', 'suspended']).optional(),
+  q: z.string().max(200).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  take: z.coerce.number().int().min(1).max(50).optional(),
+});
+
 const listNgosQuerySchema = z.object({
   status: z.enum(['pending', 'approved', 'rejected', 'suspended']).optional(),
   q: z.string().max(200).optional(),
@@ -34,6 +85,31 @@ const setStatusSchema = z.object({
 const paginationQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
   take: z.coerce.number().int().min(1).max(50).optional(),
+});
+
+function serializeGroup(group: any) {
+  return {
+    id: group.id,
+    groupName: group.groupName,
+    groupType: group.groupType,
+    description: group.description,
+    status: group.status,
+    memberCount: group._count?.members,
+    createdAt: group.createdAt,
+    owner: group.user
+      ? { id: group.user.id, email: group.user.email, name: group.user.name, handle: group.user.handle }
+      : undefined,
+  };
+}
+
+const listGroupsQuerySchema = z.object({
+  q: z.string().max(200).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  take: z.coerce.number().int().min(1).max(50).optional(),
+});
+
+const setGroupStatusSchema = z.object({
+  status: z.enum(['active', 'suspended']),
 });
 
 export default async function adminRoutes(fastify: FastifyInstance) {
@@ -65,6 +141,68 @@ export default async function adminRoutes(fastify: FastifyInstance) {
     reply.send(serializeNgo(profile));
   });
 
+  // ---------- Nurseries / Corporate (same approval workflow as NGO) ----------
+
+  fastify.get('/nurseries', async (request, reply) => {
+    const parsed = listOrgQuerySchema.safeParse(request.query);
+    if (!parsed.success) throw new BadRequestError('Invalid query parameters');
+
+    const { nurseries, total } = await adminService.listNurseries(fastify.prisma, parsed.data);
+    reply.send({ total, nurseries: nurseries.map(serializeNursery) });
+  });
+
+  fastify.patch<{ Params: { id: string } }>('/nurseries/:id/status', async (request, reply) => {
+    const parsed = setStatusSchema.safeParse(request.body);
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    const profile = await adminService.setNurseryStatus(fastify.prisma, request.params.id, {
+      status: parsed.data.status,
+      rejectionReason: parsed.data.rejectionReason,
+      adminUserId: request.user!.id,
+    });
+
+    reply.send(serializeNursery(profile));
+  });
+
+  fastify.get('/corporates', async (request, reply) => {
+    const parsed = listOrgQuerySchema.safeParse(request.query);
+    if (!parsed.success) throw new BadRequestError('Invalid query parameters');
+
+    const { corporates, total } = await adminService.listCorporates(fastify.prisma, parsed.data);
+    reply.send({ total, corporates: corporates.map(serializeCorporate) });
+  });
+
+  fastify.patch<{ Params: { id: string } }>('/corporates/:id/status', async (request, reply) => {
+    const parsed = setStatusSchema.safeParse(request.body);
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    const profile = await adminService.setCorporateStatus(fastify.prisma, request.params.id, {
+      status: parsed.data.status,
+      rejectionReason: parsed.data.rejectionReason,
+      adminUserId: request.user!.id,
+    });
+
+    reply.send(serializeCorporate(profile));
+  });
+
+  // ---------- Groups (no approval workflow — see admin.service.ts) ----------
+
+  fastify.get('/groups', async (request, reply) => {
+    const parsed = listGroupsQuerySchema.safeParse(request.query);
+    if (!parsed.success) throw new BadRequestError('Invalid query parameters');
+
+    const { groups, total } = await adminService.listGroups(fastify.prisma, parsed.data);
+    reply.send({ total, groups: groups.map(serializeGroup) });
+  });
+
+  fastify.patch<{ Params: { id: string } }>('/groups/:id/status', async (request, reply) => {
+    const parsed = setGroupStatusSchema.safeParse(request.body);
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    const group = await adminService.setGroupStatus(fastify.prisma, request.params.id, parsed.data.status, request.user!.id);
+    reply.send(serializeGroup(group));
+  });
+
   fastify.get('/action-logs', async (request, reply) => {
     const parsed = paginationQuerySchema.safeParse(request.query);
     if (!parsed.success) throw new BadRequestError('Invalid query parameters');
@@ -82,6 +220,28 @@ export default async function adminRoutes(fastify: FastifyInstance) {
         actor: { name: l.actor.name, handle: l.actor.handle },
       })),
     });
+  });
+
+  // ---------- Content moderation ----------
+
+  fastify.get('/reports', async (request, reply) => {
+    const parsed = reportsQuerySchema.safeParse(request.query);
+    if (!parsed.success) throw new BadRequestError('Invalid query parameters');
+    reply.send(await reportService.listReports(fastify.prisma, parsed.data));
+  });
+
+  fastify.patch<{ Params: { id: string } }>('/reports/:id', async (request, reply) => {
+    const parsed = reportActionSchema.safeParse(request.body ?? {});
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    await reportService.actOnReport(
+      fastify.prisma,
+      request.user!.id,
+      request.params.id,
+      parsed.data.action,
+      parsed.data.reason,
+    );
+    reply.status(204).send();
   });
 
   fastify.get('/overview', async (_request, reply) => {

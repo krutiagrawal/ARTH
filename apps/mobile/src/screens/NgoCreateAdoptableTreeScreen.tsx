@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, Image } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { Text } from '../components/common/AppText';
+import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import * as ImagePicker from 'expo-image-picker';
 import { COLORS } from '../constants/colors';
-import { RADIUS } from '../constants/theme';
+import { PhotoPickerField, PickedPhoto } from '../components/common/PhotoPickerField';
+import { AnimatedButton } from '../components/common/AnimatedButton';
+import { FormField } from '../components/common/FormField';
+import { ScreenHeader } from '../components/common/ScreenHeader';
+import { useSlideUp } from '../hooks/useAnimations';
 import { useCreateAdoptableTree } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 
@@ -20,19 +24,9 @@ export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
   const [instructions, setInstructions] = useState('');
   const [locationLabel, setLocationLabel] = useState('');
   const [city, setCity] = useState('');
-  const [photo, setPhoto] = useState<{ uri: string; name: string; type: string } | null>(null);
+  const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const pickPhoto = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      setPhoto({ uri: asset.uri, name: asset.fileName ?? 'photo.jpg', type: asset.mimeType ?? 'image/jpeg' });
-    }
-  };
+  const cardAnim = useSlideUp(0, 24);
 
   const handleSubmit = async () => {
     setError(null);
@@ -62,58 +56,77 @@ export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
       <StatusBar style="dark" />
       <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
 
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
-            <Text style={styles.backIcon}>←</Text>
-          </BlurView>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>New Adoptable Tree</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <ScreenHeader
+        title="New Adoptable Tree"
+        subtitle="List a tree for someone to adopt"
+        onBack={() => navigation?.goBack?.()}
+      />
 
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
-        <View style={styles.card}>
-          <Text style={styles.label}>Photo</Text>
-          <TouchableOpacity style={styles.photoPicker} onPress={pickPhoto}>
-            {photo ? <Image source={{ uri: photo.uri }} style={styles.photoPreview} /> : <Text style={styles.photoPickerText}>Choose photo</Text>}
-          </TouchableOpacity>
-
-          <Text style={styles.label}>Tree nickname</Text>
-          <TextInput style={styles.input} value={nickname} onChangeText={setNickname} placeholder="Grandmother Banyan" placeholderTextColor="rgba(255,255,255,0.4)" />
-
-          <Text style={styles.label}>Species</Text>
-          <TextInput style={styles.input} value={speciesName} onChangeText={setSpeciesName} placeholder="Banyan" placeholderTextColor="rgba(255,255,255,0.4)" />
-
-          <Text style={styles.label}>Description</Text>
-          <TextInput style={[styles.input, styles.multiline]} value={description} onChangeText={setDescription} multiline placeholder="Tell the tree's story" placeholderTextColor="rgba(255,255,255,0.4)" />
-
-          <Text style={styles.label}>Instructions for adopters</Text>
-          <TextInput
-            style={[styles.input, styles.multiline]}
-            value={instructions}
-            onChangeText={setInstructions}
-            multiline
-            placeholder="What adopting this tree involves, visiting notes, etc."
-            placeholderTextColor="rgba(255,255,255,0.4)"
+        <Animated.View style={cardAnim}>
+          <PhotoPickerField
+            photo={photo}
+            onChange={setPhoto}
+            mode="gallery"
+            label="Add Photo"
+            hint="Show the tree at its best"
           />
 
-          <Text style={styles.label}>Area / landmark</Text>
-          <TextInput style={styles.input} value={locationLabel} onChangeText={setLocationLabel} placeholder="Optional" placeholderTextColor="rgba(255,255,255,0.4)" />
+          <FormField
+            label="Tree nickname"
+            value={nickname}
+            onChangeText={setNickname}
+            placeholder="Grandmother Banyan"
+          />
 
-          <Text style={styles.label}>City</Text>
-          <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="City" placeholderTextColor="rgba(255,255,255,0.4)" />
+          <FormField
+            label="Species"
+            value={speciesName}
+            onChangeText={setSpeciesName}
+            placeholder="Banyan"
+          />
+
+          <FormField
+            label="Description"
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Tell the tree's story"
+            multiline
+          />
+
+          <FormField
+            label="Instructions for adopters"
+            value={instructions}
+            onChangeText={setInstructions}
+            placeholder="What adopting this tree involves, visiting notes, etc."
+            multiline
+          />
+
+          <FormField
+            label="Area / landmark"
+            value={locationLabel}
+            onChangeText={setLocationLabel}
+            placeholder="Optional"
+          />
+
+          <FormField
+            label="City"
+            value={city}
+            onChangeText={setCity}
+            placeholder="City"
+          />
 
           {error && <Text style={styles.error}>{error}</Text>}
 
-          <TouchableOpacity
-            style={[styles.submitButton, createTreeMutation.isPending && styles.submitButtonDisabled]}
+          <AnimatedButton
+            label={createTreeMutation.isPending ? 'Listing…' : 'List for Adoption  →'}
             onPress={handleSubmit}
             disabled={createTreeMutation.isPending}
-          >
-            {createTreeMutation.isPending ? <ActivityIndicator size="small" color={COLORS.white} /> : <Text style={styles.submitText}>List for adoption</Text>}
-          </TouchableOpacity>
-        </View>
+            fullWidth
+            gradientColors={[COLORS.forest, COLORS.forestDeep]}
+            style={styles.submitButton}
+          />
+        </Animated.View>
       </ScrollView>
     </View>
   );
@@ -121,21 +134,7 @@ export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
-  backButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary },
-  scrollContent: { paddingHorizontal: 16 },
-  card: { backgroundColor: 'rgba(13,35,24,0.45)', borderRadius: RADIUS.lg, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', padding: 18, gap: 6 },
-  label: { fontSize: 12, fontWeight: '600', color: COLORS.white, marginTop: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
-  input: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: RADIUS.md, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: COLORS.white, marginTop: 4 },
-  multiline: { minHeight: 70, textAlignVertical: 'top' },
-  photoPicker: { marginTop: 6, height: 120, borderRadius: RADIUS.md, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  photoPreview: { width: '100%', height: '100%' },
-  photoPickerText: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
   error: { fontSize: 13, color: COLORS.coral, marginTop: 12 },
-  submitButton: { backgroundColor: COLORS.forest, borderRadius: RADIUS.full, paddingVertical: 14, alignItems: 'center', marginTop: 20 },
-  submitButtonDisabled: { opacity: 0.6 },
-  submitText: { fontSize: 15, fontWeight: '700', color: COLORS.white },
+  submitButton: { marginTop: 20 },
 });

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { View, StyleSheet, Image, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { Text } from '../common/AppText';
 import { COLORS } from '../../constants/colors';
 import { RADIUS } from '../../constants/theme';
 import { useMyStories, useDeleteStory } from '../../hooks/useApiQueries';

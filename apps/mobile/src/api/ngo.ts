@@ -17,6 +17,8 @@ export interface ApiNgoProfile {
   foundedYear: number | null;
   volunteerCountEstimate: number | null;
   awards: Award[];
+  /** 'open' = anyone follows instantly, 'approval' = each follow needs accepting. */
+  followPolicy: 'open' | 'approval';
   status: 'pending' | 'approved' | 'rejected' | 'suspended';
   rejectionReason: string | null;
   createdAt: string;
@@ -31,6 +33,7 @@ export interface UpdateNgoProfileInput {
   foundedYear?: number;
   volunteerCountEstimate?: number;
   awards?: Award[];
+  followPolicy?: 'open' | 'approval';
   logo?: { uri: string; name: string; type: string };
 }
 
@@ -48,6 +51,7 @@ export async function updateNgoProfile(input: UpdateNgoProfileInput): Promise<Ap
   if (input.foundedYear !== undefined) form.append('foundedYear', String(input.foundedYear));
   if (input.volunteerCountEstimate !== undefined) form.append('volunteerCountEstimate', String(input.volunteerCountEstimate));
   if (input.awards !== undefined) form.append('awards', JSON.stringify(input.awards));
+  if (input.followPolicy !== undefined) form.append('followPolicy', input.followPolicy);
   if (input.logo) {
     form.append('logo', { uri: input.logo.uri, name: input.logo.name, type: input.logo.type } as unknown as Blob);
   }

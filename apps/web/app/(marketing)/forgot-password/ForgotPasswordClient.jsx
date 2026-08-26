@@ -14,7 +14,7 @@ function App() {
     setError('')
     setSubmitting(true)
     try {
-      await fetch('/api/auth/forgot-password', {
+      await fetch('/api/member/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

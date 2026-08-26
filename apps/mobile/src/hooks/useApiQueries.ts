@@ -84,6 +84,24 @@ import {
   UpdateNgoProfileInput,
   DonationsFilter,
 } from '../api/ngo';
+import {
+  fetchGroupProfile,
+  updateGroupProfile,
+  regenerateGroupInviteCode,
+  fetchGroupStats,
+  fetchGroupMembers,
+  setGroupMemberRole,
+  removeGroupMember,
+  fetchOwnGroupChallenges,
+  createGroupChallenge,
+  fetchMyGroups,
+  joinGroupByInviteCode,
+  leaveGroup,
+  fetchGroupChallenges,
+  joinGroupChallenge,
+  UpdateGroupProfileInput,
+  CreateGroupChallengeInput,
+} from '../api/group';
 import { fetchStaff, createStaff, updateStaff, deleteStaff, CreateStaffInput, UpdateStaffInput } from '../api/staff';
 import {
   fetchPlantedTrees,
@@ -96,15 +114,66 @@ import {
   TreeHealthStatus,
 } from '../api/plantedTrees';
 import { fetchMyUpdates, createUpdate, deleteUpdate, CreateUpdateInput } from '../api/ngoUpdates';
+import { fetchNgoAchievements } from '../api/ngoAchievements';
+import { fetchNgoStreakCalendar } from '../api/ngoStreaks';
+import { fetchGroupStreakCalendar, fetchGroupStreakCalendarForMember } from '../api/groupStreaks';
+import { fetchGroupAchievements, fetchGroupAchievementsForMember } from '../api/groupAchievements';
+import { fetchGroupActivity, fetchGroupActivityForMember } from '../api/groupActivity';
+import {
+  fetchNurseryProfile,
+  updateNurseryProfile,
+  resubmitNurseryProfile,
+  fetchNurseryStats,
+  fetchSaplingStock,
+  createSaplingStock,
+  updateSaplingStock,
+  deleteSaplingStock,
+  fetchNurseryBadges,
+  fetchNurseryReservations,
+  fulfillReservation as fulfillReservationApi,
+  declineReservation as declineReservationApi,
+  fetchStockLedger,
+  fetchStockAnalytics,
+  UpdateNurseryProfileInput,
+  SaplingStockInput,
+  ReservationStatus,
+} from '../api/nursery';
+import { fetchNurseryStreakCalendar } from '../api/nurseryStreaks';
+import { browseNurseries, fetchNurseryPublicProfile, createReservation as createReservationApi, CreateReservationInput } from '../api/nurseriesPublic';
+import { fetchMyReservations, cancelReservation as cancelReservationApi } from '../api/reservations';
+import {
+  fetchCorporateProfile,
+  updateCorporateProfile,
+  resubmitCorporateProfile,
+  fetchCorporateStats,
+  fetchSponsorships,
+  createSponsorship,
+  deleteSponsorship,
+  UpdateCorporateProfileInput,
+  CreateSponsorshipInput,
+} from '../api/corporate';
+import { fetchNgoLeaderboard } from '../api/ngoLeaderboard';
+import { fetchGroupLeaderboard } from '../api/groupLeaderboard';
+import { fetchGroupThemes, selectGroupTheme } from '../api/groupThemes';
 import { browseNgos, fetchNgoPublicProfile } from '../api/ngosPublic';
 import { followNgo, unfollowNgo, fetchFollowedNgos, fetchFollowingFeed } from '../api/follow';
+import {
+  fetchAdminOverview,
+  fetchAdminNgos,
+  fetchAdminNgoSummary,
+  setAdminNgoStatus,
+  fetchAdminActionLogs,
+  AdminNgosFilter,
+  AdminActionLogsParams,
+  NgoApprovalStatus,
+} from '../api/admin';
 
-export function useTrees(limit?: number) {
+export function useTrees(limit?: number, enabled: boolean = true) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['trees', limit],
     queryFn: () => fetchTrees({ limit }),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && enabled,
   });
 }
 
@@ -455,12 +524,12 @@ export function useDeleteStory() {
   });
 }
 
-export function useDrives(lat?: number, lng?: number) {
+export function useDrives(lat?: number, lng?: number, enabled: boolean = true) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['drives', lat, lng],
     queryFn: () => fetchDrives({ lat, lng }),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && enabled,
   });
 }
 
@@ -489,12 +558,12 @@ export function useLeaveDrive() {
   });
 }
 
-export function useAdoptableTrees(lat?: number, lng?: number) {
+export function useAdoptableTrees(lat?: number, lng?: number, enabled: boolean = true) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['adoptable-trees', lat, lng],
     queryFn: () => fetchAdoptableTrees({ lat, lng }),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && enabled,
   });
 }
 
@@ -523,12 +592,12 @@ export function useSponsorPlant() {
 
 // ---------- NGO-facing ----------
 
-export function useMyDrives() {
+export function useMyDrives(enabled: boolean = true) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['drives', 'mine'],
     queryFn: fetchMyDrives,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && enabled,
   });
 }
 
@@ -540,12 +609,12 @@ export function useCreateDrive() {
   });
 }
 
-export function useMyAdoptableTrees() {
+export function useMyAdoptableTrees(enabled: boolean = true) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['adoptable-trees', 'mine'],
     queryFn: fetchMyAdoptableTrees,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && enabled,
   });
 }
 
@@ -791,7 +860,39 @@ export function useCreateUpdate() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateUpdateInput) => createUpdate(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ngo', 'updates'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'updates'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'achievements'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'streaks'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'leaderboard'] });
+    },
+  });
+}
+
+export function useNgoAchievements() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'achievements'],
+    queryFn: fetchNgoAchievements,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useNgoStreakCalendar(weeks = 12) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'streaks', 'calendar', weeks],
+    queryFn: () => fetchNgoStreakCalendar(weeks),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useNgoLeaderboard(limit = 50) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'leaderboard', limit],
+    queryFn: () => fetchNgoLeaderboard(limit),
+    enabled: isAuthenticated,
   });
 }
 
@@ -863,6 +964,56 @@ export function useFollowingFeed() {
   });
 }
 
+// ---------- Admin ----------
+
+export function useAdminOverview() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['admin', 'overview'],
+    queryFn: fetchAdminOverview,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useAdminNgos(filter: AdminNgosFilter = {}) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['admin', 'ngos', filter],
+    queryFn: () => fetchAdminNgos(filter),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useAdminNgoSummary(id: string | null) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['admin', 'ngos', id, 'summary'],
+    queryFn: () => fetchAdminNgoSummary(id as string),
+    enabled: isAuthenticated && !!id,
+  });
+}
+
+export function useSetAdminNgoStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status, rejectionReason }: { id: string; status: NgoApprovalStatus; rejectionReason?: string }) =>
+      setAdminNgoStatus(id, { status, rejectionReason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'ngos'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] });
+    },
+  });
+}
+
+export function useAdminActionLogs(params: AdminActionLogsParams = {}) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['admin', 'action-logs', params],
+    queryFn: () => fetchAdminActionLogs(params),
+    enabled: isAuthenticated,
+  });
+}
+
 export function usePlantTree() {
   const queryClient = useQueryClient();
   const { refreshUser } = useAuth();
@@ -878,6 +1029,473 @@ export function usePlantTree() {
         queryClient.invalidateQueries({ queryKey: ['leaderboard'] }),
         refreshUser(),
       ]);
+    },
+  });
+}
+
+// ---------- Group profile / stats / members / challenges (owner dashboard) ----------
+
+export function useGroupProfile() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['group', 'profile'],
+    queryFn: fetchGroupProfile,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useUpdateGroupProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateGroupProfileInput) => updateGroupProfile(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['group', 'profile'] }),
+  });
+}
+
+export function useRegenerateGroupInviteCode() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => regenerateGroupInviteCode(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['group', 'profile'] }),
+  });
+}
+
+export function useGroupStats() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['group', 'stats'],
+    queryFn: fetchGroupStats,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useGroupLeaderboard(limit = 50) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['group', 'leaderboard', limit],
+    queryFn: () => fetchGroupLeaderboard(limit),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useGroupThemes() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['group', 'themes'],
+    queryFn: fetchGroupThemes,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useSelectGroupTheme() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (themeId: string) => selectGroupTheme(themeId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['group', 'themes'] });
+      await queryClient.invalidateQueries({ queryKey: ['group', 'profile'] });
+    },
+  });
+}
+
+export function useGroupMembers() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['group', 'members'],
+    queryFn: fetchGroupMembers,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useSetGroupMemberRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: 'owner' | 'co_admin' | 'member' }) => setGroupMemberRole(userId, role),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['group', 'members'] }),
+  });
+}
+
+export function useRemoveGroupMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => removeGroupMember(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group', 'members'] });
+      queryClient.invalidateQueries({ queryKey: ['group', 'stats'] });
+    },
+  });
+}
+
+export function useOwnGroupChallenges() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['group', 'challenges', 'mine'],
+    queryFn: fetchOwnGroupChallenges,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useCreateGroupChallenge() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateGroupChallengeInput) => createGroupChallenge(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['group', 'challenges'] }),
+  });
+}
+
+export function useGroupStreakCalendar(weeks = 4) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['group', 'streaks', 'calendar', weeks],
+    queryFn: () => fetchGroupStreakCalendar(weeks),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useGroupAchievements() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['group', 'achievements'],
+    queryFn: fetchGroupAchievements,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useGroupActivity(options?: { enabled?: boolean }) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['group', 'activity'],
+    queryFn: () => fetchGroupActivity(),
+    enabled: isAuthenticated && (options?.enabled ?? true),
+  });
+}
+
+// ---------- Groups (member-facing: join/leave/browse) ----------
+
+export function useMyGroups() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['groups', 'mine'],
+    queryFn: fetchMyGroups,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useJoinGroup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (inviteCode: string) => joinGroupByInviteCode(inviteCode),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['groups', 'mine'] }),
+  });
+}
+
+export function useLeaveGroup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (groupId: string) => leaveGroup(groupId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['groups', 'mine'] }),
+  });
+}
+
+export function useGroupChallenges(groupId: string | undefined) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['groups', groupId, 'challenges'],
+    queryFn: () => fetchGroupChallenges(groupId as string),
+    enabled: isAuthenticated && Boolean(groupId),
+  });
+}
+
+export function useJoinGroupChallenge() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (challengeId: string) => joinGroupChallenge(challengeId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['groups'] }),
+  });
+}
+
+export function useGroupActivityForMember(groupId: string | undefined) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['groups', groupId, 'activity'],
+    queryFn: () => fetchGroupActivityForMember(groupId as string),
+    enabled: isAuthenticated && Boolean(groupId),
+  });
+}
+
+export function useGroupStreakCalendarForMember(groupId: string | undefined, weeks = 4) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['groups', groupId, 'streaks', 'calendar', weeks],
+    queryFn: () => fetchGroupStreakCalendarForMember(groupId as string, weeks),
+    enabled: isAuthenticated && Boolean(groupId),
+  });
+}
+
+export function useGroupAchievementsForMember(groupId: string | undefined) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['groups', groupId, 'achievements'],
+    queryFn: () => fetchGroupAchievementsForMember(groupId as string),
+    enabled: isAuthenticated && Boolean(groupId),
+  });
+}
+
+// ---------- Nursery profile / stats / stock ----------
+
+export function useNurseryProfile() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nursery', 'profile'],
+    queryFn: fetchNurseryProfile,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useUpdateNurseryProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateNurseryProfileInput) => updateNurseryProfile(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['nursery', 'profile'] }),
+  });
+}
+
+export function useResubmitNurseryProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => resubmitNurseryProfile(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['nursery', 'profile'] }),
+  });
+}
+
+export function useNurseryStats() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nursery', 'stats'],
+    queryFn: fetchNurseryStats,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useSaplingStock() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nursery', 'stock'],
+    queryFn: fetchSaplingStock,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useCreateSaplingStock() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SaplingStockInput) => createSaplingStock(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['nursery', 'stock'] });
+      queryClient.invalidateQueries({ queryKey: ['nursery', 'stats'] });
+    },
+  });
+}
+
+export function useUpdateSaplingStock() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Partial<SaplingStockInput> }) => updateSaplingStock(id, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['nursery', 'stock'] });
+      queryClient.invalidateQueries({ queryKey: ['nursery', 'stats'] });
+    },
+  });
+}
+
+export function useDeleteSaplingStock() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteSaplingStock(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['nursery', 'stock'] });
+      queryClient.invalidateQueries({ queryKey: ['nursery', 'stats'] });
+    },
+  });
+}
+
+export function useNurseryStreakCalendar(weeks = 6) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nursery', 'streaks', 'calendar', weeks],
+    queryFn: () => fetchNurseryStreakCalendar(weeks),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useNurseryBadges() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nursery', 'badges'],
+    queryFn: fetchNurseryBadges,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useNurseryReservations(status?: ReservationStatus) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nursery', 'reservations', status],
+    queryFn: () => fetchNurseryReservations(status),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useFulfillReservation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => fulfillReservationApi(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['nursery', 'reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['nursery', 'stock'] });
+      queryClient.invalidateQueries({ queryKey: ['nursery', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['nursery', 'badges'] });
+    },
+  });
+}
+
+export function useDeclineReservation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => declineReservationApi(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['nursery', 'reservations'] }),
+  });
+}
+
+export function useStockLedger(page = 1, take = 30) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nursery', 'stock', 'ledger', page, take],
+    queryFn: () => fetchStockLedger(page, take),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useStockAnalytics() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nursery', 'stock', 'analytics'],
+    queryFn: fetchStockAnalytics,
+    enabled: isAuthenticated,
+  });
+}
+
+// ---------- Public nursery directory / reservations (User-side) ----------
+
+export function useBrowseNurseries(params: { q?: string; city?: string } = {}) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nurseries', 'browse', params],
+    queryFn: () => browseNurseries(params),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useNurseryPublicProfile(id: string | null) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nurseries', 'public', id],
+    queryFn: () => fetchNurseryPublicProfile(id as string),
+    enabled: isAuthenticated && !!id,
+  });
+}
+
+export function useCreateReservation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateReservationInput) => createReservationApi(input),
+    onSuccess: (_data, input) => {
+      queryClient.invalidateQueries({ queryKey: ['nurseries', 'public', input.nurseryId] });
+      queryClient.invalidateQueries({ queryKey: ['reservations', 'mine'] });
+    },
+  });
+}
+
+export function useMyReservations() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['reservations', 'mine'],
+    queryFn: fetchMyReservations,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useCancelReservation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => cancelReservationApi(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['reservations', 'mine'] }),
+  });
+}
+
+// ---------- Corporate profile / stats / sponsorships ----------
+
+export function useCorporateProfile() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['corporate', 'profile'],
+    queryFn: fetchCorporateProfile,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useUpdateCorporateProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateCorporateProfileInput) => updateCorporateProfile(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['corporate', 'profile'] }),
+  });
+}
+
+export function useResubmitCorporateProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => resubmitCorporateProfile(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['corporate', 'profile'] }),
+  });
+}
+
+export function useCorporateStats() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['corporate', 'stats'],
+    queryFn: fetchCorporateStats,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useSponsorships() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['corporate', 'sponsorships'],
+    queryFn: fetchSponsorships,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useCreateSponsorship() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateSponsorshipInput) => createSponsorship(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['corporate', 'sponsorships'] });
+      queryClient.invalidateQueries({ queryKey: ['corporate', 'stats'] });
+    },
+  });
+}
+
+export function useDeleteSponsorship() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteSponsorship(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['corporate', 'sponsorships'] });
+      queryClient.invalidateQueries({ queryKey: ['corporate', 'stats'] });
     },
   });
 }

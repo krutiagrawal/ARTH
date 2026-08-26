@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { Text, TextInput } from '../components/common/AppText';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +10,7 @@ import { RADIUS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { useUpdateMe } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
+import { GlassCard } from '../components/common/GlassCard';
 
 const AVATAR_OPTIONS = [
   '🧑‍🌾', '🌱', '🌳', '🌲', '🍃', '🌿', '🌸', '🌻',
@@ -65,7 +67,7 @@ export function EditProfileScreen({ navigation }: any) {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.card}>
+        <GlassCard variant="warm">
           <Text style={styles.label}>Avatar</Text>
           <View style={styles.avatarGrid}>
             {AVATAR_OPTIONS.map((emoji) => (
@@ -85,7 +87,7 @@ export function EditProfileScreen({ navigation }: any) {
             value={name}
             onChangeText={setName}
             placeholder="Your name"
-            placeholderTextColor="rgba(255,255,255,0.4)"
+            placeholderTextColor={COLORS.textMuted}
             maxLength={60}
           />
 
@@ -95,7 +97,7 @@ export function EditProfileScreen({ navigation }: any) {
             value={handle}
             onChangeText={(text) => setHandle(text.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
             placeholder="your_handle"
-            placeholderTextColor="rgba(255,255,255,0.4)"
+            placeholderTextColor={COLORS.textMuted}
             autoCapitalize="none"
             maxLength={30}
           />
@@ -113,7 +115,7 @@ export function EditProfileScreen({ navigation }: any) {
               <Text style={styles.submitText}>Save Changes</Text>
             )}
           </TouchableOpacity>
-        </View>
+        </GlassCard>
       </ScrollView>
     </View>
   );
@@ -146,18 +148,10 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
   },
   scrollContent: { paddingHorizontal: 16 },
-  card: {
-    backgroundColor: 'rgba(13,35,24,0.45)',
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    padding: 18,
-    gap: 6,
-  },
   label: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLORS.white,
+    color: COLORS.textSecondary,
     marginTop: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -172,7 +166,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: COLORS.beige,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
@@ -184,12 +178,12 @@ const styles = StyleSheet.create({
   },
   avatarChipEmoji: { fontSize: 22 },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: COLORS.white,
     borderRadius: RADIUS.md,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    color: COLORS.white,
+    color: COLORS.textPrimary,
     marginTop: 4,
   },
   error: {

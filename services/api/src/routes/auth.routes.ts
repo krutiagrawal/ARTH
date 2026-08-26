@@ -1,5 +1,15 @@
 import { FastifyInstance } from 'fastify';
-import { registerSchema, registerNgoSchema, loginSchema, refreshSchema } from '../schemas/auth.schema';
+import {
+  registerSchema,
+  registerNgoSchema,
+  registerGroupSchema,
+  registerNurserySchema,
+  registerCorporateSchema,
+  loginSchema,
+  refreshSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from '../schemas/auth.schema';
 import * as authService from '../services/auth.service';
 import { BadRequestError } from '../utils/errors';
 
@@ -22,6 +32,45 @@ export default async function authRoutes(fastify: FastifyInstance) {
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
 
     const result = await authService.registerNgo(fastify.prisma, {
+      ...parsed.data,
+      email: parsed.data.email.toLowerCase(),
+      handle: parsed.data.handle.toLowerCase(),
+    });
+
+    reply.status(201).send(result);
+  });
+
+  fastify.post('/register-group', async (request, reply) => {
+    const parsed = registerGroupSchema.safeParse(request.body);
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    const result = await authService.registerGroup(fastify.prisma, {
+      ...parsed.data,
+      email: parsed.data.email.toLowerCase(),
+      handle: parsed.data.handle.toLowerCase(),
+    });
+
+    reply.status(201).send(result);
+  });
+
+  fastify.post('/register-nursery', async (request, reply) => {
+    const parsed = registerNurserySchema.safeParse(request.body);
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    const result = await authService.registerNursery(fastify.prisma, {
+      ...parsed.data,
+      email: parsed.data.email.toLowerCase(),
+      handle: parsed.data.handle.toLowerCase(),
+    });
+
+    reply.status(201).send(result);
+  });
+
+  fastify.post('/register-corporate', async (request, reply) => {
+    const parsed = registerCorporateSchema.safeParse(request.body);
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    const result = await authService.registerCorporate(fastify.prisma, {
       ...parsed.data,
       email: parsed.data.email.toLowerCase(),
       handle: parsed.data.handle.toLowerCase(),
@@ -56,6 +105,24 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
     await authService.logout(fastify.prisma, parsed.data.refreshToken);
     reply.status(204).send();
+  });
+
+  fastify.post('/forgot-password', async (request, reply) => {
+    const parsed = forgotPasswordSchema.safeParse(request.body);
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    await authService.requestPasswordReset(fastify.prisma, parsed.data.email.toLowerCase());
+
+    // Always 200 — don't reveal whether an account exists for this email.
+    reply.send({ ok: true });
+  });
+
+  fastify.post('/reset-password', async (request, reply) => {
+    const parsed = resetPasswordSchema.safeParse(request.body);
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    await authService.resetPassword(fastify.prisma, parsed.data.token, parsed.data.password);
+    reply.send({ ok: true });
   });
 
   fastify.register(async (instance) => {

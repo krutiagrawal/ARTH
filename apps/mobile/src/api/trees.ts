@@ -47,8 +47,3 @@ export async function plantTree(input: PlantTreeInput): Promise<ApiTree> {
 
   return apiFetch<ApiTree>('/api/trees', { method: 'POST', body: form, isForm: true });
 }
-
-export function resolvePhotoUrl(photoUri: string | null, apiUrl: string): string | undefined {
-  if (!photoUri) return undefined;
-  return photoUri.startsWith('http') ? photoUri : `${apiUrl}${photoUri}`;
-}

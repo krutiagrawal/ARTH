@@ -1,53 +1,66 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { Text } from '../components/common/AppText';
+import Animated from 'react-native-reanimated';
 import { COLORS } from '../constants/colors';
 import { GlassCard } from '../components/common/GlassCard';
 import { EmptyState } from '../components/common/EmptyState';
+import { IconBadge } from '../components/common/IconBadge';
 import { useMyAdoptableTrees } from '../hooks/useApiQueries';
+import { useSlideUp } from '../hooks/useAnimations';
+import { useBottomNavClearance } from '../components/navigation/BottomNav';
+
+function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
+  const animStyle = useSlideUp(delay, 18);
+  return <Animated.View style={[animStyle, style]}>{children}</Animated.View>;
+}
+
+const TREE_STATUS_COLORS: Record<'available' | 'adopted' | 'removed', string> = {
+  available: COLORS.sage,
+  adopted: COLORS.golden,
+  removed: COLORS.textMuted,
+};
+
+function StatusPill({ label, color }: { label: string; color: string }) {
+  return (
+    <View style={[styles.statusPill, { backgroundColor: `${color}22` }]}>
+      <Text style={[styles.statusPillText, { color }]}>{label}</Text>
+    </View>
+  );
+}
 
 export function NgoTreesScreen({ navigation }: any) {
-  const insets = useSafeAreaInsets();
+  const bottomClearance = useBottomNavClearance();
   const { data: trees = [], isLoading } = useMyAdoptableTrees();
 
   return (
     <View style={styles.container}>
-      <StatusBar style="dark" />
-      <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
-
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
-            <Text style={styles.backIcon}>←</Text>
-          </BlurView>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>Your Adoptable Trees</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('NgoCreateAdoptableTree')} style={styles.addButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
-            <Text style={styles.addIcon}>+</Text>
-          </BlurView>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]} showsVerticalScrollIndicator={false}>
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && trees.length === 0 && (
           <EmptyState icon="🌳" title="No trees yet" body="List a tree for the community to adopt." actionLabel="New tree" onAction={() => navigation.navigate('NgoCreateAdoptableTree')} />
         )}
-        {trees.map((tree) => (
-          <GlassCard key={tree.id} variant="warm" style={styles.card}>
-            <Text style={styles.cardTitle}>{tree.nickname}</Text>
-            <Text style={styles.cardSubtitle}>{tree.speciesName}</Text>
-            <View style={styles.metaRow}>
-              <Text style={styles.metaText} numberOfLines={1}>
-                📍 {[tree.location, tree.city].filter(Boolean).join(', ') || 'No location set'}
-              </Text>
-              <Text style={styles.metaText}>{tree.status}</Text>
-            </View>
-          </GlassCard>
+        {trees.map((tree, i) => (
+          <FadeInRow key={tree.id} delay={i * 60}>
+            <GlassCard variant="warm" style={styles.card}>
+              <View style={styles.cardRow}>
+                <IconBadge icon="🌳" color={COLORS.forest} size={40} />
+                <View style={styles.cardBody}>
+                  <Text style={styles.cardTitle}>{tree.nickname}</Text>
+                  <Text style={styles.cardSubtitle}>{tree.speciesName}</Text>
+                  <View style={styles.metaRow}>
+                    <Text style={styles.metaText} numberOfLines={1}>
+                      {[tree.location, tree.city].filter(Boolean).join(', ') || 'No location set'}
+                    </Text>
+                  </View>
+                  <StatusPill
+                    label={tree.status.charAt(0).toUpperCase() + tree.status.slice(1)}
+                    color={TREE_STATUS_COLORS[tree.status]}
+                  />
+                </View>
+              </View>
+            </GlassCard>
+          </FadeInRow>
         ))}
       </ScrollView>
     </View>
@@ -56,18 +69,15 @@ export function NgoTreesScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
-  backButton: { width: 40, height: 40 },
-  addButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(94,133,80,0.2)' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
-  addIcon: { fontSize: 20, color: COLORS.white, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
-  scrollContent: { paddingHorizontal: 20 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 12 },
   loader: { marginTop: 40 },
   card: { marginBottom: 12 },
+  cardRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  cardBody: { flex: 1 },
   cardTitle: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary },
   cardSubtitle: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, gap: 8 },
   metaText: { fontSize: 12, color: COLORS.textSecondary, flexShrink: 1 },
+  statusPill: { alignSelf: 'flex-start', borderRadius: 100, paddingHorizontal: 10, paddingVertical: 4, marginTop: 8 },
+  statusPillText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
 });

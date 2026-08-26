@@ -48,8 +48,12 @@ export const COLORS = {
 
   // Text
   textPrimary: '#2D2A25',
-  textSecondary: '#6B5E4A',
-  textMuted: '#9E8E78',
+  // Darkened from #6B5E4A / #9E8E78. Both were light enough that body copy and field labels read
+  // as washed-out grey on the cream surfaces they almost always sit on. Still the same warm-brown
+  // family (so nothing turns cold or generic-grey), just with real contrast — and the
+  // secondary/muted distinction survives, so call sites don't need to change.
+  textSecondary: '#4A4034',
+  textMuted: '#6E6355',
   textLight: '#C4B49A',
   textWhite: '#FFFFFF',
 

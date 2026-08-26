@@ -42,7 +42,7 @@ export default function CompetitionsClient({ competitions }) {
                       <h2 className="font-serif text-3xl md:text-4xl leading-tight">{c.title}</h2>
                       <p className="mt-2 max-w-md text-sm text-background/85">{c.tagline}</p>
                       <div className="mt-4 flex items-center justify-between text-[11px] uppercase tracking-widest text-background/85">
-                        <span>{c.entries.toLocaleString()} entries</span>
+                        <span>{c.entriesCount.toLocaleString()} entries</span>
                         <span className="inline-flex items-center gap-1">View <ArrowUpRight className="h-3.5 w-3.5" /></span>
                       </div>
                     </div>

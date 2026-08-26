@@ -1,4 +1,4 @@
-import { Prisma, XpReason } from '@prisma/client';
+import { Prisma, XpReason } from '@plant/db';
 
 const XP_PER_LEVEL = 500;
 

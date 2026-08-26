@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Heart, Download, Edit3 } from 'lucide-react'
-import DrawerFormShell, { FormSection, DetailRow, DetailGrid } from '@/components/dashboard/DrawerFormShell'
+import DrawerFormShell, { DetailPanel, DetailSection, DetailRow, DetailGrid, DetailList } from '@/components/dashboard/DrawerFormShell'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -68,8 +68,8 @@ export default function CampaignDetailSheet({ campaign, onOpenChange, onEdit }) 
       }
     >
       {campaign && (
-        <>
-          <FormSection first label="Overview">
+        <DetailPanel>
+          <DetailSection label="Overview">
             <DetailGrid>
               <DetailRow label="Status">
                 <Badge variant={STATUS_VARIANT[campaign.status] || 'outline'} className="capitalize">
@@ -81,53 +81,55 @@ export default function CampaignDetailSheet({ campaign, onOpenChange, onEdit }) 
                 <p className="whitespace-pre-line">{campaign.description}</p>
               </DetailRow>
             </DetailGrid>
-          </FormSection>
+          </DetailSection>
 
-          <FormSection label="Progress">
-            <p className="flex items-center gap-1 text-[13px]">
+          <DetailSection label="Progress">
+            <p className="flex items-center gap-1.5 text-[14px] text-foreground">
               <Heart className="h-3.5 w-3.5 text-muted-foreground" />
               {rupees(campaign.raisedAmountCents)}
-              {campaign.goalAmountCents ? ` of ${rupees(campaign.goalAmountCents)} goal` : ' raised so far (no goal set)'}
+              <span className="text-muted-foreground">
+                {campaign.goalAmountCents ? `of ${rupees(campaign.goalAmountCents)} goal` : 'raised so far (no goal set)'}
+              </span>
             </p>
-            {pct !== null && <Progress value={pct} className="h-1.5 mt-2" />}
-          </FormSection>
+            {pct !== null && <Progress value={pct} className="mt-3 h-1.5" />}
+          </DetailSection>
 
-          <FormSection label={`Donors (${donations.length})`}>
+          <DetailSection label={`Donors (${donations.length})`}>
             {loading ? (
               <div className="space-y-2">
                 <Skeleton className="h-9 w-full" />
                 <Skeleton className="h-9 w-full" />
               </div>
             ) : donations.length === 0 ? (
-              <p className="text-[12px] text-muted-foreground">No donations yet.</p>
+              <p className="text-[13px] text-muted-foreground">No donations yet.</p>
             ) : (
               <>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-7 rounded-[7px] px-2.5 text-xs mb-2"
+                  className="h-7 rounded-[7px] px-2.5 text-xs"
                   onClick={() => downloadCsv(`${campaign.title.replace(/[^a-z0-9]+/gi, '-')}-donors.csv`, donations)}
                 >
                   <Download className="h-3.5 w-3.5" /> Export CSV
                 </Button>
-                <div className="space-y-1.5">
+                <DetailList>
                   {donations.map((d) => (
-                    <div key={d.id} className="flex items-center justify-between rounded-[8px] border border-border/60 px-2.5 py-1.5">
+                    <div key={d.id} className="flex items-center justify-between py-2.5 first:pt-3 last:pb-0">
                       <div>
-                        <p className="text-[13px] font-medium">{d.name}</p>
-                        <p className="text-[11px] text-muted-foreground">{d.handle}</p>
+                        <p className="text-[14px] font-medium text-foreground">{d.name}</p>
+                        <p className="text-[12px] text-muted-foreground">{d.handle}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-[13px] font-medium">{rupees(d.amountCents)}</p>
-                        <p className="text-[11px] text-muted-foreground">{new Date(d.donatedAt).toLocaleDateString()}</p>
+                        <p className="text-[14px] font-medium text-foreground">{rupees(d.amountCents)}</p>
+                        <p className="text-[12px] text-muted-foreground">{new Date(d.donatedAt).toLocaleDateString()}</p>
                       </div>
                     </div>
                   ))}
-                </div>
+                </DetailList>
               </>
             )}
-          </FormSection>
-        </>
+          </DetailSection>
+        </DetailPanel>
       )}
     </DrawerFormShell>
   )

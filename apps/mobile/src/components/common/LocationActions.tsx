@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import { Text } from './AppText';
 import * as Clipboard from 'expo-clipboard';
 import { COLORS } from '../../constants/colors';
 import { RADIUS } from '../../constants/theme';

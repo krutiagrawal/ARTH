@@ -1,5 +1,5 @@
 {
-    "name": "nextjs-mongo-template",
+    "name": "arth-web",
     "version": "0.1.0",
     "private": true,
     "scripts": {
@@ -8,18 +8,12 @@
         "dev:webpack": "next dev --hostname 0.0.0.0 --port 3000",
         "build": "next build",
         "start": "next start",
-        "postinstall": "prisma generate",
-        "db:migrate": "prisma migrate dev",
-        "db:seed": "prisma db seed",
-        "db:studio": "prisma studio",
+        "db:seed": "node prisma/seed.js",
         "test:e2e": "playwright test"
-    },
-    "prisma": {
-        "seed": "node prisma/seed.js"
     },
     "dependencies": {
         "@hookform/resolvers": "5.1.1",
-        "@prisma/client": "6.9.0",
+        "@plant/db": "*",
         "@radix-ui/react-accordion": "1.2.11",
         "@radix-ui/react-alert-dialog": "1.1.14",
         "@radix-ui/react-aspect-ratio": "1.1.7",
@@ -90,7 +84,6 @@
         "cross-env": "^10.1.0",
         "globals": "16.2.0",
         "postcss": "8",
-        "prisma": "6.9.0",
         "tailwindcss": "3.4.1"
     },
     "resolutions": {
@@ -102,6 +95,5 @@
         "postcss": "8.5.10",
         "yaml": "2.8.3",
         "lodash": "4.18.1"
-    },
-    "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+    }
 }

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle } from 'react-native';
+import { Text } from './AppText';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { SPACING } from '../../constants/theme';
@@ -32,7 +33,7 @@ export function StatDisplay({
   align = 'left',
   style,
 }: StatDisplayProps) {
-  const valueStyle = size === 'lg' ? TYPOGRAPHY.number : size === 'md' ? TYPOGRAPHY.numberSmall : TYPOGRAPHY.h1;
+  const valueStyle = size === 'lg' ? TYPOGRAPHY.number : size === 'md' ? TYPOGRAPHY.numberSmall : TYPOGRAPHY.numberTiny;
 
   return (
     <View style={[align === 'center' && styles.center, style]}>

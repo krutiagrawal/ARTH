@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { Text } from '../components/common/AppText';
+import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -8,8 +9,26 @@ import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { GlassCard } from '../components/common/GlassCard';
 import { EmptyState } from '../components/common/EmptyState';
+import { DonationJarIllustration } from '../components/common/DonationJarIllustration';
+import { SectionHeader } from '../components/common/SectionHeader';
+import { ScreenHeader } from '../components/common/ScreenHeader';
+import { AnimatedButton } from '../components/common/AnimatedButton';
+import { IconBadge } from '../components/common/IconBadge';
 import { useNgoDonations, useNgoDonationsSummary } from '../hooks/useApiQueries';
 import type { DonationsFilter } from '../api/ngo';
+import { useSlideUp } from '../hooks/useAnimations';
+
+const STATUS_BADGE: Record<string, { icon: string; color: string }> = {
+  succeeded: { icon: '💰', color: COLORS.sage },
+  pending: { icon: '⏳', color: COLORS.golden },
+  failed: { icon: '✕', color: COLORS.coral },
+  refunded: { icon: '↩', color: COLORS.textMuted },
+};
+
+function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
+  const animStyle = useSlideUp(delay, 18);
+  return <Animated.View style={[animStyle, style]}>{children}</Animated.View>;
+}
 
 const STATUS_FILTERS: { key: DonationsFilter['status'] | 'all'; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -31,20 +50,13 @@ export function NgoDonationsScreen({ navigation }: any) {
       <StatusBar style="dark" />
       <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
 
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
-            <Text style={styles.backIcon}>←</Text>
-          </BlurView>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Donations</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <ScreenHeader title="Donations" subtitle="View and manage all donations" onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
         {summary.length > 0 && (
+          <>
+          <SectionHeader title="By campaign" />
           <GlassCard variant="warm" style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>By campaign</Text>
             {summary.map((row) => (
               <View key={row.campaignId} style={styles.summaryRow}>
                 <Text style={styles.summaryLabel} numberOfLines={1}>{row.campaignTitle}</Text>
@@ -52,8 +64,10 @@ export function NgoDonationsScreen({ navigation }: any) {
               </View>
             ))}
           </GlassCard>
+          </>
         )}
 
+        <SectionHeader title="All donations" icon="💸" />
         <View style={styles.chipRow}>
           {STATUS_FILTERS.map((f) => (
             <TouchableOpacity key={f.key} style={[styles.chip, statusFilter === f.key && styles.chipSelected]} onPress={() => setStatusFilter(f.key)}>
@@ -64,21 +78,41 @@ export function NgoDonationsScreen({ navigation }: any) {
 
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && donations.length === 0 && (
-          <EmptyState icon="💸" title="No donations here" body="Donations matching this filter will show up here." />
+          <View style={styles.emptyWrap}>
+            <EmptyState
+              illustration={<DonationJarIllustration size={200} />}
+              title={statusFilter === 'all' ? 'No donations yet' : 'No donations here'}
+              body={
+                statusFilter === 'all'
+                  ? "When donations come in, you'll see them here."
+                  : 'Donations matching this filter will show up here.'
+              }
+            />
+            <AnimatedButton
+              label="♥  Accept Donations"
+              onPress={() => navigation.navigate('NgoCreateCampaign')}
+              fullWidth
+              gradientColors={[COLORS.forest, COLORS.forestDeep]}
+              style={styles.emptyCta}
+            />
+          </View>
         )}
-        {donations.map((d) => (
-          <GlassCard key={d.id} variant="warm" style={styles.card}>
-            <View style={styles.cardRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.cardTitle}>{d.donor.name}</Text>
-                <Text style={styles.cardMeta} numberOfLines={1}>{d.campaignTitle}</Text>
+        {donations.map((d, i) => (
+          <FadeInRow key={d.id} delay={i * 60}>
+            <GlassCard variant="warm" style={styles.card}>
+              <View style={styles.cardRow}>
+                <IconBadge icon={STATUS_BADGE[d.status]?.icon ?? '💰'} color={STATUS_BADGE[d.status]?.color ?? COLORS.sage} size={36} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>{d.donor.name}</Text>
+                  <Text style={styles.cardMeta} numberOfLines={1}>{d.campaignTitle}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.amountText}>₹{(d.amountCents / 100).toLocaleString()}</Text>
+                  <Text style={styles.statusText}>{d.status}</Text>
+                </View>
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.amountText}>₹{(d.amountCents / 100).toLocaleString()}</Text>
-                <Text style={styles.statusText}>{d.status}</Text>
-              </View>
-            </View>
-          </GlassCard>
+            </GlassCard>
+          </FadeInRow>
         ))}
       </ScrollView>
     </View>
@@ -87,14 +121,10 @@ export function NgoDonationsScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
-  backButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary },
-  scrollContent: { paddingHorizontal: 20 },
-  summaryCard: { marginBottom: 12, gap: 6 },
-  summaryTitle: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 4 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
+  emptyWrap: { marginTop: 24 },
+  emptyCta: { marginTop: 8 },
+  summaryCard: { marginBottom: 4, gap: 6 },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
   summaryLabel: { fontSize: 12, color: COLORS.textSecondary, flex: 1 },
   summaryValue: { fontSize: 12, color: COLORS.textPrimary, fontWeight: '600' },

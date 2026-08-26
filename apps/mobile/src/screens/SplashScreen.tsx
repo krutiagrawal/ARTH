@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, Image, StyleSheet, Dimensions } from 'react-native';
+import { Text } from '../components/common/AppText';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, {
   useSharedValue,
@@ -20,6 +21,7 @@ import { TYPOGRAPHY } from '../constants/typography';
 import { FloatingParticles } from '../components/common/FloatingParticles';
 import { MuteButton } from '../components/common/MuteButton';
 import { useAuth } from '../context/AuthContext';
+import { ROLE_ROUTES } from '../constants/roleRoutes';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -49,7 +51,8 @@ export function SplashScreen({ navigation }: any) {
     }
 
     if (authStateRef.current.isAuthenticated) {
-      navigation.replace(authStateRef.current.user?.role === 'ngo' ? 'NgoHome' : 'Main');
+      const role = authStateRef.current.user?.role;
+      navigation.replace(ROLE_ROUTES[role as keyof typeof ROLE_ROUTES] ?? 'Main');
       return;
     }
 

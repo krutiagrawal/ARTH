@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, ImageOff, Trees, Newspaper, Trophy, Handshake, Leaf, CalendarDays, BarChart3, History, MapPin } from 'lucide-react'
+import { Plus, Pencil, Trash2, ImageOff, Trees, Newspaper, Trophy, Handshake, Leaf, BarChart3, History, MapPin } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import DrawerFormShell, { FormSection, FieldLabel, fieldInputClassName, fieldTextareaClassName, fieldButtonClassName } from '@/components/dashboard/DrawerFormShell'
@@ -19,7 +19,6 @@ const MODEL_ICON = {
   competitions: Trophy,
   partners: Handshake,
   ecosystemEntries: Leaf,
-  drives: CalendarDays,
   stats: BarChart3,
   timelineEntries: History,
   mapPoints: MapPin,

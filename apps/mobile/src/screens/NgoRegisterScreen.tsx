@@ -1,13 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import {
-  Text,
-  TextInput,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
+import { StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
@@ -62,7 +55,7 @@ export function NgoRegisterScreen({ navigation }: any) {
         website: website.trim() || undefined,
         contactPhone: contactPhone.trim() || undefined,
       });
-      navigation.reset({ index: 0, routes: [{ name: 'NgoHome' }] });
+      navigation.reset({ index: 0, routes: [{ name: 'NgoMain' }] });
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
     } finally {
@@ -162,9 +155,9 @@ export function NgoRegisterScreen({ navigation }: any) {
               Already have an account? <Text style={styles.switchLink}>Log in</Text>
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.replace('Register')}>
+          <TouchableOpacity onPress={() => navigation.replace('AccountType')}>
             <Text style={styles.switchText}>
-              Planting as an individual? <Text style={styles.switchLink}>Sign up here</Text>
+              Not an NGO? <Text style={styles.switchLink}>Choose a different account type</Text>
             </Text>
           </TouchableOpacity>
         </BlurCard>

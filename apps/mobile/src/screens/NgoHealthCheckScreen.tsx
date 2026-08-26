@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { Text } from '../components/common/AppText';
+import Animated from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +12,12 @@ import { GlassCard } from '../components/common/GlassCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { usePlantedTrees, useSurvivalStats, useLogBulkHealthChecks } from '../hooks/useApiQueries';
 import type { TreeHealthStatus } from '../api/plantedTrees';
+import { useSlideUp } from '../hooks/useAnimations';
+
+function FadeInRow({ delay, children }: { delay: number; children: React.ReactNode }) {
+  const animStyle = useSlideUp(delay, 18);
+  return <Animated.View style={animStyle}>{children}</Animated.View>;
+}
 
 const STATUS_META: Record<TreeHealthStatus, { emoji: string; color: string; label: string }> = {
   healthy: { emoji: '🌱', color: COLORS.sage, label: 'Healthy' },
@@ -82,29 +90,31 @@ export function NgoHealthCheckScreen({ navigation }: any) {
         {!isLoading && trees.length === 0 && (
           <EmptyState icon="🌳" title="No planted trees logged" body="Log a batch of planted trees to start tracking survival." actionLabel="Log trees" onAction={() => navigation.navigate('NgoLogPlantedTrees')} />
         )}
-        {trees.map((tree) => {
+        {trees.map((tree, i) => {
           const meta = STATUS_META[tree.latestStatus];
           const isSelected = selected.has(tree.id);
           return (
-            <TouchableOpacity key={tree.id} onPress={() => toggle(tree.id)} activeOpacity={0.85}>
-              <GlassCard variant="warm" style={[styles.card, isSelected && styles.cardSelected]}>
-                <View style={styles.cardRow}>
-                  <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
-                    {isSelected && <Text style={styles.checkmark}>✓</Text>}
+            <FadeInRow key={tree.id} delay={Math.min(i, 12) * 40}>
+              <TouchableOpacity onPress={() => toggle(tree.id)} activeOpacity={0.85}>
+                <GlassCard variant="warm" style={[styles.card, isSelected && styles.cardSelected]}>
+                  <View style={styles.cardRow}>
+                    <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
+                      {isSelected && <Text style={styles.checkmark}>✓</Text>}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.cardTitle}>{tree.speciesName}{tree.label ? ` — ${tree.label}` : ''}</Text>
+                      <Text style={styles.cardMeta}>
+                        {tree.driveTitle ? `${tree.driveTitle} · ` : ''}
+                        {new Date(tree.plantedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </Text>
+                    </View>
+                    <View style={[styles.statusPill, { backgroundColor: `${meta.color}22`, borderColor: meta.color }]}>
+                      <Text style={[styles.statusPillText, { color: meta.color }]}>{meta.emoji} {meta.label}</Text>
+                    </View>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cardTitle}>{tree.speciesName}{tree.label ? ` — ${tree.label}` : ''}</Text>
-                    <Text style={styles.cardMeta}>
-                      {tree.driveTitle ? `${tree.driveTitle} · ` : ''}
-                      {new Date(tree.plantedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </Text>
-                  </View>
-                  <View style={[styles.statusPill, { backgroundColor: `${meta.color}22`, borderColor: meta.color }]}>
-                    <Text style={[styles.statusPillText, { color: meta.color }]}>{meta.emoji} {meta.label}</Text>
-                  </View>
-                </View>
-              </GlassCard>
-            </TouchableOpacity>
+                </GlassCard>
+              </TouchableOpacity>
+            </FadeInRow>
           );
         })}
       </ScrollView>

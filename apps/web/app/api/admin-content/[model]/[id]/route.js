@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getServerUser } from '@/lib/session'
+import { requireApiAdmin } from '@/lib/requireApiAdmin'
 import { ADMIN_CONTENT_MODELS, coerceFieldValue } from '@/lib/adminContent'
-
-async function requireAdmin() {
-  const user = await getServerUser()
-  if (!user || !user.isAdmin) return null
-  return user
-}
 
 function parseId(config, raw) {
   return config.idKind === 'autoincrement' ? Number(raw) : raw
@@ -18,7 +12,7 @@ export async function PATCH(request, { params }) {
   const config = ADMIN_CONTENT_MODELS[model]
   if (!config) return NextResponse.json({ error: 'Unknown content type.' }, { status: 404 })
 
-  const admin = await requireAdmin()
+  const admin = await requireApiAdmin(request)
   if (!admin) return NextResponse.json({ error: 'Admin sign in required.' }, { status: 401 })
 
   const body = await request.json().catch(() => null)
@@ -47,7 +41,7 @@ export async function DELETE(request, { params }) {
   const config = ADMIN_CONTENT_MODELS[model]
   if (!config) return NextResponse.json({ error: 'Unknown content type.' }, { status: 404 })
 
-  const admin = await requireAdmin()
+  const admin = await requireApiAdmin(request)
   if (!admin) return NextResponse.json({ error: 'Admin sign in required.' }, { status: 401 })
 
   try {

@@ -1,13 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import {
-  Text,
-  TextInput,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
+import { StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
@@ -116,9 +109,9 @@ export function RegisterScreen({ navigation }: any) {
               Already have an account? <Text style={styles.switchLink}>Log in</Text>
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.replace('NgoRegister')}>
+          <TouchableOpacity onPress={() => navigation.replace('AccountType')}>
             <Text style={styles.switchText}>
-              Are you an NGO? <Text style={styles.switchLink}>Register as an NGO instead</Text>
+              Not an individual? <Text style={styles.switchLink}>Choose a different account type</Text>
             </Text>
           </TouchableOpacity>
         </BlurCard>

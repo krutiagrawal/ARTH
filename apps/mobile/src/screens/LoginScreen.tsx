@@ -1,14 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
@@ -19,6 +11,7 @@ import { PasswordInput } from '../components/common/PasswordInput';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
+import { ROLE_ROUTES } from '../constants/roleRoutes';
 
 export function LoginScreen({ navigation }: any) {
   const { login } = useAuth();
@@ -36,7 +29,8 @@ export function LoginScreen({ navigation }: any) {
     setIsSubmitting(true);
     try {
       const loggedInUser = await login(email.trim().toLowerCase(), password);
-      navigation.reset({ index: 0, routes: [{ name: loggedInUser.role === 'ngo' ? 'NgoHome' : 'Main' }] });
+      const target = ROLE_ROUTES[loggedInUser.role] ?? 'Main';
+      navigation.reset({ index: 0, routes: [{ name: target }] });
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
     } finally {
@@ -86,14 +80,9 @@ export function LoginScreen({ navigation }: any) {
             style={styles.submitButton}
           />
 
-          <TouchableOpacity onPress={() => navigation.replace('Register')}>
+          <TouchableOpacity onPress={() => navigation.replace('AccountType')}>
             <Text style={styles.switchText}>
               Don't have an account? <Text style={styles.switchLink}>Sign up</Text>
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.replace('NgoRegister')}>
-            <Text style={styles.switchText}>
-              Are you an NGO? <Text style={styles.switchLink}>Register as an NGO instead</Text>
             </Text>
           </TouchableOpacity>
         </BlurCard>

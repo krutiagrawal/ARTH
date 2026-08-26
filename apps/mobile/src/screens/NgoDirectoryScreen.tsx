@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Image } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Image } from 'react-native';
+import { Text, TextInput } from '../components/common/AppText';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +10,7 @@ import { RADIUS } from '../constants/theme';
 import { GlassCard } from '../components/common/GlassCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useBrowseNgos } from '../hooks/useApiQueries';
+import { resolveMediaUrl } from '../api/client';
 
 export function NgoDirectoryScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -55,7 +57,7 @@ export function NgoDirectoryScreen({ navigation }: any) {
             <GlassCard variant="warm" style={styles.card}>
               <View style={styles.cardRow}>
                 {ngo.logoUrl ? (
-                  <Image source={{ uri: ngo.logoUrl }} style={styles.logo} />
+                  <Image source={{ uri: resolveMediaUrl(ngo.logoUrl) }} style={styles.logo} />
                 ) : (
                   <View style={styles.logoPlaceholder}><Text style={{ fontSize: 20 }}>🌿</Text></View>
                 )}

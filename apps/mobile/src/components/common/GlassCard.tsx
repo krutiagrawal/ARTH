@@ -40,22 +40,31 @@ export function GlassCard({
     light: {
       backgroundColor: 'rgba(255, 255, 255, 0.18)',
       borderColor: 'rgba(255, 255, 255, 0.35)',
+      borderWidth: 1,
     },
     dark: {
       backgroundColor: 'rgba(13, 35, 24, 0.55)',
       borderColor: 'rgba(135, 168, 120, 0.2)',
+      borderWidth: 1,
     },
     sage: {
       backgroundColor: COLORS.glassSage,
       borderColor: 'rgba(135, 168, 120, 0.35)',
+      borderWidth: 1,
     },
     golden: {
       backgroundColor: 'rgba(212, 168, 83, 0.15)',
       borderColor: 'rgba(212, 168, 83, 0.3)',
+      borderWidth: 1,
     },
+    // Borderless by design. The old 1px `rgba(168,128,90,0.35)` outline drew a hard brown box
+    // around every card, which is the single biggest thing separating these from the frosted,
+    // edge-free cards in the reference mockup — depth comes from the shadow instead. The fill is
+    // also lighter and slightly more translucent so it reads as glass over the page rather than
+    // an opaque cream slab sitting on top of it.
     warm: {
-      backgroundColor: 'rgba(245, 237, 214, 0.6)',
-      borderColor: 'rgba(168, 128, 90, 0.2)',
+      backgroundColor: 'rgba(254, 251, 245, 0.88)',
+      borderWidth: 0,
     },
   };
 
@@ -64,7 +73,7 @@ export function GlassCard({
     variantStyles[variant],
     { borderRadius },
     !noPadding && styles.padding,
-    variant === 'light' ? SHADOWS.md : variant === 'dark' ? {} : SHADOWS.sm,
+    variant === 'dark' ? {} : SHADOWS.md,
     style,
   ];
 
@@ -102,8 +111,8 @@ export function BlurCard({
 }
 
 const styles = StyleSheet.create({
+  // No `borderWidth` here — each variant declares its own, so `warm` can opt out entirely.
   card: {
-    borderWidth: 1,
     overflow: 'hidden',
   },
   padding: {

@@ -69,6 +69,39 @@ async function seedNgoAchievements() {
   }
 }
 
+async function seedGroupAchievements() {
+  const achievements = [
+    { key: 'group_first_roots', title: 'First Roots', description: 'Plant your first tree as a group', icon: '🌱', rarity: 'common', criteriaType: 'trees_planted', criteriaTarget: 1, sortOrder: 1 },
+    { key: 'group_grove_builders', title: 'Grove Builders', description: 'Plant 50 trees together', icon: '🌳', rarity: 'rare', criteriaType: 'trees_planted', criteriaTarget: 50, sortOrder: 2 },
+    { key: 'group_forest_founders', title: 'Forest Founders', description: 'Plant 250 trees together', icon: '🌲', rarity: 'epic', criteriaType: 'trees_planted', criteriaTarget: 250, sortOrder: 3 },
+    { key: 'group_full_house', title: 'Full House', description: 'Grow your group to 10 members', icon: '👥', rarity: 'common', criteriaType: 'member_count', criteriaTarget: 10, sortOrder: 4 },
+    { key: 'group_two_weeks_strong', title: 'Two Weeks Strong', description: 'Keep the group streak alive for 14 days', icon: '🔥', rarity: 'rare', criteriaType: 'streak_days', criteriaTarget: 14, sortOrder: 5 },
+    { key: 'group_century_streak', title: 'Century Streak', description: 'Keep the group streak alive for 100 days', icon: '⭐', rarity: 'legendary', criteriaType: 'streak_days', criteriaTarget: 100, sortOrder: 6 },
+    { key: 'group_carbon_crew', title: 'Carbon Crew', description: 'Absorb 500kg of CO₂ together', icon: '🌍', rarity: 'epic', criteriaType: 'co2_absorbed', criteriaTarget: 500, sortOrder: 7 },
+    { key: 'group_challenge_champions', title: 'Challenge Champions', description: 'Complete 3 group challenges', icon: '🏆', rarity: 'rare', criteriaType: 'challenges_completed', criteriaTarget: 3, sortOrder: 8 },
+  ] as const;
+
+  for (const a of achievements) {
+    await prisma.groupAchievement.upsert({ where: { key: a.key }, update: a, create: a });
+  }
+}
+
+async function seedNurseryAchievements() {
+  const achievements = [
+    { key: 'nursery_first_listing', title: 'First Listing', description: 'List your first species in stock', icon: '🌱', rarity: 'common', criteriaType: 'species_listed', criteriaTarget: 1, sortOrder: 1 },
+    { key: 'nursery_full_shelf', title: 'Full Shelf', description: 'List 10 different species', icon: '🌿', rarity: 'rare', criteriaType: 'species_listed', criteriaTarget: 10, sortOrder: 2 },
+    { key: 'nursery_generous_grower', title: 'Generous Grower', description: 'Give out 100 saplings to planters', icon: '🎁', rarity: 'rare', criteriaType: 'saplings_given_out', criteriaTarget: 100, sortOrder: 3 },
+    { key: 'nursery_community_pillar', title: 'Community Pillar', description: 'Give out 1,000 saplings to planters', icon: '🌳', rarity: 'legendary', criteriaType: 'saplings_given_out', criteriaTarget: 1000, sortOrder: 4 },
+    { key: 'nursery_trusted_nursery', title: 'Trusted Nursery', description: 'Fulfil 10 reservation requests', icon: '🤝', rarity: 'rare', criteriaType: 'reservations_fulfilled', criteriaTarget: 10, sortOrder: 5 },
+    { key: 'nursery_week_long_streak', title: 'Week-Long Streak', description: 'Stay active for 7 days in a row', icon: '🔥', rarity: 'common', criteriaType: 'streak_days', criteriaTarget: 7, sortOrder: 6 },
+    { key: 'nursery_century_streak', title: 'Century Streak', description: 'Stay active for 100 days in a row', icon: '⭐', rarity: 'legendary', criteriaType: 'streak_days', criteriaTarget: 100, sortOrder: 7 },
+  ] as const;
+
+  for (const a of achievements) {
+    await prisma.nurseryAchievement.upsert({ where: { key: a.key }, update: a, create: a });
+  }
+}
+
 async function seedForestThemes() {
   const themes = [
     { key: 'classic', name: 'Classic Grove', previewEmoji: '🌳', isDefaultUnlocked: true, sortOrder: 1 },
@@ -298,6 +331,8 @@ async function main() {
   await seedSpecies();
   await seedAchievements();
   await seedNgoAchievements();
+  await seedGroupAchievements();
+  await seedNurseryAchievements();
   await seedForestThemes();
   await seedDecorationTypes();
   await seedDailyMissions();

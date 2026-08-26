@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@plant/db';
 const prisma = new PrismaClient();
 async function main() {
   const email = process.argv[2];

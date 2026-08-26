@@ -1,4 +1,4 @@
-import { Prisma, AchievementCriteriaType, Rarity } from '@prisma/client';
+import { Prisma, AchievementCriteriaType, Rarity } from '@plant/db';
 import { addXp } from './xp.service';
 
 const RARITY_XP: Record<Rarity, number> = { common: 25, rare: 50, epic: 100, legendary: 200 };

@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { ORG_ROLES } from '../constants/roles';
 import {
   createDriveSchema,
   updateDriveSchema,
@@ -54,7 +55,7 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
     reply.send(results.map(serializeDrive));
   });
 
-  fastify.get('/mine', { preHandler: [fastify.requireRole('ngo')] }, async (request, reply) => {
+  fastify.get('/mine', { preHandler: [fastify.requireRole(...ORG_ROLES)] }, async (request, reply) => {
     const parsed = ownedListQuerySchema.safeParse(request.query);
     if (!parsed.success) throw new BadRequestError('Invalid query parameters');
 
@@ -64,7 +65,7 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
 
   fastify.get<{ Params: { id: string } }>(
     '/:id/attendees',
-    { preHandler: [fastify.requireRole('ngo')] },
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
     async (request, reply) => {
       const parsed = paginationQuerySchema.safeParse(request.query);
       if (!parsed.success) throw new BadRequestError('Invalid query parameters');
@@ -87,7 +88,7 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
     reply.send(serializeDrive(drive));
   });
 
-  fastify.post('/', { preHandler: [fastify.requireRole('ngo')] }, async (request, reply) => {
+  fastify.post('/', { preHandler: [fastify.requireRole(...ORG_ROLES)] }, async (request, reply) => {
     const { fields, file } = splitMultipartBody(request.body as any);
 
     const parsed = createDriveSchema.safeParse(fields);
@@ -105,7 +106,7 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
 
   fastify.patch<{ Params: { id: string } }>(
     '/:id',
-    { preHandler: [fastify.requireRole('ngo')] },
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
     async (request, reply) => {
       const isMultipart = (request.headers['content-type'] ?? '').includes('multipart/form-data');
       const { fields, file } = isMultipart
@@ -131,7 +132,7 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
 
   fastify.delete<{ Params: { id: string } }>(
     '/:id',
-    { preHandler: [fastify.requireRole('ngo')] },
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
     async (request, reply) => {
       const drive = await driveService.cancelDrive(fastify.prisma, request.user!.id, request.params.id);
       reply.send(serializeDrive(drive));
@@ -140,9 +141,24 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
 
   fastify.post<{ Params: { id: string } }>(
     '/:id/complete',
-    { preHandler: [fastify.requireRole('ngo')] },
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
     async (request, reply) => {
       const drive = await driveService.completeDrive(fastify.prisma, request.user!.id, request.params.id);
+      reply.send(serializeDrive(drive));
+    },
+  );
+
+  fastify.post<{ Params: { id: string }; Body: { featured?: boolean } }>(
+    '/:id/feature',
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
+    async (request, reply) => {
+      const featured = request.body?.featured !== false;
+      const drive = await driveService.setDriveFeatured(
+        fastify.prisma,
+        request.user!.id,
+        request.params.id,
+        featured,
+      );
       reply.send(serializeDrive(drive));
     },
   );

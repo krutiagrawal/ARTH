@@ -52,8 +52,28 @@ export function saveNgoLogo(photo: PhotoInput): Promise<string> {
   return saveImage(photo, 'ngo-logos');
 }
 
+export function saveGroupLogo(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'group-logos');
+}
+
+export function saveNurseryLogo(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'nursery-logos');
+}
+
+export function saveCorporateLogo(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'corporate-logos');
+}
+
 export function saveUpdatePhoto(photo: PhotoInput): Promise<string> {
   return saveImage(photo, 'ngo-updates');
+}
+
+export function savePostMedia(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'posts');
+}
+
+export function savePortfolioMedia(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'portfolio');
 }
 
 export function saveStaffPhoto(photo: PhotoInput): Promise<string> {

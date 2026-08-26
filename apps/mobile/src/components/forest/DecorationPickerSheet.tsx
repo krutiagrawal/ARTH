@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Dimensions } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, Dimensions } from 'react-native';
+import { Text } from '../common/AppText';
 import { COLORS } from '../../constants/colors';
 import { RADIUS } from '../../constants/theme';
 import { DECORATION_COMPONENTS, ECOSYSTEM_ZONES, DRAW_TOOL_VARIANTS, type EcosystemZoneKey } from '../../constants/decorationCatalog';

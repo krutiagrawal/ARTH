@@ -64,19 +64,6 @@ export const ADMIN_CONTENT_MODELS = {
       { name: 'long', type: 'textarea', required: true },
     ],
   },
-  drives: {
-    delegate: 'drive',
-    label: 'Drives (content)',
-    idKind: 'string',
-    fields: [
-      { name: 'title', type: 'text', required: true },
-      { name: 'ngo', type: 'text', required: true },
-      { name: 'location', type: 'text', required: true },
-      { name: 'date', type: 'date', required: true },
-      { name: 'spots', type: 'number', required: true },
-      { name: 'spotsLeft', type: 'number', required: true },
-    ],
-  },
   stats: {
     delegate: 'stat',
     label: 'Stats',

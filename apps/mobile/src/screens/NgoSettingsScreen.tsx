@@ -1,15 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
-import { BlurView } from 'expo-blur';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Image, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { Text } from '../components/common/AppText';
+import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { RADIUS } from '../constants/theme';
+import { RADIUS, SHADOWS } from '../constants/theme';
 import { useNgoProfile, useUpdateNgoProfile } from '../hooks/useApiQueries';
-import { PhotoPickerField, PickedPhoto } from '../components/common/PhotoPickerField';
+import { PickedPhoto } from '../components/common/PhotoPickerField';
+import { AnimatedButton } from '../components/common/AnimatedButton';
+import { FormField } from '../components/common/FormField';
+import { Toggle } from '../components/common/Toggle';
+import { ScreenHeader } from '../components/common/ScreenHeader';
+import { useSlideUp } from '../hooks/useAnimations';
+import { useHaptics } from '../hooks/useHaptics';
 import type { Award } from '../api/ngo';
-import { ApiError } from '../api/client';
+import { ApiError, resolveMediaUrl } from '../api/client';
 
 export function NgoSettingsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -24,8 +32,14 @@ export function NgoSettingsScreen({ navigation }: any) {
   const [foundedYear, setFoundedYear] = useState('');
   const [volunteerCountEstimate, setVolunteerCountEstimate] = useState('');
   const [awards, setAwards] = useState<Award[]>([]);
+  const [approvalRequired, setApprovalRequired] = useState(false);
   const [logo, setLogo] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const cardAnim = useSlideUp(0, 24);
+  const { medium } = useHaptics();
+  // A freshly picked photo is already an absolute `file://` URI — only the *stored* logo is a
+  // host-relative `/uploads/...` path that needs resolving against the API host.
+  const logoUri = logo?.uri ?? resolveMediaUrl(profile?.logoUrl) ?? null;
 
   useEffect(() => {
     if (!profile) return;
@@ -37,7 +51,28 @@ export function NgoSettingsScreen({ navigation }: any) {
     setFoundedYear(profile.foundedYear ? String(profile.foundedYear) : '');
     setVolunteerCountEstimate(profile.volunteerCountEstimate ? String(profile.volunteerCountEstimate) : '');
     setAwards(profile.awards ?? []);
+    setApprovalRequired(profile.followPolicy === 'approval');
   }, [profile]);
+
+  /** The reference shows the logo as a round avatar well rather than the shared
+   * rectangular drop zone, so this screen drives the picker itself. */
+  const pickLogo = useCallback(async () => {
+    medium();
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+    const asset = !result.canceled ? result.assets[0] : undefined;
+    if (asset) {
+      setLogo({
+        uri: asset.uri,
+        name: asset.fileName ?? 'logo.jpg',
+        type: asset.mimeType ?? 'image/jpeg',
+      });
+    }
+  }, [medium]);
 
   const addAward = () => setAwards((prev) => [...prev, { title: '', year: undefined, issuer: '' }]);
   const removeAward = (index: number) => setAwards((prev) => prev.filter((_, i) => i !== index));
@@ -56,6 +91,7 @@ export function NgoSettingsScreen({ navigation }: any) {
         foundedYear: foundedYear ? Number(foundedYear) : undefined,
         volunteerCountEstimate: volunteerCountEstimate ? Number(volunteerCountEstimate) : undefined,
         awards: awards.filter((a) => a.title.trim()),
+        followPolicy: approvalRequired ? 'approval' : 'open',
         logo: logo ?? undefined,
       });
       Alert.alert('Saved', 'Your NGO profile has been updated.');
@@ -69,21 +105,17 @@ export function NgoSettingsScreen({ navigation }: any) {
       <StatusBar style="dark" />
       <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
 
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
-            <Text style={styles.backIcon}>←</Text>
-          </BlurView>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>NGO Profile</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <ScreenHeader
+        title="NGO Profile"
+        subtitle="Tell people about your organization"
+        onBack={() => navigation?.goBack?.()}
+      />
 
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
-          <View style={styles.card}>
+          <Animated.View style={cardAnim}>
             {profile?.status !== 'approved' && (
               <View style={styles.statusBanner}>
                 <Text style={styles.statusBannerText}>
@@ -93,31 +125,52 @@ export function NgoSettingsScreen({ navigation }: any) {
               </View>
             )}
 
-            <Text style={styles.label}>Logo</Text>
-            <PhotoPickerField photo={logo ?? (profile?.logoUrl ? { uri: profile.logoUrl, name: 'logo.jpg', type: 'image/jpeg' } : null)} onChange={setLogo} mode="gallery" />
+            <View style={styles.logoWrap}>
+              <TouchableOpacity onPress={pickLogo} activeOpacity={0.85} style={styles.logoCircle}>
+                {logoUri ? (
+                  <Image source={{ uri: logoUri }} style={styles.logoImage} />
+                ) : (
+                  <Text style={styles.logoPlaceholder}>Logo</Text>
+                )}
+                <View style={styles.logoEditBadge}>
+                  <Text style={styles.logoEditIcon}>✎</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
 
-            <Text style={styles.label}>Organization name</Text>
-            <TextInput style={styles.input} value={orgName} onChangeText={setOrgName} placeholderTextColor="rgba(255,255,255,0.4)" />
+            <View style={styles.policyCard}>
+              <View style={styles.policyText}>
+                <Text style={styles.policyTitle}>Approve each follower</Text>
+                <Text style={styles.policyBody}>
+                  {approvalRequired
+                    ? 'People have to ask before they can follow you. Requests appear in Community → Requests.'
+                    : 'Anyone can follow you straight away and start seeing your updates.'}
+                </Text>
+              </View>
+              <Toggle value={approvalRequired} onValueChange={setApprovalRequired} />
+            </View>
 
-            <Text style={styles.label}>Description</Text>
-            <TextInput style={[styles.input, styles.multiline]} value={description} onChangeText={setDescription} multiline placeholderTextColor="rgba(255,255,255,0.4)" />
+            <FormField label="Organization Name" value={orgName} onChangeText={setOrgName} placeholder="Your organization" />
+            <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="We plant. We protect. We inspire." />
+            <FormField label="Website" value={website} onChangeText={setWebsite} autoCapitalize="none" keyboardType="url" placeholder="https://" />
+            <FormField label="Contact Phone" value={contactPhone} onChangeText={setContactPhone} keyboardType="phone-pad" placeholder="Phone number" />
+            <FormField label="City" value={city} onChangeText={setCity} placeholder="City" />
+            <FormField
+              label="Founded Year"
+              value={foundedYear}
+              onChangeText={(v: string) => setFoundedYear(v.replace(/[^0-9]/g, ''))}
+              keyboardType="number-pad"
+              placeholder="2018"
+            />
+            <FormField
+              label="Volunteer Count (Approx.)"
+              value={volunteerCountEstimate}
+              onChangeText={(v: string) => setVolunteerCountEstimate(v.replace(/[^0-9]/g, ''))}
+              keyboardType="number-pad"
+              placeholder="120"
+            />
 
-            <Text style={styles.label}>Website</Text>
-            <TextInput style={styles.input} value={website} onChangeText={setWebsite} autoCapitalize="none" keyboardType="url" placeholder="https://" placeholderTextColor="rgba(255,255,255,0.4)" />
-
-            <Text style={styles.label}>Contact phone</Text>
-            <TextInput style={styles.input} value={contactPhone} onChangeText={setContactPhone} keyboardType="phone-pad" placeholderTextColor="rgba(255,255,255,0.4)" />
-
-            <Text style={styles.label}>City</Text>
-            <TextInput style={styles.input} value={city} onChangeText={setCity} placeholderTextColor="rgba(255,255,255,0.4)" />
-
-            <Text style={styles.label}>Founded year</Text>
-            <TextInput style={styles.input} value={foundedYear} onChangeText={(v: string) => setFoundedYear(v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" placeholderTextColor="rgba(255,255,255,0.4)" />
-
-            <Text style={styles.label}>Volunteer count (approx.)</Text>
-            <TextInput style={styles.input} value={volunteerCountEstimate} onChangeText={(v: string) => setVolunteerCountEstimate(v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" placeholderTextColor="rgba(255,255,255,0.4)" />
-
-            <Text style={styles.label}>Awards & recognition</Text>
+            <Text style={styles.sectionLabel}>Awards & recognition</Text>
             <View style={styles.subCard}>
               {awards.map((award, i) => (
                 <View key={i} style={styles.listItem}>
@@ -127,9 +180,15 @@ export function NgoSettingsScreen({ navigation }: any) {
                       <Text style={styles.removeText}>Remove</Text>
                     </TouchableOpacity>
                   </View>
-                  <TextInput style={styles.input} value={award.title} onChangeText={(v: string) => updateAward(i, { title: v })} placeholder="Award title" placeholderTextColor="rgba(255,255,255,0.4)" />
-                  <TextInput style={styles.input} value={award.year ? String(award.year) : ''} onChangeText={(v: string) => updateAward(i, { year: v ? Number(v.replace(/[^0-9]/g, '')) : undefined })} placeholder="Year" keyboardType="number-pad" placeholderTextColor="rgba(255,255,255,0.4)" />
-                  <TextInput style={styles.input} value={award.issuer ?? ''} onChangeText={(v: string) => updateAward(i, { issuer: v })} placeholder="Issued by" placeholderTextColor="rgba(255,255,255,0.4)" />
+                  <FormField label="Title" value={award.title} onChangeText={(v: string) => updateAward(i, { title: v })} placeholder="Award title" />
+                  <FormField
+                    label="Year"
+                    value={award.year ? String(award.year) : ''}
+                    onChangeText={(v: string) => updateAward(i, { year: v ? Number(v.replace(/[^0-9]/g, '')) : undefined })}
+                    keyboardType="number-pad"
+                    placeholder="Year"
+                  />
+                  <FormField label="Issued by" value={award.issuer ?? ''} onChangeText={(v: string) => updateAward(i, { issuer: v })} placeholder="Issuing body" />
                 </View>
               ))}
               <TouchableOpacity style={styles.addButton} onPress={addAward}>
@@ -139,18 +198,19 @@ export function NgoSettingsScreen({ navigation }: any) {
 
             {error && <Text style={styles.error}>{error}</Text>}
 
-            <TouchableOpacity
-              style={[styles.submitButton, updateMutation.isPending && styles.submitButtonDisabled]}
+            <AnimatedButton
+              label={updateMutation.isPending ? 'Saving…' : 'Save Changes'}
               onPress={handleSave}
               disabled={updateMutation.isPending}
-            >
-              {updateMutation.isPending ? <ActivityIndicator size="small" color={COLORS.white} /> : <Text style={styles.submitText}>Save changes</Text>}
-            </TouchableOpacity>
+              fullWidth
+              gradientColors={[COLORS.forest, COLORS.forestDeep]}
+              style={styles.submitButton}
+            />
 
             <TouchableOpacity style={styles.staffLink} onPress={() => navigation.navigate('NgoStaff')}>
               <Text style={styles.staffLinkText}>Manage staff roster →</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         </ScrollView>
       )}
     </View>
@@ -158,30 +218,66 @@ export function NgoSettingsScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+  policyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: COLORS.white,
+    borderRadius: RADIUS.md,
+    padding: 14,
+    marginBottom: 12,
+  },
+  policyText: { flex: 1 },
+  policyTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
+  policyBody: { fontSize: 12, lineHeight: 17, color: COLORS.textMuted, marginTop: 3 },
+
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
-  backButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary },
-  scrollContent: { paddingHorizontal: 16 },
-  card: { backgroundColor: 'rgba(13,35,24,0.45)', borderRadius: RADIUS.lg, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', padding: 18, gap: 6 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
   statusBanner: { backgroundColor: 'rgba(232,168,75,0.18)', borderRadius: RADIUS.md, padding: 10, marginBottom: 8 },
-  statusBannerText: { color: COLORS.amberLight, fontSize: 12, fontWeight: '600' },
-  subCard: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: RADIUS.md, padding: 12, marginTop: 8, gap: 8 },
-  label: { fontSize: 12, fontWeight: '600', color: COLORS.white, marginTop: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
-  input: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: RADIUS.md, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: COLORS.white, marginTop: 4 },
-  multiline: { minHeight: 70, textAlignVertical: 'top' },
-  listItem: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)', paddingTop: 8, marginTop: 4 },
+  statusBannerText: { color: COLORS.textPrimary, fontSize: 12, fontWeight: '600' },
+
+  logoWrap: { alignItems: 'center', marginTop: 8, marginBottom: 4 },
+  logoCircle: {
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    backgroundColor: COLORS.beige,
+    borderWidth: 1,
+    borderColor: COLORS.sand,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'visible',
+  },
+  logoImage: { width: 104, height: 104, borderRadius: 52 },
+  logoPlaceholder: { fontSize: 14, color: COLORS.textMuted, fontWeight: '600' },
+  logoEditBadge: {
+    position: 'absolute',
+    right: 0,
+    bottom: 4,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: COLORS.forest,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.cream,
+    ...SHADOWS.sm,
+  },
+  logoEditIcon: { fontSize: 13, color: COLORS.white, fontWeight: '700' },
+
+  sectionLabel: { fontSize: 13, fontWeight: '700', color: COLORS.textSecondary, marginTop: 20 },
+  // Transparent too: this only groups a run of FormFields, and a beige panel sitting directly
+  // behind now-transparent fields would put the light block straight back where it was removed.
+  subCard: { borderRadius: RADIUS.md, paddingHorizontal: 0, paddingVertical: 4, marginTop: 4, gap: 8 },
+  listItem: { borderTopWidth: 1, borderTopColor: COLORS.sand, paddingTop: 8, marginTop: 4 },
   listItemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  listItemTitle: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' },
+  listItemTitle: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase' },
   removeText: { fontSize: 12, color: COLORS.coral, fontWeight: '600' },
   addButton: { alignSelf: 'flex-start', marginTop: 4 },
   addButtonText: { fontSize: 13, color: COLORS.sage, fontWeight: '700' },
   error: { fontSize: 13, color: COLORS.coral, marginTop: 12 },
-  submitButton: { backgroundColor: COLORS.forest, borderRadius: RADIUS.full, paddingVertical: 14, alignItems: 'center', marginTop: 20 },
-  submitButtonDisabled: { opacity: 0.6 },
-  submitText: { fontSize: 15, fontWeight: '700', color: COLORS.white },
+  submitButton: { marginTop: 20 },
   staffLink: { alignSelf: 'center', marginTop: 16, padding: 8 },
-  staffLinkText: { fontSize: 13, color: COLORS.mint, fontWeight: '700' },
+  staffLinkText: { fontSize: 13, color: COLORS.forest, fontWeight: '700' },
 });

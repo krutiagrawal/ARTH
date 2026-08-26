@@ -1,6 +1,6 @@
 import fp from 'fastify-plugin';
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@plant/db';
 
 export default fp(async function prismaPlugin(fastify: FastifyInstance) {
   const prisma = new PrismaClient();

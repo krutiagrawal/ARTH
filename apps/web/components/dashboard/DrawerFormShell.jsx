@@ -22,25 +22,20 @@ export default function DrawerFormShell({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className={cn('flex flex-col gap-0 p-0', widthClassName)}>
-        <div className="relative isolate shrink-0 overflow-hidden bg-primary px-5 py-4">
-          <div aria-hidden className="pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full bg-white/15 blur-3xl" />
-          <div aria-hidden className="pointer-events-none absolute -left-12 -bottom-16 h-32 w-32 rounded-full bg-black/10 blur-3xl" />
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-black/10" />
-          <div className="relative flex items-center gap-3 pr-6">
-            {Icon && (
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary-foreground text-primary shadow-md">
-                <Icon className="h-5 w-5" />
-              </span>
-            )}
-            <div className="min-w-0">
-              {eyebrow && <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-foreground/75">{eyebrow}</p>}
-              <SheetTitle className="mt-0.5 truncate font-serif text-lg font-normal leading-tight text-primary-foreground">{title}</SheetTitle>
-              {description && <SheetDescription className="mt-0.5 text-xs leading-snug text-primary-foreground/80">{description}</SheetDescription>}
-            </div>
+        <div className="flex shrink-0 items-center gap-3 border-b border-border/70 bg-background px-5 py-4">
+          {Icon && (
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+              <Icon className="h-4 w-4" />
+            </span>
+          )}
+          <div className="min-w-0">
+            {eyebrow && <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70">{eyebrow}</p>}
+            <SheetTitle className="truncate text-base font-semibold leading-tight text-foreground">{title}</SheetTitle>
+            {description && <SheetDescription className="mt-0.5 text-xs leading-snug text-muted-foreground">{description}</SheetDescription>}
           </div>
         </div>
 
-        <div className="modern-scrollbar flex-1 overflow-y-auto bg-secondary/20 px-5 py-4">{children}</div>
+        <div className="modern-scrollbar flex-1 overflow-y-auto bg-muted/30 px-5 py-5">{children}</div>
 
         {footer && (
           <div className="shrink-0 border-t border-border/70 bg-background px-5 py-3">
@@ -72,20 +67,47 @@ export function FieldLabel({ required, children }) {
   )
 }
 
-/** Read-only label/value row for detail (non-form) sheets — pairs with FormSection. */
-export function DetailRow({ label, children, full = false }) {
-  if (children == null || children === '') return null
+/**
+ * Single elevated panel that holds every section of a read-only detail
+ * sheet — sections are divided by hairlines instead of each being its own
+ * bordered/shadowed card, so a multi-section drawer reads as one coherent
+ * document rather than a stack of boxes.
+ */
+export function DetailPanel({ children }) {
+  return <div className="divide-y divide-border/60 rounded-xl border border-border/60 bg-background shadow-sm">{children}</div>
+}
+
+/** One section inside a DetailPanel — label + content, no border of its own. */
+export function DetailSection({ label, children }) {
   return (
-    <div className={cn(full && 'col-span-2')}>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
-      <div className="mt-0.5 text-[13px] leading-snug text-foreground">{children}</div>
+    <div className="p-4">
+      {label && <p className="mb-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">{label}</p>}
+      <div className="space-y-3.5">{children}</div>
     </div>
   )
 }
 
-/** Grid wrapper for a set of DetailRows within a FormSection — 2 columns on wider drawers. */
+/** Read-only label/value row for detail (non-form) sheets — pairs with DetailSection. */
+export function DetailRow({ label, children, full = false }) {
+  if (children == null || children === '') return null
+  return (
+    <div className={cn(full && 'col-span-2')}>
+      <p className="text-[12px] text-muted-foreground/80">{label}</p>
+      <div className="mt-1 text-[14px] leading-relaxed text-foreground">{children}</div>
+    </div>
+  )
+}
+
+/** Grid wrapper for a set of DetailRows within a DetailSection — 2 columns on wider drawers. */
 export function DetailGrid({ children }) {
-  return <div className="grid grid-cols-2 gap-x-3 gap-y-3">{children}</div>
+  return <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">{children}</div>
+}
+
+/** Flat, divided list for detail sheets (attendees, donors, pickup points…) —
+ * replaces one-bordered-box-per-row with subtle dividers so a list of many
+ * items doesn't read as a stack of nested cards. */
+export function DetailList({ children }) {
+  return <div className="divide-y divide-border/50">{children}</div>
 }
 
 // Explicit small radius, not the theme's `rounded-lg`/`rounded-md` (those

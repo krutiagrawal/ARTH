@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { CalendarDays, MapPin, Users, Sprout, Edit3 } from 'lucide-react'
-import DrawerFormShell, { FormSection, DetailRow, DetailGrid } from '@/components/dashboard/DrawerFormShell'
+import DrawerFormShell, { DetailPanel, DetailSection, DetailRow, DetailGrid, DetailList } from '@/components/dashboard/DrawerFormShell'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -52,8 +52,8 @@ export default function DriveDetailSheet({ drive, onOpenChange, onEdit }) {
       }
     >
       {drive && (
-        <>
-          <FormSection first label="Overview">
+        <DetailPanel>
+          <DetailSection label="Overview">
             <DetailGrid>
               <DetailRow label="Status">
                 <Badge variant={STATUS_VARIANT[drive.status] || 'outline'} className="capitalize">
@@ -61,14 +61,14 @@ export default function DriveDetailSheet({ drive, onOpenChange, onEdit }) {
                 </Badge>
               </DetailRow>
               <DetailRow label="RSVPs">
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1.5">
                   <Users className="h-3.5 w-3.5 text-muted-foreground" />
                   {drive.confirmedCount}
                   {drive.capacity != null ? ` / ${drive.capacity}` : ' (no limit)'}
                 </span>
               </DetailRow>
               <DetailRow label="Starts" full>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1.5">
                   <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
                   {new Date(drive.startsAt).toLocaleString()}
                   {drive.durationMinutes ? ` · ${drive.durationMinutes} min` : ''}
@@ -83,12 +83,12 @@ export default function DriveDetailSheet({ drive, onOpenChange, onEdit }) {
               <DetailRow label="Published">{drive.createdAt && new Date(drive.createdAt).toLocaleDateString()}</DetailRow>
               <DetailRow label="Last updated">{drive.updatedAt && new Date(drive.updatedAt).toLocaleDateString()}</DetailRow>
             </DetailGrid>
-          </FormSection>
+          </DetailSection>
 
-          <FormSection label="Location & transport">
+          <DetailSection label="Location & transport">
             <DetailGrid>
               <DetailRow label="Address" full>
-                <span className="flex items-start gap-1">
+                <span className="flex items-start gap-1.5">
                   <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   {[drive.address, drive.city].filter(Boolean).join(', ') || 'Not set'}
                 </span>
@@ -96,23 +96,23 @@ export default function DriveDetailSheet({ drive, onOpenChange, onEdit }) {
               <DetailRow label="Transport" full>{TRANSPORT_LABEL[drive.transportMode]}</DetailRow>
             </DetailGrid>
             {drive.transportMode === 'ngo_provided' && drive.pickupPoints?.length > 0 && (
-              <div className="mt-3 space-y-2">
+              <DetailList>
                 {drive.pickupPoints.map((p, i) => (
-                  <div key={p.id} className="rounded-[8px] border border-border/60 bg-secondary/20 p-2 text-[12px]">
-                    <p className="font-medium">Stop {i + 1} · {p.address}</p>
-                    <p className="text-muted-foreground">Reach by {new Date(p.arrivalBy).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                  <div key={p.id} className="py-2.5 text-[13px] first:pt-3.5 last:pb-0">
+                    <p className="font-medium text-foreground">Stop {i + 1} · {p.address}</p>
+                    <p className="mt-0.5 text-muted-foreground">Reach by {new Date(p.arrivalBy).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
                 ))}
-              </div>
+              </DetailList>
             )}
-          </FormSection>
+          </DetailSection>
 
           {drive.plants?.length > 0 && (
-            <FormSection label="Plants & sponsorships">
+            <DetailSection label="Plants & sponsorships">
               <DetailRow label="Total sponsored" full>{rupees(totalSponsoredCents)}</DetailRow>
-              <div className="mt-2 space-y-1.5">
+              <DetailList>
                 {drive.plants.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between rounded-[8px] border border-border/60 px-2.5 py-1.5 text-[12px]">
+                  <div key={p.id} className="flex items-center justify-between py-2.5 text-[13px] first:pt-3.5 last:pb-0">
                     <span className="flex items-center gap-1.5">
                       <Sprout className="h-3.5 w-3.5 text-muted-foreground" /> {p.speciesName}
                     </span>
@@ -121,33 +121,33 @@ export default function DriveDetailSheet({ drive, onOpenChange, onEdit }) {
                     </span>
                   </div>
                 ))}
-              </div>
-            </FormSection>
+              </DetailList>
+            </DetailSection>
           )}
 
-          <FormSection label={`Attendees (${drive.confirmedCount})`}>
+          <DetailSection label={`Attendees (${drive.confirmedCount})`}>
             {loading ? (
               <div className="space-y-2">
                 <Skeleton className="h-9 w-full" />
                 <Skeleton className="h-9 w-full" />
               </div>
             ) : attendees.length === 0 ? (
-              <p className="text-[12px] text-muted-foreground">No RSVPs yet.</p>
+              <p className="text-[13px] text-muted-foreground">No RSVPs yet.</p>
             ) : (
-              <div className="space-y-1.5">
+              <DetailList>
                 {attendees.map((a) => (
-                  <div key={a.id} className="flex items-center justify-between rounded-[8px] border border-border/60 px-2.5 py-1.5">
+                  <div key={a.id} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
                     <div>
-                      <p className="text-[13px] font-medium">{a.name}</p>
-                      <p className="text-[11px] text-muted-foreground">{a.handle}</p>
+                      <p className="text-[14px] font-medium text-foreground">{a.name}</p>
+                      <p className="text-[12px] text-muted-foreground">{a.handle}</p>
                     </div>
-                    <p className="text-[11px] text-muted-foreground">{new Date(a.rsvpedAt).toLocaleDateString()}</p>
+                    <p className="text-[12px] text-muted-foreground">{new Date(a.rsvpedAt).toLocaleDateString()}</p>
                   </div>
                 ))}
-              </div>
+              </DetailList>
             )}
-          </FormSection>
-        </>
+          </DetailSection>
+        </DetailPanel>
       )}
     </DrawerFormShell>
   )

@@ -1,5 +1,6 @@
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { getServerUser } from '@/lib/session'
+import { requireApiAdmin } from '@/lib/requireApiAdmin'
 import AdminContentClient from './AdminContentClient'
 
 export const metadata = {
@@ -8,9 +9,8 @@ export const metadata = {
 }
 
 export default async function Page() {
-  const user = await getServerUser()
-  if (!user) redirect('/login?next=/admin/content')
-  if (!user.isAdmin) redirect('/')
+  const admin = await requireApiAdmin({ cookies: await cookies() })
+  if (!admin) redirect('/admin/login?next=/admin/content')
 
   return <AdminContentClient />
 }

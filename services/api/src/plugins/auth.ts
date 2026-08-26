@@ -1,5 +1,5 @@
 import fp from 'fastify-plugin';
-import { UserRole } from '@prisma/client';
+import { UserRole } from '@plant/db';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { verifyAccessToken } from '../utils/jwt';
 import { ForbiddenError, UnauthorizedError } from '../utils/errors';

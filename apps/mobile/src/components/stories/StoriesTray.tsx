@@ -1,55 +1,91 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { Text } from '../common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
+import { FONTS } from '../../constants/typography';
 import { useStoryFeed } from '../../hooks/useApiQueries';
+import { useMarkStoryViewed } from '../../hooks/useSocialQueries';
+import { resolveMediaUrl } from '../../api/client';
 import { StoryViewer } from './StoryViewer';
 
-/** Horizontal tray of friends who have active stories, each shown as an avatar inside a gradient
- * ring. Tapping opens the full-screen StoryViewer for that friend's stories. Renders nothing when
- * no friends have active stories. Self-contained — drop it anywhere (e.g. Community Friends tab). */
-export function StoriesTray() {
+interface StoriesTrayProps {
+  /** Heading above the row. Pass null to hide it where the screen already has one. */
+  title?: string | null;
+  /** Set on dark surfaces (the Community tab) so labels stay readable. */
+  tone?: 'onDark' | 'onLight';
+}
+
+/**
+ * Horizontal tray of friends and followed NGOs with active stories.
+ *
+ * A group with something unseen gets the full gradient ring; once every story in it has been
+ * viewed the ring goes flat grey — the same read/unread signal every story product uses, driven
+ * by the server's `hasUnseen`. The API already sorts unseen groups first.
+ */
+export function StoriesTray({ title = "Today's stories", tone = 'onDark' }: StoriesTrayProps) {
   const { data: feed = [] } = useStoryFeed();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const markViewed = useMarkStoryViewed();
 
   if (feed.length === 0) return null;
 
   const active = activeIndex !== null ? feed[activeIndex] : null;
+  const onDark = tone === 'onDark';
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.title}>Friends' Forests</Text>
+      {title ? (
+        <Text style={[styles.title, !onDark && styles.titleOnLight]}>{title}</Text>
+      ) : null}
+
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
-        {feed.map((group, i) => (
-          <TouchableOpacity
-            key={group.user.id}
-            style={styles.item}
-            activeOpacity={0.8}
-            onPress={() => setActiveIndex(i)}
-          >
-            <LinearGradient
-              colors={[COLORS.golden, COLORS.sage, COLORS.forest]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.ring}
+        {feed.map((group, i) => {
+          const logoUri = resolveMediaUrl(group.author.imageUrl);
+          return (
+            <TouchableOpacity
+              key={`${group.author.kind}:${group.author.id}`}
+              style={styles.item}
+              activeOpacity={0.8}
+              onPress={() => setActiveIndex(i)}
             >
-              <View style={styles.avatarInner}>
-                <Text style={styles.avatarEmoji}>{group.user.avatarEmoji}</Text>
-              </View>
-            </LinearGradient>
-            <Text style={styles.name} numberOfLines={1}>
-              {group.user.name.split(' ')[0]}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <LinearGradient
+                colors={
+                  group.hasUnseen
+                    ? [COLORS.golden, COLORS.sage, COLORS.forest]
+                    : ['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.22)']
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.ring}
+              >
+                <View style={styles.avatarInner}>
+                  {logoUri ? (
+                    <Image source={{ uri: logoUri }} style={styles.avatarImage} />
+                  ) : (
+                    <Text style={styles.avatarEmoji}>{group.author.avatarEmoji ?? '🌱'}</Text>
+                  )}
+                </View>
+              </LinearGradient>
+
+              <Text
+                style={[styles.name, !onDark && styles.nameOnLight]}
+                numberOfLines={1}
+              >
+                {group.author.kind === 'ngo' ? group.author.name : group.author.name.split(' ')[0]}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       {active && (
         <StoryViewer
           visible
           stories={active.stories}
-          authorName={active.user.name}
-          authorAvatar={active.user.avatarEmoji}
+          authorName={active.author.name}
+          authorAvatar={active.author.avatarEmoji ?? '🌱'}
+          onView={(id) => markViewed.mutate(id)}
           onClose={() => setActiveIndex(null)}
         />
       )}
@@ -58,23 +94,17 @@ export function StoriesTray() {
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    marginBottom: 8,
-  },
+  wrap: { marginBottom: 8 },
   title: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontFamily: FONTS.display,
+    fontSize: 17,
+    lineHeight: 23,
     color: COLORS.white,
     marginBottom: 10,
   },
-  row: {
-    gap: 14,
-    paddingRight: 8,
-  },
-  item: {
-    alignItems: 'center',
-    width: 68,
-  },
+  titleOnLight: { color: COLORS.textPrimary },
+  row: { gap: 14, paddingRight: 8 },
+  item: { alignItems: 'center', width: 70 },
   ring: {
     width: 64,
     height: 64,
@@ -91,10 +121,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: 'rgba(0,0,0,0.25)',
+    overflow: 'hidden',
   },
-  avatarEmoji: {
-    fontSize: 28,
-  },
+  avatarImage: { width: '100%', height: '100%' },
+  avatarEmoji: { fontSize: 28 },
   name: {
     marginTop: 5,
     fontSize: 11,
@@ -102,4 +132,5 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     textAlign: 'center',
   },
+  nameOnLight: { color: COLORS.textSecondary },
 });

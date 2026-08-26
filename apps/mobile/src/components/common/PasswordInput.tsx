@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, TextInputProps, ViewStyle } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, TextInputProps, ViewStyle } from 'react-native';
+import { TextInput } from './AppText';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
 
 interface EyeIconProps {

@@ -8,6 +8,22 @@ import {
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000';
 
+/**
+ * Resolves a stored media path to an absolute URL the app can actually render.
+ *
+ * The API returns host-relative paths (`/uploads/drives/abc.jpg` — see the API's
+ * `upload.service.ts`), and React Native's `<Image>` cannot resolve those: it renders nothing at
+ * all, with no error, which is exactly how NGO drive thumbnails went missing. Every `<Image>`
+ * whose URI came from the server must go through this.
+ */
+export function resolveMediaUrl(path: string | null | undefined): string | undefined {
+  if (!path) return undefined;
+  // Already-absolute URIs pass through untouched — including the `file://`/`content://` ones a
+  // freshly picked local photo carries, which prefixing would silently corrupt.
+  if (/^[a-z][a-z0-9+.-]*:/i.test(path)) return path;
+  return `${API_URL}${path}`;
+}
+
 export class ApiError extends Error {
   status: number;
   code?: string;

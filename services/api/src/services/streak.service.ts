@@ -1,4 +1,4 @@
-import { Prisma, StreakProtectedBy } from '@prisma/client';
+import { Prisma, StreakProtectedBy } from '@plant/db';
 
 export function startOfUtcDay(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));

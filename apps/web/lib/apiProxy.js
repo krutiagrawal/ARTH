@@ -1,7 +1,7 @@
-// Session + proxy plumbing shared by the /ngo and /admin dashboards. Both are
-// plain services/api accounts (role 'ngo' / 'admin') — their tokens are stored
-// in their own httpOnly cookie pairs, fully separate from arth_session (which
-// belongs to this app's own Arth database, see lib/auth.js).
+// Session + proxy plumbing shared by the /member, /ngo, and /admin areas. All
+// three are services/api accounts (role 'user' / 'ngo'-equivalent / 'admin') —
+// each gets its own httpOnly cookie pair, namespaced by role (see cookieNames
+// below), since a browser can hold more than one of these sessions at once.
 import { apiRequest, ApiError } from './apiClient'
 
 export function cookieNames(role) {

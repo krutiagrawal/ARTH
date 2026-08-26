@@ -1,23 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Dimensions,
-} from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  withRepeat,
-  withDelay,
-  withSequence,
-  Easing,
-} from 'react-native-reanimated';
+import React, { useState } from 'react';
+import { View, Image, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { Text } from '../components/common/AppText';
+import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,8 +9,9 @@ import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
 import { Mascot, MascotBubble } from '../components/common/Mascot';
-import { FloatingParticles, LeafShape } from '../components/common/FloatingParticles';
+import { FloatingParticles } from '../components/common/FloatingParticles';
 import { ForestHeroCanvas } from '../components/common/ForestHeroCanvas';
+import { getSceneryMode, RainEffect, WindEffect } from '../components/common/WeatherEffects';
 import { EcoWidget, StreakWidget } from '../components/common/EcoWidget';
 import { ProgressRing } from '../components/common/ProgressRing';
 import { AnimatedButton } from '../components/common/AnimatedButton';
@@ -38,7 +23,6 @@ import {
 import { useTimeTheme, type TimeTheme } from '../hooks/useTimeTheme';
 import { MuteButton } from '../components/common/MuteButton';
 import { AmbientCreatures } from '../components/common/AmbientCreatures';
-import { useReduceMotion } from '../hooks/useReduceMotion';
 import { TreeCard } from '../components/common/TreeCard';
 import { Sheet } from '../components/common/Sheet';
 import { useHaptics } from '../hooks/useHaptics';
@@ -50,12 +34,11 @@ import type { ApiTree } from '../api/trees';
 import type { ApiDailyMission } from '../api/missions';
 import type { ApiWeather } from '../api/weather';
 import { getForestLevelLabel, getXpProgress } from '../constants/forestLevels';
-import { LEAF_COLORS } from '../hooks/useParticles';
 import { hexToRgba } from '../utils/color';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
+import { getHeroSeamColor } from '../utils/heroSeam';
 
 const { width: SW, height: SH } = Dimensions.get('window');
-const RAIN_FALL_GROUND_Y = SH - 200;
 /** How tall the illustrated hero section is — sky/hills/lake (or the real illustration image)
  * plus the header text and stat row that sit on top of it. A normal-flow block, not a fixed
  * backdrop, so it scrolls away with the rest of the page.
@@ -82,261 +65,6 @@ function weatherEmoji(condition: string): string {
     default: return '🌤️';
   }
 }
-
-/** The page background directly beneath the hero illustration. Normally just `theme.cardBackground`
- * (matches the other cards), but Afternoon's real illustration ends on green grass, not white —
- * a plain white seam there reads as a blank gap, so it gets its own light mint tone instead. Only
- * scoped to Afternoon for now since it's the only period whose real photo art needs this; revisit
- * once more periods have real illustrations. */
-function getHeroSeamColor(theme: TimeTheme): string {
-  if (theme.period === 'afternoon') return '#E3F4E8';
-  // Night's cardTint went light (periwinkle cards, dark text) to match its reference mockup, but
-  // the night.png illustration's ground/lake stays a deep indigo — the page background behind the
-  // hero must follow the illustration, not the (now much lighter) card color, or the seam breaks.
-  if (theme.period === 'night') return '#2A306B';
-  // Same class of mismatch as Afternoon/Night: dawn.png's ground is a saturated purple-mauve, not
-  // the near-white cardBackground — reuse the theme's own mid-hill tone instead of a new hex.
-  if (theme.period === 'dawn') return '#D9B8E8';
-  // morning.png's ground is bright green meadow vs. a pure-white cardBackground — Morning already
-  // has a ready pale-green token for this (cardBackgroundAlt), so reuse it instead of a new hex.
-  if (theme.period === 'morning') return theme.cardBackgroundAlt;
-  return theme.cardBackground;
-}
-
-type SceneryMode = 'leaves' | 'rain' | 'wind';
-
-function getSceneryMode(weather: ApiWeather | null): SceneryMode {
-  if (!weather) return 'leaves';
-  if (weather.scene === 'rainy') return 'rain';
-  if (weather.temperatureCelsius < 20) return 'wind';
-  return 'leaves';
-}
-
-function RainDrop({ x, delay, duration, groundY }: { x: number; delay: number; duration: number; groundY: number }) {
-  const translateY = useSharedValue(-40);
-  const opacity = useSharedValue(0);
-  const splashScale = useSharedValue(0);
-  const splashOpacity = useSharedValue(0);
-  const reduceMotion = useReduceMotion();
-
-  useEffect(() => {
-    if (reduceMotion) {
-      // A few still, gently-visible drops instead of an endless falling loop.
-      translateY.value = withTiming(groundY * 0.5, { duration: 400 });
-      opacity.value = withTiming(0.3, { duration: 400 });
-      return;
-    }
-
-    translateY.value = withDelay(
-      delay,
-      withRepeat(withTiming(groundY, { duration, easing: Easing.linear }), -1, false)
-    );
-    opacity.value = withDelay(
-      delay,
-      withRepeat(
-        withSequence(
-          withTiming(0.45, { duration: 120 }),
-          withTiming(0.45, { duration: Math.max(duration - 240, 100) }),
-          withTiming(0, { duration: 120 })
-        ),
-        -1,
-        false
-      )
-    );
-
-    // Splash ring pops right as the drop reaches the ground, then resets for the next cycle —
-    // the sequence's total duration matches the drop's fall duration, so they stay in sync.
-    const preSplash = Math.max(duration - 160, 0);
-    splashScale.value = withDelay(
-      delay,
-      withRepeat(
-        withSequence(
-          withTiming(0, { duration: preSplash }),
-          withTiming(1.4, { duration: 130, easing: Easing.out(Easing.quad) }),
-          withTiming(0, { duration: 30 })
-        ),
-        -1,
-        false
-      )
-    );
-    splashOpacity.value = withDelay(
-      delay,
-      withRepeat(
-        withSequence(
-          withTiming(0, { duration: preSplash }),
-          withTiming(0.55, { duration: 60 }),
-          withTiming(0, { duration: 100 })
-        ),
-        -1,
-        false
-      )
-    );
-  }, [reduceMotion]);
-
-  const dropStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }, { rotate: '12deg' }],
-    opacity: opacity.value,
-  }));
-  const splashStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: splashScale.value }],
-    opacity: splashOpacity.value,
-  }));
-
-  return (
-    <>
-      <Animated.View style={[styles.raindrop, { left: x }, dropStyle]} />
-      <Animated.View style={[styles.splash, { left: x - 7, top: groundY + 10 }, splashStyle]} />
-    </>
-  );
-}
-
-function RainEffect({ count = 22 }: { count?: number }) {
-  const drops = useMemo(
-    () =>
-      Array.from({ length: count }, () => ({
-        x: Math.random() * SW,
-        delay: Math.random() * 1500,
-        duration: 650 + Math.random() * 450,
-      })),
-    [count]
-  );
-
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {drops.map((d, i) => (
-        <RainDrop key={i} {...d} groundY={RAIN_FALL_GROUND_Y} />
-      ))}
-    </View>
-  );
-}
-
-function WindLeaf({ y, delay, duration, color }: { y: number; delay: number; duration: number; color: string }) {
-  const translateX = useSharedValue(-40);
-  const translateY = useSharedValue(0);
-  const rotate = useSharedValue(0);
-  const opacity = useSharedValue(0);
-  const reduceMotion = useReduceMotion();
-
-  useEffect(() => {
-    if (reduceMotion) {
-      translateX.value = withTiming(SW * 0.5, { duration: 400 });
-      translateY.value = withTiming(0, { duration: 400 });
-      rotate.value = withTiming(0, { duration: 400 });
-      opacity.value = withTiming(0.5, { duration: 400 });
-      return;
-    }
-
-    translateX.value = withDelay(
-      delay,
-      withRepeat(withTiming(SW + 40, { duration, easing: Easing.linear }), -1, false)
-    );
-    translateY.value = withDelay(
-      delay,
-      withRepeat(
-        withSequence(
-          withTiming(14, { duration: duration * 0.25, easing: Easing.inOut(Easing.sin) }),
-          withTiming(-10, { duration: duration * 0.25, easing: Easing.inOut(Easing.sin) }),
-          withTiming(8, { duration: duration * 0.25, easing: Easing.inOut(Easing.sin) }),
-          withTiming(0, { duration: duration * 0.25, easing: Easing.inOut(Easing.sin) })
-        ),
-        -1,
-        false
-      )
-    );
-    rotate.value = withDelay(
-      delay,
-      withRepeat(withTiming(360, { duration: duration * 0.4, easing: Easing.linear }), -1, false)
-    );
-    opacity.value = withDelay(delay, withTiming(0.85, { duration: 300 }));
-  }, [reduceMotion]);
-
-  const style = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-      { rotate: `${rotate.value}deg` },
-    ],
-    opacity: opacity.value,
-  }));
-
-  return (
-    <Animated.View style={[styles.windLeaf, { top: y }, style]}>
-      <LeafShape size={14} color={color} />
-    </Animated.View>
-  );
-}
-
-function GustLine({ y, delay, duration }: { y: number; delay: number; duration: number }) {
-  const translateX = useSharedValue(-100);
-  const opacity = useSharedValue(0);
-  const reduceMotion = useReduceMotion();
-
-  useEffect(() => {
-    if (reduceMotion) {
-      translateX.value = withTiming(SW * 0.4, { duration: 400 });
-      opacity.value = withTiming(0.15, { duration: 400 });
-      return;
-    }
-
-    translateX.value = withDelay(
-      delay,
-      withRepeat(withTiming(SW + 100, { duration, easing: Easing.linear }), -1, false)
-    );
-    opacity.value = withDelay(
-      delay,
-      withRepeat(
-        withSequence(
-          withTiming(0.3, { duration: duration * 0.3 }),
-          withTiming(0.3, { duration: duration * 0.4 }),
-          withTiming(0, { duration: duration * 0.3 })
-        ),
-        -1,
-        false
-      )
-    );
-  }, [reduceMotion]);
-
-  const style = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-    opacity: opacity.value,
-  }));
-
-  return <Animated.View style={[styles.gustLine, { top: y }, style]} />;
-}
-
-function WindEffect({ count = 6 }: { count?: number }) {
-  const leaves = useMemo(
-    () =>
-      Array.from({ length: count }, () => ({
-        y: Math.random() * SW * 0.9 + 40,
-        delay: Math.random() * 2000,
-        duration: 2200 + Math.random() * 1200,
-        color: LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)],
-      })),
-    [count]
-  );
-  const gusts = useMemo(
-    () =>
-      [0, 1, 2].map(() => ({
-        y: Math.random() * SW * 0.9 + 60,
-        delay: Math.random() * 1800,
-        duration: 1600 + Math.random() * 800,
-      })),
-    []
-  );
-
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {gusts.map((g, i) => (
-        <GustLine key={`g-${i}`} {...g} />
-      ))}
-      {leaves.map((l, i) => (
-        <WindLeaf key={i} {...l} />
-      ))}
-    </View>
-  );
-}
-
 
 
 /** The entire illustrated top section — header text, stat row, hero illustration (a real image
@@ -367,7 +95,7 @@ function HeroSection({
           source={theme.heroImage}
           style={{ position: 'absolute', top: 0, left: 0, width: SW, height: HERO_HEIGHT }}
           resizeMode="cover"
-          onError={(e) => console.warn('[HeroSection] hero image failed to load:', e.nativeEvent.error)}
+          onError={(e: any) => console.warn('[HeroSection] hero image failed to load:', e.nativeEvent.error)}
           onLoad={() => console.log('[HeroSection] hero image loaded ok for period:', theme.period)}
         />
       ) : (
@@ -433,6 +161,8 @@ function HeroSection({
             dark
             color={theme.accentColor}
             cardBackground={theme.cardBackground}
+            cardBackgroundAlt={theme.cardBackgroundAlt}
+            cardOverlayAlpha={theme.cardOverlayAlpha}
             textColor={theme.textSecondaryOnCard}
             subTextColor={theme.textSecondaryOnCard}
             borderColor={theme.cardBorder}
@@ -447,6 +177,8 @@ function HeroSection({
             dark
             color={theme.accentColor}
             cardBackground={theme.cardBackground}
+            cardBackgroundAlt={theme.cardBackgroundAlt}
+            cardOverlayAlpha={theme.cardOverlayAlpha}
             textColor={theme.textSecondaryOnCard}
             subTextColor={theme.textSecondaryOnCard}
             borderColor={theme.cardBorder}

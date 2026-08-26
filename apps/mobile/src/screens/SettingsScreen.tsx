@@ -1,14 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Dimensions,
-  Alert,
-  Linking,
-} from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, Linking } from 'react-native';
+import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -26,6 +18,7 @@ import { useSettings, useUpdateSettings, useSessions } from '../hooks/useApiQuer
 import { deleteAccount } from '../api/auth';
 import type { ApiUserSettings } from '../api/settings';
 import { PRIVACY_POLICY_TEXT, TERMS_OF_SERVICE_TEXT } from '../constants/legalContent';
+import { SettingsRow, SettingsSectionHeader, SettingsDivider } from '../components/common/SettingsRow';
 
 const DEFAULT_SETTINGS: ApiUserSettings = {
   haptics: true,
@@ -50,41 +43,6 @@ interface ToggleItem {
   sublabel: string;
   value: boolean;
   accentColor: string;
-}
-
-interface SettingsRowProps {
-  icon: string;
-  label: string;
-  sublabel?: string;
-  onPress?: () => void;
-  rightElement?: React.ReactNode;
-  accent?: string;
-  dangerous?: boolean;
-}
-
-function SettingsRow({ icon, label, sublabel, onPress, rightElement, accent = COLORS.sage, dangerous = false }: SettingsRowProps) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={onPress ? 0.75 : 1}
-      disabled={!onPress && !rightElement}
-    >
-      <View style={styles.settingsRow}>
-        <View style={[styles.settingsRowIcon, { backgroundColor: `${accent}20` }]}>
-          <Text style={styles.settingsRowIconText}>{icon}</Text>
-        </View>
-        <View style={styles.settingsRowContent}>
-          <Text style={[styles.settingsRowLabelDark, dangerous && styles.dangerLabel]}>{label}</Text>
-          {sublabel && <Text style={styles.settingsRowSublabelDark}>{sublabel}</Text>}
-        </View>
-        {rightElement ?? (onPress && <Text style={styles.settingsRowArrowDark}>›</Text>)}
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-function SectionHeader({ title }: { title: string }) {
-  return <Text style={styles.sectionHeaderDark}>{title}</Text>;
 }
 
 export function SettingsScreen({ navigation }: any) {
@@ -194,7 +152,7 @@ export function SettingsScreen({ navigation }: any) {
         </Animated.View>
 
         {/* Experience */}
-        <SectionHeader title="Experience" />
+        <SettingsSectionHeader title="Experience" />
         <GlassCard variant="dark" noPadding>
           <SettingsRow
             icon="🌟"
@@ -210,7 +168,7 @@ export function SettingsScreen({ navigation }: any) {
               />
             }
           />
-          <View style={styles.divider} />
+          <SettingsDivider />
           <SettingsRow
             icon="🔊"
             label="Nature Sounds"
@@ -225,7 +183,7 @@ export function SettingsScreen({ navigation }: any) {
               />
             }
           />
-          <View style={styles.divider} />
+          <SettingsDivider />
           <SettingsRow
             icon="📳"
             label="Haptic Feedback"
@@ -240,7 +198,7 @@ export function SettingsScreen({ navigation }: any) {
               />
             }
           />
-          <View style={styles.divider} />
+          <SettingsDivider />
           <SettingsRow
             icon="🧘"
             label="Reduce Motion"
@@ -258,7 +216,7 @@ export function SettingsScreen({ navigation }: any) {
         </GlassCard>
 
         {/* Theme */}
-        <SectionHeader title="Appearance" />
+        <SettingsSectionHeader title="Appearance" />
         <GlassCard variant="dark" style={styles.themeSection}>
           <Text style={styles.themeSectionLabelDark}>App Theme</Text>
           <View style={styles.themeOptions}>
@@ -280,7 +238,7 @@ export function SettingsScreen({ navigation }: any) {
         </GlassCard>
 
         {/* Notifications */}
-        <SectionHeader title="Notifications" />
+        <SettingsSectionHeader title="Notifications" />
         <GlassCard variant="dark" noPadding>
           <SettingsRow
             icon="🔔"
@@ -296,7 +254,7 @@ export function SettingsScreen({ navigation }: any) {
               />
             }
           />
-          <View style={styles.divider} />
+          <SettingsDivider />
           <SettingsRow
             icon="🔥"
             label="Streak Reminders"
@@ -314,7 +272,7 @@ export function SettingsScreen({ navigation }: any) {
         </GlassCard>
 
         {/* Privacy */}
-        <SectionHeader title="Privacy & Data" />
+        <SettingsSectionHeader title="Privacy & Data" />
         <GlassCard variant="dark" noPadding>
           <SettingsRow
             icon="📍"
@@ -330,7 +288,7 @@ export function SettingsScreen({ navigation }: any) {
               />
             }
           />
-          <View style={styles.divider} />
+          <SettingsDivider />
           <SettingsRow
             icon="👁️"
             label="Public Profile"
@@ -345,7 +303,7 @@ export function SettingsScreen({ navigation }: any) {
               />
             }
           />
-          <View style={styles.divider} />
+          <SettingsDivider />
           <SettingsRow
             icon="📊"
             label="Usage Analytics"
@@ -363,12 +321,12 @@ export function SettingsScreen({ navigation }: any) {
         </GlassCard>
 
         {/* Account */}
-        <SectionHeader title="Account" />
+        <SettingsSectionHeader title="Account" />
         <GlassCard variant="dark" noPadding>
           <SettingsRow icon="📧" label="Email" sublabel={user?.email ?? ''} accent={COLORS.xpBlue} />
-          <View style={styles.divider} />
+          <SettingsDivider />
           <SettingsRow icon="🔒" label="Change Password" accent={COLORS.earth} onPress={() => navigation.navigate('ChangePassword')} />
-          <View style={styles.divider} />
+          <SettingsDivider />
           <SettingsRow
             icon="📱"
             label="Connected Devices"
@@ -376,35 +334,63 @@ export function SettingsScreen({ navigation }: any) {
             accent={COLORS.sage}
             onPress={() => navigation.navigate('Sessions')}
           />
+          <SettingsDivider />
+          <SettingsRow
+            icon="🌱"
+            label="My Sapling Reservations"
+            sublabel="Requests you've sent to nurseries"
+            accent={COLORS.earth}
+            onPress={() => navigation.navigate('MySaplingReservations')}
+          />
+        </GlassCard>
+
+        {/* Safety */}
+        <SettingsSectionHeader title="Safety" />
+        <GlassCard variant="dark" noPadding>
+          <SettingsRow
+            icon="🚫"
+            label="Blocked Accounts"
+            sublabel="People and organisations you have hidden"
+            accent={COLORS.coral}
+            onPress={() => navigation.navigate('BlockedAccounts')}
+          />
+          <SettingsDivider />
+          <SettingsRow
+            icon="🔔"
+            label="Notifications"
+            sublabel="Follows, likes and updates"
+            accent={COLORS.amber}
+            onPress={() => navigation.navigate('Notifications')}
+          />
         </GlassCard>
 
         {/* About */}
-        <SectionHeader title="About" />
+        <SettingsSectionHeader title="About" />
         <GlassCard variant="dark" noPadding>
           <SettingsRow icon="ℹ️" label="App Version" sublabel={appVersionLabel} accent={COLORS.textMuted} />
-          <View style={styles.divider} />
+          <SettingsDivider />
           <SettingsRow
             icon="📜"
             label="Privacy Policy"
             accent={COLORS.textMuted}
             onPress={() => navigation.navigate('StaticContent', { title: 'Privacy Policy', body: PRIVACY_POLICY_TEXT })}
           />
-          <View style={styles.divider} />
+          <SettingsDivider />
           <SettingsRow
             icon="⚖️"
             label="Terms of Service"
             accent={COLORS.textMuted}
             onPress={() => navigation.navigate('StaticContent', { title: 'Terms of Service', body: TERMS_OF_SERVICE_TEXT })}
           />
-          <View style={styles.divider} />
+          <SettingsDivider />
           <SettingsRow icon="💌" label="Send Feedback" accent={COLORS.sage} onPress={handleSendFeedback} />
         </GlassCard>
 
         {/* Danger zone */}
-        <SectionHeader title="Account Actions" />
+        <SettingsSectionHeader title="Account Actions" />
         <GlassCard variant="dark" noPadding>
           <SettingsRow icon="🚪" label="Log Out" accent={COLORS.earth} onPress={handleLogout} />
-          <View style={styles.divider} />
+          <SettingsDivider />
           <SettingsRow icon="🗑️" label="Delete Account" accent={COLORS.coral} dangerous onPress={handleDeleteAccount} />
         </GlassCard>
 
@@ -497,60 +483,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: COLORS.white,
-  },
-  sectionHeaderDark: {
-    fontSize: 13,
-    fontWeight: '700',
-    // Sits directly on the page's cream gradient background, NOT inside a GlassCard — must use
-    // dark text (was COLORS.white, invisible on cream).
-    color: COLORS.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginTop: 8,
-    marginBottom: -4,
-    paddingHorizontal: 4,
-  },
-  settingsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
-  },
-  settingsRowIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  settingsRowIconText: {
-    fontSize: 20,
-  },
-  settingsRowContent: {
-    flex: 1,
-  },
-  settingsRowLabelDark: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.white,
-  },
-  dangerLabel: {
-    color: COLORS.coral,
-  },
-  settingsRowSublabelDark: {
-    fontSize: 12,
-    color: COLORS.white,
-    marginTop: 1,
-  },
-  settingsRowArrowDark: {
-    fontSize: 20,
-    color: COLORS.white,
-    fontWeight: '300',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    marginLeft: 66,
   },
   themeSection: {
     gap: 12,

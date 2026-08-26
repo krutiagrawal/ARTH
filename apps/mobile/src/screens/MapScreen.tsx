@@ -1,13 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Dimensions,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-} from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { Text } from '../components/common/AppText';
 import MapView, { Marker, Circle, PROVIDER_DEFAULT } from 'react-native-maps';
 import * as Location from 'expo-location';
 import Animated, {
@@ -25,7 +18,7 @@ import { SHADOWS } from '../constants/theme';
 import { useTimeTheme } from '../hooks/useTimeTheme';
 import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
 import { useAuth } from '../context/AuthContext';
-import { useTrees, useAdoptableTrees, useDrives } from '../hooks/useApiQueries';
+import { useTrees, useAdoptableTrees, useDrives, useMyDrives, useMyAdoptableTrees, useBrowseNurseries } from '../hooks/useApiQueries';
 import { EmptyState } from '../components/common/EmptyState';
 import { StatDisplay } from '../components/common/StatDisplay';
 import type { ApiTree } from '../api/trees';
@@ -49,8 +42,8 @@ const GROWTH_COLOR = ['#5BA847', '#3E8A2E', '#2D6B20', '#1E5214', '#0E3A0A'];
  *   - own tree      → solid filled pin bubble, growth-stage color + emoji (TreeMarker)
  *   - adoptable tree → outline-only pin bubble (unfilled center), sage accent (AdoptableTreeMarker)
  *   - NGO drive      → rounded golden-accent bubble, flag emoji (NgoDriveMarker)
- *   - nursery        → house/leaf-shaped marker, earth-brown accent — still unreserved, no
- *                       nursery data model exists yet
+ *   - nursery        → house-shaped marker, earth-brown accent (NurseryMarker) — only nurseries
+ *                       that have set a location in NurserySettingsScreen appear here
  * Tapping an adoptable-tree/drive marker navigates straight to its detail screen (where the
  * adopt/RSVP action lives) rather than opening an in-map info card like TreeMarker's, since
  * those are read-only "this is mine" cards and these need a real action surface.
@@ -138,6 +131,19 @@ function NgoDriveMarker({ drive, onPress }: { drive: ApiDrive & { lat: number; l
           <Text style={styles.markerEmoji}>🤝</Text>
         </View>
         <View style={[styles.markerPin, { borderTopColor: COLORS.golden }]} />
+      </View>
+    </Marker>
+  );
+}
+
+function NurseryMarker({ nursery, onPress }: { nursery: { id: string; nurseryName: string; lat: number; lng: number }; onPress: () => void }) {
+  return (
+    <Marker coordinate={{ latitude: nursery.lat, longitude: nursery.lng }} onPress={onPress} anchor={{ x: 0.5, y: 1 }}>
+      <View style={styles.markerContainer}>
+        <View style={[styles.markerBubble, styles.nurseryBubble]}>
+          <Text style={styles.markerEmoji}>🌿</Text>
+        </View>
+        <View style={[styles.markerPin, { borderTopColor: COLORS.earth }]} />
       </View>
     </Marker>
   );
@@ -237,7 +243,7 @@ function TreeInfoCard({ tree, onClose, isNight }: {
   );
 }
 
-export function MapScreen({ navigation }: any) {
+export function MapScreen({ navigation, mode = 'user' }: any) {
   const insets = useSafeAreaInsets();
   const theme = useTimeTheme();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
@@ -247,9 +253,20 @@ export function MapScreen({ navigation }: any) {
   const fadeStyle = useFadeIn(0, 400);
   const headerSlide = useSlideUp(0, 20, 350);
   const { user } = useAuth();
-  const { data: trees = [] } = useTrees();
-  const { data: adoptableTrees = [] } = useAdoptableTrees();
-  const { data: drives = [] } = useDrives();
+  const isNgo = mode === 'ngo';
+  // Both public and NGO-owned feeds are always fetched (stable per-mount `mode` prop, never
+  // toggles) so this never has to call hooks conditionally — whichever pair isn't relevant for
+  // this mode is simply not used below. NGO mode has no personal "planted trees" concept at all.
+  const { data: rawTrees = [] } = useTrees(undefined, !isNgo);
+  const trees = isNgo ? [] : rawTrees;
+  const { data: publicAdoptableTrees = [] } = useAdoptableTrees(undefined, undefined, !isNgo);
+  const { data: myAdoptableTrees = [] } = useMyAdoptableTrees(isNgo);
+  const adoptableTrees = isNgo ? myAdoptableTrees : publicAdoptableTrees;
+  const { data: publicDrives = [] } = useDrives(undefined, undefined, !isNgo);
+  const { data: myDrives = [] } = useMyDrives(isNgo);
+  const drives = isNgo ? myDrives : publicDrives;
+  const { data: nurseriesData } = useBrowseNurseries();
+  const nurseries = isNgo ? [] : nurseriesData?.nurseries ?? [];
 
   const isNight = theme.mascotOutfit === 'night';
   const statesCount = new Set(
@@ -270,10 +287,21 @@ export function MapScreen({ navigation }: any) {
     })();
   }, []);
 
+  const ngoPoints = isNgo
+    ? ([...drives, ...adoptableTrees] as Array<{ lat: number | null; lng: number | null }>)
+        .filter((p) => p.lat != null && p.lng != null)
+        .map((p) => ({ latitude: p.lat as number, longitude: p.lng as number }))
+    : [];
+
   const fitToOverview = useCallback(() => {
     if (trees.length > 0) {
       mapRef.current?.fitToCoordinates(
         trees.map(t => ({ latitude: t.lat, longitude: t.lng })),
+        { edgePadding: { top: 100, right: 60, bottom: 260, left: 60 }, animated: true }
+      );
+    } else if (ngoPoints.length > 0) {
+      mapRef.current?.fitToCoordinates(
+        ngoPoints,
         { edgePadding: { top: 100, right: 60, bottom: 260, left: 60 }, animated: true }
       );
     } else if (location) {
@@ -287,16 +315,16 @@ export function MapScreen({ navigation }: any) {
       mapRef.current?.animateToRegion(INDIA, 800);
     }
     setSelectedTree(null);
-  }, [trees, location]);
+  }, [trees, ngoPoints, location]);
 
   const hasAutoFitRef = useRef(false);
   useEffect(() => {
     if (hasAutoFitRef.current) return;
-    if (trees.length > 0 || (location && !locationPending)) {
+    if (trees.length > 0 || ngoPoints.length > 0 || (location && !locationPending)) {
       hasAutoFitRef.current = true;
       fitToOverview();
     }
-  }, [trees, location, locationPending, fitToOverview]);
+  }, [trees, ngoPoints, location, locationPending, fitToOverview]);
 
   const flyToTree = useCallback((tree: ApiTree) => {
     mapRef.current?.animateToRegion({
@@ -373,6 +401,16 @@ export function MapScreen({ navigation }: any) {
               />
             ))}
 
+          {nurseries
+            .filter((n) => n.lat != null && n.lng != null)
+            .map((n) => (
+              <NurseryMarker
+                key={`nursery_${n.id}`}
+                nursery={{ id: n.id, nurseryName: n.nurseryName, lat: Number(n.lat), lng: Number(n.lng) }}
+                onPress={() => navigation.navigate('NurseryPublicProfile', { nurseryId: n.id })}
+              />
+            ))}
+
           {location && (
             <>
               <Marker
@@ -406,9 +444,13 @@ export function MapScreen({ navigation }: any) {
         <BlurView intensity={isNight ? 65 : 50} tint={isNight ? 'dark' : 'light'} style={styles.headerBlur}>
           <View style={styles.headerContent}>
             <View>
-              <Text style={[styles.headerTitle, isNight && styles.lightText]}>🗺️ Tree Map</Text>
+              <Text style={[styles.headerTitle, isNight && styles.lightText]}>
+                {isNgo ? '🗺️ Your Drives & Trees' : '🗺️ Tree Map'}
+              </Text>
               <Text style={[styles.headerSub, isNight && styles.lightSubText]}>
-                {trees.length} {trees.length === 1 ? 'tree' : 'trees'} planted
+                {isNgo
+                  ? `${drives.length} ${drives.length === 1 ? 'drive' : 'drives'} · ${adoptableTrees.length} ${adoptableTrees.length === 1 ? 'tree' : 'trees'}`
+                  : `${trees.length} ${trees.length === 1 ? 'tree' : 'trees'} planted`}
               </Text>
             </View>
             <TouchableOpacity style={styles.indiaBtn} onPress={fitToOverview}>
@@ -440,11 +482,17 @@ export function MapScreen({ navigation }: any) {
       {!selectedTree && (
         <View style={[styles.statsBar, { bottom: 110 + insets.bottom }]}>
           <BlurView intensity={isNight ? 65 : 45} tint={isNight ? 'dark' : 'light'} style={styles.statsBarInner}>
-            {[
-              { val: user?.treesPlantedCount ?? 0, label: 'Trees' },
-              { val: `${(user?.totalCo2Absorbed ?? 0).toFixed(1)}kg`, label: 'Estimated CO₂' },
-              { val: statesCount, label: 'States' },
-            ].map((s, i) => (
+            {(isNgo
+              ? [
+                  { val: drives.length, label: 'Drives' },
+                  { val: adoptableTrees.length, label: 'Trees listed' },
+                ]
+              : [
+                  { val: user?.treesPlantedCount ?? 0, label: 'Trees' },
+                  { val: `${(user?.totalCo2Absorbed ?? 0).toFixed(1)}kg`, label: 'Estimated CO₂' },
+                  { val: statesCount, label: 'States' },
+                ]
+            ).map((s, i) => (
               <React.Fragment key={i}>
                 {i > 0 && <View style={[styles.statsDiv, isNight && styles.statsDivDark]} />}
                 <StatDisplay
@@ -463,7 +511,7 @@ export function MapScreen({ navigation }: any) {
       )}
 
       {/* Bottom tree list */}
-      {!selectedTree && (
+      {!selectedTree && !isNgo && (
         <View style={[styles.bottomSheet, { paddingBottom: insets.bottom }]}>
           <BlurView intensity={isNight ? 70 : 55} tint={isNight ? 'dark' : 'light'} style={styles.bottomBlur}>
             <Text style={[styles.bottomTitle, isNight && styles.lightText]}>Your Trees</Text>
@@ -533,6 +581,10 @@ const styles = StyleSheet.create({
   },
   flagBubble: {
     backgroundColor: COLORS.golden,
+    borderColor: 'rgba(255,255,255,0.85)',
+  },
+  nurseryBubble: {
+    backgroundColor: COLORS.earth,
     borderColor: 'rgba(255,255,255,0.85)',
   },
   markerPin: {

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
+    "packages/*",
     "apps/mobile",
     "apps/web",
     "services/api"
@@ -13,14 +14,21 @@
     "dev:api": "npm run dev --workspace=services/api",
     "android": "npm run android --workspace=apps/mobile",
     "ios": "npm run ios --workspace=apps/mobile",
-    "build:web": "npm run build --workspace=apps/web",
-    "build:api": "npm run build --workspace=services/api",
+    "build:db": "npm run build --workspace=packages/db",
+    "build:web": "npm run build:db && npm run build --workspace=apps/web",
+    "build:api": "npm run build:db && npm run build --workspace=services/api",
     "start:api": "npm run start --workspace=services/api",
     "typecheck:mobile": "tsc --noEmit -p apps/mobile/tsconfig.json",
     "typecheck:api": "tsc --noEmit -p services/api/tsconfig.json",
     "typecheck": "npm run typecheck:mobile && npm run typecheck:api",
-    "prisma:generate:api": "npm run prisma:generate --workspace=services/api",
-    "prisma:migrate:api": "npm run prisma:migrate --workspace=services/api",
+    "prisma:generate": "npm run prisma:generate --workspace=packages/db",
+    "prisma:migrate": "npm run prisma:migrate --workspace=packages/db",
+    "prisma:migrate:deploy": "npm run prisma:migrate:deploy --workspace=packages/db",
+    "prisma:seed": "npm run prisma:seed --workspace=packages/db",
+    "prisma:studio": "npm run prisma:studio --workspace=packages/db",
     "test:e2e": "npm run test:e2e --workspace=apps/web"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.17"
   }
 }

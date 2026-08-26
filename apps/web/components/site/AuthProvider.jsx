@@ -9,9 +9,13 @@ export function AuthProvider({ children }) {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch('/api/auth/me')
+      const res = await fetch('/api/member/proxy/auth/me')
+      if (!res.ok) {
+        setUser(null)
+        return
+      }
       const data = await res.json()
-      setUser(data.user ?? null)
+      setUser(data ?? null)
     } catch {
       setUser(null)
     } finally {
@@ -22,7 +26,7 @@ export function AuthProvider({ children }) {
   useEffect(() => { refresh() }, [refresh])
 
   const logout = useCallback(async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
+    await fetch('/api/member/logout', { method: 'POST' })
     setUser(null)
   }, [])
 

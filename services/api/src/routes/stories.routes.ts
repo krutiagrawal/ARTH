@@ -1,125 +1,87 @@
 import { FastifyInstance } from 'fastify';
 import { saveStorySnapshot } from '../services/upload.service';
-import { BadRequestError, NotFoundError } from '../utils/errors';
-
-const STORY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-function serializeStory(story: any) {
-  return {
-    id: story.id,
-    userId: story.userId,
-    imageUrl: story.imageUrl,
-    caption: story.caption,
-    createdAt: story.createdAt,
-    expiresAt: story.expiresAt,
-  };
-}
+import { splitMultipartBody } from '../utils/multipart';
+import * as storyService from '../services/story.service';
+import { BadRequestError } from '../utils/errors';
 
 export default async function storiesRoutes(fastify: FastifyInstance) {
-  // Create a story from a captured forest snapshot (JSON: base64 JPEG + optional caption)
+  /**
+   * Create a story. Two shapes, because two callers:
+   *  - JSON `{ imageBase64, caption }` — the user forest snapshot, composited on-device by Skia
+   *  - multipart `photo` — a camera/gallery photo, which is how NGOs/Groups post
+   * `asNgo`/`asGroup` publish as the caller's NGO/Group instead of as themselves.
+   */
   fastify.post('/', async (request, reply) => {
-    const body = (request.body ?? {}) as { imageBase64?: string; caption?: string };
-
-    const imageBase64 = body.imageBase64?.replace(/^data:image\/\w+;base64,/, '');
-    if (!imageBase64) throw new BadRequestError('Image is required');
-
-    const caption = body.caption?.trim();
-    if (caption && caption.length > 280) throw new BadRequestError('Caption is too long');
+    const isMultipart = (request.headers['content-type'] ?? '').includes('multipart/form-data');
 
     let buffer: Buffer;
-    try {
-      buffer = Buffer.from(imageBase64, 'base64');
-    } catch {
-      throw new BadRequestError('Invalid image data');
-    }
-    if (buffer.length === 0) throw new BadRequestError('Invalid image data');
+    let filename = 'forest.jpg';
+    let mimetype = 'image/jpeg';
+    let caption: string | undefined;
+    let asNgo = false;
+    let asGroup = false;
 
-    const imageUrl = await saveStorySnapshot({
-      filename: 'forest.jpg',
-      mimetype: 'image/jpeg',
-      buffer,
-    });
+    if (isMultipart) {
+      const { fields, file } = splitMultipartBody(request.body as any);
+      if (!file) throw new BadRequestError('Image is required');
+      buffer = await file.toBuffer();
+      filename = file.filename;
+      mimetype = file.mimetype;
+      caption = fields.caption?.trim();
+      asNgo = fields.asNgo === 'true';
+      asGroup = fields.asGroup === 'true';
+    } else {
+      const body = (request.body ?? {}) as {
+        imageBase64?: string;
+        caption?: string;
+        asNgo?: boolean;
+        asGroup?: boolean;
+      };
+      const imageBase64 = body.imageBase64?.replace(/^data:image\/\w+;base64,/, '');
+      if (!imageBase64) throw new BadRequestError('Image is required');
 
-    const now = Date.now();
-    const story = await fastify.prisma.story.create({
-      data: {
-        userId: request.user!.id,
-        imageUrl,
-        caption: caption || null,
-        expiresAt: new Date(now + STORY_TTL_MS),
-      },
-    });
-
-    reply.status(201).send(serializeStory(story));
-  });
-
-  // All of my stories, newest first — permanent gallery (no expiry filter)
-  fastify.get('/me', async (request, reply) => {
-    const stories = await fastify.prisma.story.findMany({
-      where: { userId: request.user!.id },
-      orderBy: { createdAt: 'desc' },
-    });
-    reply.send(stories.map(serializeStory));
-  });
-
-  // Friends' active (non-expired) stories, grouped by user — for the story rings
-  fastify.get('/feed', async (request, reply) => {
-    const userId = request.user!.id;
-    const friendships = await fastify.prisma.friendship.findMany({
-      where: {
-        status: 'accepted',
-        OR: [{ requesterId: userId }, { addresseeId: userId }],
-      },
-      select: { requesterId: true, addresseeId: true },
-    });
-
-    const friendIds = friendships.map((f) =>
-      f.requesterId === userId ? f.addresseeId : f.requesterId
-    );
-    if (friendIds.length === 0) {
-      reply.send([]);
-      return;
-    }
-
-    const stories = await fastify.prisma.story.findMany({
-      where: { userId: { in: friendIds }, expiresAt: { gt: new Date() } },
-      orderBy: { createdAt: 'asc' },
-      include: { user: true },
-    });
-
-    // Group by poster; preserve most-recent-first ordering of users
-    const byUser = new Map<string, { user: any; stories: any[] }>();
-    for (const story of stories) {
-      let entry = byUser.get(story.userId);
-      if (!entry) {
-        entry = {
-          user: {
-            id: story.user.id,
-            name: story.user.name,
-            handle: story.user.handle,
-            avatarEmoji: story.user.avatarEmoji,
-          },
-          stories: [],
-        };
-        byUser.set(story.userId, entry);
+      try {
+        buffer = Buffer.from(imageBase64, 'base64');
+      } catch {
+        throw new BadRequestError('Invalid image data');
       }
-      entry.stories.push(serializeStory(story));
+      if (buffer.length === 0) throw new BadRequestError('Invalid image data');
+
+      caption = body.caption?.trim();
+      asNgo = body.asNgo === true;
+      asGroup = body.asGroup === true;
     }
 
-    const feed = [...byUser.values()].sort((a, b) => {
-      const aLatest = a.stories[a.stories.length - 1].createdAt;
-      const bLatest = b.stories[b.stories.length - 1].createdAt;
-      return new Date(bLatest).getTime() - new Date(aLatest).getTime();
+    if (caption && caption.length > 280) throw new BadRequestError('Caption is too long');
+
+    const imageUrl = await saveStorySnapshot({ filename, mimetype, buffer });
+    const story = await storyService.createStory(fastify.prisma, request.user!.id, {
+      imageUrl,
+      caption,
+      asNgo,
+      asGroup,
     });
 
-    reply.send(feed);
+    reply.status(201).send(storyService.serializeStory(story));
+  });
+
+  // Everything I've posted, newest first — no expiry filter, this is the permanent gallery.
+  fastify.get('/me', async (request, reply) => {
+    reply.send(await storyService.listOwnStories(fastify.prisma, request.user!.id));
+  });
+
+  // Active stories from friends and followed NGOs, grouped by author, unseen rings first.
+  fastify.get('/feed', async (request, reply) => {
+    reply.send(await storyService.getStoryFeed(fastify.prisma, request.user!.id));
+  });
+
+  fastify.post<{ Params: { id: string } }>('/:id/view', async (request, reply) => {
+    await storyService.markStoryViewed(fastify.prisma, request.user!.id, request.params.id);
+    reply.status(204).send();
   });
 
   fastify.delete<{ Params: { id: string } }>('/:id', async (request, reply) => {
-    const result = await fastify.prisma.story.deleteMany({
-      where: { id: request.params.id, userId: request.user!.id },
-    });
-    if (result.count === 0) throw new NotFoundError('Story not found');
+    await storyService.deleteStory(fastify.prisma, request.user!.id, request.params.id);
     reply.status(204).send();
   });
 }

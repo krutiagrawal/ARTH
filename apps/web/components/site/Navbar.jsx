@@ -114,7 +114,7 @@ export default function Navbar() {
             )}
             {user ? (
               <div className="hidden sm:flex items-center gap-2">
-                <Link href={`/dashboard/${user.accountType}`} className="inline-flex items-center gap-2 rounded-full bg-foreground text-background px-4 py-2 text-[13px] hover:opacity-90 transition">
+                <Link href={'/dashboard/individual'} className="inline-flex items-center gap-2 rounded-full bg-foreground text-background px-4 py-2 text-[13px] hover:opacity-90 transition">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                   Dashboard
                 </Link>
@@ -152,7 +152,7 @@ export default function Navbar() {
                 ))}
                 {user ? (
                   <>
-                    <li className="col-span-2 pt-1"><Link onClick={() => setOpen(false)} href={`/dashboard/${user.accountType}`} className="block rounded-full bg-foreground text-background text-center py-2.5 text-sm">Dashboard</Link></li>
+                    <li className="col-span-2 pt-1"><Link onClick={() => setOpen(false)} href={'/dashboard/individual'} className="block rounded-full bg-foreground text-background text-center py-2.5 text-sm">Dashboard</Link></li>
                     <li className="col-span-2"><button onClick={() => { setOpen(false); logout() }} className="w-full rounded-full border border-border text-center py-2.5 text-sm">Logout</button></li>
                   </>
                 ) : (

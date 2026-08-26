@@ -3,17 +3,18 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { User, Users, Sprout, TreePine, Building2, ArrowRight } from 'lucide-react'
+import { User, Users, Sprout, ArrowRight } from 'lucide-react'
 import { useAuth } from '@/components/site/AuthProvider'
 
 const REGISTER_IMAGE = 'https://images.pexels.com/photos/8060360/pexels-photo-8060360.jpeg'
 
+// Nursery and Organisation/CSR doorways come back once those account types get
+// their own dedicated profile + dashboard (see GroupProfile's schema comment
+// for why they no longer share NgoProfile with 'ngo').
 const ACCOUNTS = [
   { id: 'individual', label: 'Individual', desc: 'Plant your own trees. Track your legacy.', icon: User },
-  { id: 'community', label: 'Community', desc: 'Neighbourhoods and citizen groups.', icon: Users },
+  { id: 'group', label: 'Group', desc: 'Families, schools and clubs planting together.', icon: Users },
   { id: 'ngo', label: 'NGO', desc: 'Run drives. Verify impact.', icon: Sprout },
-  { id: 'nursery', label: 'Nursery', desc: 'List native saplings.', icon: TreePine },
-  { id: 'organisation', label: 'Organisation / CSR', desc: 'Adopt forests. Sponsor drives.', icon: Building2 },
 ]
 
 function App() {
@@ -21,13 +22,17 @@ function App() {
   const { refresh } = useAuth()
   const [accountType, setAccountType] = useState('individual')
   const [name, setName] = useState('')
+  const [handle, setHandle] = useState('')
   const [email, setEmail] = useState('')
-  const [place, setPlace] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const isNgo = accountType === 'ngo'
+  // NGO gets a separate, admin-reviewed doorway; Group is also its own doorway
+  // (its own registration form/fields) but self-serve — no approval wait.
+  const needsNgoDoorway = accountType === 'ngo'
+  const needsGroupDoorway = accountType === 'group'
+  const needsDoorway = needsNgoDoorway || needsGroupDoorway
 
   const submit = async (e) => {
     e.preventDefault()
@@ -38,10 +43,10 @@ function App() {
     }
     setSubmitting(true)
     try {
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch('/api/member/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, accountType, place: place || undefined }),
+        body: JSON.stringify({ name, handle, email, password }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -49,7 +54,7 @@ function App() {
         return
       }
       await refresh()
-      router.push(`/dashboard/${data.user.accountType}`)
+      router.push('/dashboard/individual')
     } catch {
       setError('Could not reach the server. Please check your connection and try again.')
     } finally {
@@ -95,15 +100,19 @@ function App() {
             ))}
           </div>
 
-          {isNgo ? (
+          {needsDoorway ? (
             <div className="mt-8 rounded-2xl border border-primary/30 bg-primary/5 p-6">
-              <p className="font-serif text-lg leading-tight">NGOs get their own verified doorway.</p>
-              <p className="mt-2 text-sm text-muted-foreground">Running drives, listing adoptable trees, and receiving donations requires an approved NGO account — a separate, reviewed sign-up from the one here.</p>
-              <Link href="/ngo/register" className="mt-4 inline-flex items-center gap-2 rounded-full bg-foreground text-background px-5 h-11 text-sm hover:opacity-90 transition">
-                Register your NGO
+              <p className="font-serif text-lg leading-tight">{ACCOUNTS.find(a => a.id === accountType).label} accounts get their own doorway.</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {needsNgoDoorway
+                  ? 'Running drives, listing adoptable trees, and receiving donations requires an approved organisation account — a separate, reviewed sign-up from the one here.'
+                  : 'Groups get a shared invite code, a combined forest, and group challenges — a separate sign-up from the one here. No review wait, you can start right away.'}
+              </p>
+              <Link href={needsNgoDoorway ? '/ngo/register' : '/group/register'} className="mt-4 inline-flex items-center gap-2 rounded-full bg-foreground text-background px-5 h-11 text-sm hover:opacity-90 transition">
+                Register your {ACCOUNTS.find(a => a.id === accountType).label}
                 <ArrowRight className="h-4 w-4" />
               </Link>
-              <p className="text-xs mt-4 text-center text-muted-foreground">Already have an NGO account? <Link href="/ngo/login" className="text-primary">Sign in</Link></p>
+              <p className="text-xs mt-4 text-center text-muted-foreground">Already have an account? <Link href={needsNgoDoorway ? '/ngo/login' : '/group/login'} className="text-primary">Sign in</Link></p>
             </div>
           ) : (
             <form onSubmit={submit} className="mt-8 space-y-3">
@@ -112,12 +121,12 @@ function App() {
                 <input required value={name} onChange={e => setName(e.target.value)} placeholder="Your name" className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
               </label>
               <label className="block">
-                <span className="eyebrow">Email</span>
-                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@earth.org" className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+                <span className="eyebrow">Handle</span>
+                <input required pattern="[a-z0-9_]+" minLength={3} maxLength={30} value={handle} onChange={e => setHandle(e.target.value)} placeholder="lowercase, numbers, underscores" className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
               </label>
               <label className="block">
-                <span className="eyebrow">Place</span>
-                <input value={place} onChange={e => setPlace(e.target.value)} placeholder="City, country" className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+                <span className="eyebrow">Email</span>
+                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@earth.org" className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
               </label>
               <label className="block">
                 <span className="eyebrow">Password</span>
@@ -136,7 +145,7 @@ function App() {
               <p className="text-xs text-center"><Link href="/" className="text-primary">Back to home</Link></p>
             </form>
           )}
-          {isNgo && (
+          {needsDoorway && (
             <p className="text-xs text-center mt-6"><Link href="/" className="text-primary">Back to home</Link></p>
           )}
         </div>

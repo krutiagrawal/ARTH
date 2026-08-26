@@ -1,20 +1,12 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Dimensions,
-  TextInput,
-  ActivityIndicator,
-  Modal,
-} from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator, Modal } from 'react-native';
+import { Text, TextInput } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
+import { FONTS } from '../constants/typography';
 import { RADIUS, SHADOWS } from '../constants/theme';
 import { GlassCard } from '../components/common/GlassCard';
 import { ProgressRing } from '../components/common/ProgressRing';
@@ -38,6 +30,8 @@ import {
   useUserStories,
 } from '../hooks/useApiQueries';
 import { StoriesTray } from '../components/stories/StoriesTray';
+import { FollowingFeedScreen } from './FollowingFeedScreen';
+import { NotificationBell } from '../components/social/NotificationBell';
 import { StoryViewer } from '../components/stories/StoryViewer';
 import type { ApiFriend, ApiFriendRequest } from '../api/friends';
 import type { ApiChallenge } from '../api/challenges';
@@ -45,7 +39,18 @@ import type { LeaderboardEntry } from '../api/leaderboard';
 import type { ApiActivity, ActivityType } from '../api/feed';
 
 const { width: SW } = Dimensions.get('window');
-type Tab = 'friends' | 'feed' | 'challenges' | 'leaderboard';
+// 'feed' is the social feed of posts; 'activity' is the older gamification stream
+// (tree_planted / achievement_unlocked / ...), whose "cheer" reaction stays separate from
+// post likes — they count different things.
+type Tab = 'feed' | 'friends' | 'activity' | 'challenges' | 'leaderboard';
+
+const TAB_LABELS: Record<Tab, string> = {
+  feed: '📸 Feed',
+  friends: '👥 Friends',
+  activity: '⚡ Activity',
+  challenges: '⚔️ Quests',
+  leaderboard: '🏆 Ranks',
+};
 
 const ACTIVITY_COPY: Record<ActivityType, { icon: string; text: (name: string) => string }> = {
   tree_planted: { icon: '🌱', text: (name) => `${name} planted a tree` },
@@ -379,7 +384,7 @@ function LeaderboardRow({ entry, index }: { entry: LeaderboardEntry; index: numb
 
   return (
     <Animated.View style={slideStyle}>
-      <View style={[styles.leaderRow, entry.isUser && styles.leaderRowUser]}>
+      <GlassCard variant="warm" style={[styles.leaderRow, entry.isUser && styles.leaderRowUser]}>
         {rankColors[entry.rank] ? (
           <LinearGradient
             colors={rankColors[entry.rank]}
@@ -405,13 +410,13 @@ function LeaderboardRow({ entry, index }: { entry: LeaderboardEntry; index: numb
           <Text style={styles.leaderTreeNumDark}>{entry.trees}</Text>
           <Text style={styles.leaderTreeLabelDark}>trees</Text>
         </View>
-      </View>
+      </GlassCard>
     </Animated.View>
   );
 }
 
 export function CommunityScreen({ navigation }: any) {
-  const [activeTab, setActiveTab] = useState<Tab>('friends');
+  const [activeTab, setActiveTab] = useState<Tab>('feed');
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [joinedIds, setJoinedIds] = useState<Set<string>>(new Set());
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
@@ -434,8 +439,12 @@ export function CommunityScreen({ navigation }: any) {
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.headerTitleDark}>Community 🌱</Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
+          <NotificationBell onPress={() => navigation.navigate('Notifications')} />
           <TouchableOpacity style={styles.ngoButton} onPress={() => navigation.navigate('NgoDirectory')}>
             <Text style={styles.ngoButtonText}>🌿 NGOs</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.ngoButton} onPress={() => navigation.navigate('NurseryDirectory')}>
+            <Text style={styles.ngoButtonText}>🌱 Nurseries</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.addFriendButton} onPress={() => setShowAddFriend(prev => !prev)}>
             <LinearGradient colors={[COLORS.sageLight, COLORS.sage]} style={styles.addFriendGradient}>
@@ -446,20 +455,26 @@ export function CommunityScreen({ navigation }: any) {
       </View>
 
       {/* Tab bar */}
-      <View style={styles.tabBarDark}>
-        {(['friends', 'feed', 'challenges', 'leaderboard'] as Tab[]).map(tab => (
+      <GlassCard variant="warm" noPadding borderRadius={RADIUS.xl} style={styles.tabBarDark}>
+        {(Object.keys(TAB_LABELS) as Tab[]).map(tab => (
           <TouchableOpacity
             key={tab}
             style={[styles.tab, activeTab === tab && styles.tabActive]}
             onPress={() => setActiveTab(tab)}
           >
-            <Text style={[styles.tabTextDark, activeTab === tab && styles.tabTextActive]}>
-              {tab === 'friends' ? '👥 Friends' : tab === 'feed' ? '📰 Feed' : tab === 'challenges' ? '⚔️ Challenges' : '🏆 Leaderboard'}
+            <Text
+              style={[styles.tabTextDark, activeTab === tab && styles.tabTextActive]}
+              numberOfLines={1}
+            >
+              {TAB_LABELS[tab]}
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </GlassCard>
 
+      {activeTab === 'feed' ? (
+        <FollowingFeedScreen navigation={navigation} embedded />
+      ) : (
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavClearance }]}
         showsVerticalScrollIndicator={false}
@@ -470,7 +485,6 @@ export function CommunityScreen({ navigation }: any) {
 
         {activeTab === 'friends' && (
           <View style={styles.section}>
-            <StoriesTray />
             {friendRequests.length > 0 && (
               <>
                 <Text style={styles.sectionTitleDark}>Friend Requests</Text>
@@ -495,7 +509,7 @@ export function CommunityScreen({ navigation }: any) {
           </View>
         )}
 
-        {activeTab === 'feed' && (
+        {activeTab === 'activity' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitleDark}>Friend Activity</Text>
             {feed.length === 0 ? (
@@ -566,6 +580,7 @@ export function CommunityScreen({ navigation }: any) {
           </View>
         )}
       </ScrollView>
+      )}
 
       <FriendProfileModal userId={selectedFriendId} onClose={() => setSelectedFriendId(null)} />
     </View>
@@ -584,8 +599,9 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   headerTitleDark: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
+    fontSize: 26,
+    lineHeight: 34,
     color: COLORS.textPrimary,
   },
   ngoButton: {
@@ -618,12 +634,8 @@ const styles = StyleSheet.create({
   tabBarDark: {
     flexDirection: 'row',
     marginHorizontal: 16,
-    backgroundColor: 'rgba(13,35,24,0.45)',
-    borderRadius: RADIUS.xl,
     padding: 4,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
   },
   tab: {
     flex: 1,
@@ -638,7 +650,7 @@ const styles = StyleSheet.create({
   tabTextDark: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLORS.white,
+    color: COLORS.textSecondary,
   },
   tabTextActive: {
     color: COLORS.white,
@@ -859,11 +871,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: 'rgba(13,35,24,0.45)',
-    borderRadius: RADIUS.lg,
     padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
   },
   leaderRowUser: {
     backgroundColor: 'rgba(168,196,153,0.25)',
@@ -885,14 +893,14 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(107,68,35,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   rankTextPlainDark: {
     fontSize: 13,
     fontWeight: '700',
-    color: COLORS.white,
+    color: COLORS.textPrimary,
   },
   leaderAvatar: {
     width: 36,
@@ -907,15 +915,15 @@ const styles = StyleSheet.create({
   leaderNameDark: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.white,
+    color: COLORS.textPrimary,
   },
   leaderNameUser: {
-    color: COLORS.sageLight,
+    color: COLORS.forest,
     fontWeight: '700',
   },
   leaderStreakDark: {
     fontSize: 11,
-    color: COLORS.white,
+    color: COLORS.textSecondary,
     marginTop: 1,
   },
   leaderTreeCount: {
@@ -924,11 +932,11 @@ const styles = StyleSheet.create({
   leaderTreeNumDark: {
     fontSize: 17,
     fontWeight: '700',
-    color: COLORS.sageLight,
+    color: COLORS.forest,
   },
   leaderTreeLabelDark: {
     fontSize: 10,
-    color: COLORS.white,
+    color: COLORS.textMuted,
     fontWeight: '500',
   },
   requestActions: {

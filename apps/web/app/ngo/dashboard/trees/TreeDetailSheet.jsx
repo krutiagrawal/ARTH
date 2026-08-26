@@ -1,7 +1,7 @@
 'use client'
 
 import { TreePine, MapPin, Heart, Edit3 } from 'lucide-react'
-import DrawerFormShell, { FormSection, DetailRow, DetailGrid } from '@/components/dashboard/DrawerFormShell'
+import DrawerFormShell, { DetailPanel, DetailSection, DetailRow, DetailGrid } from '@/components/dashboard/DrawerFormShell'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
@@ -29,8 +29,8 @@ export default function TreeDetailSheet({ tree, onOpenChange, onEdit }) {
       }
     >
       {tree && (
-        <>
-          <FormSection first label="Overview">
+        <DetailPanel>
+          <DetailSection label="Overview">
             <DetailGrid>
               <DetailRow label="Species">{tree.speciesName}</DetailRow>
               <DetailRow label="Status">
@@ -46,38 +46,38 @@ export default function TreeDetailSheet({ tree, onOpenChange, onEdit }) {
               </DetailRow>
               <DetailRow label="Listed on">{tree.createdAt && new Date(tree.createdAt).toLocaleDateString()}</DetailRow>
             </DetailGrid>
-          </FormSection>
+          </DetailSection>
 
-          <FormSection label="Location">
+          <DetailSection label="Location">
             <DetailRow label="Location" full>
-              <span className="flex items-start gap-1">
+              <span className="flex items-start gap-1.5">
                 <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 {[tree.location, tree.city].filter(Boolean).join(', ') || 'Not set'}
               </span>
             </DetailRow>
-          </FormSection>
+          </DetailSection>
 
-          <FormSection label="Adoption activity">
+          <DetailSection label="Adoption activity">
             {tree.adopter ? (
-              <div className="rounded-[8px] border border-border/60 bg-secondary/20 p-2.5">
-                <p className="flex items-center gap-1.5 text-[13px] font-medium">
+              <div>
+                <p className="flex items-center gap-1.5 text-[14px] font-medium text-foreground">
                   <Heart className="h-3.5 w-3.5 text-primary" /> {tree.adopter.name}
                   <span className="font-normal text-muted-foreground">{tree.adopter.handle}</span>
                 </p>
-                <p className="mt-1 text-[11px] text-muted-foreground">
+                <p className="mt-1 text-[12px] text-muted-foreground">
                   Adopted {new Date(tree.adopter.adoptedAt).toLocaleDateString()}
                 </p>
                 {tree.adopter.message && (
-                  <p className="mt-1.5 text-[12px] italic text-foreground">&ldquo;{tree.adopter.message}&rdquo;</p>
+                  <p className="mt-2 border-l-2 border-primary/30 pl-2.5 text-[13px] italic text-foreground">&ldquo;{tree.adopter.message}&rdquo;</p>
                 )}
               </div>
             ) : (
-              <p className="text-[12px] text-muted-foreground">
+              <p className="text-[13px] text-muted-foreground">
                 {tree.status === 'removed' ? 'This tree has been removed and is no longer listed.' : 'Not adopted yet — still available.'}
               </p>
             )}
-          </FormSection>
-        </>
+          </DetailSection>
+        </DetailPanel>
       )}
     </DrawerFormShell>
   )

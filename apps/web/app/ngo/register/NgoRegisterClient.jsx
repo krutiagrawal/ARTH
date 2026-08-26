@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Sprout } from 'lucide-react'
 
@@ -39,7 +39,7 @@ function ConfirmationView({ orgName }) {
   )
 }
 
-export default function NgoRegisterPage() {
+function NgoRegisterForm() {
   const [form, setForm] = useState(initialForm)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -134,5 +134,13 @@ export default function NgoRegisterPage() {
         </form>
         )}
     </div>
+  )
+}
+
+export default function NgoRegisterClient() {
+  return (
+    <Suspense fallback={null}>
+      <NgoRegisterForm />
+    </Suspense>
   )
 }

@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, Image, Platform } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { Text } from '../components/common/AppText';
+import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { useCreateDrive } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
+import { useSlideUp } from '../hooks/useAnimations';
+import { PhotoPickerField, PickedPhoto } from '../components/common/PhotoPickerField';
+import { AnimatedButton } from '../components/common/AnimatedButton';
+import { FormField, FormFieldShell } from '../components/common/FormField';
+import { ScreenHeader } from '../components/common/ScreenHeader';
 
 interface PickupPointDraft {
   address: string;
@@ -26,9 +31,10 @@ function DateField({ label, value, onChange }: { label: string; value: Date; onC
 
   return (
     <>
-      <Text style={styles.label}>{label}</Text>
-      <TouchableOpacity style={styles.input} onPress={() => setShowPicker(true)}>
-        <Text style={styles.inputText}>{value.toLocaleString()}</Text>
+      <TouchableOpacity activeOpacity={0.8} onPress={() => setShowPicker(true)}>
+        <FormFieldShell label={label}>
+          <Text style={styles.inputText}>{value.toLocaleString()}</Text>
+        </FormFieldShell>
       </TouchableOpacity>
       {showPicker && (
         <DateTimePicker
@@ -60,19 +66,9 @@ export function NgoCreateDriveScreen({ navigation }: any) {
   const [startsAt, setStartsAt] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
   const [durationMinutes, setDurationMinutes] = useState('');
   const [capacity, setCapacity] = useState('');
-  const [photo, setPhoto] = useState<{ uri: string; name: string; type: string } | null>(null);
+  const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const pickPhoto = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      setPhoto({ uri: asset.uri, name: asset.fileName ?? 'photo.jpg', type: asset.mimeType ?? 'image/jpeg' });
-    }
-  };
+  const cardAnim = useSlideUp(0, 24);
 
   const addPickupPoint = () => setPickupPoints((prev) => [...prev, { address: '', arrivalBy: new Date(startsAt) }]);
   const removePickupPoint = (index: number) => setPickupPoints((prev) => prev.filter((_, i) => i !== index));
@@ -126,39 +122,31 @@ export function NgoCreateDriveScreen({ navigation }: any) {
       <StatusBar style="dark" />
       <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
 
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
-            <Text style={styles.backIcon}>←</Text>
-          </BlurView>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>New Drive</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <ScreenHeader
+        title="Create New Drive"
+        subtitle="Tell us more about your drive"
+        onBack={() => navigation?.goBack?.()}
+        align="left"
+      />
 
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
-        <View style={styles.card}>
-          <Text style={styles.label}>Cover photo</Text>
-          <TouchableOpacity style={styles.photoPicker} onPress={pickPhoto}>
-            {photo ? <Image source={{ uri: photo.uri }} style={styles.photoPreview} /> : <Text style={styles.photoPickerText}>Choose photo</Text>}
-          </TouchableOpacity>
+        <Animated.View style={cardAnim}>
+          <PhotoPickerField
+            photo={photo}
+            onChange={setPhoto}
+            mode="gallery"
+            label="Add Cover Photo"
+            hint="Showcase your drive"
+            aspect={[16, 9]}
+          />
 
-          <Text style={styles.label}>Title</Text>
-          <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Riverside plantation drive" placeholderTextColor="rgba(255,255,255,0.4)" />
+          <FormField label="Drive Title" value={title} onChangeText={setTitle} placeholder="e.g. Riverbank Plantation Drive" />
+          <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="What will volunteers do?" />
+          <FormField label="Instructions for Volunteers" value={instructions} onChangeText={setInstructions} multiline placeholder="What to carry, weather, meeting point" />
+          <FormField label="Address" value={address} onChangeText={setAddress} multiline placeholder="Street / Landmark" />
+          <FormField label="City" value={city} onChangeText={setCity} placeholder="Select city" />
 
-          <Text style={styles.label}>Description</Text>
-          <TextInput style={[styles.input, styles.multiline]} value={description} onChangeText={setDescription} multiline placeholder="What volunteers will be doing" placeholderTextColor="rgba(255,255,255,0.4)" />
-
-          <Text style={styles.label}>Instructions for volunteers</Text>
-          <TextInput style={[styles.input, styles.multiline]} value={instructions} onChangeText={setInstructions} multiline placeholder="What to carry, expected weather, meeting notes…" placeholderTextColor="rgba(255,255,255,0.4)" />
-
-          <Text style={styles.label}>Address</Text>
-          <TextInput style={[styles.input, styles.multiline]} value={address} onChangeText={setAddress} multiline placeholder="Plot / street / landmark" placeholderTextColor="rgba(255,255,255,0.4)" />
-
-          <Text style={styles.label}>City</Text>
-          <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="City" placeholderTextColor="rgba(255,255,255,0.4)" />
-
-          <Text style={styles.label}>Transport</Text>
+          <Text style={styles.sectionLabel}>Transport</Text>
           <View style={styles.chipRow}>
             <TouchableOpacity
               style={[styles.transportChip, transportMode === 'self_arrange' && styles.transportChipSelected]}
@@ -188,12 +176,11 @@ export function NgoCreateDriveScreen({ navigation }: any) {
                       <Text style={styles.removeText}>Remove</Text>
                     </TouchableOpacity>
                   </View>
-                  <TextInput
-                    style={styles.input}
+                  <FormField
+                    label="Pickup address"
                     value={p.address}
                     onChangeText={(v: string) => updatePickupPoint(i, { address: v })}
-                    placeholder="Pickup address"
-                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    placeholder="Where volunteers board"
                   />
                   <DateField label="Reach by" value={p.arrivalBy} onChange={(d) => updatePickupPoint(i, { arrivalBy: d })} />
                 </View>
@@ -204,7 +191,7 @@ export function NgoCreateDriveScreen({ navigation }: any) {
             </View>
           )}
 
-          <Text style={styles.label}>Plants to sponsor (optional)</Text>
+          <Text style={styles.sectionLabel}>Plants to sponsor (optional)</Text>
           <View style={styles.subCard}>
             {plants.map((p, i) => (
               <View key={i} style={styles.listItem}>
@@ -214,20 +201,18 @@ export function NgoCreateDriveScreen({ navigation }: any) {
                     <Text style={styles.removeText}>Remove</Text>
                   </TouchableOpacity>
                 </View>
-                <TextInput
-                  style={styles.input}
+                <FormField
+                  label="Species name"
                   value={p.speciesName}
                   onChangeText={(v: string) => updatePlant(i, { speciesName: v })}
-                  placeholder="Species name"
-                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  placeholder="e.g. Neem"
                 />
-                <TextInput
-                  style={styles.input}
+                <FormField
+                  label="Price to sponsor (₹)"
                   value={p.priceRupees}
                   onChangeText={(v: string) => updatePlant(i, { priceRupees: v.replace(/[^0-9]/g, '') })}
-                  placeholder="₹ price to sponsor"
                   keyboardType="number-pad"
-                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  placeholder="250"
                 />
               </View>
             ))}
@@ -238,22 +223,32 @@ export function NgoCreateDriveScreen({ navigation }: any) {
 
           <DateField label="Starts at" value={startsAt} onChange={setStartsAt} />
 
-          <Text style={styles.label}>Duration (minutes)</Text>
-          <TextInput style={styles.input} value={durationMinutes} onChangeText={(v: string) => setDurationMinutes(v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" placeholder="No limit" placeholderTextColor="rgba(255,255,255,0.4)" />
-
-          <Text style={styles.label}>Capacity</Text>
-          <TextInput style={styles.input} value={capacity} onChangeText={(v: string) => setCapacity(v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" placeholder="No limit" placeholderTextColor="rgba(255,255,255,0.4)" />
+          <FormField
+            label="Duration (minutes)"
+            value={durationMinutes}
+            onChangeText={(v: string) => setDurationMinutes(v.replace(/[^0-9]/g, ''))}
+            keyboardType="number-pad"
+            placeholder="No limit"
+          />
+          <FormField
+            label="Capacity"
+            value={capacity}
+            onChangeText={(v: string) => setCapacity(v.replace(/[^0-9]/g, ''))}
+            keyboardType="number-pad"
+            placeholder="No limit"
+          />
 
           {error && <Text style={styles.error}>{error}</Text>}
 
-          <TouchableOpacity
-            style={[styles.submitButton, createDriveMutation.isPending && styles.submitButtonDisabled]}
+          <AnimatedButton
+            label={createDriveMutation.isPending ? 'Publishing…' : 'Create Drive  →'}
             onPress={handleSubmit}
             disabled={createDriveMutation.isPending}
-          >
-            {createDriveMutation.isPending ? <ActivityIndicator size="small" color={COLORS.white} /> : <Text style={styles.submitText}>Publish drive</Text>}
-          </TouchableOpacity>
-        </View>
+            fullWidth
+            gradientColors={[COLORS.forest, COLORS.forestDeep]}
+            style={styles.submitButton}
+          />
+        </Animated.View>
       </ScrollView>
     </View>
   );
@@ -261,34 +256,23 @@ export function NgoCreateDriveScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
-  backButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary },
-  scrollContent: { paddingHorizontal: 16 },
-  card: { backgroundColor: 'rgba(13,35,24,0.45)', borderRadius: RADIUS.lg, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', padding: 18, gap: 6 },
-  subCard: { backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: RADIUS.md, padding: 12, marginTop: 8, gap: 8 },
-  label: { fontSize: 12, fontWeight: '600', color: COLORS.white, marginTop: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
-  input: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: RADIUS.md, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: COLORS.white, marginTop: 4, justifyContent: 'center' },
-  inputText: { fontSize: 15, color: COLORS.white },
-  multiline: { minHeight: 70, textAlignVertical: 'top' },
-  photoPicker: { marginTop: 6, height: 120, borderRadius: RADIUS.md, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  photoPreview: { width: '100%', height: '100%' },
-  photoPickerText: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
-  chipRow: { flexDirection: 'row', gap: 8, marginTop: 6 },
-  transportChip: { flex: 1, borderRadius: RADIUS.md, paddingVertical: 10, paddingHorizontal: 10, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1.5, borderColor: 'transparent' },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
+  // Transparent too: this only groups a run of FormFields, and a beige panel sitting directly
+  // behind now-transparent fields would put the light block straight back where it was removed.
+  subCard: { borderRadius: RADIUS.md, paddingHorizontal: 0, paddingVertical: 4, marginTop: 4, gap: 8 },
+  sectionLabel: { fontSize: 13, fontWeight: '700', color: COLORS.textSecondary, marginTop: 20 },
+  inputText: { fontSize: 15, color: COLORS.textPrimary, paddingVertical: 4 },
+  chipRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  transportChip: { flex: 1, borderRadius: RADIUS.md, paddingVertical: 10, paddingHorizontal: 10, backgroundColor: COLORS.beige, borderWidth: 1.5, borderColor: 'transparent' },
   transportChipSelected: { borderColor: COLORS.sage, backgroundColor: 'rgba(135,168,120,0.25)' },
-  transportChipText: { fontSize: 12, color: 'rgba(255,255,255,0.75)', textAlign: 'center' },
-  transportChipTextSelected: { color: COLORS.white, fontWeight: '700' },
-  listItem: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)', paddingTop: 8, marginTop: 4 },
+  transportChipText: { fontSize: 12, color: COLORS.textSecondary, textAlign: 'center' },
+  transportChipTextSelected: { color: COLORS.forest, fontWeight: '700' },
+  listItem: { borderTopWidth: 1, borderTopColor: COLORS.sand, paddingTop: 8, marginTop: 4 },
   listItemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  listItemTitle: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase' },
+  listItemTitle: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase' },
   removeText: { fontSize: 12, color: COLORS.coral, fontWeight: '600' },
   addButton: { alignSelf: 'flex-start', marginTop: 4 },
   addButtonText: { fontSize: 13, color: COLORS.sage, fontWeight: '700' },
   error: { fontSize: 13, color: COLORS.coral, marginTop: 12 },
-  submitButton: { backgroundColor: COLORS.forest, borderRadius: RADIUS.full, paddingVertical: 14, alignItems: 'center', marginTop: 20 },
-  submitButtonDisabled: { opacity: 0.6 },
-  submitText: { fontSize: 15, fontWeight: '700', color: COLORS.white },
+  submitButton: { marginTop: 20 },
 });

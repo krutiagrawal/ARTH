@@ -1,11 +1,14 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { Text } from '../components/common/AppText';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
+import { GlassCard } from '../components/common/GlassCard';
+import { IconBadge } from '../components/common/IconBadge';
 import { useSessions, useRevokeSession } from '../hooks/useApiQueries';
 import type { ApiSession } from '../api/users';
 
@@ -29,9 +32,7 @@ function SessionRow({ session }: { session: ApiSession }) {
 
   return (
     <View style={styles.row}>
-      <View style={styles.rowIcon}>
-        <Text style={styles.rowIconText}>📱</Text>
-      </View>
+      <IconBadge icon="📱" color={COLORS.xpBlue} size={40} />
       <View style={styles.rowContent}>
         <Text style={styles.rowLabel}>{session.deviceInfo ?? 'Unknown device'}</Text>
         <Text style={styles.rowSublabel}>Signed in {formatDate(session.createdAt)}</Text>
@@ -75,11 +76,11 @@ export function SessionsScreen({ navigation }: any) {
         ) : sessions.length === 0 ? (
           <Text style={styles.emptyText}>No active sessions found.</Text>
         ) : (
-          <View style={styles.list}>
+          <GlassCard variant="warm" noPadding style={styles.list}>
             {sessions.map((session) => (
               <SessionRow key={session.id} session={session} />
             ))}
-          </View>
+          </GlassCard>
         )}
       </ScrollView>
     </View>
@@ -113,33 +114,18 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
   },
   scrollContent: { paddingHorizontal: 16 },
-  list: {
-    backgroundColor: 'rgba(13,35,24,0.45)',
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    overflow: 'hidden',
-  },
+  list: {},
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
-  rowIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rowIconText: { fontSize: 18 },
   rowContent: { flex: 1 },
-  rowLabel: { fontSize: 14, fontWeight: '600', color: COLORS.white },
-  rowSublabel: { fontSize: 12, color: COLORS.white, marginTop: 2 },
+  rowLabel: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary },
+  rowSublabel: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   revokeButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,

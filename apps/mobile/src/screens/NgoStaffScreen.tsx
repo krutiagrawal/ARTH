@@ -1,16 +1,26 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { Text } from '../components/common/AppText';
+import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { GlassCard } from '../components/common/GlassCard';
+import { IconBadge } from '../components/common/IconBadge';
 import { EmptyState } from '../components/common/EmptyState';
 import { PhotoPickerField, PickedPhoto } from '../components/common/PhotoPickerField';
+import { FormField } from '../components/common/FormField';
+import { ScreenHeader } from '../components/common/ScreenHeader';
 import { useStaff, useCreateStaff, useDeleteStaff } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
+import { useSlideUp } from '../hooks/useAnimations';
+
+function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
+  const animStyle = useSlideUp(delay, 18);
+  return <Animated.View style={[animStyle, style]}>{children}</Animated.View>;
+}
 
 export function NgoStaffScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -67,33 +77,44 @@ export function NgoStaffScreen({ navigation }: any) {
       <StatusBar style="dark" />
       <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
 
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
-            <Text style={styles.backIcon}>←</Text>
-          </BlurView>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Staff Roster</Text>
-        <TouchableOpacity onPress={() => setShowForm((v) => !v)} style={styles.addButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+      <ScreenHeader
+        title="Staff Roster"
+        subtitle="Manage your team's public listing"
+        onBack={() => navigation.goBack()}
+        right={
+          <TouchableOpacity onPress={() => setShowForm((v) => !v)} style={styles.addButton}>
             <Text style={styles.addIcon}>{showForm ? '×' : '+'}</Text>
-          </BlurView>
-        </TouchableOpacity>
-      </View>
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
         {showForm && (
           <View style={styles.formCard}>
-            <Text style={styles.label}>Photo</Text>
-            <PhotoPickerField photo={photo} onChange={setPhoto} mode="gallery" />
-            <Text style={styles.label}>Name</Text>
-            <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Full name" placeholderTextColor="rgba(255,255,255,0.4)" />
-            <Text style={styles.label}>Role</Text>
-            <TextInput style={styles.input} value={role} onChangeText={setRole} placeholder="Field Coordinator" placeholderTextColor="rgba(255,255,255,0.4)" />
-            <Text style={styles.label}>Email</Text>
-            <TextInput style={styles.input} value={contactEmail} onChangeText={setContactEmail} autoCapitalize="none" keyboardType="email-address" placeholderTextColor="rgba(255,255,255,0.4)" />
-            <Text style={styles.label}>Phone</Text>
-            <TextInput style={styles.input} value={contactPhone} onChangeText={setContactPhone} keyboardType="phone-pad" placeholderTextColor="rgba(255,255,255,0.4)" />
+            <PhotoPickerField
+              photo={photo}
+              onChange={setPhoto}
+              mode="gallery"
+              label="Add Photo"
+              hint="A friendly headshot works best"
+            />
+            <FormField label="Name" value={name} onChangeText={setName} placeholder="Full name" />
+            <FormField label="Role" value={role} onChangeText={setRole} placeholder="Field Coordinator" />
+            <FormField
+              label="Email"
+              value={contactEmail}
+              onChangeText={setContactEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholder="name@example.org"
+            />
+            <FormField
+              label="Phone"
+              value={contactPhone}
+              onChangeText={setContactPhone}
+              keyboardType="phone-pad"
+              placeholder="Optional"
+            />
             {error && <Text style={styles.error}>{error}</Text>}
             <TouchableOpacity style={[styles.submitButton, createMutation.isPending && styles.submitButtonDisabled]} onPress={handleAdd} disabled={createMutation.isPending}>
               {createMutation.isPending ? <ActivityIndicator size="small" color={COLORS.white} /> : <Text style={styles.submitText}>Add to roster</Text>}
@@ -105,21 +126,24 @@ export function NgoStaffScreen({ navigation }: any) {
         {!isLoading && staff.length === 0 && !showForm && (
           <EmptyState icon="🧑‍🤝‍🧑" title="No staff listed yet" body="Add your team so supporters know who's behind the work." actionLabel="Add staff" onAction={() => setShowForm(true)} />
         )}
-        {staff.map((member) => (
-          <GlassCard key={member.id} variant="warm" style={styles.card}>
-            <View style={styles.cardRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.cardTitle}>{member.name}</Text>
-                <Text style={styles.cardRole}>{member.role}</Text>
-                {(member.contactEmail || member.contactPhone) && (
-                  <Text style={styles.cardMeta}>{[member.contactEmail, member.contactPhone].filter(Boolean).join(' · ')}</Text>
-                )}
+        {staff.map((member, i) => (
+          <FadeInRow key={member.id} delay={i * 60}>
+            <GlassCard variant="warm" style={styles.card}>
+              <View style={styles.cardRow}>
+                <IconBadge icon="🧑‍🤝‍🧑" color={COLORS.warmBrown} size={40} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>{member.name}</Text>
+                  <Text style={styles.cardRole}>{member.role}</Text>
+                  {(member.contactEmail || member.contactPhone) && (
+                    <Text style={styles.cardMeta}>{[member.contactEmail, member.contactPhone].filter(Boolean).join(' · ')}</Text>
+                  )}
+                </View>
+                <TouchableOpacity onPress={() => handleDelete(member.id, member.name)}>
+                  <Text style={styles.removeText}>Remove</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity onPress={() => handleDelete(member.id, member.name)}>
-                <Text style={styles.removeText}>Remove</Text>
-              </TouchableOpacity>
-            </View>
-          </GlassCard>
+            </GlassCard>
+          </FadeInRow>
         ))}
       </ScrollView>
     </View>
@@ -128,18 +152,11 @@ export function NgoStaffScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
-  backButton: { width: 40, height: 40 },
-  addButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
-  addIcon: { fontSize: 20, color: COLORS.white, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
-  scrollContent: { paddingHorizontal: 20 },
+  addButton: { width: 40, height: 40, borderRadius: RADIUS.md, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.beige },
+  addIcon: { fontSize: 20, color: COLORS.textPrimary, fontWeight: '700' },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
   loader: { marginTop: 40 },
-  formCard: { backgroundColor: 'rgba(13,35,24,0.45)', borderRadius: RADIUS.lg, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', padding: 18, gap: 6, marginBottom: 16 },
-  label: { fontSize: 12, fontWeight: '600', color: COLORS.white, marginTop: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
-  input: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: RADIUS.md, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: COLORS.white, marginTop: 4 },
+  formCard: { marginBottom: 16 },
   error: { fontSize: 13, color: COLORS.coral, marginTop: 12 },
   submitButton: { backgroundColor: COLORS.forest, borderRadius: RADIUS.full, paddingVertical: 14, alignItems: 'center', marginTop: 16 },
   submitButtonDisabled: { opacity: 0.6 },

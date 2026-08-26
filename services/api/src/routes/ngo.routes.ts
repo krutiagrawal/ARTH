@@ -1,9 +1,24 @@
 import { FastifyInstance } from 'fastify';
+import { ORG_ROLES } from '../constants/roles';
 import * as ngoService from '../services/ngo.service';
+import { requireNgoProfile } from '../services/ngo.service';
 import { saveNgoLogo } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
 import { BadRequestError } from '../utils/errors';
 import { updateProfileSchema, donationsQuerySchema } from '../schemas/ngo.schema';
+import { startOfIsoWeekUtc, addWeeks } from '../services/ngoStreak.service';
+
+interface NgoLeaderboardRow {
+  id: string;
+  org_name: string;
+  logo_url: string | null;
+  trees_planted: bigint;
+  rank: bigint;
+}
+
+interface NgoRankRow {
+  rank: bigint;
+}
 
 function serializeNgoProfile(profile: any) {
   return {
@@ -17,6 +32,7 @@ function serializeNgoProfile(profile: any) {
     foundedYear: profile.foundedYear,
     volunteerCountEstimate: profile.volunteerCountEstimate,
     awards: profile.awards ?? [],
+    followPolicy: profile.followPolicy,
     status: profile.status,
     rejectionReason: profile.rejectionReason,
     createdAt: profile.createdAt,
@@ -35,7 +51,7 @@ function toCsv(rows: Record<string, unknown>[]): string {
 }
 
 export default async function ngoRoutes(fastify: FastifyInstance) {
-  fastify.addHook('preHandler', fastify.requireRole('ngo'));
+  fastify.addHook('preHandler', fastify.requireRole(...ORG_ROLES));
 
   fastify.get('/profile', async (request, reply) => {
     const profile = await ngoService.getOwnProfile(fastify.prisma, request.user!.id);
@@ -118,5 +134,97 @@ export default async function ngoRoutes(fastify: FastifyInstance) {
   fastify.get('/reports', async (request, reply) => {
     const reports = await ngoService.getOwnReports(fastify.prisma, request.user!.id);
     reply.send(reports);
+  });
+
+  fastify.get('/achievements', async (request, reply) => {
+    const ngo = await requireNgoProfile(fastify.prisma, request.user!.id);
+
+    const achievements = await fastify.prisma.ngoAchievement.findMany({
+      orderBy: { sortOrder: 'asc' },
+      include: {
+        unlocks: { where: { ngoId: ngo.id } },
+      },
+    });
+
+    reply.send(
+      achievements.map((achievement) => {
+        const unlock = achievement.unlocks[0];
+        return {
+          id: achievement.id,
+          title: achievement.title,
+          description: achievement.description,
+          icon: achievement.icon,
+          rarity: achievement.rarity,
+          unlocked: unlock?.unlocked ?? false,
+          progress: unlock?.progress ?? 0,
+          total: achievement.criteriaTarget ?? undefined,
+        };
+      })
+    );
+  });
+
+  fastify.get<{ Querystring: { weeks?: string } }>('/streaks/calendar', async (request, reply) => {
+    const ngo = await requireNgoProfile(fastify.prisma, request.user!.id);
+    const weeksCount = Math.min(Math.max(Number(request.query.weeks) || 12, 1), 26);
+
+    const thisWeek = startOfIsoWeekUtc(new Date());
+    const startWeek = addWeeks(thisWeek, -(weeksCount - 1));
+
+    const rows = await fastify.prisma.ngoStreakHistory.findMany({
+      where: { ngoId: ngo.id, weekStart: { gte: startWeek } },
+    });
+    const postedWeeks = new Set(rows.filter((r) => r.posted).map((r) => r.weekStart.toISOString().slice(0, 10)));
+
+    const weeks = [];
+    for (let w = 0; w < weeksCount; w++) {
+      const weekStart = addWeeks(startWeek, w);
+      weeks.push({
+        weekLabel: `Week ${w + 1}`,
+        posted: postedWeeks.has(weekStart.toISOString().slice(0, 10)),
+      });
+    }
+
+    reply.send({ weeks });
+  });
+
+  fastify.get<{ Querystring: { limit?: string } }>('/leaderboard', async (request, reply) => {
+    const ngoId = (await requireNgoProfile(fastify.prisma, request.user!.id)).id;
+    const limit = Math.min(Number(request.query.limit) || 50, 200);
+
+    const rows = await fastify.prisma.$queryRaw<NgoLeaderboardRow[]>`
+      SELECT n.id, n.org_name, n.logo_url, COUNT(pt.id) AS trees_planted,
+             RANK() OVER (ORDER BY COUNT(pt.id) DESC) AS rank
+      FROM ngo_profiles n
+      LEFT JOIN planted_trees pt ON pt.ngo_id = n.id
+      WHERE n.status = 'approved'
+      GROUP BY n.id
+      ORDER BY trees_planted DESC
+      LIMIT ${limit};
+    `;
+
+    const myRankRows = await fastify.prisma.$queryRaw<NgoRankRow[]>`
+      SELECT rank FROM (
+        SELECT n.id, RANK() OVER (ORDER BY COUNT(pt.id) DESC) AS rank
+        FROM ngo_profiles n
+        LEFT JOIN planted_trees pt ON pt.ngo_id = n.id
+        WHERE n.status = 'approved'
+        GROUP BY n.id
+      ) ranked WHERE id = ${ngoId};
+    `;
+
+    const totalNgos = await fastify.prisma.ngoProfile.count({ where: { status: 'approved' } });
+
+    reply.send({
+      entries: rows.map((row) => ({
+        rank: Number(row.rank),
+        id: row.id,
+        orgName: row.org_name,
+        logoUrl: row.logo_url,
+        treesPlanted: Number(row.trees_planted),
+        isNgo: row.id === ngoId,
+      })),
+      totalNgos,
+      myRank: myRankRows[0] ? Number(myRankRows[0].rank) : null,
+    });
   });
 }

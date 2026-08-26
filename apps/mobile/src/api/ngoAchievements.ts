@@ -1,0 +1,8 @@
+import { apiFetch } from './client';
+import type { ApiAchievement } from './achievements';
+
+export type { ApiAchievement };
+
+export async function fetchNgoAchievements(): Promise<ApiAchievement[]> {
+  return apiFetch<ApiAchievement[]>('/api/ngo/achievements');
+}

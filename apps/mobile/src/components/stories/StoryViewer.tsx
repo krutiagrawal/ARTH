@@ -1,15 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  Image,
-  Pressable,
-  Animated,
-  Dimensions,
-  TouchableOpacity,
-} from 'react-native';
+import { View, StyleSheet, Modal, Image, Pressable, Animated, Dimensions, TouchableOpacity } from 'react-native';
+import { Text } from '../common/AppText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { resolveStoryImage, type ApiStory } from '../../api/stories';
@@ -25,6 +16,7 @@ export function StoryViewer({
   initialIndex = 0,
   onClose,
   onDelete,
+  onView,
 }: {
   visible: boolean;
   stories: ApiStory[];
@@ -33,6 +25,8 @@ export function StoryViewer({
   initialIndex?: number;
   onClose: () => void;
   onDelete?: (storyId: string) => void;
+  /** Fired once per story as it comes on screen, so the tray ring can dim. Fire-and-forget. */
+  onView?: (storyId: string) => void;
 }) {
   const insets = useSafeAreaInsets();
   const [index, setIndex] = useState(initialIndex);
@@ -58,6 +52,12 @@ export function StoryViewer({
   const goPrev = () => {
     setIndex((i) => Math.max(0, i - 1));
   };
+
+  // Record the view as the story comes on screen. Deliberately not awaited — the 5s timer must
+  // not depend on a network round trip.
+  useEffect(() => {
+    if (visible && current) onView?.(current.id);
+  }, [visible, current?.id]);
 
   // Drive the active segment's progress bar and auto-advance when it fills.
   useEffect(() => {

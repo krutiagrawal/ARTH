@@ -1,5 +1,6 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle } from 'react-native';
+import { TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
+import { Text } from './AppText';
 import { BlurView } from 'expo-blur';
 import { useSoundSystem } from '../../hooks/useSoundSystem';
 

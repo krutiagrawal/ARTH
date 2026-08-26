@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@plant/db';
 import { ForbiddenError, NotFoundError } from '../utils/errors';
 
 const RECENT_ACTIVITY_LIMIT = 10;

@@ -1,12 +1,15 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
+import { Text } from './AppText';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import Animated from 'react-native-reanimated';
 import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { RADIUS, SHADOWS } from '../../constants/theme';
 import { GlassCard } from './GlassCard';
 import { useSlideUp, useBreathing } from '../../hooks/useAnimations';
+import { hexToRgba } from '../../utils/color';
 
 interface EcoWidgetProps {
   icon: string;
@@ -22,11 +25,24 @@ interface EcoWidgetProps {
    * light styling — for use over dark or variable-brightness backdrops (e.g. Home's time-of-day sky). */
   dark?: boolean;
   /** Time-of-day theme overrides for the 'glass' variant — when provided, these win over the
-   * `dark` boolean's static look so the widget can be retinted per time-of-day period. */
+   * `dark` boolean's static look so the widget can be retinted per time-of-day period. Passing
+   * `cardBackground` switches the card to a real BlurView + gradient wash (matching `ThemedCard`)
+   * instead of the flat, non-blurred `GlassCard` fill. */
   cardBackground?: string;
+  /** Second gradient stop for the wash — same idea as `theme.cardBackgroundAlt`. Falls back to
+   * `cardBackground` (a flat wash) when omitted. */
+  cardBackgroundAlt?: string;
+  /** Alpha the wash colors are composited at over the blur — same idea as `theme.cardOverlayAlpha`. */
+  cardOverlayAlpha?: number;
   textColor?: string;
   subTextColor?: string;
   borderColor?: string;
+  /** Applied to the widget's outermost wrapper — how a caller gives it a width in a grid. */
+  style?: StyleProp<ViewStyle>;
+  /** Stretch to fill the wrapper. Needed for equal-size grid tiles: the flex has to reach the
+   * card itself, or the row's `alignItems: 'stretch'` has nothing to equalise and the tiles come
+   * out content-sized at different heights. */
+  fill?: boolean;
 }
 
 export function EcoWidget({
@@ -41,30 +57,68 @@ export function EcoWidget({
   variant = 'card',
   dark = false,
   cardBackground,
+  cardBackgroundAlt,
+  cardOverlayAlpha = 1,
   textColor,
   subTextColor,
   borderColor,
+  style,
+  fill = false,
 }: EcoWidgetProps) {
   const slideStyle = useSlideUp(delay, 20);
   const breathStyle = useBreathing(0.96, 1.04, 3500);
+  const fillStyle = fill ? styles.fill : null;
+  // The card itself needs more than `flex: 1`: `minWidth: 0` releases the 90px floor that would
+  // otherwise overflow a three-across grid on a narrow phone, and the tighter horizontal padding
+  // keeps two-word labels ("Upcoming drives") on two lines instead of three.
+  const fillCardStyle = fill ? styles.fillCard : null;
 
   if (variant === 'glass') {
-    const themedCardStyle = cardBackground
-      ? { backgroundColor: cardBackground, borderColor: borderColor ?? cardBackground }
-      : null;
+    const glassContent = (
+      <>
+        <Animated.Text style={[styles.glassIcon, breathStyle]}>{icon}</Animated.Text>
+        <Text style={[styles.glassValue, { color }]}>{value}</Text>
+        <Text style={[styles.glassLabel, dark && styles.glassLabelDark, textColor && { color: textColor }]}>{label}</Text>
+        {sublabel && (
+          <Text style={[styles.glassSublabel, dark && styles.glassSublabelDark, subTextColor && { color: subTextColor }]}>
+            {sublabel}
+          </Text>
+        )}
+      </>
+    );
+
+    // Time-themed usage (cardBackground given): a real BlurView + gradient wash, same recipe as
+    // `ThemedCard` — GlassCard's flat rgba fill gets fully overwritten by an opaque theme color
+    // otherwise, which is why these tiles used to look like plain cards instead of glass.
+    if (cardBackground) {
+      return (
+        <Animated.View style={[slideStyle, style]}>
+          <TouchableOpacity activeOpacity={0.85} onPress={onPress} disabled={!onPress} style={fillStyle}>
+            <BlurView
+              intensity={35}
+              tint={dark ? 'dark' : 'light'}
+              experimentalBlurMethod="dimezisBlurView"
+              style={[styles.glassWidgetThemed, { borderColor: borderColor ?? cardBackground }, fillCardStyle]}
+            >
+              <LinearGradient
+                colors={[
+                  hexToRgba(cardBackground, cardOverlayAlpha),
+                  hexToRgba(cardBackgroundAlt ?? cardBackground, cardOverlayAlpha),
+                ]}
+                style={StyleSheet.absoluteFill}
+              />
+              <View style={styles.glassWidgetContent}>{glassContent}</View>
+            </BlurView>
+          </TouchableOpacity>
+        </Animated.View>
+      );
+    }
 
     return (
-      <Animated.View style={slideStyle}>
-        <TouchableOpacity activeOpacity={0.85} onPress={onPress} disabled={!onPress}>
-          <GlassCard variant={dark ? 'dark' : 'light'} style={[styles.glassWidget, themedCardStyle]}>
-            <Animated.Text style={[styles.glassIcon, breathStyle]}>{icon}</Animated.Text>
-            <Text style={[styles.glassValue, { color }]}>{value}</Text>
-            <Text style={[styles.glassLabel, dark && styles.glassLabelDark, textColor && { color: textColor }]}>{label}</Text>
-            {sublabel && (
-              <Text style={[styles.glassSublabel, dark && styles.glassSublabelDark, subTextColor && { color: subTextColor }]}>
-                {sublabel}
-              </Text>
-            )}
+      <Animated.View style={[slideStyle, style]}>
+        <TouchableOpacity activeOpacity={0.85} onPress={onPress} disabled={!onPress} style={fillStyle}>
+          <GlassCard variant={dark ? 'dark' : 'light'} style={[styles.glassWidget, fillCardStyle]}>
+            {glassContent}
           </GlassCard>
         </TouchableOpacity>
       </Animated.View>
@@ -73,7 +127,7 @@ export function EcoWidget({
 
   if (variant === 'minimal') {
     return (
-      <Animated.View style={[styles.minimalWidget, slideStyle]}>
+      <Animated.View style={[styles.minimalWidget, slideStyle, style]}>
         <Text style={styles.minimalIcon}>{icon}</Text>
         <View>
           <Text style={[styles.minimalValue, { color }]}>{value}</Text>
@@ -84,14 +138,14 @@ export function EcoWidget({
   }
 
   return (
-    <Animated.View style={slideStyle}>
-      <TouchableOpacity activeOpacity={0.85} onPress={onPress} disabled={!onPress}>
+    <Animated.View style={[slideStyle, style]}>
+      <TouchableOpacity activeOpacity={0.85} onPress={onPress} disabled={!onPress} style={fillStyle}>
         {gradientColors ? (
           <LinearGradient
             colors={gradientColors}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.gradientWidget}
+            style={[styles.gradientWidget, fillCardStyle]}
           >
             <Animated.Text style={[styles.icon, breathStyle]}>{icon}</Animated.Text>
             <Text style={styles.valueWhite}>{value}</Text>
@@ -99,7 +153,7 @@ export function EcoWidget({
             {sublabel && <Text style={styles.sublabelWhite}>{sublabel}</Text>}
           </LinearGradient>
         ) : (
-          <View style={[styles.widget, SHADOWS.md, { borderLeftColor: color }]}>
+          <View style={[styles.widget, SHADOWS.md, fillCardStyle]}>
             <Text style={styles.icon}>{icon}</Text>
             <Text style={[styles.value, { color }]}>{value}</Text>
             <Text style={styles.label}>{label}</Text>
@@ -133,12 +187,17 @@ export function StreakWidget({ streak, isActive }: { streak: number; isActive: b
 }
 
 const styles = StyleSheet.create({
+  fill: { flex: 1 },
+  fillCard: { flex: 1, minWidth: 0, paddingHorizontal: 8, justifyContent: 'center' },
   widget: {
     backgroundColor: COLORS.beigeLight,
     borderRadius: RADIUS.lg,
     padding: 16,
     alignItems: 'center',
-    borderLeftWidth: 3,
+    // A uniform border, not `borderLeftWidth` — a left-only border against this
+    // radius renders as a crescent hugging the corner rather than an accent bar.
+    borderWidth: 1,
+    borderColor: COLORS.sand,
     minWidth: 90,
   },
   gradientWidget: {
@@ -150,10 +209,23 @@ const styles = StyleSheet.create({
   },
   glassWidget: {
     alignItems: 'center',
+    justifyContent: 'center',
     minWidth: 90,
     paddingVertical: 14,
     paddingHorizontal: 16,
   },
+  glassWidgetThemed: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 90,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  // The gradient wash is an absolute fill, so content needs its own stacking context above it.
+  glassWidgetContent: { alignItems: 'center', position: 'relative' },
   minimalWidget: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -192,6 +264,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   label: {
+    textAlign: 'center',
     fontSize: 11,
     color: COLORS.textPrimary,
     fontWeight: '600',
@@ -199,6 +272,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   labelWhite: {
+    textAlign: 'center',
     fontSize: 11,
     color: COLORS.white,
     fontWeight: '600',
@@ -206,6 +280,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   glassLabel: {
+    textAlign: 'center',
     fontSize: 11,
     color: COLORS.textPrimary,
     fontWeight: '600',
@@ -220,16 +295,19 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
   },
   sublabel: {
+    textAlign: 'center',
     fontSize: 10,
     color: COLORS.textPrimary,
     marginTop: 2,
   },
   sublabelWhite: {
+    textAlign: 'center',
     fontSize: 10,
     color: COLORS.white,
     marginTop: 2,
   },
   glassSublabel: {
+    textAlign: 'center',
     fontSize: 10,
     color: COLORS.textPrimary,
     marginTop: 2,

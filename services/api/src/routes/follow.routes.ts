@@ -1,6 +1,5 @@
 import { FastifyInstance } from 'fastify';
 import * as followService from '../services/follow.service';
-import { serializeUpdate } from './ngoUpdates.routes';
 import { z } from 'zod';
 import { BadRequestError } from '../utils/errors';
 
@@ -19,7 +18,7 @@ export default async function followRoutes(fastify: FastifyInstance) {
     const parsed = paginationQuerySchema.safeParse(request.query);
     if (!parsed.success) throw new BadRequestError('Invalid query parameters');
 
-    const { total, updates } = await followService.getFollowingFeed(fastify.prisma, request.user!.id, parsed.data);
-    reply.send({ total, updates: updates.map(serializeUpdate) });
+    // Updates come back already serialized (they are Posts now, carrying the legacy keys).
+    reply.send(await followService.getFollowingFeed(fastify.prisma, request.user!.id, parsed.data));
   });
 }

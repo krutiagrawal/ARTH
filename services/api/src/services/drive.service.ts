@@ -1,4 +1,4 @@
-import { DriveStatus, DriveTransportMode, PrismaClient } from '@prisma/client';
+import { DriveStatus, DriveTransportMode, PrismaClient } from '@plant/db';
 import { getStripeClient } from '../lib/stripe';
 import { ConflictError, NotFoundError } from '../utils/errors';
 import { geocodeAddress } from '../utils/geocode';
@@ -160,6 +160,22 @@ export async function cancelDrive(prisma: PrismaClient, ngoUserId: string, drive
     data: { status: 'cancelled' as DriveStatus },
     include: driveInclude,
   });
+}
+
+/**
+ * Curates which completed drives headline the public profile. `Drive.featured` already drove
+ * that showcase's ordering but had no endpoint behind it, so nothing could ever set it.
+ */
+export async function setDriveFeatured(
+  prisma: PrismaClient,
+  ngoUserId: string,
+  driveId: string,
+  featured: boolean,
+) {
+  const ngo = await requireNgoProfile(prisma, ngoUserId);
+  const drive = await prisma.drive.findFirst({ where: { id: driveId, ngoId: ngo.id } });
+  if (!drive) throw new NotFoundError('Drive not found');
+  return prisma.drive.update({ where: { id: drive.id }, data: { featured } });
 }
 
 export async function completeDrive(prisma: PrismaClient, ngoUserId: string, driveId: string) {

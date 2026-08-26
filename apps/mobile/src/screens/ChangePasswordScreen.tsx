@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { Text } from '../components/common/AppText';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +10,7 @@ import { RADIUS } from '../constants/theme';
 import { PasswordInput } from '../components/common/PasswordInput';
 import { useChangePassword } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
+import { GlassCard } from '../components/common/GlassCard';
 
 export function ChangePasswordScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -57,14 +59,14 @@ export function ChangePasswordScreen({ navigation }: any) {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.card}>
+        <GlassCard variant="warm">
           <Text style={styles.label}>Current Password</Text>
           <PasswordInput
             inputStyle={styles.input}
             value={currentPassword}
             onChangeText={setCurrentPassword}
             placeholder="Enter current password"
-            placeholderTextColor="rgba(255,255,255,0.4)"
+            placeholderTextColor={COLORS.textMuted}
           />
 
           <Text style={styles.label}>New Password</Text>
@@ -73,7 +75,7 @@ export function ChangePasswordScreen({ navigation }: any) {
             value={newPassword}
             onChangeText={setNewPassword}
             placeholder="At least 8 characters"
-            placeholderTextColor="rgba(255,255,255,0.4)"
+            placeholderTextColor={COLORS.textMuted}
           />
 
           <Text style={styles.label}>Confirm New Password</Text>
@@ -82,7 +84,7 @@ export function ChangePasswordScreen({ navigation }: any) {
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             placeholder="Re-enter new password"
-            placeholderTextColor="rgba(255,255,255,0.4)"
+            placeholderTextColor={COLORS.textMuted}
           />
 
           {error && <Text style={styles.error}>{error}</Text>}
@@ -98,7 +100,7 @@ export function ChangePasswordScreen({ navigation }: any) {
               <Text style={styles.submitText}>Update Password</Text>
             )}
           </TouchableOpacity>
-        </View>
+        </GlassCard>
       </ScrollView>
     </View>
   );
@@ -131,29 +133,21 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
   },
   scrollContent: { paddingHorizontal: 16 },
-  card: {
-    backgroundColor: 'rgba(13,35,24,0.45)',
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    padding: 18,
-    gap: 6,
-  },
   label: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLORS.white,
+    color: COLORS.textSecondary,
     marginTop: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: COLORS.white,
     borderRadius: RADIUS.md,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    color: COLORS.white,
+    color: COLORS.textPrimary,
     marginTop: 4,
   },
   error: {
