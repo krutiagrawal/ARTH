@@ -709,11 +709,27 @@ export default function HomeClient({ namingExample }) {
       })
     }, wrapRef)
 
+    // Fonts are loaded via a Google Fonts @import with font-display:swap (see
+    // globals.css), so Fraunces/Inter can finish downloading and swap in well
+    // after `load` fires — on a cold cache that reflows the Navbar/headline
+    // text, shifting where wrapRef actually sits in the document. If that
+    // shift happens after ScrollTrigger already cached its pin start/end, the
+    // pin-spacer is left the wrong size and the pinned stage overlaps the
+    // footer until something (e.g. a manual refresh) recomputes it. A warm
+    // cache never swaps, which is why a page refresh "fixes" it. Refreshing
+    // once document.fonts.ready resolves closes that race deterministically.
     const onLoad = () => ScrollTrigger.refresh()
     window.addEventListener('load', onLoad)
+    let cancelled = false
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      document.fonts.ready.then(() => {
+        if (!cancelled) ScrollTrigger.refresh()
+      })
+    }
     const t = setTimeout(() => ScrollTrigger.refresh(), 600)
 
     return () => {
+      cancelled = true
       ctx2.revert()
       window.removeEventListener('load', onLoad)
       window.removeEventListener('resize', path.resize)
@@ -737,7 +753,7 @@ export default function HomeClient({ namingExample }) {
 
   return (
     <div className="bg-[#F8F4EC]">
-      <div ref={wrapRef} id="cinematic-hero" className="relative" style={{ height: `${SCROLL_VH}vh` }}>
+      <div ref={wrapRef} id="cinematic-hero" data-navbar-hero className="relative" style={{ height: `${SCROLL_VH}vh` }}>
         <div ref={stageRef} className="relative h-screen w-full overflow-hidden">
 
           {/* single cinematic background — scroll-scrubbed frame sequence drawn to canvas.

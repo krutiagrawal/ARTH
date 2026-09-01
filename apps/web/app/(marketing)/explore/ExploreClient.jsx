@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Search, MapPin, ArrowUpRight } from 'lucide-react'
 
-const FILTERS = ['All', 'Forests', 'Trees', 'Stories', 'Competitions']
+// TODO(post-launch): add 'Competitions' back once that page is re-enabled.
+const FILTERS = ['All', 'Forests', 'Trees', 'Stories']
 const PAGE_SIZE = 24
 
 function Reveal({ children, delay = 0, className }) {

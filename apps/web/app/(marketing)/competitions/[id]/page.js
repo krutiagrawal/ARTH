@@ -1,3 +1,14 @@
+// TODO(post-launch): re-enable competition detail pages alongside the
+// competitions list (see ../page.js for why). To restore: delete the stub
+// below and uncomment the original implementation.
+import { notFound } from 'next/navigation'
+
+export default function Page() {
+  return notFound()
+}
+
+/* ORIGINAL IMPLEMENTATION — restore after launch:
+
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import CompetitionDetailClient from './CompetitionDetailClient'
@@ -33,3 +44,5 @@ export default async function Page({ params }) {
   const serialisedComp = { ...comp, deadline: comp.deadline.toISOString() }
   return <CompetitionDetailClient comp={serialisedComp} initialEntries={serialisedEntries} />
 }
+
+*/

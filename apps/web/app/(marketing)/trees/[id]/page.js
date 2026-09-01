@@ -23,14 +23,14 @@ export default async function App({ params }) {
   const others = await prisma.legacyTree.findMany({ where: { id: { not: id } } })
   return (
     <div>
-      <section className="relative min-h-[80vh] flex items-end">
+      <section data-navbar-hero className="relative min-h-[80vh] flex items-end">
         <img src={t.imageUrl} alt={t.name} className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-foreground/10" />
-        <div className="relative z-10 container pb-20 pt-40 max-w-4xl">
-          <Link href="/explore" className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Back</Link>
+        <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/10 to-transparent" />
+        <div className="relative z-10 container pb-20 pt-40 max-w-4xl text-background">
+          <Link href="/explore" className="mb-6 inline-flex items-center gap-2 text-sm opacity-80 hover:opacity-100"><ArrowLeft className="h-4 w-4" /> Back</Link>
           <p className="text-xs uppercase tracking-[0.22em] text-primary">Legacy tree</p>
           <h1 className="font-serif text-6xl md:text-8xl leading-[0.95] mt-3 text-balance">{t.name}</h1>
-          <p className="mt-6 max-w-2xl font-serif italic text-2xl leading-snug text-muted-foreground">&ldquo;{t.quote}&rdquo;</p>
+          <p className="mt-6 max-w-2xl font-serif italic text-2xl leading-snug text-background/85">&ldquo;{t.quote}&rdquo;</p>
         </div>
       </section>
 

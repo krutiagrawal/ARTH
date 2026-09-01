@@ -5,7 +5,7 @@ import { ArrowLeft, Calendar, Trophy, Heart, Plus, X } from 'lucide-react'
 import SectionWrapper from '@/components/site/SectionWrapper'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/site/AuthProvider'
-import { proxy } from '../../../app/proxy'
+import { proxy } from '@/lib/memberProxy'
 
 function useCountdown(deadline) {
   const [now, setNow] = useState(() => Date.now())
@@ -63,9 +63,9 @@ export default function CompetitionDetailClient({ comp, initialEntries }) {
 
   return (
     <div>
-      <section className="relative h-[60vh] min-h-[480px]">
+      <section data-navbar-hero className="relative h-[60vh] min-h-[480px]">
         <img src={comp.imageUrl} alt={comp.title} className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-b from-foreground/30 via-foreground/40 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/10 to-transparent" />
         <div className="relative z-10 container h-full flex flex-col justify-end pb-16 text-background">
           <Link href="/competitions" className="mb-6 inline-flex items-center gap-2 text-sm opacity-80 hover:opacity-100"><ArrowLeft className="h-4 w-4" /> All competitions</Link>
           <p className="text-xs uppercase tracking-[0.22em] opacity-80">Competition</p>

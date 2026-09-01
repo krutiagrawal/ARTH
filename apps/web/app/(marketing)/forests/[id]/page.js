@@ -24,9 +24,9 @@ export default async function App({ params }) {
 
   return (
     <div>
-      <section className="relative h-[70vh] min-h-[520px]">
+      <section data-navbar-hero className="relative h-[70vh] min-h-[520px]">
         <img src={forest.imageUrl} alt={forest.name} className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-b from-foreground/20 via-foreground/30 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/10 to-transparent" />
         <div className="relative z-10 container h-full flex flex-col justify-end pb-20 text-background">
           <Link href="/forests" className="mb-6 inline-flex items-center gap-2 text-sm opacity-80 hover:opacity-100"><ArrowLeft className="h-4 w-4" /> All forests</Link>
           <p className="inline-flex items-center gap-1.5 text-sm opacity-90"><MapPin className="h-4 w-4" />{forest.location}</p>
