@@ -41,6 +41,26 @@ export default async function donationsRoutes(fastify: FastifyInstance) {
     reply.send(campaigns.map(serializeCampaign));
   });
 
+  fastify.get('/mine-donations', async (request, reply) => {
+    const parsed = paginationQuerySchema.safeParse(request.query);
+    if (!parsed.success) throw new BadRequestError('Invalid query parameters');
+
+    const { donations, total } = await donationService.listMyDonations(fastify.prisma, request.user!.id, parsed.data);
+    reply.send({
+      total,
+      donations: donations.map((d) => ({
+        id: d.id,
+        amountCents: d.amountCents,
+        currency: d.currency,
+        status: d.status,
+        donatedAt: d.createdAt,
+        campaignId: d.campaignId,
+        campaignTitle: d.campaign.title,
+        ngoName: d.campaign.ngo?.orgName,
+      })),
+    });
+  });
+
   fastify.get<{ Params: { id: string } }>(
     '/:id/donations',
     { preHandler: [fastify.requireRole(...ORG_ROLES)] },

@@ -13,7 +13,7 @@ import { ScreenHeader } from '../components/common/ScreenHeader';
 import { MultiPhotoPickerField } from '../components/social/MultiPhotoPickerField';
 import type { PickedPhoto } from '../components/common/PhotoPickerField';
 import { useSlideUp } from '../hooks/useAnimations';
-import { useMyDrives, useNgoProfile } from '../hooks/useApiQueries';
+import { useMyDrives, useNgoProfile, useNurseryProfile } from '../hooks/useApiQueries';
 import { useCreatePost } from '../hooks/useSocialQueries';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useAuth } from '../context/AuthContext';
@@ -33,6 +33,7 @@ export function PostComposerScreen({ navigation, route }: any) {
   const bottomClearance = useBottomNavClearance();
   const { user } = useAuth();
   const { data: ngoProfile } = useNgoProfile();
+  const { data: nurseryProfile } = useNurseryProfile();
   const { data: drives = [] } = useMyDrives();
   const createPost = useCreatePost();
 
@@ -41,6 +42,8 @@ export function PostComposerScreen({ navigation, route }: any) {
   // NGO-style authorship switch, so the two contexts are mutually exclusive.
   const isNgo = !groupId && user?.role === 'ngo';
   const canPublishAsNgo = isNgo && ngoProfile?.status === 'approved';
+  const isNursery = !groupId && user?.role === 'nursery';
+  const canPublishAsNursery = isNursery && nurseryProfile?.status === 'approved';
   // The Group account's own login (no groupId param, distinct from a member tagging a post to
   // their group above) publishing as the group itself — Group has no approval gate, so always on.
   const isGroupAccount = !groupId && user?.role === 'group';
@@ -75,11 +78,12 @@ export function PostComposerScreen({ navigation, route }: any) {
         groupId,
         photos,
         asNgo: canPublishAsNgo,
+        asNursery: canPublishAsNursery,
       });
       reset();
       Alert.alert(
         'Posted',
-        groupId ? 'Shared to your group.' : canPublishAsNgo ? 'Your followers can see this now.' : 'Shared with your friends.'
+        groupId ? 'Shared to your group.' : canPublishAsNgo || canPublishAsNursery ? 'Your followers can see this now.' : 'Shared with your friends.'
       );
       navigation?.goBack?.();
     } catch (e) {
@@ -100,6 +104,7 @@ export function PostComposerScreen({ navigation, route }: any) {
         caption: caption.trim() || undefined,
         asNgo: canPublishAsNgo,
         asGroup: canPublishAsGroup,
+        asNursery: canPublishAsNursery,
       });
       reset();
       Alert.alert('Story posted', 'It disappears in 24 hours.');
@@ -162,6 +167,15 @@ export function PostComposerScreen({ navigation, route }: any) {
               <Text style={styles.warningText}>
                 Your NGO is not approved yet, so this will publish from your personal account
                 rather than from {ngoProfile?.orgName ?? 'your organisation'}.
+              </Text>
+            </View>
+          )}
+
+          {isNursery && !canPublishAsNursery && (
+            <View style={styles.warning}>
+              <Text style={styles.warningText}>
+                Your nursery is not approved yet, so this will publish from your personal account
+                rather than from {nurseryProfile?.nurseryName ?? 'your nursery'}.
               </Text>
             </View>
           )}

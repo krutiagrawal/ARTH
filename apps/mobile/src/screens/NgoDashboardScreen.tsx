@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useRef, type RefObject } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurTargetView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
@@ -61,11 +62,13 @@ function StreakCard({
   streakCurrent,
   recentWeeks,
   onPress,
+  blurTarget,
 }: {
   theme: TimeTheme;
   streakCurrent: number;
   recentWeeks: { posted: boolean }[];
   onPress: () => void;
+  blurTarget: RefObject<View | null>;
 }) {
   const animStyle = useSlideUp(60, 20);
   const hasStreak = streakCurrent > 0;
@@ -77,7 +80,7 @@ function StreakCard({
   return (
     <Animated.View style={animStyle}>
       <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
-        <ThemedCard theme={theme} style={styles.streakCard}>
+        <ThemedCard theme={theme} style={styles.streakCard} blurTarget={blurTarget}>
           <View style={styles.streakRowOuter}>
             <Mascot size={64} animate={false} />
             <View style={styles.streakTextColumn}>
@@ -117,6 +120,7 @@ function QuickAction({
   title,
   body,
   onPress,
+  blurTarget,
 }: {
   theme: TimeTheme;
   delay: number;
@@ -125,12 +129,13 @@ function QuickAction({
   title: string;
   body: string;
   onPress: () => void;
+  blurTarget: RefObject<View | null>;
 }) {
   const animStyle = useSlideUp(delay, 18);
   return (
     <Animated.View style={animStyle}>
       <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-        <ThemedCard theme={theme} style={styles.actionCard}>
+        <ThemedCard theme={theme} style={styles.actionCard} blurTarget={blurTarget}>
           <View style={styles.actionRow}>
             <IconBadge icon={emoji} color={color} round />
             <View style={styles.actionTextColumn}>
@@ -158,6 +163,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
   const streakCurrent = streakData ? currentStreakFromWeeks(streakData.weeks) : 0;
   const recentWeeks = (streakData?.weeks ?? []).slice(-STREAK_WEEKS_SHOWN);
   const statsAnim = useFadeIn(80);
+  const blurTargetRef = useRef<View>(null);
 
   // The page below the hero follows the illustration's ground tone, exactly as the user-facing
   // Home screen does — a fixed cream page made every period look identical below the fold.
@@ -178,10 +184,11 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
     textColor: theme.textPrimaryOnCard,
     subTextColor: theme.textSecondaryOnCard,
     borderColor: theme.cardBorder,
+    blurTarget: blurTargetRef,
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: pageBackground }]}>
+    <BlurTargetView ref={blurTargetRef} collapsable={false} style={[styles.container, { backgroundColor: pageBackground }]}>
       <StatusBar style={theme.statusBarStyle} />
 
       <ScrollView
@@ -235,6 +242,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
               borderColor={theme.cardBorder}
               delay={100}
               onPress={() => onNavigateTab('Manage')}
+              blurTarget={blurTargetRef}
             />
             <EcoWidget
               icon="🔥"
@@ -251,6 +259,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
               borderColor={theme.cardBorder}
               delay={200}
               onPress={() => navigation.navigate('NgoProfile')}
+              blurTarget={blurTargetRef}
             />
           </View>
         </View>
@@ -260,6 +269,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
           streakCurrent={streakCurrent}
           recentWeeks={recentWeeks}
           onPress={() => navigation.navigate('NgoPostUpdate')}
+          blurTarget={blurTargetRef}
         />
 
         {isLoading || !stats ? (
@@ -298,6 +308,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
           title="Post an update"
           body="Share real-time updates with your followers."
           onPress={() => navigation.navigate('NgoPostUpdate')}
+          blurTarget={blurTargetRef}
         />
         <QuickAction
           theme={theme}
@@ -307,6 +318,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
           title="Survival & impact"
           body="Log tree survival and track impact."
           onPress={() => navigation.navigate('NgoHealthCheck')}
+          blurTarget={blurTargetRef}
         />
         <QuickAction
           theme={theme}
@@ -316,6 +328,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
           title="Manage drives"
           body="View and manage all your drives."
           onPress={() => onNavigateTab('Manage')}
+          blurTarget={blurTargetRef}
         />
       </ScrollView>
 
@@ -331,13 +344,13 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
           />
         )}
       </View>
-    </View>
+    </BlurTargetView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  ambientLayer: { ...StyleSheet.absoluteFillObject },
+  ambientLayer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   scrollContent: { paddingHorizontal: 16, gap: 8 },
   heroSection: { position: 'relative', overflow: 'hidden', marginHorizontal: -16 },
   heroBottomFade: { position: 'absolute', left: 0, right: 0, bottom: 0 },

@@ -16,6 +16,7 @@ export interface ApiAdoptableTree {
   status: 'available' | 'adopted' | 'removed';
   isAdopted: boolean;
   distanceKm?: number;
+  adopter?: { name: string; handle: string; message: string | null; adoptedAt: string };
 }
 
 export async function fetchAdoptableTrees(params: { lat?: number; lng?: number } = {}): Promise<ApiAdoptableTree[]> {
@@ -35,6 +36,14 @@ export async function adoptTree(id: string, message?: string): Promise<ApiAdopta
     method: 'POST',
     body: message ? { message } : {},
   });
+}
+
+export async function fetchMyAdoptions(): Promise<ApiAdoptableTree[]> {
+  return apiFetch<ApiAdoptableTree[]>('/api/adoptable-trees/my-adoptions');
+}
+
+export async function releaseMyAdoption(id: string): Promise<ApiAdoptableTree> {
+  return apiFetch<ApiAdoptableTree>(`/api/adoptable-trees/${id}/adopt`, { method: 'DELETE' });
 }
 
 // ---------- NGO-facing ----------

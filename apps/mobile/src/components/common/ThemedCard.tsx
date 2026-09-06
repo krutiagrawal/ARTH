@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { type RefObject } from 'react';
 import { View, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,19 +23,27 @@ export function ThemedCard({
   style,
   borderRadius = RADIUS.lg,
   noPadding = false,
+  blurTarget,
 }: {
   theme: TimeTheme;
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   borderRadius?: number;
   noPadding?: boolean;
+  /** Ref to the screen's `BlurTargetView` — required on Android for this to actually blur. */
+  blurTarget?: RefObject<View | null>;
 }) {
   return (
     <BlurView
       intensity={35}
       tint={theme.cardTint === 'dark' ? 'dark' : 'light'}
-      experimentalBlurMethod="dimezisBlurView"
-      style={[styles.card, { borderRadius, borderColor: theme.cardBorder }, !noPadding && styles.padding, style]}
+      blurTarget={blurTarget}
+      style={[
+        styles.card,
+        { borderRadius, borderColor: theme.cardBorder, borderTopColor: 'rgba(255,255,255,0.4)' },
+        !noPadding && styles.padding,
+        style,
+      ]}
     >
       <LinearGradient
         colors={[
@@ -43,6 +51,14 @@ export function ThemedCard({
           hexToRgba(theme.cardBackgroundAlt, theme.cardOverlayAlpha),
         ]}
         style={StyleSheet.absoluteFill}
+      />
+      {/* Fake glass sheen — Android has no real live blur here, see HomeScreen.tsx. */}
+      <LinearGradient
+        colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0.6, y: 0.8 }}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
       />
       <View style={styles.content}>{children}</View>
     </BlurView>

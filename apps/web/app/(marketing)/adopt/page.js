@@ -1,4 +1,4 @@
-import TreesListClient from '../../app/(guarded)/trees/TreesListClient'
+import AdoptClient from './AdoptClient'
 
 export const metadata = {
   title: 'Adopt a tree',
@@ -6,5 +6,5 @@ export const metadata = {
 }
 
 export default function Page() {
-  return <TreesListClient />
+  return <AdoptClient />
 }

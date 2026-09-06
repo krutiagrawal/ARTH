@@ -24,6 +24,8 @@ async function assertTargetExists(prisma: PrismaClient, targetType: ReportTarget
         return prisma.ngoProfile.findUnique({ where: { id: targetId }, select: { id: true } });
       case 'portfolio_entry':
         return prisma.ngoPortfolioEntry.findUnique({ where: { id: targetId }, select: { id: true } });
+      case 'order_review':
+        return prisma.orderReview.findUnique({ where: { id: targetId }, select: { id: true } });
     }
   })();
 

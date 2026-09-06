@@ -327,6 +327,25 @@ async function seedForestLevelTiers() {
   await prisma.forestLevelTier.createMany({ data: tiers });
 }
 
+async function seedApprovedPlantingLocations() {
+  const locations = [
+    { id: 'pune-empress-garden', name: 'Empress Garden, Pune', lat: 18.5089, lng: 73.8823, radiusMeters: 150 },
+    { id: 'pune-saras-baug', name: 'Saras Baug, Pune', lat: 18.5018, lng: 73.8517, radiusMeters: 120 },
+    { id: 'pune-okayama-friendship-garden', name: 'Okayama Friendship Garden, Pune', lat: 18.5057, lng: 73.8226, radiusMeters: 100 },
+    { id: 'pune-vetal-tekdi', name: 'Vetal Tekdi, Pune', lat: 18.5228, lng: 73.8145, radiusMeters: 300 },
+    { id: 'pune-bund-garden', name: 'Bund Garden, Pune', lat: 18.5395, lng: 73.8869, radiusMeters: 120 },
+    { id: 'pune-pu-la-deshpande-garden', name: 'Pu La Deshpande Garden, Pune', lat: 18.4977, lng: 73.857, radiusMeters: 100 },
+  ];
+
+  for (const location of locations) {
+    await prisma.approvedPlantingLocation.upsert({
+      where: { id: location.id },
+      update: location,
+      create: location,
+    });
+  }
+}
+
 async function main() {
   await seedSpecies();
   await seedAchievements();
@@ -340,6 +359,7 @@ async function main() {
   await seedEcoFacts();
   await seedAppConfig();
   await seedForestLevelTiers();
+  await seedApprovedPlantingLocations();
   console.log('Seed complete.');
 }
 

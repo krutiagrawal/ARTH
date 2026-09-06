@@ -60,6 +60,14 @@ export function saveNurseryLogo(photo: PhotoInput): Promise<string> {
   return saveImage(photo, 'nursery-logos');
 }
 
+export function saveNurseryCoverPhoto(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'nursery-covers');
+}
+
+export function saveStockPhoto(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'stock');
+}
+
 export function saveCorporateLogo(photo: PhotoInput): Promise<string> {
   return saveImage(photo, 'corporate-logos');
 }

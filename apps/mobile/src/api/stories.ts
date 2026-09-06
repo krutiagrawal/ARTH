@@ -2,11 +2,12 @@ import { apiFetch, resolveMediaUrl } from './client';
 
 export interface ApiStory {
   id: string;
-  authorType: 'user' | 'ngo' | 'group';
-  /** Null on NGO/Group-authored stories — the org/group owns them, not the operator's account. */
+  authorType: 'user' | 'ngo' | 'group' | 'nursery';
+  /** Null on org-authored stories — the org/group owns them, not the operator's account. */
   userId: string | null;
   ngoId: string | null;
   groupId: string | null;
+  nurseryId: string | null;
   imageUrl: string;
   caption: string | null;
   createdAt: string;
@@ -18,12 +19,12 @@ export interface ApiStory {
 }
 
 export interface ApiStoryAuthor {
-  kind: 'user' | 'ngo';
+  kind: 'user' | 'ngo' | 'nursery';
   id: string;
   name: string;
   handle: string | null;
   avatarEmoji: string | null;
-  /** NGO logo path; null for users. */
+  /** NGO/nursery logo path; null for users. */
   imageUrl: string | null;
 }
 
@@ -58,6 +59,7 @@ export async function postStory(input: {
   caption?: string;
   asNgo?: boolean;
   asGroup?: boolean;
+  asNursery?: boolean;
 }): Promise<ApiStory> {
   return apiFetch<ApiStory>('/api/stories', {
     method: 'POST',
@@ -66,16 +68,18 @@ export async function postStory(input: {
       caption: input.caption?.trim() || undefined,
       asNgo: input.asNgo || undefined,
       asGroup: input.asGroup || undefined,
+      asNursery: input.asNursery || undefined,
     },
   });
 }
 
-/** Posts a camera/gallery photo as a story — how NGOs/Groups post, vs. the base64 forest snapshot. */
+/** Posts a camera/gallery photo as a story — how NGOs/Groups/nurseries post, vs. the base64 forest snapshot. */
 export async function postPhotoStory(input: {
   photo: { uri: string; name: string; type: string };
   caption?: string;
   asNgo?: boolean;
   asGroup?: boolean;
+  asNursery?: boolean;
 }): Promise<ApiStory> {
   const form = new FormData();
   form.append('photo', {
@@ -86,6 +90,7 @@ export async function postPhotoStory(input: {
   if (input.caption?.trim()) form.append('caption', input.caption.trim());
   if (input.asNgo) form.append('asNgo', 'true');
   if (input.asGroup) form.append('asGroup', 'true');
+  if (input.asNursery) form.append('asNursery', 'true');
   return apiFetch<ApiStory>('/api/stories', { method: 'POST', body: form, isForm: true });
 }
 

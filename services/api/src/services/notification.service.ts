@@ -6,6 +6,7 @@ interface NotifyInput {
   type: NotificationType;
   actorUserId?: string | null;
   actorNgoId?: string | null;
+  actorNurseryId?: string | null;
   postId?: string | null;
   followId?: string | null;
   data?: Prisma.InputJsonValue;
@@ -32,6 +33,7 @@ export async function notify(prisma: PrismaClient, input: NotifyInput): Promise<
         type: input.type,
         actorUserId: input.actorUserId ?? null,
         actorNgoId: input.actorNgoId ?? null,
+        actorNurseryId: input.actorNurseryId ?? null,
         postId: input.postId ?? null,
         followId: input.followId ?? null,
         data: input.data,
@@ -99,6 +101,47 @@ export async function notifyFollowersOfNewPost(
   }
 }
 
+/** Nursery sibling of notifyFollowersOfNewPost — see that function's comment for the rate-limit rationale. */
+export async function notifyFollowersOfNewNurseryPost(
+  prisma: PrismaClient,
+  nurseryId: string,
+  postId: string,
+  nurseryName: string,
+): Promise<void> {
+  try {
+    const followers = await prisma.follow.findMany({
+      where: { nurseryId, status: 'accepted' },
+      select: { followerId: true },
+    });
+    if (followers.length === 0) return;
+
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const recent = await prisma.notification.findFirst({
+      where: { actorNurseryId: nurseryId, type: 'new_post_from_followed', createdAt: { gte: oneHourAgo } },
+      select: { id: true },
+    });
+    if (recent) return;
+
+    await prisma.notification.createMany({
+      data: followers.map((f) => ({
+        userId: f.followerId,
+        type: 'new_post_from_followed' as const,
+        actorNurseryId: nurseryId,
+        postId,
+      })),
+      skipDuplicates: true,
+    });
+
+    void sendPush(
+      prisma,
+      followers.map((f) => f.followerId),
+      { title: nurseryName, body: 'shared a new update', data: { type: 'new_post_from_followed', postId } },
+    );
+  } catch (error) {
+    console.warn('[notify] nursery follower fan-out failed:', error);
+  }
+}
+
 function serializeNotification(n: any) {
   return {
     id: n.id,
@@ -110,9 +153,11 @@ function serializeNotification(n: any) {
     createdAt: n.createdAt,
     actor: n.actorNgo
       ? { kind: 'ngo' as const, id: n.actorNgo.id, name: n.actorNgo.orgName, imageUrl: n.actorNgo.logoUrl, handle: null }
-      : n.actorUser
-        ? { kind: 'user' as const, id: n.actorUser.id, name: n.actorUser.name, imageUrl: null, handle: n.actorUser.handle, avatarEmoji: n.actorUser.avatarEmoji }
-        : null,
+      : n.actorNursery
+        ? { kind: 'nursery' as const, id: n.actorNursery.id, name: n.actorNursery.nurseryName, imageUrl: n.actorNursery.logoUrl, handle: null }
+        : n.actorUser
+          ? { kind: 'user' as const, id: n.actorUser.id, name: n.actorUser.name, imageUrl: null, handle: n.actorUser.handle, avatarEmoji: n.actorUser.avatarEmoji }
+          : null,
     // First image of the related post, so the row can show a thumbnail without another request.
     postThumbnailUrl: n.post?.media?.[0]?.url ?? null,
   };
@@ -134,6 +179,7 @@ export async function listNotifications(
     include: {
       actorUser: { select: { id: true, name: true, handle: true, avatarEmoji: true } },
       actorNgo: { select: { id: true, orgName: true, logoUrl: true } },
+      actorNursery: { select: { id: true, nurseryName: true, logoUrl: true } },
       post: { select: { id: true, media: { orderBy: { order: 'asc' }, take: 1, select: { url: true } } } },
     },
   });

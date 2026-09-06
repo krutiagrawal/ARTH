@@ -10,9 +10,27 @@ import { RADIUS } from '../constants/theme';
 import { GlassCard, BlurCard } from '../components/common/GlassCard';
 import { LocationActions } from '../components/common/LocationActions';
 import { EmptyState } from '../components/common/EmptyState';
-import { useNurseryPublicProfile } from '../hooks/useApiQueries';
+import { useNurseryPublicProfile, useFollowNursery, useUnfollowNursery } from '../hooks/useApiQueries';
 import { resolveMediaUrl } from '../api/client';
 import type { ApiSaplingStock } from '../api/nursery';
+import type { ApiPost } from '../api/posts';
+
+function followLabel(status: string | null, followersCount: number): string {
+  if (status === 'accepted') return 'Following ✓';
+  if (status === 'pending') return 'Requested';
+  return `Follow · ${followersCount}`;
+}
+
+function RecentPostCard({ post, navigation }: { post: ApiPost; navigation: any }) {
+  return (
+    <TouchableOpacity onPress={() => navigation.navigate('PostDetail', { postId: post.id })} activeOpacity={0.85}>
+      <BlurCard tint="light" noPadding style={styles.postCard}>
+        {post.media[0] && <Image source={{ uri: resolveMediaUrl(post.media[0].url) }} style={styles.postImage} />}
+        {post.caption ? <Text style={styles.postCaption} numberOfLines={2}>{post.caption}</Text> : null}
+      </BlurCard>
+    </TouchableOpacity>
+  );
+}
 
 function StockRow({ nurseryId, item, onPress }: { nurseryId: string; item: ApiSaplingStock; onPress: () => void }) {
   return (
@@ -34,6 +52,16 @@ export function NurseryPublicProfileScreen({ route, navigation }: any) {
   const nurseryId: string = route?.params?.nurseryId;
   const insets = useSafeAreaInsets();
   const { data: profile, isLoading } = useNurseryPublicProfile(nurseryId);
+  const followMutation = useFollowNursery();
+  const unfollowMutation = useUnfollowNursery();
+
+  const status = profile?.followStatus ?? null;
+  const isFollowingOrPending = status === 'accepted' || status === 'pending';
+
+  const toggleFollow = () => {
+    if (isFollowingOrPending) unfollowMutation.mutate(nurseryId);
+    else followMutation.mutate(nurseryId);
+  };
 
   const handleCall = () => {
     if (profile?.contactPhone) Linking.openURL(`tel:${profile.contactPhone}`);
@@ -51,7 +79,11 @@ export function NurseryPublicProfileScreen({ route, navigation }: any) {
           </BlurView>
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{profile?.nurseryName ?? 'Nursery'}</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={() => navigation.navigate('Cart')} style={styles.backButton}>
+          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+            <Text style={styles.backIcon}>🛒</Text>
+          </BlurView>
+        </TouchableOpacity>
       </View>
 
       {isLoading || !profile ? (
@@ -73,6 +105,16 @@ export function NurseryPublicProfileScreen({ route, navigation }: any) {
 
             <View style={styles.divider} />
             <Text style={styles.description}>{profile.description}</Text>
+
+            <TouchableOpacity
+              style={[styles.followButton, isFollowingOrPending && styles.followingButton]}
+              onPress={toggleFollow}
+              disabled={followMutation.isPending || unfollowMutation.isPending}
+            >
+              <Text style={[styles.followButtonText, isFollowingOrPending && styles.followingButtonText]}>
+                {followLabel(status, profile.followersCount)}
+              </Text>
+            </TouchableOpacity>
           </GlassCard>
 
           <LocationActions label="Location" address={profile.city ?? undefined} />
@@ -81,6 +123,15 @@ export function NurseryPublicProfileScreen({ route, navigation }: any) {
             <TouchableOpacity style={styles.callButton} onPress={handleCall}>
               <Text style={styles.callButtonText}>📞 Call {profile.contactPhone}</Text>
             </TouchableOpacity>
+          )}
+
+          {profile.recentPosts.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>Updates</Text>
+              {profile.recentPosts.map((post) => (
+                <RecentPostCard key={post.id} post={post} navigation={navigation} />
+              ))}
+            </>
           )}
 
           <Text style={styles.sectionTitle}>Available Saplings</Text>
@@ -92,7 +143,9 @@ export function NurseryPublicProfileScreen({ route, navigation }: any) {
                 key={item.id}
                 nurseryId={nurseryId}
                 item={item}
-                onPress={() => navigation.navigate('SaplingReservation', { nurseryId, stockId: item.id })}
+                onPress={() =>
+                  navigation.navigate(item.isFree ? 'SaplingReservation' : 'AddToCart', { nurseryId, stockId: item.id })
+                }
               />
             ))
           )}
@@ -126,4 +179,11 @@ const styles = StyleSheet.create({
   stockSpecies: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
   stockMeta: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   stockChevron: { fontSize: 22, color: COLORS.textSecondary, fontWeight: '600' },
+  followButton: { marginTop: 14, paddingVertical: 10, borderRadius: RADIUS.full, alignItems: 'center', backgroundColor: COLORS.forest },
+  followingButton: { backgroundColor: 'rgba(94,133,80,0.12)' },
+  followButtonText: { fontSize: 13, fontWeight: '700', color: COLORS.white },
+  followingButtonText: { color: COLORS.forest },
+  postCard: { borderRadius: RADIUS.md, padding: 10, marginBottom: 10, overflow: 'hidden' },
+  postImage: { width: '100%', height: 140, borderRadius: RADIUS.sm },
+  postCaption: { fontSize: 12, color: COLORS.textPrimary, marginTop: 8 },
 });

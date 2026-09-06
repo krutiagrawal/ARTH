@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { View, StyleSheet, Dimensions, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
-import MapView, { Marker, Circle, PROVIDER_DEFAULT } from 'react-native-maps';
+import { Map, Camera, Marker, UserLocation, GeoJSONSource, Layer, type CameraRef } from '@maplibre/maplibre-react-native';
 import * as Location from 'expo-location';
 import Animated, {
   useSharedValue,
@@ -18,20 +18,45 @@ import { SHADOWS } from '../constants/theme';
 import { useTimeTheme } from '../hooks/useTimeTheme';
 import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
 import { useAuth } from '../context/AuthContext';
-import { useTrees, useAdoptableTrees, useDrives, useMyDrives, useMyAdoptableTrees, useBrowseNurseries } from '../hooks/useApiQueries';
+import {
+  useTrees,
+  useAdoptableTrees,
+  useDrives,
+  useMyDrives,
+  useMyAdoptableTrees,
+  useBrowseNurseries,
+  useApprovedPlantingLocations,
+  useCheckPlantingEligibility,
+} from '../hooks/useApiQueries';
 import { EmptyState } from '../components/common/EmptyState';
 import { StatDisplay } from '../components/common/StatDisplay';
+import { StatusModal } from '../components/common/StatusModal';
 import type { ApiTree } from '../api/trees';
 import type { ApiAdoptableTree } from '../api/adoptions';
 import type { ApiDrive } from '../api/drives';
+import type { ApiApprovedLocation } from '../api/plantingLocations';
+import { NOT_APPROVED_MESSAGE } from '../constants/plantingLocation';
+import { getCurrentPositionWithTimeout } from '../utils/location';
 
 const { width: SW } = Dimensions.get('window');
 
-const INDIA = {
-  latitude: 20.5937,
-  longitude: 78.9629,
-  latitudeDelta: 22,
-  longitudeDelta: 18,
+// [lng, lat] — MapLibre's coordinate order, opposite of react-native-maps' {latitude, longitude}.
+const INDIA_CENTER: [number, number] = [78.9629, 20.5937];
+const INDIA_ZOOM = 3.5;
+
+// Plain OpenStreetMap raster tiles — no API key or billing required, unlike Google Maps (which
+// this screen used before switching off react-native-maps; see project notes on why).
+const OSM_STYLE = {
+  version: 8 as const,
+  sources: {
+    osm: {
+      type: 'raster' as const,
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors',
+    },
+  },
+  layers: [{ id: 'osm-tiles', type: 'raster' as const, source: 'osm' }],
 };
 
 const GROWTH_EMOJI = ['🌱', '🌿', '🌳', '🌲', '🎋'];
@@ -56,22 +81,74 @@ const MARKER_STYLES = {
   nursery: { shape: 'housePin', accent: COLORS.earth },
 } as const;
 
-const MAP_STYLE = [
-  { featureType: 'all', elementType: 'geometry', stylers: [{ saturation: -15 }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#93C8D8' }] },
-  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#4A8FA0' }] },
-  { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#D8E8C8' }] },
-  { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#E8E0D0' }] },
-  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#A8C890' }] },
-  { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#3A6B28' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#F0E8D0' }] },
-  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#D4C8A8' }] },
-  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#E8D8B0' }] },
-  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#D8CCBC' }] },
-  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#B0A890', weight: 1.5 }] },
-  { featureType: 'administrative.country', elementType: 'labels.text.fill', stylers: [{ color: '#5C4A30' }] },
-  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#4A3C28' }] },
-];
+const STATUS_MODAL_CONTENT = {
+  locationUnavailable: {
+    icon: '📍',
+    title: 'Location unavailable',
+    message: 'We could not find your current location. Check your location permission and try again.',
+  },
+  notApproved: {
+    icon: '🚫',
+    title: 'Not an ARTH Approved Spot',
+    message: NOT_APPROVED_MESSAGE,
+  },
+  checkFailed: {
+    icon: '⚠️',
+    title: 'Something went wrong',
+    message: 'Could not check this location right now. Please try again.',
+  },
+} as const;
+
+// Generates an approximate geographic circle (equirectangular projection — accurate enough at
+// the radii used here, tens of meters to ~90km) as a GeoJSON polygon, since MapLibre's own
+// "circle" layer type sizes in constant screen pixels, not real-world meters like the radii the
+// approved-planting-zone and tree distinctness circles need.
+function makeCirclePolygon(lat: number, lng: number, radiusMeters: number, points = 48): GeoJSON.Feature<GeoJSON.Polygon> {
+  const EARTH_RADIUS_M = 6371000;
+  const latRad = (lat * Math.PI) / 180;
+  const coords: [number, number][] = [];
+  for (let i = 0; i <= points; i++) {
+    const angle = (i / points) * 2 * Math.PI;
+    const dx = radiusMeters * Math.cos(angle);
+    const dy = radiusMeters * Math.sin(angle);
+    const dLat = (dy / EARTH_RADIUS_M) * (180 / Math.PI);
+    const dLng = (dx / (EARTH_RADIUS_M * Math.cos(latRad))) * (180 / Math.PI);
+    coords.push([lng + dLng, lat + dLat]);
+  }
+  return { type: 'Feature', geometry: { type: 'Polygon', coordinates: [coords] }, properties: {} };
+}
+
+function computeBounds(points: { lat: number; lng: number }[]): [number, number, number, number] {
+  let west = points[0].lng;
+  let east = points[0].lng;
+  let south = points[0].lat;
+  let north = points[0].lat;
+  for (const p of points) {
+    west = Math.min(west, p.lng);
+    east = Math.max(east, p.lng);
+    south = Math.min(south, p.lat);
+    north = Math.max(north, p.lat);
+  }
+  return [west, south, east, north];
+}
+
+function CircleOverlay({ id, lat, lng, radiusMeters, fillColor, strokeColor, strokeWidth = 1.5 }: {
+  id: string;
+  lat: number;
+  lng: number;
+  radiusMeters: number;
+  fillColor: string;
+  strokeColor: string;
+  strokeWidth?: number;
+}) {
+  const shape = makeCirclePolygon(lat, lng, radiusMeters);
+  return (
+    <GeoJSONSource id={id} data={shape}>
+      <Layer id={`${id}_fill`} type="fill" paint={{ 'fill-color': fillColor }} />
+      <Layer id={`${id}_line`} type="line" paint={{ 'line-color': strokeColor, 'line-width': strokeWidth }} />
+    </GeoJSONSource>
+  );
+}
 
 function TreeMarker({ tree, onPress, selected }: {
   tree: ApiTree;
@@ -89,62 +166,81 @@ function TreeMarker({ tree, onPress, selected }: {
   }));
 
   return (
-    <Marker
-      coordinate={{ latitude: tree.lat, longitude: tree.lng }}
-      onPress={onPress}
-      anchor={{ x: 0.5, y: 1 }}
-    >
-      <Animated.View style={[styles.markerContainer, animStyle]}>
-        <View style={[
-          styles.markerBubble,
-          selected && styles.markerBubbleSelected,
-          { backgroundColor: selected ? GROWTH_COLOR[tree.growthStage - 1] : COLORS.white },
-        ]}>
-          <Text style={styles.markerEmoji}>{GROWTH_EMOJI[tree.growthStage - 1]}</Text>
-        </View>
-        <View style={[styles.markerPin, {
-          borderTopColor: selected ? GROWTH_COLOR[tree.growthStage - 1] : COLORS.white,
-        }]} />
-      </Animated.View>
+    <Marker id={`tree-${tree.id}`} lngLat={[tree.lng, tree.lat]} anchor="bottom">
+      <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+        <Animated.View style={[styles.markerContainer, animStyle]}>
+          <View style={[
+            styles.markerBubble,
+            selected && styles.markerBubbleSelected,
+            { backgroundColor: selected ? GROWTH_COLOR[tree.growthStage - 1] : COLORS.white },
+          ]}>
+            <Text style={styles.markerEmoji}>{GROWTH_EMOJI[tree.growthStage - 1]}</Text>
+          </View>
+          <View style={[styles.markerPin, {
+            borderTopColor: selected ? GROWTH_COLOR[tree.growthStage - 1] : COLORS.white,
+          }]} />
+        </Animated.View>
+      </TouchableOpacity>
     </Marker>
   );
 }
 
 function AdoptableTreeMarker({ tree, onPress }: { tree: ApiAdoptableTree & { lat: number; lng: number }; onPress: () => void }) {
   return (
-    <Marker coordinate={{ latitude: tree.lat, longitude: tree.lng }} onPress={onPress} anchor={{ x: 0.5, y: 1 }}>
-      <View style={styles.markerContainer}>
-        <View style={[styles.markerBubble, styles.outlineBubble]}>
-          <Text style={styles.markerEmoji}>🌳</Text>
+    <Marker id={`adopt-${tree.id}`} lngLat={[tree.lng, tree.lat]} anchor="bottom">
+      <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+        <View style={styles.markerContainer}>
+          <View style={[styles.markerBubble, styles.outlineBubble]}>
+            <Text style={styles.markerEmoji}>🌳</Text>
+          </View>
+          <View style={[styles.markerPin, { borderTopColor: COLORS.sage }]} />
         </View>
-        <View style={[styles.markerPin, { borderTopColor: COLORS.sage }]} />
-      </View>
+      </TouchableOpacity>
     </Marker>
   );
 }
 
 function NgoDriveMarker({ drive, onPress }: { drive: ApiDrive & { lat: number; lng: number }; onPress: () => void }) {
   return (
-    <Marker coordinate={{ latitude: drive.lat, longitude: drive.lng }} onPress={onPress} anchor={{ x: 0.5, y: 1 }}>
-      <View style={styles.markerContainer}>
-        <View style={[styles.markerBubble, styles.flagBubble]}>
-          <Text style={styles.markerEmoji}>🤝</Text>
+    <Marker id={`drive-${drive.id}`} lngLat={[drive.lng, drive.lat]} anchor="bottom">
+      <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+        <View style={styles.markerContainer}>
+          <View style={[styles.markerBubble, styles.flagBubble]}>
+            <Text style={styles.markerEmoji}>🤝</Text>
+          </View>
+          <View style={[styles.markerPin, { borderTopColor: COLORS.golden }]} />
         </View>
-        <View style={[styles.markerPin, { borderTopColor: COLORS.golden }]} />
-      </View>
+      </TouchableOpacity>
     </Marker>
   );
 }
 
 function NurseryMarker({ nursery, onPress }: { nursery: { id: string; nurseryName: string; lat: number; lng: number }; onPress: () => void }) {
   return (
-    <Marker coordinate={{ latitude: nursery.lat, longitude: nursery.lng }} onPress={onPress} anchor={{ x: 0.5, y: 1 }}>
-      <View style={styles.markerContainer}>
-        <View style={[styles.markerBubble, styles.nurseryBubble]}>
-          <Text style={styles.markerEmoji}>🌿</Text>
+    <Marker id={`nursery-${nursery.id}`} lngLat={[nursery.lng, nursery.lat]} anchor="bottom">
+      <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+        <View style={styles.markerContainer}>
+          <View style={[styles.markerBubble, styles.nurseryBubble]}>
+            <Text style={styles.markerEmoji}>🌿</Text>
+          </View>
+          <View style={[styles.markerPin, { borderTopColor: COLORS.earth }]} />
         </View>
-        <View style={[styles.markerPin, { borderTopColor: COLORS.earth }]} />
-      </View>
+      </TouchableOpacity>
+    </Marker>
+  );
+}
+
+function ApprovedLocationMarker({ location, onPress }: { location: ApiApprovedLocation; onPress: () => void }) {
+  return (
+    <Marker id={`approved-${location.id}`} lngLat={[location.lng, location.lat]} anchor="bottom">
+      <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+        <View style={styles.markerContainer}>
+          <View style={[styles.markerBubble, styles.approvedBubble]}>
+            <Text style={styles.markerEmoji}>🏞️</Text>
+          </View>
+          <View style={[styles.markerPin, { borderTopColor: COLORS.forest }]} />
+        </View>
+      </TouchableOpacity>
     </Marker>
   );
 }
@@ -249,7 +345,7 @@ export function MapScreen({ navigation, mode = 'user' }: any) {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [locationPending, setLocationPending] = useState(true);
   const [selectedTree, setSelectedTree] = useState<ApiTree | null>(null);
-  const mapRef = useRef<MapView>(null);
+  const cameraRef = useRef<CameraRef>(null);
   const fadeStyle = useFadeIn(0, 400);
   const headerSlide = useSlideUp(0, 20, 350);
   const { user } = useAuth();
@@ -267,6 +363,11 @@ export function MapScreen({ navigation, mode = 'user' }: any) {
   const drives = isNgo ? myDrives : publicDrives;
   const { data: nurseriesData } = useBrowseNurseries();
   const nurseries = isNgo ? [] : nurseriesData?.nurseries ?? [];
+  const { data: approvedLocations = [] } = useApprovedPlantingLocations(!isNgo);
+  const checkEligibility = useCheckPlantingEligibility();
+  const [checkingEligibility, setCheckingEligibility] = useState(false);
+  const [statusModal, setStatusModal] = useState<'locationUnavailable' | 'notApproved' | 'checkFailed' | null>(null);
+  const [infoLocation, setInfoLocation] = useState<ApiApprovedLocation | null>(null);
 
   const isNight = theme.mascotOutfit === 'night';
   const statesCount = new Set(
@@ -278,7 +379,7 @@ export function MapScreen({ navigation, mode = 'user' }: any) {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') { setLocationPending(false); return; }
       try {
-        const loc = await Location.getCurrentPositionAsync({
+        const loc = await getCurrentPositionWithTimeout({
           accuracy: Location.Accuracy.Balanced,
         });
         setLocation(loc);
@@ -290,29 +391,28 @@ export function MapScreen({ navigation, mode = 'user' }: any) {
   const ngoPoints = isNgo
     ? ([...drives, ...adoptableTrees] as Array<{ lat: number | null; lng: number | null }>)
         .filter((p) => p.lat != null && p.lng != null)
-        .map((p) => ({ latitude: p.lat as number, longitude: p.lng as number }))
+        .map((p) => ({ lat: p.lat as number, lng: p.lng as number }))
     : [];
 
   const fitToOverview = useCallback(() => {
     if (trees.length > 0) {
-      mapRef.current?.fitToCoordinates(
-        trees.map(t => ({ latitude: t.lat, longitude: t.lng })),
-        { edgePadding: { top: 100, right: 60, bottom: 260, left: 60 }, animated: true }
+      cameraRef.current?.fitBounds(
+        computeBounds(trees.map(t => ({ lat: t.lat, lng: t.lng }))),
+        { padding: { top: 100, right: 60, bottom: 260, left: 60 }, duration: 800 }
       );
     } else if (ngoPoints.length > 0) {
-      mapRef.current?.fitToCoordinates(
-        ngoPoints,
-        { edgePadding: { top: 100, right: 60, bottom: 260, left: 60 }, animated: true }
+      cameraRef.current?.fitBounds(
+        computeBounds(ngoPoints),
+        { padding: { top: 100, right: 60, bottom: 260, left: 60 }, duration: 800 }
       );
     } else if (location) {
-      mapRef.current?.animateToRegion({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: 0.5,
-        longitudeDelta: 0.5,
-      }, 800);
+      cameraRef.current?.flyTo({
+        center: [location.coords.longitude, location.coords.latitude],
+        zoom: 11,
+        duration: 800,
+      });
     } else {
-      mapRef.current?.animateToRegion(INDIA, 800);
+      cameraRef.current?.flyTo({ center: INDIA_CENTER, zoom: INDIA_ZOOM, duration: 800 });
     }
     setSelectedTree(null);
   }, [trees, ngoPoints, location]);
@@ -327,24 +427,67 @@ export function MapScreen({ navigation, mode = 'user' }: any) {
   }, [trees, ngoPoints, location, locationPending, fitToOverview]);
 
   const flyToTree = useCallback((tree: ApiTree) => {
-    mapRef.current?.animateToRegion({
-      latitude: tree.lat - 0.4,
-      longitude: tree.lng,
-      latitudeDelta: 2,
-      longitudeDelta: 2,
-    }, 600);
+    cameraRef.current?.flyTo({
+      center: [tree.lng, tree.lat - 0.4],
+      zoom: 7,
+      duration: 600,
+    });
     setSelectedTree(tree);
   }, []);
 
   const flyToMe = useCallback(() => {
     if (!location) return;
-    mapRef.current?.animateToRegion({
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
-      latitudeDelta: 0.08,
-      longitudeDelta: 0.08,
-    }, 600);
+    cameraRef.current?.flyTo({
+      center: [location.coords.longitude, location.coords.latitude],
+      zoom: 14,
+      duration: 600,
+    });
   }, [location]);
+
+  const handlePlantWhereYouAre = useCallback(async () => {
+    if (!location) {
+      setStatusModal('locationUnavailable');
+      return;
+    }
+    const lat = location.coords.latitude;
+    const lng = location.coords.longitude;
+
+    setCheckingEligibility(true);
+    try {
+      const result = await checkEligibility.mutateAsync({ lat, lng });
+      if (result.eligible) {
+        navigation.navigate('PlantTree', { verifiedLat: lat, verifiedLng: lng });
+      } else {
+        setStatusModal('notApproved');
+      }
+    } catch {
+      setStatusModal('checkFailed');
+    } finally {
+      setCheckingEligibility(false);
+    }
+  }, [location, checkEligibility, navigation]);
+
+  const plantHereButton = (
+    <View style={[styles.plantHereBtn, { bottom: (selectedTree ? 260 : 160) + insets.bottom + 62 }]}>
+      <TouchableOpacity
+        onPress={handlePlantWhereYouAre}
+        disabled={!location || checkingEligibility}
+        accessibilityRole="button"
+        accessibilityLabel="Plant where you are"
+      >
+        <BlurView intensity={55} tint={isNight ? 'dark' : 'light'} style={styles.plantHereBtnBlur}>
+          {checkingEligibility ? (
+            <ActivityIndicator size="small" color={COLORS.forest} />
+          ) : (
+            <>
+              <Text style={styles.plantHereBtnIcon}>🌱</Text>
+              <Text style={[styles.plantHereBtnText, isNight && styles.lightText]}>Plant where you are</Text>
+            </>
+          )}
+        </BlurView>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -352,32 +495,51 @@ export function MapScreen({ navigation, mode = 'user' }: any) {
 
       {/* Map */}
       <Animated.View style={[StyleSheet.absoluteFill, fadeStyle]}>
-        <MapView
-          ref={mapRef}
-          style={StyleSheet.absoluteFill}
-          provider={PROVIDER_DEFAULT}
-          initialRegion={INDIA}
-          customMapStyle={MAP_STYLE}
-          showsCompass={false}
-          showsScale={false}
-        >
+        <Map style={StyleSheet.absoluteFill} mapStyle={OSM_STYLE} compass={false} scaleBar={false}>
+          <Camera ref={cameraRef} initialViewState={{ center: INDIA_CENTER, zoom: INDIA_ZOOM }} />
+
+          {trees.map(tree => (
+            <CircleOverlay
+              key={`c_${tree.id}`}
+              id={`c_${tree.id}`}
+              lat={tree.lat}
+              lng={tree.lng}
+              radiusMeters={selectedTree?.id === tree.id ? 90000 : 45000}
+              fillColor={GROWTH_COLOR[tree.growthStage - 1] + '1A'}
+              strokeColor={GROWTH_COLOR[tree.growthStage - 1] + '55'}
+            />
+          ))}
+
+          {!isNgo && approvedLocations.map((loc) => (
+            <CircleOverlay
+              key={`approved_c_${loc.id}`}
+              id={`approved_c_${loc.id}`}
+              lat={loc.lat}
+              lng={loc.lng}
+              radiusMeters={loc.radiusMeters}
+              fillColor="rgba(45,90,39,0.10)"
+              strokeColor="rgba(45,90,39,0.45)"
+            />
+          ))}
+
+          {location && (
+            <CircleOverlay
+              id="user-accuracy"
+              lat={location.coords.latitude}
+              lng={location.coords.longitude}
+              radiusMeters={Math.max(location.coords.accuracy ?? 500, 500)}
+              fillColor="rgba(90,160,220,0.10)"
+              strokeColor="rgba(90,160,220,0.35)"
+              strokeWidth={1}
+            />
+          )}
+
           {trees.map(tree => (
             <TreeMarker
               key={tree.id}
               tree={tree}
               selected={selectedTree?.id === tree.id}
               onPress={() => flyToTree(tree)}
-            />
-          ))}
-
-          {trees.map(tree => (
-            <Circle
-              key={`c_${tree.id}`}
-              center={{ latitude: tree.lat, longitude: tree.lng }}
-              radius={selectedTree?.id === tree.id ? 90000 : 45000}
-              fillColor={GROWTH_COLOR[tree.growthStage - 1] + '1A'}
-              strokeColor={GROWTH_COLOR[tree.growthStage - 1] + '55'}
-              strokeWidth={1.5}
             />
           ))}
 
@@ -411,32 +573,16 @@ export function MapScreen({ navigation, mode = 'user' }: any) {
               />
             ))}
 
-          {location && (
-            <>
-              <Marker
-                coordinate={{
-                  latitude: location.coords.latitude,
-                  longitude: location.coords.longitude,
-                }}
-                anchor={{ x: 0.5, y: 0.5 }}
-              >
-                <View style={styles.userMarker}>
-                  <View style={styles.userMarkerInner} />
-                </View>
-              </Marker>
-              <Circle
-                center={{
-                  latitude: location.coords.latitude,
-                  longitude: location.coords.longitude,
-                }}
-                radius={Math.max(location.coords.accuracy ?? 500, 500)}
-                fillColor="rgba(90,160,220,0.10)"
-                strokeColor="rgba(90,160,220,0.35)"
-                strokeWidth={1}
-              />
-            </>
-          )}
-        </MapView>
+          {!isNgo && approvedLocations.map((loc) => (
+            <ApprovedLocationMarker
+              key={`approved_${loc.id}`}
+              location={loc}
+              onPress={() => setInfoLocation(loc)}
+            />
+          ))}
+
+          <UserLocation animated accuracy={false} />
+        </Map>
       </Animated.View>
 
       {/* Header */}
@@ -477,6 +623,9 @@ export function MapScreen({ navigation, mode = 'user' }: any) {
           </BlurView>
         </TouchableOpacity>
       </View>
+
+      {/* Rendered here or after the bottom sheet below — sibling order, not zIndex, decides both paint and touch priority on Android. */}
+      {!isNgo && trees.length > 0 && plantHereButton}
 
       {/* Stats bar */}
       {!selectedTree && (
@@ -546,8 +695,30 @@ export function MapScreen({ navigation, mode = 'user' }: any) {
         </View>
       )}
 
+      {!isNgo && trees.length === 0 && plantHereButton}
+
       {/* Tree info card */}
       <TreeInfoCard tree={selectedTree} onClose={() => setSelectedTree(null)} isNight={isNight} />
+
+      {statusModal && (
+        <StatusModal
+          visible
+          onClose={() => setStatusModal(null)}
+          icon={STATUS_MODAL_CONTENT[statusModal].icon}
+          title={STATUS_MODAL_CONTENT[statusModal].title}
+          message={STATUS_MODAL_CONTENT[statusModal].message}
+        />
+      )}
+
+      {infoLocation && (
+        <StatusModal
+          visible
+          onClose={() => setInfoLocation(null)}
+          icon="🏞️"
+          title={infoLocation.name}
+          message={`ARTH approved planting zone — ${infoLocation.radiusMeters}m radius.`}
+        />
+      )}
     </View>
   );
 }
@@ -587,6 +758,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.earth,
     borderColor: 'rgba(255,255,255,0.85)',
   },
+  approvedBubble: {
+    backgroundColor: COLORS.forest,
+    borderColor: 'rgba(255,255,255,0.85)',
+  },
   markerPin: {
     width: 0, height: 0,
     borderLeftWidth: 5, borderRightWidth: 5, borderTopWidth: 9,
@@ -594,20 +769,18 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.white,
   },
 
-  userMarker: {
-    width: 24, height: 24, borderRadius: 12,
-    backgroundColor: 'rgba(60,120,210,0.25)',
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: 'rgba(60,120,210,0.55)',
-  },
-  userMarkerInner: {
-    width: 11, height: 11, borderRadius: 5.5,
-    backgroundColor: '#3C78D2', borderWidth: 2, borderColor: 'white',
-  },
-
   gpsBtn: { position: 'absolute', right: 16 },
   gpsBtnBlur: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   gpsBtnIcon: { fontSize: 22 },
+
+  plantHereBtn: { position: 'absolute', right: 16 },
+  plantHereBtnBlur: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 14, paddingVertical: 11, borderRadius: 24, overflow: 'hidden',
+    ...SHADOWS.md,
+  },
+  plantHereBtnIcon: { fontSize: 16 },
+  plantHereBtnText: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary },
 
   statsBar: { position: 'absolute', left: 16, right: 16 },
   statsBarInner: { borderRadius: 18, overflow: 'hidden', flexDirection: 'row', paddingVertical: 12 },

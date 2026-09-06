@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, type RefObject } from 'react';
 import { View, Image, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
+import { BlurView, BlurTargetView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { COLORS } from '../constants/colors';
+import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
 import { Mascot, MascotBubble } from '../components/common/Mascot';
 import { FloatingParticles } from '../components/common/FloatingParticles';
 import { ForestHeroCanvas } from '../components/common/ForestHeroCanvas';
 import { getSceneryMode, RainEffect, WindEffect } from '../components/common/WeatherEffects';
-import { EcoWidget, StreakWidget } from '../components/common/EcoWidget';
+import { EcoWidget } from '../components/common/EcoWidget';
 import { ProgressRing } from '../components/common/ProgressRing';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import {
@@ -20,7 +20,7 @@ import {
   useSlideUp,
   useSpringPress,
 } from '../hooks/useAnimations';
-import { useTimeTheme, type TimeTheme } from '../hooks/useTimeTheme';
+import { useTimeTheme, isNightlikePeriod, type TimeTheme } from '../hooks/useTimeTheme';
 import { MuteButton } from '../components/common/MuteButton';
 import { AmbientCreatures } from '../components/common/AmbientCreatures';
 import { TreeCard } from '../components/common/TreeCard';
@@ -51,6 +51,16 @@ const { width: SW, height: SH } = Dimensions.get('window');
  * the hero — so 0.54 is restored here and `scrollContent`'s gap is what got tightened instead. */
 const HERO_HEIGHT = SH * 0.54;
 
+/** Forces text to full/partial white during 'night'/'lateNight' — HomeScreen only. Does NOT touch
+ * useTimeTheme.ts's per-period values, since that hook is shared by Forest/NGO/Corporate/Group
+ * dashboards too and this ask was scoped to Home. A plain function (not a hook) so it can be
+ * called from HomeScreen's child components that read their own `theme` locally (MissionCard,
+ * RecentTrees, EcoFactCard) as well as from HeroSection (which receives `theme` as a prop). */
+function homeTextColor(theme: TimeTheme, base: string, opts?: { secondary?: boolean }): string {
+  if (!isNightlikePeriod(theme.period)) return base;
+  return opts?.secondary ? ON_DARK_SURFACE.secondary : ON_DARK_SURFACE.primary;
+}
+
 function weatherEmoji(condition: string): string {
   switch (condition) {
     case 'Clear': return '☀️';
@@ -78,12 +88,14 @@ function HeroSection({
   navigation,
   onNavigateTab,
   weather,
+  blurTarget,
 }: {
   theme: TimeTheme;
   user: ApiUser | null;
   navigation: any;
   onNavigateTab: (tab: string) => void;
   weather: ApiWeather | null;
+  blurTarget: RefObject<View | null>;
 }) {
   const insets = useSafeAreaInsets();
   const isLightText = theme.textOnSky === '#FFFFFF';
@@ -151,7 +163,22 @@ function HeroSection({
 
       {/* Top stats row */}
       <View style={styles.statsRow}>
-        <StreakWidget streak={user?.streakCurrent ?? 0} isActive={(user?.streakCurrent ?? 0) > 0} />
+        <EcoWidget
+          icon={(user?.streakCurrent ?? 0) > 0 ? '🔥' : '💤'}
+          value={user?.streakCurrent ?? 0}
+          label={`day${(user?.streakCurrent ?? 0) !== 1 ? 's' : ''}`}
+          variant="glass"
+          dark
+          color={homeTextColor(theme, theme.accentColor)}
+          cardBackground={theme.cardBackground}
+          cardBackgroundAlt={theme.cardBackgroundAlt}
+          cardOverlayAlpha={theme.cardOverlayAlpha}
+          textColor={homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true })}
+          subTextColor={homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true })}
+          borderColor={theme.cardBorder}
+          delay={0}
+          blurTarget={blurTarget}
+        />
         <View style={styles.statsRight}>
           <EcoWidget
             icon="🌿"
@@ -159,15 +186,16 @@ function HeroSection({
             label="Trees"
             variant="glass"
             dark
-            color={theme.accentColor}
+            color={homeTextColor(theme, theme.accentColor)}
             cardBackground={theme.cardBackground}
             cardBackgroundAlt={theme.cardBackgroundAlt}
             cardOverlayAlpha={theme.cardOverlayAlpha}
-            textColor={theme.textSecondaryOnCard}
-            subTextColor={theme.textSecondaryOnCard}
+            textColor={homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true })}
+            subTextColor={homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true })}
             borderColor={theme.cardBorder}
             delay={100}
             onPress={() => onNavigateTab('Map')}
+            blurTarget={blurTarget}
           />
           <EcoWidget
             icon="💨"
@@ -175,15 +203,16 @@ function HeroSection({
             label="CO₂"
             variant="glass"
             dark
-            color={theme.accentColor}
+            color={homeTextColor(theme, theme.accentColor)}
             cardBackground={theme.cardBackground}
             cardBackgroundAlt={theme.cardBackgroundAlt}
             cardOverlayAlpha={theme.cardOverlayAlpha}
-            textColor={theme.textSecondaryOnCard}
-            subTextColor={theme.textSecondaryOnCard}
+            textColor={homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true })}
+            subTextColor={homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true })}
             borderColor={theme.cardBorder}
             delay={200}
             onPress={() => navigation.navigate('Profile')}
+            blurTarget={blurTarget}
           />
         </View>
       </View>
@@ -195,25 +224,25 @@ function HeroSection({
       <BlurView
         intensity={35}
         tint={theme.cardTint === 'dark' ? 'dark' : 'light'}
-        experimentalBlurMethod="dimezisBlurView"
+        blurTarget={blurTarget}
         style={styles.forestStats}
         pointerEvents="none"
       >
         <View style={[styles.forestStatsOverlay, { backgroundColor: hexToRgba(theme.cardBackground, theme.cardOverlayAlpha) }]} />
         <View style={styles.forestStatRow}>
           <View style={styles.forestStat}>
-            <Text style={[styles.forestStatNum, { color: theme.textPrimaryOnCard }]}>{user?.treesPlantedCount ?? 0}</Text>
-            <Text style={[styles.forestStatLabel, { color: theme.textSecondaryOnCard }]}>Trees</Text>
+            <Text style={[styles.forestStatNum, { color: homeTextColor(theme, theme.textPrimaryOnCard) }]}>{user?.treesPlantedCount ?? 0}</Text>
+            <Text style={[styles.forestStatLabel, { color: homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true }) }]}>Trees</Text>
           </View>
           <View style={[styles.forestStatDivider, { backgroundColor: theme.cardBorder }]} />
           <View style={styles.forestStat}>
-            <Text style={[styles.forestStatNum, { color: theme.textPrimaryOnCard }]}>{(user?.totalCo2Absorbed ?? 0).toFixed(1)}</Text>
-            <Text style={[styles.forestStatLabel, { color: theme.textSecondaryOnCard }]}>kg CO₂</Text>
+            <Text style={[styles.forestStatNum, { color: homeTextColor(theme, theme.textPrimaryOnCard) }]}>{(user?.totalCo2Absorbed ?? 0).toFixed(1)}</Text>
+            <Text style={[styles.forestStatLabel, { color: homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true }) }]}>kg CO₂</Text>
           </View>
           <View style={[styles.forestStatDivider, { backgroundColor: theme.cardBorder }]} />
           <View style={styles.forestStat}>
-            <Text style={[styles.forestStatNum, { color: theme.textPrimaryOnCard }]}>Lv.{user?.level ?? 1}</Text>
-            <Text style={[styles.forestStatLabel, { color: theme.textSecondaryOnCard }]}>Forest</Text>
+            <Text style={[styles.forestStatNum, { color: homeTextColor(theme, theme.textPrimaryOnCard) }]}>Lv.{user?.level ?? 1}</Text>
+            <Text style={[styles.forestStatLabel, { color: homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true }) }]}>Forest</Text>
           </View>
         </View>
       </BlurView>
@@ -221,7 +250,7 @@ function HeroSection({
   );
 }
 
-function MissionCard({ missions, navigation }: { missions: ApiDailyMission[]; navigation: any }) {
+function MissionCard({ missions, navigation, blurTarget }: { missions: ApiDailyMission[]; navigation: any; blurTarget: RefObject<View | null> }) {
   const slideStyle = useSlideUp(100, 24);
   const theme = useTimeTheme();
   const completedCount = missions.filter(m => m.completed).length;
@@ -244,17 +273,24 @@ function MissionCard({ missions, navigation }: { missions: ApiDailyMission[]; na
       <BlurView
         intensity={35}
         tint={theme.cardTint === 'dark' ? 'dark' : 'light'}
-        experimentalBlurMethod="dimezisBlurView"
-        style={[styles.missionCard, { borderColor: theme.cardBorder, borderWidth: 1 }]}
+        blurTarget={blurTarget}
+        style={[styles.missionCard, { borderColor: theme.cardBorder, borderWidth: 1, borderTopColor: 'rgba(255,255,255,0.4)' }]}
       >
         <LinearGradient
           colors={[hexToRgba(theme.cardBackground, theme.cardOverlayAlpha), hexToRgba(theme.cardBackgroundAlt, theme.cardOverlayAlpha)]}
           style={StyleSheet.absoluteFill}
         />
+        <LinearGradient
+          colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0.6, y: 0.8 }}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
         <View style={styles.missionHeader}>
           <View>
-            <Text style={[styles.missionTag, { color: theme.accentColor }]}>DAILY MISSIONS</Text>
-            <Text style={[styles.missionTitle, { color: theme.textPrimaryOnCard }]}>Today's Quests</Text>
+            <Text style={[styles.missionTag, { color: homeTextColor(theme, theme.accentColor) }]}>DAILY MISSIONS</Text>
+            <Text style={[styles.missionTitle, { color: homeTextColor(theme, theme.textPrimaryOnCard) }]}>Today's Quests</Text>
           </View>
           <ProgressRing
             size={52}
@@ -277,17 +313,17 @@ function MissionCard({ missions, navigation }: { missions: ApiDailyMission[]; na
             >
               <View style={[styles.missionItem, { backgroundColor: rowBg }, mission.completed && styles.missionItemDone]}>
                 <View style={[styles.missionCheck, { borderColor: theme.accentColor }, mission.completed && { backgroundColor: theme.accentColor, borderColor: theme.accentColor }]}>
-                  <Text style={styles.missionCheckIcon}>{mission.completed ? '✓' : ''}</Text>
+                  <Text style={[styles.missionCheckIcon, { color: homeTextColor(theme, COLORS.forestDeep) }]}>{mission.completed ? '✓' : ''}</Text>
                 </View>
                 <Text style={styles.missionIcon}>{mission.icon}</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.missionItemTitle, { color: theme.textPrimaryOnCard }, mission.completed && styles.missionItemDoneText]}>
+                  <Text style={[styles.missionItemTitle, { color: homeTextColor(theme, theme.textPrimaryOnCard) }, mission.completed && styles.missionItemDoneText]}>
                     {mission.title}
                   </Text>
-                  <Text style={[styles.missionItemDesc, { color: theme.textSecondaryOnCard }]}>{mission.description}</Text>
+                  <Text style={[styles.missionItemDesc, { color: homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true }) }]}>{mission.description}</Text>
                 </View>
                 <View style={styles.missionXp}>
-                  <Text style={styles.missionXpText}>+{mission.xpReward} XP</Text>
+                  <Text style={[styles.missionXpText, { color: homeTextColor(theme, COLORS.xpBlue) }]}>+{mission.xpReward} XP</Text>
                 </View>
               </View>
             </TouchableOpacity>
@@ -298,7 +334,7 @@ function MissionCard({ missions, navigation }: { missions: ApiDailyMission[]; na
   );
 }
 
-function RecentTrees({ trees, onNavigateTab }: { trees: ApiTree[]; onNavigateTab: (tab: string) => void }) {
+function RecentTrees({ trees, onNavigateTab, blurTarget }: { trees: ApiTree[]; onNavigateTab: (tab: string) => void; blurTarget: RefObject<View | null> }) {
   const slideStyle = useSlideUp(200, 24);
   const theme = useTimeTheme();
   const recentTrees = trees.slice(0, 4);
@@ -308,7 +344,7 @@ function RecentTrees({ trees, onNavigateTab }: { trees: ApiTree[]; onNavigateTab
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionTitle, { color: theme.textOnSky }]}>Recent Plants</Text>
         <TouchableOpacity onPress={() => onNavigateTab('Map')}>
-          <Text style={[styles.seeAll, { color: theme.accentColor }]}>See all →</Text>
+          <Text style={[styles.seeAll, { color: homeTextColor(theme, theme.accentColor) }]}>See all →</Text>
         </TouchableOpacity>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.treeScroll}>
@@ -320,6 +356,7 @@ function RecentTrees({ trees, onNavigateTab }: { trees: ApiTree[]; onNavigateTab
             theme={theme}
             onPress={() => onNavigateTab('Map')}
             style={styles.treeCardSpacing}
+            blurTarget={blurTarget}
           />
         ))}
       </ScrollView>
@@ -327,7 +364,7 @@ function RecentTrees({ trees, onNavigateTab }: { trees: ApiTree[]; onNavigateTab
   );
 }
 
-function EcoFactCard({ fact }: { fact: string }) {
+function EcoFactCard({ fact, blurTarget }: { fact: string; blurTarget: RefObject<View | null> }) {
   const slideStyle = useSlideUp(300, 24);
   const theme = useTimeTheme();
   return (
@@ -335,8 +372,8 @@ function EcoFactCard({ fact }: { fact: string }) {
       <BlurView
         intensity={35}
         tint={theme.cardTint === 'dark' ? 'dark' : 'light'}
-        experimentalBlurMethod="dimezisBlurView"
-        style={[styles.ecoFactCard, { borderColor: theme.cardBorder, borderWidth: 1 }]}
+        blurTarget={blurTarget}
+        style={[styles.ecoFactCard, { borderColor: theme.cardBorder, borderWidth: 1, borderTopColor: 'rgba(255,255,255,0.4)' }]}
       >
         <LinearGradient
           colors={[hexToRgba(theme.cardBackground, theme.cardOverlayAlpha), hexToRgba(theme.cardBackgroundAlt, theme.cardOverlayAlpha)]}
@@ -344,8 +381,15 @@ function EcoFactCard({ fact }: { fact: string }) {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         />
-        <Text style={[styles.ecoFactTag, { color: theme.accentColor }]}>🌍 ECO INSIGHT</Text>
-        <Text style={[styles.ecoFactText, { color: theme.textPrimaryOnCard }]}>{fact}</Text>
+        <LinearGradient
+          colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0.6, y: 0.8 }}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+        <Text style={[styles.ecoFactTag, { color: homeTextColor(theme, theme.accentColor) }]}>🌍 ECO INSIGHT</Text>
+        <Text style={[styles.ecoFactText, { color: homeTextColor(theme, theme.textPrimaryOnCard) }]}>{fact}</Text>
       </BlurView>
     </Animated.View>
   );
@@ -419,10 +463,12 @@ function GrowActionSheet({
   visible,
   onClose,
   navigation,
+  theme,
 }: {
   visible: boolean;
   onClose: () => void;
   navigation: any;
+  theme: TimeTheme;
 }) {
   const { selection } = useHaptics();
 
@@ -447,10 +493,10 @@ function GrowActionSheet({
         >
           <Text style={styles.growActionIcon}>{action.icon}</Text>
           <View style={styles.growActionTextWrap}>
-            <Text style={styles.growActionTitle}>{action.title}</Text>
-            <Text style={styles.growActionSubtitle}>{action.subtitle}</Text>
+            <Text style={[styles.growActionTitle, { color: homeTextColor(theme, COLORS.textPrimary) }]}>{action.title}</Text>
+            <Text style={[styles.growActionSubtitle, { color: homeTextColor(theme, COLORS.textPrimary, { secondary: true }) }]}>{action.subtitle}</Text>
           </View>
-          <Text style={styles.growActionArrow}>›</Text>
+          <Text style={[styles.growActionArrow, { color: homeTextColor(theme, COLORS.textPrimary) }]}>›</Text>
         </TouchableOpacity>
       ))}
     </Sheet>
@@ -464,6 +510,10 @@ export function HomeScreen({ navigation, onNavigateTab }: any) {
   const { weather } = useDeviceWeather();
   const sceneryMode = getSceneryMode(weather);
   const [growSheetVisible, setGrowSheetVisible] = useState(false);
+  // blurMethod is intentionally omitted (Android "dimezisBlurView*" crashes the RenderThread on
+  // Android 16 here, since blurTarget is an ancestor of the BlurViews sampling it) — cards fake
+  // glass depth with a diagonal sheen instead; blurTargetRef stays wired up as a harmless no-op.
+  const blurTargetRef = useRef<View>(null);
 
   const { data: trees = [] } = useTrees(4);
   const { data: missions = [] } = useTodayMissions();
@@ -474,7 +524,7 @@ export function HomeScreen({ navigation, onNavigateTab }: any) {
   const xpProgress = getXpProgress(user?.xp ?? 0, user?.level ?? 1);
 
   return (
-    <View style={[styles.container, { backgroundColor: getHeroSeamColor(theme) }]}>
+    <BlurTargetView ref={blurTargetRef} collapsable={false} style={[styles.container, { backgroundColor: getHeroSeamColor(theme) }]}>
       <StatusBar style={theme.statusBarStyle} />
 
       <ScrollView
@@ -483,7 +533,7 @@ export function HomeScreen({ navigation, onNavigateTab }: any) {
       >
         {/* Illustrated hero — header, stat row, scenery, and stats pill all scroll together as
             one normal-flow block instead of a fixed backdrop the rest of the page scrolls over. */}
-        <HeroSection theme={theme} user={user} navigation={navigation} onNavigateTab={onNavigateTab} weather={weather} />
+        <HeroSection theme={theme} user={user} navigation={navigation} onNavigateTab={onNavigateTab} weather={weather} blurTarget={blurTargetRef} />
 
         {/* Primary "take action" entry point — outranks quests/XP below it in hierarchy */}
         <View style={styles.growCtaSection}>
@@ -504,14 +554,21 @@ export function HomeScreen({ navigation, onNavigateTab }: any) {
           <BlurView
             intensity={35}
             tint={theme.cardTint === 'dark' ? 'dark' : 'light'}
-            experimentalBlurMethod="dimezisBlurView"
-            style={[styles.xpCard, { borderColor: theme.cardBorder, borderWidth: 1 }]}
+            blurTarget={blurTargetRef}
+            style={[styles.xpCard, { borderColor: theme.cardBorder, borderWidth: 1, borderTopColor: 'rgba(255,255,255,0.4)' }]}
           >
             <View style={[StyleSheet.absoluteFill, { backgroundColor: hexToRgba(theme.cardBackground, theme.cardOverlayAlpha) }]} />
+            <LinearGradient
+              colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0.6, y: 0.8 }}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
             <View style={styles.xpContent}>
               <View>
-                <Text style={[styles.xpLevel, { color: theme.accentColor }]}>{forestLevelLabel}</Text>
-                <Text style={[styles.xpSubLabel, { color: theme.textSecondaryOnCard }]}>Forest Level</Text>
+                <Text style={[styles.xpLevel, { color: homeTextColor(theme, theme.accentColor) }]}>{forestLevelLabel}</Text>
+                <Text style={[styles.xpSubLabel, { color: homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true }) }]}>Forest Level</Text>
               </View>
               <ProgressRing
                 size={58}
@@ -527,16 +584,16 @@ export function HomeScreen({ navigation, onNavigateTab }: any) {
               <View style={[styles.xpBar, { backgroundColor: theme.accentColorSoft }]}>
                 <Animated.View style={[styles.xpBarFill, { width: `${xpProgress.progress * 100}%`, backgroundColor: theme.accentColor }]} />
               </View>
-              <Text style={[styles.xpBarLabel, { color: theme.textSecondaryOnCard }]}>
+              <Text style={[styles.xpBarLabel, { color: homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true }) }]}>
                 {xpProgress.current} / {xpProgress.needed} XP to next level
               </Text>
             </View>
           </BlurView>
         </View>
 
-        <MissionCard missions={missions} navigation={navigation} />
-        <RecentTrees trees={trees} onNavigateTab={onNavigateTab} />
-        {todayFact ? <EcoFactCard fact={todayFact} /> : null}
+        <MissionCard missions={missions} navigation={navigation} blurTarget={blurTargetRef} />
+        <RecentTrees trees={trees} onNavigateTab={onNavigateTab} blurTarget={blurTargetRef} />
+        {todayFact ? <EcoFactCard fact={todayFact} blurTarget={blurTargetRef} /> : null}
       </ScrollView>
 
       {/* Ambient scenery — rendered last so it drifts on top of everything, a constant animation.
@@ -558,8 +615,9 @@ export function HomeScreen({ navigation, onNavigateTab }: any) {
         visible={growSheetVisible}
         onClose={() => setGrowSheetVisible(false)}
         navigation={navigation}
+        theme={theme}
       />
-    </View>
+    </BlurTargetView>
   );
 }
 
@@ -568,7 +626,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   ambientLayer: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
   },
   raindrop: {
     position: 'absolute',
@@ -716,7 +778,7 @@ const styles = StyleSheet.create({
    * hills at Sunset) — this flat semi-opaque layer underneath gives the pill a visible surface
    * regardless of what's behind it. */
   forestStatsOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 } as const,
     backgroundColor: 'rgba(255,255,255,0.55)',
   },
   forestStatRow: {

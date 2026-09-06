@@ -35,6 +35,17 @@ import { NurseryDirectoryScreen } from '../screens/NurseryDirectoryScreen';
 import { NurseryPublicProfileScreen } from '../screens/NurseryPublicProfileScreen';
 import { SaplingReservationScreen } from '../screens/SaplingReservationScreen';
 import { MySaplingReservationsScreen } from '../screens/MySaplingReservationsScreen';
+import { AddToCartScreen } from '../screens/AddToCartScreen';
+import { CartScreen } from '../screens/CartScreen';
+import { MyOrdersScreen } from '../screens/MyOrdersScreen';
+import { OrderDetailScreen } from '../screens/OrderDetailScreen';
+import { WishlistScreen } from '../screens/WishlistScreen';
+import { AddressBookScreen } from '../screens/AddressBookScreen';
+import { NurseryOrdersScreen } from '../screens/NurseryOrdersScreen';
+import { NurseryOrderDetailScreen } from '../screens/NurseryOrderDetailScreen';
+import { NurseryReviewsScreen } from '../screens/NurseryReviewsScreen';
+import { MyAdoptionsScreen } from '../screens/MyAdoptionsScreen';
+import { NurseryFollowersScreen } from '../screens/NurseryFollowersScreen';
 import { CorporateRegisterScreen } from '../screens/CorporateRegisterScreen';
 import { CorporateDashboardScreen } from '../screens/CorporateDashboardScreen';
 import { CorporateSettingsScreen } from '../screens/CorporateSettingsScreen';
@@ -247,6 +258,21 @@ function DriveDetailScreen(props: any) {
   );
 }
 
+// CheckoutScreen also uses @stripe/stripe-react-native (marketplace checkout) — same fix.
+const LazyCheckoutScreen = React.lazy(() =>
+  import('../screens/CheckoutScreen').then((m) => ({ default: m.CheckoutScreen }))
+);
+
+function CheckoutScreen(props: any) {
+  return (
+    <DonateErrorBoundary>
+      <Suspense fallback={<View style={styles.mainContainer} />}>
+        <LazyCheckoutScreen {...props} />
+      </Suspense>
+    </DonateErrorBoundary>
+  );
+}
+
 export type RootStackParamList = {
   Splash: undefined;
   Onboarding: undefined;
@@ -277,11 +303,24 @@ export type RootStackParamList = {
   NurseryPublicProfile: { nurseryId: string };
   SaplingReservation: { nurseryId: string; stockId: string };
   MySaplingReservations: undefined;
+  AddToCart: { nurseryId: string; stockId: string };
+  Cart: undefined;
+  Checkout: undefined;
+  MyOrders: undefined;
+  OrderDetail: { orderId: string };
+  Wishlist: undefined;
+  AddressBook: undefined;
+  NurseryOrders: undefined;
+  NurseryOrderDetail: { orderId: string };
+  NurseryReviews: undefined;
+  MyAdoptions: undefined;
+  NurseryFollowers: undefined;
+  NurseryPostUpdate: undefined;
   CorporateRegister: undefined;
   CorporateMain: undefined;
   CorporateSponsorships: undefined;
   Main: undefined;
-  PlantTree: undefined;
+  PlantTree: { verifiedLat?: number; verifiedLng?: number } | undefined;
   StreakProtection: undefined;
   Settings: undefined;
   Profile: undefined;
@@ -670,6 +709,19 @@ export function AppNavigator() {
           <Stack.Screen name="NurseryPublicProfile" component={NurseryPublicProfileScreen} />
           <Stack.Screen name="SaplingReservation" component={SaplingReservationScreen} />
           <Stack.Screen name="MySaplingReservations" component={MySaplingReservationsScreen} />
+          <Stack.Screen name="AddToCart" component={AddToCartScreen} />
+          <Stack.Screen name="Cart" component={CartScreen} />
+          <Stack.Screen name="Checkout" component={CheckoutScreen} />
+          <Stack.Screen name="MyOrders" component={MyOrdersScreen} />
+          <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
+          <Stack.Screen name="Wishlist" component={WishlistScreen} />
+          <Stack.Screen name="AddressBook" component={AddressBookScreen} />
+          <Stack.Screen name="NurseryOrders" component={NurseryOrdersScreen} />
+          <Stack.Screen name="NurseryOrderDetail" component={NurseryOrderDetailScreen} />
+          <Stack.Screen name="NurseryReviews" component={NurseryReviewsScreen} />
+          <Stack.Screen name="MyAdoptions" component={MyAdoptionsScreen} />
+          <Stack.Screen name="NurseryFollowers" component={NurseryFollowersScreen} />
+          <Stack.Screen name="NurseryPostUpdate" component={PostComposerScreen} />
           <Stack.Screen name="FollowingFeed" component={FollowingFeedScreen} />
           <Stack.Screen name="AdminMain" component={AdminMainApp} />
           <Stack.Screen name="AdminNgoApprovalDetail" component={AdminNgoApprovalDetailScreen} />

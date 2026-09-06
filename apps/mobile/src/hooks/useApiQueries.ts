@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { fetchTrees, plantTree, type PlantTreeInput } from '../api/trees';
+import { fetchApprovedLocations, checkPlantingEligibility } from '../api/plantingLocations';
 import { fetchSpecies } from '../api/species';
 import { fetchTodayMissions, completeMission } from '../api/missions';
 import { fetchEcoFacts } from '../api/ecoFacts';
@@ -60,6 +61,8 @@ import {
   adoptTree,
   fetchMyAdoptableTrees,
   createAdoptableTree,
+  fetchMyAdoptions,
+  releaseMyAdoption,
   CreateAdoptableTreeInput,
 } from '../api/adoptions';
 import {
@@ -134,12 +137,28 @@ import {
   declineReservation as declineReservationApi,
   fetchStockLedger,
   fetchStockAnalytics,
+  fetchNurseryOrders,
+  fetchNurseryOrder,
+  packOrder,
+  dispatchOrder,
+  deliverOrder,
+  cancelNurseryOrder,
+  fetchNurseryReviews,
+  respondToReview as respondToReviewApi,
   UpdateNurseryProfileInput,
   SaplingStockInput,
   ReservationStatus,
+  NurseryOrderStatus,
 } from '../api/nursery';
 import { fetchNurseryStreakCalendar } from '../api/nurseryStreaks';
-import { browseNurseries, fetchNurseryPublicProfile, createReservation as createReservationApi, CreateReservationInput } from '../api/nurseriesPublic';
+import {
+  browseNurseries,
+  fetchNurseryPublicProfile,
+  createReservation as createReservationApi,
+  CreateReservationInput,
+  followNursery,
+  unfollowNursery,
+} from '../api/nurseriesPublic';
 import { fetchMyReservations, cancelReservation as cancelReservationApi } from '../api/reservations';
 import {
   fetchCorporateProfile,
@@ -167,6 +186,10 @@ import {
   AdminActionLogsParams,
   NgoApprovalStatus,
 } from '../api/admin';
+import { fetchAddresses, createAddress, updateAddress, deleteAddress, UpsertAddressInput } from '../api/addresses';
+import { fetchCart, addCartItem, updateCartItem, removeCartItem, clearCart } from '../api/cart';
+import { fetchMyOrders, fetchMyOrder, checkout, cancelOrder, submitOrderReview } from '../api/orders';
+import { fetchWishlist, addWishlistItem, removeWishlistItem } from '../api/wishlist';
 
 export function useTrees(limit?: number, enabled: boolean = true) {
   const { isAuthenticated } = useAuth();
@@ -550,6 +573,21 @@ export function useJoinDrive() {
   });
 }
 
+export function useApprovedPlantingLocations(enabled: boolean = true) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['plantingLocations'],
+    queryFn: fetchApprovedLocations,
+    enabled: isAuthenticated && enabled,
+  });
+}
+
+export function useCheckPlantingEligibility() {
+  return useMutation({
+    mutationFn: (input: { lat: number; lng: number }) => checkPlantingEligibility(input),
+  });
+}
+
 export function useLeaveDrive() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -581,6 +619,21 @@ export function useAdoptTree() {
   return useMutation({
     mutationFn: ({ id, message }: { id: string; message?: string }) => adoptTree(id, message),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] }),
+  });
+}
+
+export function useMyAdoptions() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({ queryKey: ['adoptable-trees', 'my-adoptions'], queryFn: fetchMyAdoptions, enabled: isAuthenticated });
+}
+
+export function useReleaseMyAdoption() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => releaseMyAdoption(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] });
+    },
   });
 }
 
@@ -1385,14 +1438,106 @@ export function useStockAnalytics() {
   });
 }
 
+// ---------- Nursery marketplace orders (Nursery-side) ----------
+
+export function useNurseryOrders(status?: NurseryOrderStatus) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nursery', 'orders', status],
+    queryFn: () => fetchNurseryOrders(status),
+    enabled: isAuthenticated,
+    refetchInterval: 15000,
+  });
+}
+
+export function useNurseryOrder(id: string | null) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nursery', 'orders', 'detail', id],
+    queryFn: () => fetchNurseryOrder(id as string),
+    enabled: isAuthenticated && !!id,
+  });
+}
+
+function invalidateNurseryOrders(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: ['nursery', 'orders'] });
+}
+
+export function usePackOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({ mutationFn: (id: string) => packOrder(id), onSuccess: () => invalidateNurseryOrders(queryClient) });
+}
+
+export function useDispatchOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, riderName, riderPhone }: { id: string; riderName?: string; riderPhone?: string }) =>
+      dispatchOrder(id, riderName, riderPhone),
+    onSuccess: () => invalidateNurseryOrders(queryClient),
+  });
+}
+
+export function useDeliverOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, otp }: { id: string; otp: string }) => deliverOrder(id, otp),
+    onSuccess: () => invalidateNurseryOrders(queryClient),
+  });
+}
+
+export function useCancelNurseryOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => cancelNurseryOrder(id),
+    onSuccess: () => invalidateNurseryOrders(queryClient),
+  });
+}
+
+// ---------- Reviews (Nursery-side) ----------
+
+export function useNurseryReviews() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({ queryKey: ['nursery', 'reviews'], queryFn: fetchNurseryReviews, enabled: isAuthenticated });
+}
+
+export function useRespondToReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, response }: { id: string; response: string }) => respondToReviewApi(id, response),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['nursery', 'reviews'] }),
+  });
+}
+
 // ---------- Public nursery directory / reservations (User-side) ----------
 
-export function useBrowseNurseries(params: { q?: string; city?: string } = {}) {
+export function useBrowseNurseries(params: { q?: string; city?: string; deliveryOnly?: boolean; minRating?: number; lat?: number; lng?: number; radiusKm?: number } = {}) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['nurseries', 'browse', params],
     queryFn: () => browseNurseries(params),
     enabled: isAuthenticated,
+  });
+}
+
+export function useFollowNursery() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (nurseryId: string) => followNursery(nurseryId),
+    onSuccess: (_data, nurseryId) => {
+      queryClient.invalidateQueries({ queryKey: ['nurseries', 'public', nurseryId] });
+      queryClient.invalidateQueries({ queryKey: ['follows'] });
+    },
+  });
+}
+
+export function useUnfollowNursery() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (nurseryId: string) => unfollowNursery(nurseryId),
+    onSuccess: (_data, nurseryId) => {
+      queryClient.invalidateQueries({ queryKey: ['nurseries', 'public', nurseryId] });
+      queryClient.invalidateQueries({ queryKey: ['follows'] });
+    },
   });
 }
 
@@ -1497,5 +1642,145 @@ export function useDeleteSponsorship() {
       queryClient.invalidateQueries({ queryKey: ['corporate', 'sponsorships'] });
       queryClient.invalidateQueries({ queryKey: ['corporate', 'stats'] });
     },
+  });
+}
+
+// ---------- Addresses ----------
+
+export function useAddresses() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({ queryKey: ['addresses'], queryFn: fetchAddresses, enabled: isAuthenticated });
+}
+
+export function useCreateAddress() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpsertAddressInput) => createAddress(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['addresses'] }),
+  });
+}
+
+export function useUpdateAddress() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Partial<UpsertAddressInput> }) => updateAddress(id, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['addresses'] }),
+  });
+}
+
+export function useDeleteAddress() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteAddress(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['addresses'] }),
+  });
+}
+
+// ---------- Nursery marketplace: cart / checkout / orders / wishlist ----------
+
+export function useCart() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({ queryKey: ['cart'], queryFn: fetchCart, enabled: isAuthenticated });
+}
+
+export function useAddCartItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ stockId, quantity }: { stockId: string; quantity: number }) => addCartItem(stockId, quantity),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cart'] }),
+  });
+}
+
+export function useUpdateCartItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, quantity }: { itemId: string; quantity: number }) => updateCartItem(itemId, quantity),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cart'] }),
+  });
+}
+
+export function useRemoveCartItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (itemId: string) => removeCartItem(itemId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cart'] }),
+  });
+}
+
+export function useClearCart() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => clearCart(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cart'] }),
+  });
+}
+
+export function useMyOrders() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({ queryKey: ['orders', 'mine'], queryFn: fetchMyOrders, enabled: isAuthenticated });
+}
+
+/** Polls every 8s while an order is out for delivery, so the tracking map keeps moving. */
+export function useMyOrder(id: string | null) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['orders', 'mine', id],
+    queryFn: () => fetchMyOrder(id as string),
+    enabled: isAuthenticated && !!id,
+    refetchInterval: (query) => (query.state.data?.status === 'out_for_delivery' ? 8000 : false),
+  });
+}
+
+export function useCheckout() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (addressId: string) => checkout(addressId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
+      queryClient.invalidateQueries({ queryKey: ['orders', 'mine'] });
+    },
+  });
+}
+
+export function useCancelOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => cancelOrder(id),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ['orders', 'mine'] });
+      queryClient.invalidateQueries({ queryKey: ['orders', 'mine', id] });
+    },
+  });
+}
+
+export function useSubmitOrderReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: { nurseryRating: number; deliveryRating?: number; comment?: string } }) =>
+      submitOrderReview(id, input),
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['orders', 'mine', id] });
+    },
+  });
+}
+
+export function useWishlist() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({ queryKey: ['wishlist'], queryFn: fetchWishlist, enabled: isAuthenticated });
+}
+
+export function useAddWishlistItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { nurseryId?: string; stockId?: string }) => addWishlistItem(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['wishlist'] }),
+  });
+}
+
+export function useRemoveWishlistItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => removeWishlistItem(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['wishlist'] }),
   });
 }

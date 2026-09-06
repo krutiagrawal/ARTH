@@ -13,6 +13,7 @@ const createPostSchema = z.object({
   groupId: z.string().uuid().optional(),
   // Multipart fields arrive as strings, so the flag is compared as one.
   asNgo: z.union([z.literal('true'), z.literal('false'), z.boolean()]).optional(),
+  asNursery: z.union([z.literal('true'), z.literal('false'), z.boolean()]).optional(),
 });
 
 const cursorQuerySchema = z.object({
@@ -55,6 +56,7 @@ export default async function postsRoutes(fastify: FastifyInstance) {
       treeId: parsed.data.treeId,
       groupId: parsed.data.groupId,
       asNgo: isTrue(parsed.data.asNgo),
+      asNursery: isTrue(parsed.data.asNursery),
       mediaUrls,
     });
 

@@ -9,10 +9,14 @@ interface UpdateProfileInput {
   nurseryName?: string;
   description?: string;
   logoUrl?: string;
+  coverPhotoUrl?: string;
   city?: string;
   contactPhone?: string;
   lat?: number;
   lng?: number;
+  offersDelivery?: boolean;
+  deliveryRadiusKm?: number | null;
+  followPolicy?: 'open' | 'approval';
 }
 
 interface StockInput {
@@ -20,6 +24,7 @@ interface StockInput {
   quantity: number;
   isFree?: boolean;
   priceCents?: number;
+  photoUrl?: string;
 }
 
 export async function getOwnProfile(prisma: PrismaClient, userId: string) {
@@ -94,7 +99,7 @@ export async function createStock(prisma: PrismaClient, userId: string, input: S
 export async function updateStock(prisma: PrismaClient, userId: string, stockId: string, input: Partial<StockInput>) {
   const profile = await getOwnProfile(prisma, userId);
 
-  return prisma.$transaction(async (tx) => {
+  const { updated, wishlisterIds } = await prisma.$transaction(async (tx) => {
     const existing = await tx.saplingStock.findFirst({ where: { id: stockId, nurseryId: profile.id } });
     if (!existing) throw new NotFoundError('Stock item not found');
 
@@ -113,7 +118,49 @@ export async function updateStock(prisma: PrismaClient, userId: string, stockId:
       await recordNurseryActiveToday(tx, profile.id);
     }
 
-    return updated;
+    // Back-in-stock: only fires on the 0 -> positive transition, never on every restock bump, so
+    // wishlisting a perpetually-low-stock item doesn't spam the wishlister daily. Notifications are
+    // sent after the transaction commits (see reservation.service.ts's pattern), not inside it.
+    let wishlisterIds: string[] = [];
+    if (existing.quantity <= 0 && updated.quantity > 0) {
+      const wishlisters = await tx.wishlistItem.findMany({ where: { stockId }, select: { userId: true } });
+      wishlisterIds = wishlisters.map((w) => w.userId);
+    }
+
+    return { updated, wishlisterIds };
+  });
+
+  for (const userId of wishlisterIds) {
+    await notify(prisma, {
+      userId,
+      type: 'wishlist_back_in_stock',
+      data: { stockId, species: updated.species, nurseryName: profile.nurseryName },
+      push: { title: `${updated.species} is back in stock!`, body: `${profile.nurseryName} just restocked ${updated.species}.` },
+    });
+  }
+
+  return updated;
+}
+
+/** Nursery responds once to a review left on one of their orders. */
+export async function respondToReview(prisma: PrismaClient, userId: string, reviewId: string, response: string) {
+  const profile = await getOwnProfile(prisma, userId);
+  const review = await prisma.orderReview.findFirst({ where: { id: reviewId, nurseryId: profile.id } });
+  if (!review) throw new NotFoundError('Review not found');
+  if (review.nurseryResponse) throw new BadRequestError('You already responded to this review');
+
+  return prisma.orderReview.update({
+    where: { id: reviewId },
+    data: { nurseryResponse: response, nurseryRespondedAt: new Date() },
+  });
+}
+
+export async function listReviews(prisma: PrismaClient, userId: string) {
+  const profile = await getOwnProfile(prisma, userId);
+  return prisma.orderReview.findMany({
+    where: { nurseryId: profile.id },
+    orderBy: { createdAt: 'desc' },
+    include: { user: { select: { id: true, name: true, avatarEmoji: true } } },
   });
 }
 

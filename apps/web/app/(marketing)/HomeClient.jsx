@@ -326,7 +326,7 @@ function glassTokens(variant) {
     glassCls: isLight ? GLASS_LIGHT : GLASS_DARK,
     text: isLight ? INK : CREAM,
     subCls: isLight ? 'text-[#2b1f14]/65' : 'text-[#f5ecd9]/70',
-    hoverCls: isLight ? 'hover:bg-white/22' : 'hover:bg-white/10',
+    hoverCls: isLight ? 'hover:bg-white/28' : 'hover:bg-black/45 hover:ring-1 hover:ring-white/25',
     chipActiveCls: isLight ? 'bg-[#2b1f14] text-[#f5ecd9]' : 'bg-[#f5ecd9] text-[#2b1f14]',
     iconBgCls: isLight ? 'bg-black/5' : 'bg-white/10',
   }
@@ -411,22 +411,28 @@ function SupportLine({ text, href, label, tone = 'dark' }) {
    fully visible — no hover-to-reveal needed, so behavior is identical on
    mouse and touch. Each row is a plain Link; tapping/clicking just navigates. */
 
-function OptionList({ items, glass = 'light', centered = false }) {
+function OptionList({ items, glass = 'light', centered = false, linked = true }) {
   const t = glassTokens(glass)
+  const rowCls = `flex items-center gap-3 rounded-2xl px-4 py-3 transition ${t.glassCls}` + (linked ? ` group ${t.hoverCls}` : '')
   return (
     <div className={`flex flex-col gap-3 text-left ${centered ? 'mx-auto max-w-xs' : ''}`}>
-      {items.map(item => (
-        <Link key={item.id} href={item.href} className={`group flex items-center gap-3 rounded-2xl px-4 py-3 transition ${t.glassCls} ${t.hoverCls}`}>
-          <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${t.iconBgCls}`}>
-            <item.icon className="h-4 w-4" style={{ color: t.text }} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-bold leading-tight" style={{ color: t.text }}>{item.label}</span>
-            <span className={`block text-xs mt-0.5 leading-snug ${t.subCls}`}>{item.description}</span>
-          </span>
-          <ChevronRight className={`h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5 ${t.subCls}`} />
-        </Link>
-      ))}
+      {items.map(item => {
+        const inner = (
+          <>
+            <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${t.iconBgCls}`}>
+              <item.icon className="h-4 w-4" style={{ color: t.text }} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold leading-tight" style={{ color: t.text }}>{item.label}</span>
+              <span className={`block text-xs mt-0.5 leading-snug ${t.subCls}`}>{item.description}</span>
+            </span>
+            {linked && <ChevronRight className={`h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5 ${t.subCls}`} />}
+          </>
+        )
+        return linked
+          ? <Link key={item.id} href={item.href} className={rowCls}>{inner}</Link>
+          : <div key={item.id} className={rowCls}>{inner}</div>
+      })}
     </div>
   )
 }
@@ -541,9 +547,9 @@ const SPROUT_ITEMS = [
 ]
 
 const SAPLING_ITEMS = [
-  { id: 'name', label: 'Name your tree', description: 'Give your tree a name it will carry for the rest of its life.', href: '/plant', icon: Tag },
-  { id: 'legacy', label: 'Write its legacy', description: 'Leave a message future visitors can read beneath its shade.', href: '/plant', icon: ScrollText },
-  { id: 'track', label: 'Track its growth', description: 'Follow its story through every season, right from your device.', href: '/plant', icon: TrendingUp },
+  { id: 'name', label: 'Name your tree', description: 'Give your tree a name it will carry for the rest of its life.', icon: Tag },
+  { id: 'legacy', label: 'Write its legacy', description: 'Leave a message future visitors can read beneath its shade.', icon: ScrollText },
+  { id: 'track', label: 'Track its growth', description: 'Follow its story through every season, right from your device.', icon: TrendingUp },
 ]
 
 const MATURE_ITEMS = [
@@ -621,8 +627,13 @@ export default function HomeClient({ namingExample }) {
         tl.to(el, { opacity: 1, y: 0, duration: inE - inS, ease: 'power2.out' }, inS)
         tl.to(el, { opacity: 0, y: -16, duration: outE - outS, ease: 'power2.in' }, outS)
         if (interactive) {
-          tl.set(el, { pointerEvents: 'auto' }, inS)
-          tl.set(el, { pointerEvents: 'none' }, outE)
+          // Buffer beyond the visual fade window: the timeline is scrubbed with
+          // a 0.35s lag (see scrub below), so the playhead can still be short of
+          // inS/past outE right when a click resolves — a bare pointerEvents flip
+          // exactly at the fade edges intermittently swallows clicks near them.
+          const POINTER_BUFFER = 8
+          tl.set(el, { pointerEvents: 'auto' }, Math.max(0, inS - POINTER_BUFFER))
+          tl.set(el, { pointerEvents: 'none' }, outE + POINTER_BUFFER)
         }
       }
 
@@ -699,6 +710,9 @@ export default function HomeClient({ namingExample }) {
 
       /* ===================== CHAPTER 8 — THE FOREST (928–1000) ===================== */
       tl.to(g(ctaWrapRef), { opacity: 1, y: 0, duration: 40, ease: 'power2.out' }, 950)
+      // See the comment on ctaWrapRef's JSX: gate its always-bottom-left interactive
+      // content to this chapter's own window, same POINTER_BUFFER cushion as captions.
+      tl.set(g(ctaWrapRef), { pointerEvents: 'auto' }, Math.max(0, 950 - 8))
 
       // side progress indicator
       tl.eventCallback('onUpdate', () => {
@@ -751,9 +765,33 @@ export default function HomeClient({ namingExample }) {
     }
   }, [])
 
+  // Any link clicked deep in the pinned hero (e.g. Trees, well past thousands
+  // of vh scrolled) leaves the browser scrolled far down when React unmounts
+  // this component: the cleanup effect above reverts the GSAP context, which
+  // un-pins and collapses the SCROLL_VH-tall spacer immediately, before the
+  // new route has a chance to reset scroll — so the collapsed page's Footer
+  // (rendered right after this component in layout.js) flashes into view for
+  // a frame. Jumping to the top *before* the click reaches the Link closes
+  // that race. Uses the legacy 2-arg form, which is always instant regardless
+  // of globals.css's `scroll-behavior: smooth`.
+  const handleHeroLinkClick = (e) => {
+    const anchor = e.target.closest('a[href]')
+    if (!anchor) return
+    if (anchor.target && anchor.target !== '_self') return
+    if (!anchor.getAttribute('href')?.startsWith('/')) return
+    // Deferred to the next frame, not called synchronously in this handler:
+    // Next's <Link> onClick (which runs right after this capture-phase handler,
+    // in the same dispatch) reads/stores the current scroll position as part of
+    // starting the transition — scrolling synchronously here raced it and made
+    // the navigation silently no-op. One rAF is still well before the GSAP
+    // cleanup effect's un-pin (which only runs once React actually commits the
+    // unmount, after the transition resolves), so the flash is still closed.
+    requestAnimationFrame(() => window.scrollTo(0, 0))
+  }
+
   return (
     <div className="bg-[#F8F4EC]">
-      <div ref={wrapRef} id="cinematic-hero" data-navbar-hero className="relative" style={{ height: `${SCROLL_VH}vh` }}>
+      <div ref={wrapRef} id="cinematic-hero" className="relative" style={{ height: `${SCROLL_VH}vh` }} onClickCapture={handleHeroLinkClick}>
         <div ref={stageRef} className="relative h-screen w-full overflow-hidden">
 
           {/* single cinematic background — scroll-scrubbed frame sequence drawn to canvas.
@@ -814,7 +852,7 @@ export default function HomeClient({ namingExample }) {
             extra={
               <div className="space-y-3">
                 <SupportLine tone="light" text="Name it. Leave a message. Follow its story through every season." />
-                <OptionList items={SAPLING_ITEMS} glass="dark" />
+                <OptionList items={SAPLING_ITEMS} glass="dark" linked={false} />
                 <ExampleCard glass="dark" name={namingExample.name} quote={namingExample.quote} />
                 <LinkChip href="/trees" glass="dark">Discover tree ownership</LinkChip>
               </div>
@@ -877,7 +915,16 @@ export default function HomeClient({ namingExample }) {
           {/* pointer-events-none on the wrapper: this box spans the full viewport even
               while invisible (opacity is animated, not display), which would otherwise
               block hover/click on every earlier chapter's interactive pills underneath
-              it in DOM order. Its own interactive children opt back in individually.
+              it in DOM order. Its interactive content used to opt back in unconditionally
+              via a static pointer-events-auto class below — but this block sits bottom-
+              left for the entire scroll (only its opacity animates), so that static class
+              let it silently intercept clicks on any earlier caption whose own content
+              happened to lay out over the same screen region (confirmed: chapter 4's
+              "Discover tree ownership" chip and chapter 6's bottom-aligned caption both
+              land in this box's on-screen footprint at points in the scroll well before
+              unit 950). Now gated the same way interactive captions are: pointerEvents
+              flips to 'auto' on the wrapper itself only once this chapter's own fade-in
+              begins, and the (now unconditional) child pointer-events inherit from it.
               This whole block previously used theme tokens (text-foreground, bg-foreground,
               text-primary) instead of the fixed ink/cream palette every other chapter
               uses — those flip with light/dark site theme, independent of what the video
@@ -888,7 +935,7 @@ export default function HomeClient({ namingExample }) {
               Plant the <em className="not-italic" style={{ color: '#c3dabb' }}>Next Seed</em>.
             </h2>
 
-            <div className="pointer-events-auto">
+            <div>
               <button onClick={() => setShowChooser(v => !v)} className="group mt-8 inline-flex items-center gap-2 rounded-full pl-6 pr-2 py-2 text-sm font-bold" style={{ backgroundColor: INK, color: CREAM }}>
                 Start planting
                 <span className="grid h-8 w-8 place-items-center rounded-full transition-transform group-hover:translate-x-0.5" style={{ backgroundColor: '#A8C3A0', color: INK }}>

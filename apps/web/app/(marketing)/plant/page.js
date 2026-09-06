@@ -2,7 +2,7 @@ import PlantClient from './PlantClient'
 
 export const metadata = {
   title: 'Plant a tree',
-  description: 'Log a tree you planted and add it to your living legacy.',
+  description: 'Planting is verified with a live camera in the ARTH mobile app.',
 }
 
 export default function Page() {

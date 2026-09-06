@@ -13,6 +13,7 @@ import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { resolveMediaUrl } from '../api/client';
 import { useActOnReport, useAdminReports } from '../hooks/useSocialQueries';
 import type { ApiAdminReport, ModerationAction, ReportStatus } from '../api/admin';
+import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
 
 const FILTERS: { key: ReportStatus | undefined; label: string }[] = [
   { key: 'open', label: 'Open' },
@@ -122,6 +123,8 @@ export function AdminReportsScreen() {
   const [filter, setFilter] = useState<ReportStatus | undefined>('open');
   const [pending, setPending] = useState<{ report: ApiAdminReport; action: ModerationAction } | null>(null);
   const [reason, setReason] = useState('');
+  const { period } = useTimeTheme();
+  const isNightMode = isNightlikePeriod(period);
 
   const { data, isLoading, refetch, isRefetching } = useAdminReports(filter);
   const act = useActOnReport();
@@ -209,7 +212,7 @@ export function AdminReportsScreen() {
                 : 'Hide this content?'
         }
       >
-        <Text style={styles.sheetBody}>
+        <Text style={[styles.sheetBody, isNightMode && styles.sheetBodyNight]}>
           {pending?.action === 'delete'
             ? 'This removes the content permanently for everyone. It cannot be undone.'
             : pending?.action === 'dismiss'
@@ -220,9 +223,9 @@ export function AdminReportsScreen() {
         </Text>
 
         <TextInput
-          style={styles.reasonInput}
+          style={[styles.reasonInput, isNightMode && styles.reasonInputNight]}
           placeholder="Reason (optional — saved to the audit log)"
-          placeholderTextColor={COLORS.textLight}
+          placeholderTextColor={isNightMode ? ON_DARK_SURFACE.muted : COLORS.textLight}
           value={reason}
           onChangeText={setReason}
           multiline
@@ -362,4 +365,6 @@ const styles = StyleSheet.create({
   confirmDanger: { backgroundColor: COLORS.danger },
   confirmText: { fontSize: 15, fontWeight: '800', color: COLORS.white },
   busy: { opacity: 0.6 },
+  sheetBodyNight: { color: ON_DARK_SURFACE.secondary },
+  reasonInputNight: { color: ON_DARK_SURFACE.primary, borderColor: 'rgba(255,255,255,0.2)' },
 });

@@ -42,6 +42,22 @@ export async function submitEntry(
   return entry;
 }
 
+export function listMyEntries(prisma: PrismaClient, userId: string) {
+  return prisma.competitionEntry.findMany({
+    where: { userId },
+    include: { competition: { select: { title: true, deadline: true } } },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+export function listMyVotes(prisma: PrismaClient, userId: string) {
+  return prisma.competitionEntryVote.findMany({
+    where: { userId },
+    include: { entry: { include: { competition: { select: { title: true } } } } },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
 export async function voteForEntry(prisma: PrismaClient, entryId: string, userId: string) {
   try {
     const [, entry] = await prisma.$transaction([

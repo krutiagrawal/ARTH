@@ -222,7 +222,7 @@ export function PostCard({
                 {/* A drawn flat heart, not the ❤️ emoji — the emoji's glossy highlight/shine
                     (and its glyph occasionally painting outside its reported metrics, cropping the
                     top-right lobe at this size) isn't something we can control across devices. */}
-                <Svg width={90} height={90} viewBox="0 0 24 24" style={StyleSheet.absoluteFillObject}>
+                <Svg width={90} height={90} viewBox="0 0 24 24" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}>
                   <Path
                     d="M12,21.35l-1.45-1.32C5.4,15.36,2,12.28,2,8.5C2,5.42,4.42,3,7.5,3c1.74,0,3.41,0.81,4.5,2.09
                        C13.09,3.81,14.76,3,16.5,3C19.58,3,22,5.42,22,8.5c0,3.78-3.4,6.86-8.55,11.54L12,21.35z"
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
   reviewText: { fontSize: 12, color: COLORS.dangerDark, fontWeight: '600' },
   mediaWrap: { alignItems: 'center' },
   burstOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 } as const,
     alignItems: 'center',
     justifyContent: 'center',
   },

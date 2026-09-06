@@ -4,14 +4,13 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Heart, HeartOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { proxy } from '../../app/proxy'
+import { proxy } from '@/lib/memberProxy'
 
 /**
  * Follows/unfollows through the member session (a regular logged-in app
  * user, not the NGO's own account). Determines initial follow-state
  * client-side via /follows rather than passing it from the server component,
- * since that would require parsing member cookies in a page.js — this keeps
- * auth entirely in the existing MemberContext/proxy pattern.
+ * since that would require parsing member cookies in a page.js.
  */
 export default function FollowButton({ ngoId, initialFollowersCount }) {
   const router = useRouter()
@@ -41,7 +40,7 @@ export default function FollowButton({ ngoId, initialFollowersCount }) {
       }
     } catch (err) {
       if (err.status === 401) {
-        router.push('/app/login')
+        router.push('/login')
       }
     } finally {
       setBusy(false)

@@ -78,7 +78,7 @@ export default function Navbar() {
 
   return (
     <header
-      className={cn('fixed top-0 left-0 right-0 z-50 transition-colors duration-500', scrolled ? 'bg-background/85 backdrop-blur-md border-b border-border/60' : 'bg-transparent')}
+      className="fixed top-0 left-0 right-0 z-50 bg-transparent"
       style={lightText ? { textShadow: '0 1px 3px rgba(0,0,0,0.45), 0 4px 16px rgba(0,0,0,0.3)' } : undefined}
     >
       <div className="container">

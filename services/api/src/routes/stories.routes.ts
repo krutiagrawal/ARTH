@@ -20,6 +20,7 @@ export default async function storiesRoutes(fastify: FastifyInstance) {
     let caption: string | undefined;
     let asNgo = false;
     let asGroup = false;
+    let asNursery = false;
 
     if (isMultipart) {
       const { fields, file } = splitMultipartBody(request.body as any);
@@ -30,12 +31,14 @@ export default async function storiesRoutes(fastify: FastifyInstance) {
       caption = fields.caption?.trim();
       asNgo = fields.asNgo === 'true';
       asGroup = fields.asGroup === 'true';
+      asNursery = fields.asNursery === 'true';
     } else {
       const body = (request.body ?? {}) as {
         imageBase64?: string;
         caption?: string;
         asNgo?: boolean;
         asGroup?: boolean;
+        asNursery?: boolean;
       };
       const imageBase64 = body.imageBase64?.replace(/^data:image\/\w+;base64,/, '');
       if (!imageBase64) throw new BadRequestError('Image is required');
@@ -50,6 +53,7 @@ export default async function storiesRoutes(fastify: FastifyInstance) {
       caption = body.caption?.trim();
       asNgo = body.asNgo === true;
       asGroup = body.asGroup === true;
+      asNursery = body.asNursery === true;
     }
 
     if (caption && caption.length > 280) throw new BadRequestError('Caption is too long');
@@ -60,6 +64,7 @@ export default async function storiesRoutes(fastify: FastifyInstance) {
       caption,
       asNgo,
       asGroup,
+      asNursery,
     });
 
     reply.status(201).send(storyService.serializeStory(story));

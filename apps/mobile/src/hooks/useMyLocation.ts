@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import * as Location from 'expo-location';
+import { getCurrentPositionWithTimeout } from '../utils/location';
 
 // Mirrors PlantTreeScreen's FALLBACK_COORDS (India centroid) so a denied/unavailable
 // location still centers nearby-sorted lists somewhere sensible instead of failing outright.
@@ -15,7 +16,7 @@ export function useMyLocation() {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status === 'granted') {
-          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          const loc = await getCurrentPositionWithTimeout({ accuracy: Location.Accuracy.Balanced });
           if (mounted) setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
         } else if (mounted) {
           setCoords(FALLBACK_COORDS);

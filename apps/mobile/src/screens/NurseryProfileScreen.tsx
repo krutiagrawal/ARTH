@@ -15,6 +15,7 @@ import { PickedPhoto } from '../components/common/PhotoPickerField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
+import { Toggle } from '../components/common/Toggle';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useHaptics } from '../hooks/useHaptics';
 import { ApiError, resolveMediaUrl } from '../api/client';
@@ -34,6 +35,8 @@ export function NurseryProfileScreen({ navigation }: any) {
   const [description, setDescription] = useState('');
   const [city, setCity] = useState('');
   const [contactPhone, setContactPhone] = useState('');
+  const [offersDelivery, setOffersDelivery] = useState(true);
+  const [deliveryRadiusKm, setDeliveryRadiusKm] = useState('');
   const [logo, setLogo] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
@@ -49,6 +52,8 @@ export function NurseryProfileScreen({ navigation }: any) {
     setDescription(profile.description);
     setCity(profile.city ?? '');
     setContactPhone(profile.contactPhone ?? '');
+    setOffersDelivery(profile.offersDelivery);
+    setDeliveryRadiusKm(profile.deliveryRadiusKm != null ? String(profile.deliveryRadiusKm) : '');
   }, [profile]);
 
   const pickLogo = useCallback(async () => {
@@ -92,6 +97,8 @@ export function NurseryProfileScreen({ navigation }: any) {
         description: description.trim(),
         city: city.trim() || undefined,
         contactPhone: contactPhone.trim() || undefined,
+        offersDelivery,
+        deliveryRadiusKm: deliveryRadiusKm.trim() ? Number(deliveryRadiusKm.trim()) : undefined,
         logo: logo ?? undefined,
       });
       Alert.alert('Saved', 'Your nursery profile has been updated.');
@@ -147,6 +154,25 @@ export function NurseryProfileScreen({ navigation }: any) {
             <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="What does your nursery grow?" />
             <FormField label="City" value={city} onChangeText={setCity} placeholder="City" />
             <FormField label="Contact phone" value={contactPhone} onChangeText={setContactPhone} placeholder="Phone" keyboardType="phone-pad" />
+
+            <BlurCard tint="light" noPadding style={styles.deliveryCard}>
+              <View style={styles.deliveryRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.deliveryLabel}>Offer delivery</Text>
+                  <Text style={styles.deliveryHint}>Show up when planters filter for delivery</Text>
+                </View>
+                <Toggle value={offersDelivery} onValueChange={setOffersDelivery} offColor={COLORS.sand} onColor={COLORS.forest} />
+              </View>
+              {offersDelivery && (
+                <FormField
+                  label="Delivery radius (km, optional)"
+                  value={deliveryRadiusKm}
+                  onChangeText={setDeliveryRadiusKm}
+                  placeholder="e.g. 15"
+                  keyboardType="number-pad"
+                />
+              )}
+            </BlurCard>
 
             {error && <Text style={styles.error}>{error}</Text>}
 
@@ -225,6 +251,10 @@ const styles = StyleSheet.create({
     ...SHADOWS.sm,
   },
   logoEditIcon: { fontSize: 13, color: COLORS.white, fontWeight: '700' },
+  deliveryCard: { padding: 14, borderRadius: RADIUS.md, marginTop: 4, marginBottom: 8, gap: 8 },
+  deliveryRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  deliveryLabel: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
+  deliveryHint: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
   error: { fontSize: 13, color: COLORS.coral, marginTop: 12 },
   submitButton: { marginTop: 20 },
   rejectedCard: { marginTop: 20, padding: 16, borderRadius: RADIUS.md, borderLeftWidth: 4, borderLeftColor: COLORS.coral },

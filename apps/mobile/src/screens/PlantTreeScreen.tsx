@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Image } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import Animated, {
@@ -22,11 +22,16 @@ import { COLORS } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
 import { GlassCard } from '../components/common/GlassCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
+import { StatusModal } from '../components/common/StatusModal';
 import { Mascot } from '../components/common/Mascot';
 import { FloatingParticles } from '../components/common/FloatingParticles';
 import { useHaptics } from '../hooks/useHaptics';
 import { useSpecies } from '../hooks/useApiQueries';
 import { usePlantTree } from '../hooks/useApiQueries';
+import { useCheckPlantingEligibility } from '../hooks/useApiQueries';
+import { ApiError } from '../api/client';
+import { NOT_APPROVED_MESSAGE } from '../constants/plantingLocation';
+import { getCurrentPositionWithTimeout } from '../utils/location';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -175,22 +180,35 @@ function SuccessAnimation({ treeName, xpEarned }: { treeName: string; xpEarned: 
   );
 }
 
-export function PlantTreeScreen({ navigation }: any) {
+export function PlantTreeScreen({ navigation, route }: any) {
+  const verifiedLat: number | undefined = route?.params?.verifiedLat;
+  const verifiedLng: number | undefined = route?.params?.verifiedLng;
+  const isPreVerified = verifiedLat != null && verifiedLng != null;
+
   const [stage, setStage] = useState<Stage>('upload');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [selectedSpeciesId, setSelectedSpeciesId] = useState<string | null>(null);
   const [nickname, setNickname] = useState('');
-  const [location, setLocation] = useState<LocationInfo | null>(null);
+  const [location, setLocation] = useState<LocationInfo | null>(
+    isPreVerified ? { lat: verifiedLat!, lng: verifiedLng!, label: 'Verified planting spot' } : null
+  );
   const [locationLoading, setLocationLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Whether this exact location has been confirmed as an ARTH-approved spot. Coming in via the
+  // map's "Plant where you are" button, it's already been checked — otherwise (direct-tab entry)
+  // it starts unknown and gets checked once GPS resolves, in the effect below.
+  const [eligible, setEligible] = useState<boolean | null>(isPreVerified ? true : null);
+  const [showNotApprovedModal, setShowNotApprovedModal] = useState(false);
   const { success, medium } = useHaptics();
   const insets = useSafeAreaInsets();
 
   const { data: speciesList = [] } = useSpecies();
   const plantTreeMutation = usePlantTree();
+  const checkEligibility = useCheckPlantingEligibility();
   const selectedSpecies = speciesList.find(s => s.id === selectedSpeciesId) ?? null;
 
   const fetchLocation = useCallback(async () => {
+    if (isPreVerified) return;
     setLocationLoading(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -198,7 +216,7 @@ export function PlantTreeScreen({ navigation }: any) {
         setLocation(null);
         return;
       }
-      const position = await Location.getCurrentPositionAsync({});
+      const position = await getCurrentPositionWithTimeout({});
       const [place] = await Location.reverseGeocodeAsync({
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
@@ -206,13 +224,37 @@ export function PlantTreeScreen({ navigation }: any) {
       const label = place
         ? [place.city ?? place.subregion, place.region ?? place.country].filter(Boolean).join(', ')
         : `${position.coords.latitude.toFixed(3)}, ${position.coords.longitude.toFixed(3)}`;
+      setEligible(null);
       setLocation({ lat: position.coords.latitude, lng: position.coords.longitude, label: label || 'Unknown location' });
     } catch {
       setLocation(null);
     } finally {
       setLocationLoading(false);
     }
-  }, []);
+  }, [isPreVerified]);
+
+  // Direct-tab entry (no map pre-check): once GPS resolves, verify it against ARTH-approved
+  // locations before letting the user submit — this makes the coordinate check apply no matter
+  // how the user got here, not just via the map's button.
+  useEffect(() => {
+    if (isPreVerified || !location) return;
+    let cancelled = false;
+    checkEligibility.mutateAsync({ lat: location.lat, lng: location.lng }).then((result) => {
+      if (!cancelled) setEligible(result.eligible);
+    }).catch(() => {
+      if (!cancelled) setEligible(null);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPreVerified, location?.lat, location?.lng]);
+
+  useEffect(() => {
+    if (!isPreVerified && eligible === false) {
+      setShowNotApprovedModal(true);
+    }
+  }, [eligible, isPreVerified]);
 
   const handlePickImage = useCallback(async () => {
     medium();
@@ -269,7 +311,11 @@ export function PlantTreeScreen({ navigation }: any) {
       success();
       setStage('success');
     } catch (e) {
-      setSubmitError(e instanceof Error ? e.message : 'Could not save your tree. Please try again.');
+      if (e instanceof ApiError && e.status === 403) {
+        setSubmitError(NOT_APPROVED_MESSAGE);
+      } else {
+        setSubmitError(e instanceof Error ? e.message : 'Could not save your tree. Please try again.');
+      }
     }
   }, [selectedSpecies, imageUri, nickname, location, plantTreeMutation, success]);
 
@@ -431,13 +477,25 @@ export function PlantTreeScreen({ navigation }: any) {
             }}
           >
             <GlassCard variant="warm" style={styles.locationCard}>
-              <Text style={styles.locationIcon}>📍</Text>
+              <Text style={styles.locationIcon}>{eligible === false ? '⚠️' : '📍'}</Text>
               <View style={{ flex: 1 }}>
                 <Text style={styles.locationTitle}>
-                  {locationLoading ? 'Locating...' : location ? 'Location Detected' : 'Location Unavailable'}
+                  {locationLoading
+                    ? 'Locating...'
+                    : !location
+                    ? 'Location Unavailable'
+                    : eligible === false
+                    ? 'Not an ARTH Approved Spot'
+                    : checkEligibility.isPending
+                    ? 'Checking approved spots...'
+                    : 'Location Detected'}
                 </Text>
                 <Text style={styles.locationValue}>
-                  {locationLoading ? 'Finding your spot...' : location?.label ?? 'Tap to try again, or enable location in Settings'}
+                  {locationLoading
+                    ? 'Finding your spot...'
+                    : eligible === false
+                    ? NOT_APPROVED_MESSAGE
+                    : location?.label ?? 'Tap to try again, or enable location in Settings'}
                 </Text>
               </View>
             </GlassCard>
@@ -451,7 +509,7 @@ export function PlantTreeScreen({ navigation }: any) {
             variant="primary"
             size="lg"
             fullWidth
-            disabled={!selectedSpecies || plantTreeMutation.isPending}
+            disabled={!selectedSpecies || plantTreeMutation.isPending || eligible === false}
           />
         </ScrollView>
       )}
@@ -470,6 +528,14 @@ export function PlantTreeScreen({ navigation }: any) {
           </View>
         </>
       )}
+
+      <StatusModal
+        visible={showNotApprovedModal}
+        onClose={() => setShowNotApprovedModal(false)}
+        icon="🚫"
+        title="Not an ARTH Approved Spot"
+        message={NOT_APPROVED_MESSAGE}
+      />
     </View>
   );
 }
@@ -605,7 +671,7 @@ const styles = StyleSheet.create({
     fontSize: 80,
   },
   scanGlow: {
-    ...StyleSheet.absoluteFillObject,
+    ...{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 } as const,
     backgroundColor: 'rgba(168, 196, 153, 0.25)',
   },
   corner: {

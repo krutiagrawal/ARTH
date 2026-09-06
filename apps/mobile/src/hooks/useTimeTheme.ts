@@ -484,3 +484,10 @@ export function useTimeTheme(): TimeTheme {
 }
 
 export { getThemeForHour };
+
+/** Shared predicate for "should this generic (non-illustrated) surface go dark right now" —
+ * used by components like Sheet/MascotBubble that render across the whole app, not just the
+ * time-of-day illustrated screens, so they don't each duplicate this check. */
+export function isNightlikePeriod(period: TimePeriod): boolean {
+  return period === 'night' || period === 'lateNight';
+}

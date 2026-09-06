@@ -94,6 +94,17 @@ export const ADMIN_CONTENT_MODELS = {
       { name: 'label', type: 'text', required: true },
     ],
   },
+  approvedPlantingLocations: {
+    delegate: 'approvedPlantingLocation',
+    label: 'Approved Planting Locations',
+    idKind: 'string',
+    fields: [
+      { name: 'name', type: 'text', required: true },
+      { name: 'lat', type: 'number', required: true },
+      { name: 'lng', type: 'number', required: true },
+      { name: 'radiusMeters', type: 'number', required: true },
+    ],
+  },
 }
 
 export function coerceFieldValue(field, raw) {

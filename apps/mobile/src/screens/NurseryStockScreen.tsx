@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Image, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
+import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
@@ -11,17 +12,20 @@ import { BlurCard } from '../components/common/GlassCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { FormField } from '../components/common/FormField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
+import type { PickedPhoto } from '../components/common/PhotoPickerField';
 import {
   useSaplingStock,
   useCreateSaplingStock,
   useDeleteSaplingStock,
 } from '../hooks/useApiQueries';
 import type { ApiSaplingStock } from '../api/nursery';
-import { ApiError } from '../api/client';
+import { ApiError, resolveMediaUrl } from '../api/client';
 
 function StockRow({ item, onDelete }: { item: ApiSaplingStock; onDelete: () => void }) {
+  const photoUri = resolveMediaUrl(item.photoUrl);
   return (
     <BlurCard tint="light" noPadding style={styles.row}>
+      {photoUri ? <Image source={{ uri: photoUri }} style={styles.thumb} /> : <View style={styles.thumbPlaceholder}><Text style={{ fontSize: 18 }}>🌱</Text></View>}
       <View style={styles.rowText}>
         <Text style={styles.species}>{item.species}</Text>
         <Text style={styles.meta}>
@@ -44,7 +48,21 @@ export function NurseryStockScreen({ navigation }: any) {
   const [species, setSpecies] = useState('');
   const [quantity, setQuantity] = useState('');
   const [priceCents, setPriceCents] = useState('');
+  const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const pickPhoto = useCallback(async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+    const asset = !result.canceled ? result.assets[0] : undefined;
+    if (asset) {
+      setPhoto({ uri: asset.uri, name: asset.fileName ?? 'stock.jpg', type: asset.mimeType ?? 'image/jpeg' });
+    }
+  }, []);
 
   const handleAdd = async () => {
     setError(null);
@@ -60,10 +78,12 @@ export function NurseryStockScreen({ navigation }: any) {
         quantity: qty,
         isFree: !priceCents.trim(),
         priceCents: price,
+        photo: photo ?? undefined,
       });
       setSpecies('');
       setQuantity('');
       setPriceCents('');
+      setPhoto(null);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not add this item. Please try again.');
     }
@@ -97,6 +117,10 @@ export function NurseryStockScreen({ navigation }: any) {
             <FormField label="Price ₹ (blank = free)" value={priceCents} onChangeText={setPriceCents} placeholder="0" keyboardType="number-pad" />
           </View>
         </View>
+        <TouchableOpacity onPress={pickPhoto} style={styles.photoPickerRow}>
+          {photo ? <Image source={{ uri: photo.uri }} style={styles.photoPreview} /> : <View style={styles.photoPreviewPlaceholder}><Text style={{ fontSize: 16 }}>📷</Text></View>}
+          <Text style={styles.photoPickerText}>{photo ? 'Change photo' : 'Add a photo (optional)'}</Text>
+        </TouchableOpacity>
         {error && <Text style={styles.error}>{error}</Text>}
         <AnimatedButton
           label={createMutation.isPending ? 'Adding…' : '+ Add to inventory'}
@@ -132,14 +156,21 @@ const styles = StyleSheet.create({
   inlineField: { flex: 1 },
   addButton: { marginTop: 8 },
   error: { fontSize: 13, color: COLORS.coral, marginTop: 4 },
+  photoPickerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
+  photoPreview: { width: 36, height: 36, borderRadius: 8 },
+  photoPreviewPlaceholder: { width: 36, height: 36, borderRadius: 8, backgroundColor: COLORS.beige, alignItems: 'center', justifyContent: 'center' },
+  photoPickerText: { fontSize: 13, fontWeight: '600', color: COLORS.forest },
   list: { paddingHorizontal: SPACING.md, paddingTop: SPACING.sm },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
     borderRadius: RADIUS.md,
     padding: 14,
     marginBottom: 10,
   },
+  thumb: { width: 40, height: 40, borderRadius: 8 },
+  thumbPlaceholder: { width: 40, height: 40, borderRadius: 8, backgroundColor: COLORS.beige, alignItems: 'center', justifyContent: 'center' },
   rowText: { flex: 1 },
   species: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
   meta: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },

@@ -50,7 +50,9 @@
           "merchantIdentifier": "merchant.com.plant.ecoapp",
           "enableGooglePay": false
         }
-      ]
+      ],
+      "expo-audio",
+      "@maplibre/maplibre-react-native"
     ],
     "extra": {
       "eas": {

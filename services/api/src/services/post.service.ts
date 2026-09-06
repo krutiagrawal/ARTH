@@ -1,9 +1,12 @@
 import { Prisma, PrismaClient } from '@plant/db';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
 import { requireApprovedNgoProfile } from './ngo.service';
+import { requireApprovedNurseryProfile } from './nursery.service';
 import { recordUpdatePostedThisWeek } from './ngoStreak.service';
 import { evaluateNgoAchievements } from './ngoAchievement.service';
-import { notify, notifyFollowersOfNewPost } from './notification.service';
+import { recordNurseryActiveToday } from './nurseryStreak.service';
+import { evaluateNurseryAchievements } from './nurseryAchievement.service';
+import { notify, notifyFollowersOfNewPost, notifyFollowersOfNewNurseryPost } from './notification.service';
 import { BlockedIds, getBlockedIds } from './block.service';
 
 export const MAX_MEDIA_PER_POST = 6;
@@ -15,6 +18,7 @@ const AUTO_HIDE_REPORT_THRESHOLD = 3;
 export const postInclude = {
   user: { select: { id: true, name: true, handle: true, avatarEmoji: true } },
   ngo: { select: { id: true, orgName: true, logoUrl: true } },
+  nursery: { select: { id: true, nurseryName: true, logoUrl: true } },
   drive: { select: { id: true, title: true } },
   tree: { select: { id: true, nickname: true } },
   media: { orderBy: { order: 'asc' as const }, select: { id: true, url: true, order: true } },
@@ -43,14 +47,23 @@ export function serializePost(post: PostWithRelations, viewerId?: string) {
         handle: null as string | null,
         avatarEmoji: null as string | null,
       }
-    : {
-        kind: 'user' as const,
-        id: post.user?.id ?? '',
-        name: post.user?.name ?? 'Unknown',
-        imageUrl: null as string | null,
-        handle: post.user?.handle ?? null,
-        avatarEmoji: post.user?.avatarEmoji ?? null,
-      };
+    : post.nursery
+      ? {
+          kind: 'nursery' as const,
+          id: post.nursery.id,
+          name: post.nursery.nurseryName,
+          imageUrl: post.nursery.logoUrl,
+          handle: null as string | null,
+          avatarEmoji: null as string | null,
+        }
+      : {
+          kind: 'user' as const,
+          id: post.user?.id ?? '',
+          name: post.user?.name ?? 'Unknown',
+          imageUrl: null as string | null,
+          handle: post.user?.handle ?? null,
+          avatarEmoji: post.user?.avatarEmoji ?? null,
+        };
 
   return {
     id: post.id,
@@ -73,6 +86,7 @@ export function serializePost(post: PostWithRelations, viewerId?: string) {
     ngoId: post.ngoId,
     ngoName: post.ngo?.orgName,
     ngoLogoUrl: post.ngo?.logoUrl,
+    nurseryId: post.nurseryId,
     photoUrl: post.media[0]?.url ?? null,
   };
 }
@@ -123,6 +137,8 @@ interface CreatePostInput {
   mediaUrls: string[];
   /** Post as the caller's NGO rather than as themselves. Requires an approved NGO profile. */
   asNgo?: boolean;
+  /** Post as the caller's nursery rather than as themselves. Requires an approved nursery profile. */
+  asNursery?: boolean;
 }
 
 export async function createPost(prisma: PrismaClient, viewerId: string, input: CreatePostInput) {
@@ -136,6 +152,8 @@ export async function createPost(prisma: PrismaClient, viewerId: string, input: 
   await assertNotRateLimited(prisma, viewerId);
 
   const ngo = input.asNgo ? await requireApprovedNgoProfile(prisma, viewerId) : null;
+  const nursery = !ngo && input.asNursery ? await requireApprovedNurseryProfile(prisma, viewerId) : null;
+  const asOrg = ngo ?? nursery;
 
   if (input.driveId) {
     // A drive tag is only meaningful for the NGO that owns it.
@@ -148,7 +166,7 @@ export async function createPost(prisma: PrismaClient, viewerId: string, input: 
     const tree = await prisma.tree.findFirst({ where: { id: input.treeId, userId: viewerId, isDeleted: false } });
     if (!tree) throw new NotFoundError('Tree not found');
   }
-  if (input.groupId && !ngo) {
+  if (input.groupId && !asOrg) {
     // Members post as themselves — this is a membership check, not an ownership check
     // (unlike driveId, which is only meaningful for the NGO that owns the drive).
     const membership = await prisma.groupMember.findUnique({
@@ -160,15 +178,16 @@ export async function createPost(prisma: PrismaClient, viewerId: string, input: 
   const post = await prisma.$transaction(async (tx) => {
     const created = await tx.post.create({
       data: {
-        authorType: ngo ? 'ngo' : 'user',
-        // The owning user is recorded only for user-authored posts; an NGO post belongs to the
+        authorType: ngo ? 'ngo' : nursery ? 'nursery' : 'user',
+        // The owning user is recorded only for user-authored posts; an org post belongs to the
         // organisation, so it survives its operator's account being deleted.
-        userId: ngo ? null : viewerId,
+        userId: asOrg ? null : viewerId,
         ngoId: ngo?.id ?? null,
+        nurseryId: nursery?.id ?? null,
         caption: input.caption,
         driveId: input.driveId,
-        treeId: ngo ? null : input.treeId,
-        groupId: ngo ? null : input.groupId,
+        treeId: asOrg ? null : input.treeId,
+        groupId: asOrg ? null : input.groupId,
         media: { create: input.mediaUrls.map((url, order) => ({ url, order })) },
       },
       include: postInclude,
@@ -179,11 +198,16 @@ export async function createPost(prisma: PrismaClient, viewerId: string, input: 
       await recordUpdatePostedThisWeek(tx as unknown as PrismaClient, ngo.id);
       await evaluateNgoAchievements(tx as unknown as PrismaClient, ngo.id);
     }
+    if (nursery) {
+      await recordNurseryActiveToday(tx as unknown as PrismaClient, nursery.id);
+      await evaluateNurseryAchievements(tx as unknown as PrismaClient, nursery.id);
+    }
 
     return created;
   });
 
   if (ngo) void notifyFollowersOfNewPost(prisma, ngo.id, post.id, ngo.orgName);
+  if (nursery) void notifyFollowersOfNewNurseryPost(prisma, nursery.id, post.id, nursery.nurseryName);
 
   return post;
 }
@@ -199,12 +223,13 @@ export async function getPost(prisma: PrismaClient, viewerId: string, postId: st
 }
 
 async function requireOwnedPost(prisma: PrismaClient, viewerId: string, postId: string) {
-  const post = await prisma.post.findUnique({ where: { id: postId }, include: { ngo: true } });
+  const post = await prisma.post.findUnique({ where: { id: postId }, include: { ngo: true, nursery: true } });
   if (!post) throw new NotFoundError('Post not found');
 
   const ownsAsUser = post.userId === viewerId;
   const ownsAsNgo = post.ngo?.userId === viewerId;
-  if (!ownsAsUser && !ownsAsNgo) throw new ForbiddenError('This is not your post');
+  const ownsAsNursery = post.nursery?.userId === viewerId;
+  if (!ownsAsUser && !ownsAsNgo && !ownsAsNursery) throw new ForbiddenError('This is not your post');
 
   return post;
 }
@@ -349,7 +374,7 @@ export async function getSocialFeed(
   const take = Math.min(filter.take ?? 20, 50);
 
   const [follows, friendships, blocked] = await Promise.all([
-    prisma.follow.findMany({ where: { followerId: viewerId, status: 'accepted' }, select: { ngoId: true } }),
+    prisma.follow.findMany({ where: { followerId: viewerId, status: 'accepted' }, select: { ngoId: true, nurseryId: true } }),
     prisma.friendship.findMany({
       where: { status: 'accepted', OR: [{ requesterId: viewerId }, { addresseeId: viewerId }] },
       select: { requesterId: true, addresseeId: true },
@@ -357,11 +382,13 @@ export async function getSocialFeed(
     getBlockedIds(prisma, viewerId),
   ]);
 
-  const ngoIds = follows.map((f) => f.ngoId);
+  const ngoIds = follows.map((f) => f.ngoId).filter((id): id is string => id != null);
+  const nurseryIds = follows.map((f) => f.nurseryId).filter((id): id is string => id != null);
   const friendIds = friendships.map((f) => (f.requesterId === viewerId ? f.addresseeId : f.requesterId));
 
   const authorClauses: Prisma.PostWhereInput[] = [{ userId: viewerId }];
   if (ngoIds.length) authorClauses.push({ ngoId: { in: ngoIds } });
+  if (nurseryIds.length) authorClauses.push({ nurseryId: { in: nurseryIds } });
   if (friendIds.length) authorClauses.push({ userId: { in: friendIds } });
 
   const rows = await prisma.post.findMany({
@@ -383,7 +410,7 @@ export async function getSocialFeed(
 export async function listPostsByAuthor(
   prisma: PrismaClient,
   viewerId: string,
-  author: { ngoId?: string; userId?: string },
+  author: { ngoId?: string; nurseryId?: string; userId?: string },
   filter: { cursor?: string; take?: number } = {},
 ) {
   const take = Math.min(filter.take ?? 20, 50);
@@ -392,7 +419,7 @@ export async function listPostsByAuthor(
   const rows = await prisma.post.findMany({
     where: {
       AND: [
-        author.ngoId ? { ngoId: author.ngoId } : { userId: author.userId },
+        author.ngoId ? { ngoId: author.ngoId } : author.nurseryId ? { nurseryId: author.nurseryId } : { userId: author.userId },
         visibilityWhere(viewerId, blocked),
       ],
     },

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useRef, type RefObject } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurTargetView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
@@ -53,6 +54,7 @@ function QuickAction({
   title,
   body,
   onPress,
+  blurTarget,
 }: {
   theme: TimeTheme;
   delay: number;
@@ -61,12 +63,13 @@ function QuickAction({
   title: string;
   body: string;
   onPress: () => void;
+  blurTarget: RefObject<View | null>;
 }) {
   const animStyle = useSlideUp(delay, 18);
   return (
     <Animated.View style={animStyle}>
       <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-        <ThemedCard theme={theme} style={styles.actionCard}>
+        <ThemedCard theme={theme} style={styles.actionCard} blurTarget={blurTarget}>
           <View style={styles.actionRow}>
             <IconBadge icon={emoji} color={color} round />
             <View style={styles.actionTextColumn}>
@@ -98,6 +101,7 @@ export function CorporateDashboardScreen({ navigation, onNavigateTab }: Corporat
 
   const pageBackground = getHeroSeamColor(theme);
   const seamText = getHeroSeamTextColors(theme);
+  const blurTargetRef = useRef<View>(null);
 
   const tileProps = {
     variant: 'glass' as const,
@@ -110,10 +114,11 @@ export function CorporateDashboardScreen({ navigation, onNavigateTab }: Corporat
     textColor: theme.textPrimaryOnCard,
     subTextColor: theme.textSecondaryOnCard,
     borderColor: theme.cardBorder,
+    blurTarget: blurTargetRef,
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: pageBackground }]}>
+    <BlurTargetView ref={blurTargetRef} collapsable={false} style={[styles.container, { backgroundColor: pageBackground }]}>
       <StatusBar style={theme.statusBarStyle} />
 
       <ScrollView
@@ -165,6 +170,7 @@ export function CorporateDashboardScreen({ navigation, onNavigateTab }: Corporat
               borderColor={theme.cardBorder}
               delay={100}
               onPress={() => navigation.navigate('CorporateSponsorships')}
+              blurTarget={blurTargetRef}
             />
             <EcoWidget
               icon="💰"
@@ -181,6 +187,7 @@ export function CorporateDashboardScreen({ navigation, onNavigateTab }: Corporat
               borderColor={theme.cardBorder}
               delay={200}
               onPress={() => navigation.navigate('CorporateSponsorships')}
+              blurTarget={blurTargetRef}
             />
           </View>
         </View>
@@ -209,6 +216,7 @@ export function CorporateDashboardScreen({ navigation, onNavigateTab }: Corporat
           title="Sponsor a drive"
           body="Back a planting drive as part of your CSR spend."
           onPress={() => navigation.navigate('CorporateSponsorships')}
+          blurTarget={blurTargetRef}
         />
         <QuickAction
           theme={theme}
@@ -218,6 +226,7 @@ export function CorporateDashboardScreen({ navigation, onNavigateTab }: Corporat
           title="Company profile"
           body="Logo, description, industry, and city."
           onPress={() => onNavigateTab('Settings')}
+          blurTarget={blurTargetRef}
         />
       </ScrollView>
 
@@ -233,13 +242,13 @@ export function CorporateDashboardScreen({ navigation, onNavigateTab }: Corporat
           />
         )}
       </View>
-    </View>
+    </BlurTargetView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  ambientLayer: { ...StyleSheet.absoluteFillObject },
+  ambientLayer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   scrollContent: { paddingHorizontal: 16, gap: 8 },
   heroSection: { position: 'relative', overflow: 'hidden', marginHorizontal: -16 },
   heroBottomFade: { position: 'absolute', left: 0, right: 0, bottom: 0 },

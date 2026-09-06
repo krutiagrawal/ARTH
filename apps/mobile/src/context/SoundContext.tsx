@@ -6,7 +6,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Audio } from 'expo-av';
+import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getWeatherScene, type WeatherScene } from '../services/weatherService';
 
@@ -41,15 +41,14 @@ const SRC_RAIN  = (() => { try { return require('../../assets/sounds/light_rain.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const SRC_WOOF  = (() => { try { return require('../../assets/sounds/woof_bark.mp3');     } catch { return null; } })();
 
-async function makeLoop(src: any, volume: number, muted: boolean): Promise<Audio.Sound | null> {
+function makeLoop(src: any, volume: number, muted: boolean): AudioPlayer | null {
   if (!src) return null;
   try {
-    const { sound } = await Audio.Sound.createAsync(src, {
-      shouldPlay: !muted,
-      isLooping: true,
-      volume: muted ? 0 : volume,
-    });
-    return sound;
+    const player = createAudioPlayer(src);
+    player.loop = true;
+    player.volume = muted ? 0 : volume;
+    if (!muted) player.play();
+    return player;
   } catch { return null; }
 }
 
@@ -66,10 +65,10 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
   const isMutedRef = useRef(false);
   const sceneRef = useRef<WeatherScene>('sunny');
 
-  const birdsRef = useRef<Audio.Sound | null>(null);
-  const pianoRef = useRef<Audio.Sound | null>(null);
-  const rainRef  = useRef<Audio.Sound | null>(null);
-  const woofRef  = useRef<Audio.Sound | null>(null);
+  const birdsRef = useRef<AudioPlayer | null>(null);
+  const pianoRef = useRef<AudioPlayer | null>(null);
+  const rainRef  = useRef<AudioPlayer | null>(null);
+  const woofRef  = useRef<AudioPlayer | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -81,19 +80,19 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
       if (mounted) { setIsMuted(muted); isMutedRef.current = muted; }
 
       // Configure audio session before any playback
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        staysActiveInBackground: false,
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
+      await setAudioModeAsync({
+        allowsRecording: false,
+        shouldPlayInBackground: false,
+        playsInSilentMode: true,
+        interruptionMode: 'duckOthers',
+        shouldRouteThroughEarpiece: false,
       });
 
       if (!mounted) return;
 
       // Start birds + piano immediately
-      birdsRef.current = await makeLoop(SRC_BIRDS, VOL.birds_sunny, muted);
-      pianoRef.current = await makeLoop(SRC_PIANO, VOL.piano, muted);
+      birdsRef.current = makeLoop(SRC_BIRDS, VOL.birds_sunny, muted);
+      pianoRef.current = makeLoop(SRC_PIANO, VOL.piano, muted);
 
       // Weather check in background — adds rain if needed
       getWeatherScene().then(async (scene) => {
@@ -101,16 +100,16 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
         sceneRef.current = scene;
         if (scene !== 'rainy') return;
 
-        if (!isMutedRef.current) {
-          await birdsRef.current?.setVolumeAsync(VOL.birds_rainy);
+        if (!isMutedRef.current && birdsRef.current) {
+          birdsRef.current.volume = VOL.birds_rainy;
         }
-        rainRef.current = await makeLoop(SRC_RAIN, 0, isMutedRef.current);
+        rainRef.current = makeLoop(SRC_RAIN, 0, isMutedRef.current);
         if (rainRef.current && !isMutedRef.current) {
           let vol = 0;
           const step = VOL.rain / 20;
-          const id = setInterval(async () => {
+          const id = setInterval(() => {
             vol = Math.min(vol + step, VOL.rain);
-            await rainRef.current?.setVolumeAsync(vol);
+            if (rainRef.current) rainRef.current.volume = vol;
             if (vol >= VOL.rain) clearInterval(id);
           }, 100);
         }
@@ -121,10 +120,10 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false;
-      birdsRef.current?.unloadAsync();
-      pianoRef.current?.unloadAsync();
-      rainRef.current?.unloadAsync();
-      woofRef.current?.unloadAsync();
+      birdsRef.current?.remove();
+      pianoRef.current?.remove();
+      rainRef.current?.remove();
+      woofRef.current?.remove();
     };
   }, []);
 
@@ -136,19 +135,19 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
 
       const birdVol = sceneRef.current === 'rainy' ? VOL.birds_rainy : VOL.birds_sunny;
       if (next) {
-        birdsRef.current?.setVolumeAsync(0);
-        pianoRef.current?.setVolumeAsync(0);
-        rainRef.current?.setVolumeAsync(0);
-        birdsRef.current?.pauseAsync();
-        pianoRef.current?.pauseAsync();
-        rainRef.current?.pauseAsync();
+        if (birdsRef.current) birdsRef.current.volume = 0;
+        if (pianoRef.current) pianoRef.current.volume = 0;
+        if (rainRef.current) rainRef.current.volume = 0;
+        birdsRef.current?.pause();
+        pianoRef.current?.pause();
+        rainRef.current?.pause();
       } else {
-        birdsRef.current?.setVolumeAsync(birdVol);
-        pianoRef.current?.setVolumeAsync(VOL.piano);
-        if (sceneRef.current === 'rainy') rainRef.current?.setVolumeAsync(VOL.rain);
-        birdsRef.current?.playAsync();
-        pianoRef.current?.playAsync();
-        if (sceneRef.current === 'rainy') rainRef.current?.playAsync();
+        if (birdsRef.current) birdsRef.current.volume = birdVol;
+        if (pianoRef.current) pianoRef.current.volume = VOL.piano;
+        if (sceneRef.current === 'rainy' && rainRef.current) rainRef.current.volume = VOL.rain;
+        birdsRef.current?.play();
+        pianoRef.current?.play();
+        if (sceneRef.current === 'rainy') rainRef.current?.play();
       }
       return next;
     });
@@ -158,14 +157,12 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
     if (isMutedRef.current || !SRC_WOOF) return;
     try {
       if (!woofRef.current) {
-        const { sound } = await Audio.Sound.createAsync(SRC_WOOF, {
-          shouldPlay: false, isLooping: false, volume: VOL.woof,
-        });
-        woofRef.current = sound;
+        woofRef.current = createAudioPlayer(SRC_WOOF);
+        woofRef.current.volume = VOL.woof;
       }
-      await woofRef.current.stopAsync();
-      await woofRef.current.setPositionAsync(0);
-      await woofRef.current.playAsync();
+      woofRef.current.pause();
+      await woofRef.current.seekTo(0);
+      woofRef.current.play();
     } catch {}
   }, []);
 

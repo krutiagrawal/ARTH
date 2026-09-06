@@ -19,6 +19,7 @@ import weatherRoutes from './routes/weather.routes';
 import usersRoutes from './routes/users.routes';
 import settingsRoutes from './routes/settings.routes';
 import treesRoutes from './routes/trees.routes';
+import plantingLocationsRoutes from './routes/plantingLocations.routes';
 import achievementsRoutes from './routes/achievements.routes';
 import friendsRoutes from './routes/friends.routes';
 import leaderboardRoutes from './routes/leaderboard.routes';
@@ -54,6 +55,11 @@ import portfolioRoutes from './routes/portfolio.routes';
 import plantedTreesRoutes from './routes/plantedTrees.routes';
 import competitionsPublicRoutes from './routes/competitions.public.routes';
 import competitionsRoutes from './routes/competitions.routes';
+import nurseryFollowersRoutes from './routes/nurseryFollowers.routes';
+import addressesRoutes from './routes/addresses.routes';
+import cartRoutes from './routes/cart.routes';
+import ordersRoutes from './routes/orders.routes';
+import wishlistRoutes from './routes/wishlist.routes';
 
 export async function buildApp() {
   const app = Fastify({ logger: true });
@@ -98,6 +104,7 @@ export async function buildApp() {
     await instance.register(usersRoutes, { prefix: '/api/users' });
     await instance.register(settingsRoutes, { prefix: '/api/users/me/settings' });
     await instance.register(treesRoutes, { prefix: '/api/trees' });
+    await instance.register(plantingLocationsRoutes, { prefix: '/api/planting-locations' });
     await instance.register(achievementsRoutes, { prefix: '/api/achievements' });
     await instance.register(friendsRoutes, { prefix: '/api/friends' });
     await instance.register(leaderboardRoutes, { prefix: '/api/leaderboard' });
@@ -131,6 +138,11 @@ export async function buildApp() {
     await instance.register(socialRoutes, { prefix: '/api' });
     await instance.register(plantedTreesRoutes, { prefix: '/api/ngo/planted-trees' });
     await instance.register(competitionsRoutes, { prefix: '/api/competitions' });
+    await instance.register(addressesRoutes, { prefix: '/api/addresses' });
+    await instance.register(cartRoutes, { prefix: '/api/cart' });
+    await instance.register(ordersRoutes, { prefix: '/api/orders' });
+    await instance.register(wishlistRoutes, { prefix: '/api/wishlist' });
+    await instance.register(nurseryFollowersRoutes, { prefix: '/api/nursery/followers' });
   });
 
   return app;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { type RefObject } from 'react';
 import { View, StyleSheet, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
 import { Text } from './AppText';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -37,6 +37,9 @@ interface EcoWidgetProps {
   textColor?: string;
   subTextColor?: string;
   borderColor?: string;
+  /** Ref to the screen's `BlurTargetView` — required on Android for the 'glass' + `cardBackground`
+   * variant's `BlurView` to actually blur (otherwise it silently falls back to a flat tint there). */
+  blurTarget?: RefObject<View | null>;
   /** Applied to the widget's outermost wrapper — how a caller gives it a width in a grid. */
   style?: StyleProp<ViewStyle>;
   /** Stretch to fill the wrapper. Needed for equal-size grid tiles: the flex has to reach the
@@ -62,6 +65,7 @@ export function EcoWidget({
   textColor,
   subTextColor,
   borderColor,
+  blurTarget,
   style,
   fill = false,
 }: EcoWidgetProps) {
@@ -97,8 +101,12 @@ export function EcoWidget({
             <BlurView
               intensity={35}
               tint={dark ? 'dark' : 'light'}
-              experimentalBlurMethod="dimezisBlurView"
-              style={[styles.glassWidgetThemed, { borderColor: borderColor ?? cardBackground }, fillCardStyle]}
+              blurTarget={blurTarget}
+              style={[
+                styles.glassWidgetThemed,
+                { borderColor: borderColor ?? cardBackground, borderTopColor: 'rgba(255,255,255,0.4)' },
+                fillCardStyle,
+              ]}
             >
               <LinearGradient
                 colors={[
@@ -106,6 +114,14 @@ export function EcoWidget({
                   hexToRgba(cardBackgroundAlt ?? cardBackground, cardOverlayAlpha),
                 ]}
                 style={StyleSheet.absoluteFill}
+              />
+              {/* Fake glass sheen — Android has no real live blur here, see HomeScreen.tsx. */}
+              <LinearGradient
+                colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0.6, y: 0.8 }}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
               />
               <View style={styles.glassWidgetContent}>{glassContent}</View>
             </BlurView>
@@ -162,27 +178,6 @@ export function EcoWidget({
         )}
       </TouchableOpacity>
     </Animated.View>
-  );
-}
-
-export function StreakWidget({ streak, isActive }: { streak: number; isActive: boolean }) {
-  const breathStyle = useBreathing(0.95, 1.05, 1800);
-
-  return (
-    <View style={streakStyles.container}>
-      <LinearGradient
-        colors={isActive ? ['#FF6B35', '#FFD700'] : ['#C4B49A', '#9E8E78']}
-        style={streakStyles.gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <Animated.Text style={[streakStyles.fire, breathStyle]}>
-          {isActive ? '🔥' : '💤'}
-        </Animated.Text>
-        <Text style={streakStyles.count}>{streak}</Text>
-        <Text style={streakStyles.label}>day{streak !== 1 ? 's' : ''}</Text>
-      </LinearGradient>
-    </View>
   );
 }
 
@@ -314,34 +309,5 @@ const styles = StyleSheet.create({
   },
   glassSublabelDark: {
     color: COLORS.white,
-  },
-});
-
-const streakStyles = StyleSheet.create({
-  container: {
-    ...SHADOWS.golden,
-  },
-  gradient: {
-    borderRadius: RADIUS.xl,
-    padding: 16,
-    alignItems: 'center',
-    minWidth: 80,
-  },
-  fire: {
-    fontSize: 28,
-    marginBottom: 2,
-  },
-  count: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: COLORS.white,
-    lineHeight: 30,
-  },
-  label: {
-    fontSize: 11,
-    color: COLORS.white,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
 });

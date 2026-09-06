@@ -31,6 +31,12 @@ import {
   type FollowStatus,
 } from '../api/ngoFollowers';
 import {
+  acceptNurseryFollowRequest,
+  declineNurseryFollowRequest,
+  fetchNurseryFollowers,
+  removeNurseryFollower,
+} from '../api/nurseryFollowers';
+import {
   createPortfolioEntry,
   deletePortfolioEntry,
   fetchMyPortfolio,
@@ -63,6 +69,7 @@ export const socialKeys = {
   ngoPosts: (ngoId: string) => ['social', 'posts', 'ngo', ngoId] as const,
   userPosts: (userId: string) => ['social', 'posts', 'user', userId] as const,
   followers: (status?: FollowStatus, q?: string) => ['ngo', 'followers', status ?? 'all', q ?? ''] as const,
+  nurseryFollowers: (status?: FollowStatus, q?: string) => ['nursery', 'followers', status ?? 'all', q ?? ''] as const,
   portfolio: ['ngo', 'portfolio'] as const,
   ngoPortfolio: (ngoId: string) => ['ngos', 'portfolio', ngoId] as const,
   notifications: ['notifications'] as const,
@@ -156,6 +163,7 @@ export function useCreatePost() {
       // list is the same data under another name.
       queryClient.invalidateQueries({ queryKey: ['ngo'] });
       if (post.ngoId) queryClient.invalidateQueries({ queryKey: ['ngos', 'public', post.ngoId] });
+      if (post.nurseryId) queryClient.invalidateQueries({ queryKey: ['nurseries', 'public', post.nurseryId] });
       // A group-tagged post shows up in that group's activity timeline immediately.
       queryClient.invalidateQueries({ queryKey: ['group'] });
       queryClient.invalidateQueries({ queryKey: ['groups'] });
@@ -299,6 +307,32 @@ function useFollowerAction(fn: (followId: string) => Promise<void>) {
 export const useAcceptFollowRequest = () => useFollowerAction(acceptFollowRequest);
 export const useDeclineFollowRequest = () => useFollowerAction(declineFollowRequest);
 export const useRemoveFollower = () => useFollowerAction(removeFollower);
+
+// ---------------------------------------------------------------- Nursery followers
+
+export function useNurseryFollowers(params: { status?: FollowStatus; q?: string } = {}) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: socialKeys.nurseryFollowers(params.status, params.q),
+    queryFn: () => fetchNurseryFollowers(params),
+    enabled: isAuthenticated,
+  });
+}
+
+function useNurseryFollowerAction(fn: (followId: string) => Promise<void>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['nursery', 'followers'] });
+      queryClient.invalidateQueries({ queryKey: ['nursery', 'profile'] });
+    },
+  });
+}
+
+export const useAcceptNurseryFollowRequest = () => useNurseryFollowerAction(acceptNurseryFollowRequest);
+export const useDeclineNurseryFollowRequest = () => useNurseryFollowerAction(declineNurseryFollowRequest);
+export const useRemoveNurseryFollower = () => useNurseryFollowerAction(removeNurseryFollower);
 
 // ---------------------------------------------------------------- Portfolio
 

@@ -151,6 +151,30 @@ export async function releaseAdoption(prisma: PrismaClient, ngoUserId: string, t
   });
 }
 
+export async function listMyAdoptedTrees(prisma: PrismaClient, userId: string) {
+  const adoptions = await prisma.adoption.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    include: { adoptableTree: { include: adoptableTreeInclude } },
+  });
+  return adoptions.map((a) => a.adoptableTree);
+}
+
+/** Self-service sibling of releaseAdoption (NGO-initiated) — the adopter gives up their own tree. */
+export async function releaseAdoptionByUser(prisma: PrismaClient, userId: string, treeId: string) {
+  const adoption = await prisma.adoption.findFirst({ where: { adoptableTreeId: treeId, userId } });
+  if (!adoption) throw new NotFoundError('You have not adopted this tree');
+
+  return prisma.$transaction(async (tx) => {
+    await tx.adoption.delete({ where: { adoptableTreeId: treeId } });
+    return tx.adoptableTree.update({
+      where: { id: treeId },
+      data: { status: 'available' },
+      include: adoptableTreeInclude,
+    });
+  });
+}
+
 export async function adoptTree(prisma: PrismaClient, userId: string, treeId: string, message?: string) {
   return prisma.$transaction(async (tx) => {
     const tree = await tx.adoptableTree.findUnique({ where: { id: treeId } });

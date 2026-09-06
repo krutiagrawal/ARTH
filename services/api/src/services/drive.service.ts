@@ -4,6 +4,7 @@ import { ConflictError, NotFoundError } from '../utils/errors';
 import { geocodeAddress } from '../utils/geocode';
 import { haversineDistanceKm } from '../utils/geo';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
+import { notify } from './notification.service';
 
 interface PickupPointInput {
   address: string;
@@ -153,13 +154,49 @@ export async function updateDrive(prisma: PrismaClient, ngoUserId: string, drive
   });
 }
 
+/**
+ * Cancelling a drive must not leave paid sponsorships or RSVP'd attendees stranded — refund every
+ * `succeeded` sponsorship via Stripe (reusing donation.service.ts's pattern) and notify everyone
+ * who'd committed to this drive, since none of that used to happen at all.
+ */
 export async function cancelDrive(prisma: PrismaClient, ngoUserId: string, driveId: string) {
   const drive = await findOwnedDriveOrThrow(prisma, ngoUserId, driveId);
-  return prisma.drive.update({
+
+  const sponsorships = await prisma.drivePlantSponsorship.findMany({
+    where: { status: 'succeeded', drivePlant: { driveId: drive.id } },
+    include: { drivePlant: true },
+  });
+
+  if (sponsorships.length > 0) {
+    const stripe = getStripeClient();
+    for (const s of sponsorships) {
+      await stripe.refunds.create({ payment_intent: s.stripePaymentIntentId });
+      await prisma.drivePlantSponsorship.update({ where: { id: s.id }, data: { status: 'refunded' } });
+    }
+  }
+
+  const updated = await prisma.drive.update({
     where: { id: drive.id },
     data: { status: 'cancelled' as DriveStatus },
     include: driveInclude,
   });
+
+  const [rsvpUserIds, sponsorUserIds] = await Promise.all([
+    prisma.driveRsvp.findMany({ where: { driveId: drive.id, status: 'confirmed' }, select: { userId: true } }),
+    Promise.resolve(sponsorships.map((s) => ({ userId: s.userId }))),
+  ]);
+  const notifyUserIds = new Set([...rsvpUserIds.map((r) => r.userId), ...sponsorUserIds.map((s) => s.userId)]);
+
+  for (const userId of notifyUserIds) {
+    await notify(prisma, {
+      userId,
+      type: 'drive_reminder',
+      data: { driveId: drive.id, driveTitle: drive.title, kind: 'cancelled' },
+      push: { title: 'Drive cancelled', body: `"${drive.title}" has been cancelled by the organizer.` },
+    });
+  }
+
+  return updated;
 }
 
 /**

@@ -198,7 +198,7 @@ export function AdminHomeScreen({ navigation, onNavigateTab }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: PANEL_BG },
-  ambientLayer: { ...StyleSheet.absoluteFillObject },
+  ambientLayer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   scrollContent: { paddingHorizontal: 16, gap: 8 },
   heroSection: { position: 'relative', overflow: 'hidden', marginHorizontal: -16 },
   heroBottomFade: { position: 'absolute', left: 0, right: 0, bottom: 0 },

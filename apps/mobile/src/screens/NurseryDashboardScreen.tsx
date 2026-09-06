@@ -19,7 +19,7 @@ import { getSceneryMode, RainEffect, WindEffect } from '../components/common/Wea
 import { useTimeTheme, type TimeTheme } from '../hooks/useTimeTheme';
 import { useDeviceWeather } from '../hooks/useDeviceWeather';
 import { useAuth } from '../context/AuthContext';
-import { useNurseryProfile, useNurseryStats, useNurseryReservations } from '../hooks/useApiQueries';
+import { useNurseryProfile, useNurseryStats, useNurseryReservations, useNurseryOrders } from '../hooks/useApiQueries';
 import { useUnreadNotificationCount } from '../hooks/useSocialQueries';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
@@ -192,6 +192,8 @@ export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDas
   const { data: profile } = useNurseryProfile();
   const { data: stats, isLoading } = useNurseryStats();
   const { data: pendingReservations = [] } = useNurseryReservations('pending');
+  const { data: confirmedOrders = [] } = useNurseryOrders('confirmed');
+  const { data: packedOrders = [] } = useNurseryOrders('packed');
 
   const pageBackground = getHeroSeamColor(theme);
   const seamText = getHeroSeamTextColors(theme);
@@ -218,7 +220,18 @@ export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDas
   // circle, both camouflaged the icon against its own background.
   const dockActions: DockActionSpec[] = [
     { key: 'stock', emoji: '📦', color: COLORS.xpBlue, title: 'Manage inventory', onPress: () => navigation.navigate('NurseryStock') },
+    {
+      key: 'orders',
+      emoji: '🚚',
+      color: COLORS.amber,
+      title: 'Orders',
+      badge: confirmedOrders.length + packedOrders.length,
+      onPress: () => navigation.navigate('NurseryOrders'),
+    },
     { key: 'reservations', emoji: '🤝', color: COLORS.forest, title: 'Reservations', badge: pendingReservations.length, onPress: () => navigation.navigate('NurseryReservations') },
+    { key: 'reviews', emoji: '⭐', color: COLORS.coral, title: 'Reviews', onPress: () => navigation.navigate('NurseryReviews') },
+    { key: 'post', emoji: '📝', color: COLORS.sageDark, title: 'Post an update', onPress: () => navigation.navigate('NurseryPostUpdate') },
+    { key: 'followers', emoji: '👥', color: COLORS.xpBlue, title: 'Followers', onPress: () => navigation.navigate('NurseryFollowers') },
     { key: 'streak', emoji: '🔥', color: COLORS.sage, title: 'Streak & Badges', onPress: () => navigation.navigate('NurseryStreakBadges') },
     { key: 'analytics', emoji: '📊', color: COLORS.golden, title: 'Stock Analytics', onPress: () => navigation.navigate('NurseryStockAnalytics') },
     { key: 'profile', emoji: '⚙️', color: COLORS.earth, title: 'Nursery profile', onPress: () => navigation.navigate('NurseryProfile') },
@@ -330,7 +343,7 @@ export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDas
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  ambientLayer: { ...StyleSheet.absoluteFillObject },
+  ambientLayer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   scrollContent: { paddingHorizontal: 16, gap: 8 },
   heroSection: { position: 'relative', overflow: 'hidden', marginHorizontal: -16 },
   heroBottomFade: { position: 'absolute', left: 0, right: 0, bottom: 0 },

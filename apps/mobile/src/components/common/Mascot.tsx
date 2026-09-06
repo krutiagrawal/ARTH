@@ -16,9 +16,9 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import LottieView from 'lottie-react-native';
-import { useTimeTheme, type MascotOutfit } from '../../hooks/useTimeTheme';
+import { useTimeTheme, isNightlikePeriod, type MascotOutfit } from '../../hooks/useTimeTheme';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
-import { COLORS } from '../../constants/colors';
+import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
 
 type MascotImageMode = 'sleepy' | 'windingUp' | null;
 
@@ -135,13 +135,15 @@ export function MascotBubble({
   // mascot and its speech bubble bounce together as one unit rather than the bubble sitting
   // static beside a moving character.
   const floatStyle = useFloatBounce(true);
+  const { period } = useTimeTheme();
+  const isNightMode = isNightlikePeriod(period);
 
   return (
     <Animated.View style={[bub.container, floatStyle]}>
       <Mascot size={size} mood={mood} outfit={outfit} animate={false} />
-      <View style={bub.box}>
-        <View style={bub.tail} />
-        <Text style={bub.text}>{message}</Text>
+      <View style={[bub.box, isNightMode && bub.boxNight]}>
+        <View style={[bub.tail, isNightMode && bub.tailNight]} />
+        <Text style={[bub.text, isNightMode && bub.textNight]}>{message}</Text>
       </View>
     </Animated.View>
   );
@@ -182,5 +184,15 @@ const bub = StyleSheet.create({
     lineHeight: 17,
     color: COLORS.textPrimary,
     fontWeight: '500',
+  },
+  boxNight: {
+    backgroundColor: COLORS.nightSky,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  tailNight: {
+    borderRightColor: COLORS.nightSky,
+  },
+  textNight: {
+    color: ON_DARK_SURFACE.primary,
   },
 });

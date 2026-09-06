@@ -342,6 +342,38 @@ export function SettingsScreen({ navigation }: any) {
             accent={COLORS.earth}
             onPress={() => navigation.navigate('MySaplingReservations')}
           />
+          <SettingsDivider />
+          <SettingsRow
+            icon="📦"
+            label="My Orders"
+            sublabel="Saplings you've bought and their delivery status"
+            accent={COLORS.golden}
+            onPress={() => navigation.navigate('MyOrders')}
+          />
+          <SettingsDivider />
+          <SettingsRow
+            icon="♥"
+            label="Wishlist"
+            sublabel="Nurseries and saplings you've saved"
+            accent={COLORS.coral}
+            onPress={() => navigation.navigate('Wishlist')}
+          />
+          <SettingsDivider />
+          <SettingsRow
+            icon="📍"
+            label="Delivery Addresses"
+            sublabel="Manage saved addresses"
+            accent={COLORS.sage}
+            onPress={() => navigation.navigate('AddressBook')}
+          />
+          <SettingsDivider />
+          <SettingsRow
+            icon="🌳"
+            label="My Adopted Trees"
+            sublabel="Trees you're caring for"
+            accent={COLORS.forest}
+            onPress={() => navigation.navigate('MyAdoptions')}
+          />
         </GlassCard>
 
         {/* Safety */}

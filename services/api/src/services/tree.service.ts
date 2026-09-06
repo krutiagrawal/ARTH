@@ -7,6 +7,7 @@ import { completeMissionByType } from './missions.service';
 import { recordGroupPlantedToday } from './groupStreak.service';
 import { evaluateGroupAchievements } from './groupAchievement.service';
 import { NotFoundError } from '../utils/errors';
+import { assertEligiblePlantingLocation } from './plantingLocation.service';
 
 const BASE_XP_PER_TREE = 80;
 
@@ -21,6 +22,8 @@ interface PlantTreeInput {
 }
 
 export async function plantTree(prisma: PrismaClient, input: PlantTreeInput) {
+  await assertEligiblePlantingLocation(prisma, { lat: input.lat, lng: input.lng });
+
   return prisma.$transaction(async (tx) => {
     const species = await tx.treeSpecies.findUnique({ where: { id: input.speciesId } });
     if (!species) throw new NotFoundError('Unknown tree species');

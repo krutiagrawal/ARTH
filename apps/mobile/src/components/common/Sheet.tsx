@@ -2,10 +2,11 @@ import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Modal, Dimensions, ScrollView } from 'react-native';
 import { Text } from './AppText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS } from '../../constants/colors';
+import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
 import { RADIUS, SPACING, SHADOWS } from '../../constants/theme';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
+import { useTimeTheme, isNightlikePeriod } from '../../hooks/useTimeTheme';
 
 const { height: SH } = Dimensions.get('window');
 
@@ -38,6 +39,8 @@ export function Sheet({
   const insets = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();
   const effectiveAnimation = reduceMotion ? 'fade' : variant === 'slideUp' ? 'slide' : 'fade';
+  const { period } = useTimeTheme();
+  const isNightMode = isNightlikePeriod(period);
 
   const Content = scrollable ? ScrollView : View;
   const contentProps = scrollable
@@ -51,24 +54,25 @@ export function Sheet({
         <View
           style={[
             variant === 'slideUp' ? styles.sheet : styles.card,
+            isNightMode && styles.surfaceNight,
             { paddingBottom: variant === 'slideUp' ? Math.max(insets.bottom, SPACING.md) : SPACING.lg },
             maxHeight ? { maxHeight } : variant === 'slideUp' ? { maxHeight: SH * 0.85 } : null,
           ]}
         >
-          {variant === 'slideUp' && <View style={styles.handle} />}
+          {variant === 'slideUp' && <View style={[styles.handle, isNightMode && styles.handleNight]} />}
           {title ? (
             <View style={styles.headerRow}>
-              <Text style={styles.title} numberOfLines={1}>
+              <Text style={[styles.title, isNightMode && styles.titleNight]} numberOfLines={1}>
                 {title}
               </Text>
               <TouchableOpacity
                 onPress={onClose}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                style={styles.closeButton}
+                style={[styles.closeButton, isNightMode && styles.closeButtonNight]}
                 accessibilityRole="button"
                 accessibilityLabel="Close"
               >
-                <Text style={styles.closeIcon}>✕</Text>
+                <Text style={[styles.closeIcon, isNightMode && styles.titleNight]}>✕</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -143,5 +147,17 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: SPACING.md,
+  },
+  surfaceNight: {
+    backgroundColor: COLORS.nightSky,
+  },
+  titleNight: {
+    color: ON_DARK_SURFACE.primary,
+  },
+  handleNight: {
+    backgroundColor: ON_DARK_SURFACE.muted,
+  },
+  closeButtonNight: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
 });

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { type RefObject } from 'react';
 import { View, StyleSheet, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
 import { Text } from './AppText';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
 import { RADIUS, SPACING } from '../../constants/theme';
 import { TYPOGRAPHY } from '../../constants/typography';
@@ -26,9 +27,11 @@ interface TreeCardProps {
   onPress?: () => void;
   theme?: TimeTheme | null;
   style?: StyleProp<ViewStyle>;
+  /** Ref to the screen's `BlurTargetView` — required on Android for this to actually blur. */
+  blurTarget?: RefObject<View | null>;
 }
 
-export function TreeCard({ tree, size = 'chip', onPress, theme, style }: TreeCardProps) {
+export function TreeCard({ tree, size = 'chip', onPress, theme, style, blurTarget }: TreeCardProps) {
   const isCard = size === 'card';
   const nameColor = theme?.textPrimaryOnCard ?? COLORS.textWhite;
   const secondaryColor = theme?.textSecondaryOnCard ?? COLORS.textWhite;
@@ -47,14 +50,22 @@ export function TreeCard({ tree, size = 'chip', onPress, theme, style }: TreeCar
       <BlurView
         intensity={35}
         tint={theme?.cardTint === 'dark' || !theme ? 'dark' : 'light'}
-        experimentalBlurMethod="dimezisBlurView"
+        blurTarget={blurTarget}
         style={[
           isCard ? styles.card : styles.chip,
-          { borderColor, borderWidth: 1 },
+          { borderColor, borderWidth: 1, borderTopColor: 'rgba(255,255,255,0.4)' },
           style,
         ]}
       >
         <View style={[StyleSheet.absoluteFill, { backgroundColor: bgTint }]} />
+        {/* Fake glass sheen — Android has no real live blur here, see HomeScreen.tsx. */}
+        <LinearGradient
+          colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0.6, y: 0.8 }}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
         <Text style={isCard ? styles.cardEmoji : styles.chipEmoji}>{GROWTH_STAGE_EMOJI[stageIndex]}</Text>
         <Text
           style={[isCard ? styles.cardName : styles.chipName, { color: nameColor }]}

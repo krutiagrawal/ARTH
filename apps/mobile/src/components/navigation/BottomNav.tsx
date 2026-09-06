@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.lg,
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 } as const,
     backgroundColor: 'rgba(250, 245, 232, 0.85)',
   },
   container: {
@@ -347,7 +347,6 @@ const styles = StyleSheet.create({
   plantButtonWrapper: {
     flex: 1,
     alignItems: 'center',
-    marginTop: -20,
   },
   plantButton: {
     width: 60,

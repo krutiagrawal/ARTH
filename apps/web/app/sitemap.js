@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 
 const STATIC_ROUTES = [
-  '', '/about', '/mission', '/how-it-works', '/explore', '/forests', '/competitions',
+  '', '/mission', '/how-it-works', '/explore', '/forests', '/competitions',
   '/leaderboards', '/blogs', '/partners', '/contact', '/donate', '/adopt', '/drives',
   '/plant', '/register', '/login', '/privacy', '/terms', '/faq',
 ]

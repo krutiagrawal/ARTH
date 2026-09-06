@@ -4,6 +4,35 @@ import * as competitionService from '../services/competition.service';
 import { BadRequestError } from '../utils/errors';
 
 export default async function competitionsRoutes(fastify: FastifyInstance) {
+  fastify.get('/mine', async (request, reply) => {
+    const [entries, votes] = await Promise.all([
+      competitionService.listMyEntries(fastify.prisma, request.user!.id),
+      competitionService.listMyVotes(fastify.prisma, request.user!.id),
+    ]);
+
+    reply.send({
+      entries: entries.map((e) => ({
+        id: e.id,
+        title: e.title,
+        description: e.description,
+        imageUrl: e.imageUrl,
+        votesCount: e.votesCount,
+        createdAt: e.createdAt,
+        competitionId: e.competitionId,
+        competitionTitle: e.competition.title,
+        competitionDeadline: e.competition.deadline,
+      })),
+      votes: votes.map((v) => ({
+        id: v.id,
+        entryId: v.entryId,
+        entryTitle: v.entry.title,
+        competitionId: v.entry.competitionId,
+        competitionTitle: v.entry.competition.title,
+        createdAt: v.createdAt,
+      })),
+    });
+  });
+
   fastify.post<{ Params: { id: string } }>('/:id/entries', async (request, reply) => {
     const parsed = createEntrySchema.safeParse(request.body);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');

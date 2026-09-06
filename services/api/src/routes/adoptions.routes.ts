@@ -65,6 +65,11 @@ export default async function adoptionsRoutes(fastify: FastifyInstance) {
     reply.send(serializeAdoptableTree(tree));
   });
 
+  fastify.get('/my-adoptions', async (request, reply) => {
+    const trees = await adoptionService.listMyAdoptedTrees(fastify.prisma, request.user!.id);
+    reply.send(trees.map((t) => serializeAdoptableTree(t, { includeAdopter: true })));
+  });
+
   fastify.post('/', { preHandler: [fastify.requireRole(...ORG_ROLES)] }, async (request, reply) => {
     const { fields, file } = splitMultipartBody(request.body as any);
 
@@ -142,5 +147,10 @@ export default async function adoptionsRoutes(fastify: FastifyInstance) {
       parsed.data.message,
     );
     reply.status(201).send(serializeAdoptableTree(adoption.adoptableTree));
+  });
+
+  fastify.delete<{ Params: { id: string } }>('/:id/adopt', async (request, reply) => {
+    const tree = await adoptionService.releaseAdoptionByUser(fastify.prisma, request.user!.id, request.params.id);
+    reply.send(serializeAdoptableTree(tree));
   });
 }

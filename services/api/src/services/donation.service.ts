@@ -2,6 +2,7 @@ import { PrismaClient } from '@plant/db';
 import { getStripeClient } from '../lib/stripe';
 import { ConflictError, NotFoundError } from '../utils/errors';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
+import { confirmOrderPayment } from './order.service';
 
 interface CreateCampaignInput {
   title: string;
@@ -19,6 +20,11 @@ interface UpdateCampaignInput {
 
 interface OwnedListFilter {
   q?: string;
+  page?: number;
+  take?: number;
+}
+
+interface MyDonationsFilter {
   page?: number;
   take?: number;
 }
@@ -151,6 +157,24 @@ export async function listCampaignDonations(prisma: PrismaClient, ngoUserId: str
   return { donations, total };
 }
 
+export async function listMyDonations(prisma: PrismaClient, userId: string, filter: MyDonationsFilter = {}) {
+  const take = Math.min(filter.take ?? 50, 50);
+  const page = Math.max(filter.page ?? 1, 1);
+
+  const [donations, total] = await Promise.all([
+    prisma.donation.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take,
+      skip: (page - 1) * take,
+      include: { campaign: { include: { ngo: true } } },
+    }),
+    prisma.donation.count({ where: { userId } }),
+  ]);
+
+  return { donations, total };
+}
+
 export async function createDonationIntent(
   prisma: PrismaClient,
   userId: string,
@@ -206,5 +230,8 @@ export async function handleStripeWebhookEvent(
       where: { stripePaymentIntentId: paymentIntent.id },
       data: { status },
     });
+    // A no-op unless this payment intent belongs to a marketplace order (confirmOrderPayment
+    // looks it up by id and returns early if there's no matching, still-pending order).
+    await confirmOrderPayment(prisma, paymentIntent.id, status === 'succeeded');
   }
 }

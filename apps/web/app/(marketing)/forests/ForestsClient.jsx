@@ -1,29 +1,46 @@
 'use client'
 import Link from 'next/link'
+import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowUpRight, MapPin } from 'lucide-react'
+import IndiaMap from './IndiaMap'
 
 function Reveal({ children, delay = 0, className }) {
   return <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.9, delay, ease: [0.22, 1, 0.36, 1] }} className={className}>{children}</motion.div>
 }
 
 export default function ForestsClient({ forests }) {
+  const forestsByState = useMemo(() => {
+    const map = {}
+    for (const f of forests) {
+      if (!map[f.state]) map[f.state] = []
+      map[f.state].push(f)
+    }
+    return map
+  }, [forests])
+
   return (
     <div>
-      <section className="pt-36 md:pt-48 pb-12 md:pb-16 px-5 md:px-10">
-        <div className="grid grid-cols-12 gap-6 items-end">
-          <div className="col-span-12 md:col-span-9">
+      {/* Hero — heading + tagline stacked on the left, the map (the real
+          highlight of this page) large on the right, no card chrome around it. */}
+      <section className="pt-28 md:pt-36 pb-16 md:pb-24 px-5 md:px-10">
+        <div className="grid grid-cols-12 gap-4 md:gap-6 items-start">
+          <div className="col-span-12 md:col-span-4">
             <p className="eyebrow">Forests</p>
-            <Reveal><h1 className="display text-[14vw] md:text-[9vw] mt-6 max-w-[16ch]">The places we<br/><em className="text-primary">return</em> to.</h1></Reveal>
+            <Reveal><h1 className="font-serif text-4xl md:text-6xl mt-3 leading-[1.05]">The places we <em className="text-primary not-italic">return</em> to.</h1></Reveal>
+            <Reveal delay={0.1}>
+              <p className="text-muted-foreground text-base md:text-lg mt-3 max-w-sm">{forests.length} forests and growing, across {Object.keys(forestsByState).length} states. Tap the map to meet the ones near you.</p>
+            </Reveal>
           </div>
-          <Reveal className="col-span-12 md:col-span-3" delay={0.1}>
-            <p className="text-muted-foreground max-w-xs">Six featured forests. Not projects — living, breathing places with names and their own quiet weather.</p>
+          <Reveal className="col-span-12 md:col-span-8" delay={0.15}>
+            <IndiaMap forestsByState={forestsByState} />
           </Reveal>
         </div>
       </section>
 
-      {/* Editorial alternating rows */}
+      {/* Editorial alternating rows — every forest, in order */}
       <section className="px-5 md:px-10 pb-24 md:pb-32">
+        <p className="eyebrow mb-10 md:mb-14">Every forest, so far</p>
         <div className="space-y-20 md:space-y-32">
           {forests.map((f, i) => {
             const flip = i % 2 === 1
@@ -37,7 +54,7 @@ export default function ForestsClient({ forests }) {
                   </div>
                   <div className={`col-span-12 md:col-span-5 ${flip ? 'md:order-1 md:text-right' : ''}`}>
                     <div className={`flex items-center gap-3 ${flip ? 'md:justify-end' : ''}`}>
-                      <span className="font-serif italic text-primary text-xl">0{i + 1}</span>
+                      <span className="font-serif italic text-primary text-xl">{String(i + 1).padStart(2, '0')}</span>
                       <span className="h-px w-10 bg-foreground/25" />
                       <span className="eyebrow flex items-center gap-1.5"><MapPin className="h-3 w-3" /> {f.location}</span>
                     </div>

@@ -41,11 +41,11 @@ export async function middleware(request) {
     return NextResponse.next()
   }
 
-  // /app/*, and the old Arth-native plant/adopt/donate/drives/dashboard paths,
-  // all run on the member session now.
+  // The old Arth-native adopt/donate/drives/dashboard paths all run on the
+  // member session now. (/app/* used to be a second member-gated area — it's
+  // retired; next.config.js redirects() sends old /app/* links here. /plant
+  // is a public informational page now — planting itself is mobile-only.)
   const isMemberPath =
-    (pathname.startsWith('/app/') && pathname !== '/app/login' && pathname !== '/app/register') ||
-    pathname.startsWith('/plant') ||
     pathname.startsWith('/adopt') ||
     pathname.startsWith('/donate') ||
     pathname.startsWith('/drives') ||
@@ -65,7 +65,6 @@ export async function middleware(request) {
 
 export const config = {
   matcher: [
-    '/plant/:path*',
     '/adopt/:path*',
     '/donate/:path*',
     '/drives/:path*',
@@ -73,6 +72,5 @@ export const config = {
     '/ngo/dashboard/:path*',
     '/group/dashboard/:path*',
     '/admin/:path*',
-    '/app/:path*',
   ],
 }

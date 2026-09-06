@@ -10,12 +10,21 @@ import { RADIUS } from '../constants/theme';
 import { GlassCard } from '../components/common/GlassCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useBrowseNurseries } from '../hooks/useApiQueries';
+import { useMyLocation } from '../hooks/useMyLocation';
 import { resolveMediaUrl } from '../api/client';
 
 export function NurseryDirectoryScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
-  const { data, isLoading } = useBrowseNurseries({ q: query || undefined });
+  const [deliveryOnly, setDeliveryOnly] = useState(false);
+  const [nearbyOnly, setNearbyOnly] = useState(false);
+  const { coords } = useMyLocation();
+  const { data, isLoading } = useBrowseNurseries({
+    q: query || undefined,
+    deliveryOnly: deliveryOnly || undefined,
+    lat: nearbyOnly ? coords?.lat : undefined,
+    lng: nearbyOnly ? coords?.lng : undefined,
+  });
   const nurseries = data?.nurseries ?? [];
 
   return (
@@ -41,6 +50,12 @@ export function NurseryDirectoryScreen({ navigation }: any) {
           value={query}
           onChangeText={setQuery}
         />
+        <TouchableOpacity onPress={() => setDeliveryOnly((v) => !v)} style={[styles.filterChip, deliveryOnly && styles.filterChipActive]}>
+          <Text style={[styles.filterChipText, deliveryOnly && styles.filterChipTextActive]}>🚚 Delivers</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setNearbyOnly((v) => !v)} style={[styles.filterChip, nearbyOnly && styles.filterChipActive]}>
+          <Text style={[styles.filterChipText, nearbyOnly && styles.filterChipTextActive]}>📍 Nearby</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
@@ -59,7 +74,16 @@ export function NurseryDirectoryScreen({ navigation }: any) {
                 )}
                 <View style={{ flex: 1 }}>
                   <Text style={styles.cardTitle}>{nursery.nurseryName}</Text>
-                  {nursery.city ? <Text style={styles.cardMeta}>📍 {nursery.city}</Text> : null}
+                  <View style={styles.badgeRow}>
+                    {nursery.city ? <Text style={styles.cardMeta}>📍 {nursery.city}</Text> : null}
+                    {nursery.distanceKm != null && (
+                      <Text style={styles.cardMeta}>{nursery.distanceKm.toFixed(1)} km away</Text>
+                    )}
+                    {nursery.reviewCount > 0 && (
+                      <Text style={styles.cardMeta}>★ {Number(nursery.avgRating).toFixed(1)} ({nursery.reviewCount})</Text>
+                    )}
+                    {nursery.offersDelivery && <Text style={styles.cardMeta}>🚚 Delivers</Text>}
+                  </View>
                   <Text style={styles.cardBody} numberOfLines={2}>{nursery.description}</Text>
                 </View>
               </View>
@@ -78,8 +102,13 @@ const styles = StyleSheet.create({
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(94,133,80,0.2)' },
   backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
-  searchWrap: { paddingHorizontal: 20, paddingBottom: 12 },
-  searchInput: { backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.sand, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: COLORS.textPrimary },
+  searchWrap: { paddingHorizontal: 20, paddingBottom: 12, flexDirection: 'row', gap: 8, alignItems: 'center' },
+  searchInput: { flex: 1, backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.sand, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: COLORS.textPrimary },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.sand, backgroundColor: 'rgba(255,255,255,0.8)' },
+  filterChipActive: { backgroundColor: COLORS.forest, borderColor: COLORS.forest },
+  filterChipText: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
+  filterChipTextActive: { color: COLORS.white },
+  badgeRow: { flexDirection: 'row', gap: 10, marginTop: 2, flexWrap: 'wrap' },
   scrollContent: { paddingHorizontal: 20 },
   loader: { marginTop: 40 },
   card: { marginBottom: 12 },

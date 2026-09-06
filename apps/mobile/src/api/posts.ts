@@ -1,12 +1,12 @@
 import { apiFetch } from './client';
 
-export type PostAuthorKind = 'user' | 'ngo';
+export type PostAuthorKind = 'user' | 'ngo' | 'nursery';
 
 export interface ApiPostAuthor {
   kind: PostAuthorKind;
   id: string;
   name: string;
-  /** NGO logo. Null for users, who use `avatarEmoji` instead. */
+  /** NGO/nursery logo. Null for users, who use `avatarEmoji` instead. */
   imageUrl: string | null;
   handle: string | null;
   avatarEmoji: string | null;
@@ -40,6 +40,7 @@ export interface ApiPost {
   ngoId: string | null;
   ngoName?: string;
   ngoLogoUrl?: string | null;
+  nurseryId: string | null;
   photoUrl: string | null;
 }
 
@@ -63,6 +64,8 @@ export interface CreatePostInput {
   photos: PickedPhoto[];
   /** Publish as the caller's NGO rather than as themselves. */
   asNgo?: boolean;
+  /** Publish as the caller's nursery rather than as themselves. */
+  asNursery?: boolean;
 }
 
 export async function createPost(input: CreatePostInput): Promise<ApiPost> {
@@ -72,6 +75,7 @@ export async function createPost(input: CreatePostInput): Promise<ApiPost> {
   if (input.treeId) form.append('treeId', input.treeId);
   if (input.groupId) form.append('groupId', input.groupId);
   if (input.asNgo) form.append('asNgo', 'true');
+  if (input.asNursery) form.append('asNursery', 'true');
   // Repeated field name — the API reads every `photos` part in append order as the carousel.
   for (const photo of input.photos) {
     form.append('photos', { uri: photo.uri, name: photo.name, type: photo.type } as unknown as Blob);

@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import * as followService from '../services/follow.service';
+import * as nurseryFollowService from '../services/nurseryFollow.service';
 import { z } from 'zod';
 import { BadRequestError } from '../utils/errors';
 
@@ -12,6 +13,11 @@ export default async function followRoutes(fastify: FastifyInstance) {
   fastify.get('/', async (request, reply) => {
     const ngos = await followService.listFollowedNgos(fastify.prisma, request.user!.id);
     reply.send(ngos);
+  });
+
+  fastify.get('/nurseries', async (request, reply) => {
+    const nurseries = await nurseryFollowService.listFollowedNurseries(fastify.prisma, request.user!.id);
+    reply.send(nurseries);
   });
 
   fastify.get('/feed', async (request, reply) => {

@@ -1,4 +1,4 @@
-import DrivesListClient from '../../app/(guarded)/drives/DrivesListClient'
+import DrivesClient from './DrivesClient'
 
 export const metadata = {
   title: 'Drives',
@@ -6,5 +6,5 @@ export const metadata = {
 }
 
 export default function Page() {
-  return <DrivesListClient />
+  return <DrivesClient />
 }
