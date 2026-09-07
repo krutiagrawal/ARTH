@@ -1,9 +1,8 @@
-import React, { useState, useCallback, useEffect, useRef, Suspense } from 'react';
+﻿import React, { useState, useCallback, useEffect, useRef, Suspense } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 
 import { SplashScreen } from '../screens/SplashScreen';
@@ -106,46 +105,46 @@ export type AdminTabName = 'Overview' | 'NGOs' | 'Reports' | 'AuditLog';
 export type GroupTabName = 'Home' | 'Manage' | 'Activity' | 'Settings';
 
 const GROUP_TABS: TabItem[] = [
-  { name: 'Home', icon: '🏡', label: 'Home' },
-  { name: 'Manage', icon: '👥', label: 'Manage', raised: true },
-  { name: 'Activity', icon: '📣', label: 'Activity' },
-  { name: 'Settings', icon: '⚙️', label: 'Settings' },
+  { name: 'Home', icon: 'ðŸ¡', label: 'Home' },
+  { name: 'Manage', icon: 'ðŸ‘¥', label: 'Manage', raised: true },
+  { name: 'Activity', icon: 'ðŸ“£', label: 'Activity' },
+  { name: 'Settings', icon: 'âš™ï¸', label: 'Settings' },
 ];
 
 export type NurseryTabName = 'Home' | 'Stock' | 'Settings';
 
 const NURSERY_TABS: TabItem[] = [
-  { name: 'Home', icon: '🏡', label: 'Home' },
-  { name: 'Stock', icon: '📦', label: 'Stock', raised: true },
-  { name: 'Settings', icon: '⚙️', label: 'Settings' },
+  { name: 'Home', icon: 'ðŸ¡', label: 'Home' },
+  { name: 'Stock', icon: 'ðŸ“¦', label: 'Stock', raised: true },
+  { name: 'Settings', icon: 'âš™ï¸', label: 'Settings' },
 ];
 
 export type CorporateTabName = 'Home' | 'Sponsorships' | 'Settings';
 
 const CORPORATE_TABS: TabItem[] = [
-  { name: 'Home', icon: '🏡', label: 'Home' },
-  { name: 'Sponsorships', icon: '🤝', label: 'Sponsor', raised: true },
-  { name: 'Settings', icon: '⚙️', label: 'Settings' },
+  { name: 'Home', icon: 'ðŸ¡', label: 'Home' },
+  { name: 'Sponsorships', icon: 'ðŸ¤', label: 'Sponsor', raised: true },
+  { name: 'Settings', icon: 'âš™ï¸', label: 'Settings' },
 ];
 
 // Post takes the centre as a raised FAB, mirroring the user app's Plant button — posting is the
 // action an NGO repeats most, and its weekly streak depends on it. Map moved into More: an NGO
 // browsing the map is rare next to managing its own drives and community.
 const NGO_TABS: TabItem[] = [
-  { name: 'Home', icon: '🏡', label: 'Home' },
-  { name: 'Community', icon: '👥', label: 'Community' },
-  { name: 'Post', icon: '➕', label: 'Post', raised: true },
-  { name: 'Manage', icon: '📋', label: 'Manage' },
-  { name: 'More', icon: '⚙️', label: 'More' },
+  { name: 'Home', icon: 'ðŸ¡', label: 'Home' },
+  { name: 'Community', icon: 'ðŸ‘¥', label: 'Community' },
+  { name: 'Post', icon: 'âž•', label: 'Post', raised: true },
+  { name: 'Manage', icon: 'ðŸ“‹', label: 'Manage' },
+  { name: 'More', icon: 'âš™ï¸', label: 'More' },
 ];
 
 // NGO approvals is the action admins repeat most (AdminHomeScreen's own mascot line nags about
 // pending count), so it takes the raised centre slot — same treatment as Post/Plant above.
 const ADMIN_TABS: TabItem[] = [
-  { name: 'Overview', icon: '📊', label: 'Overview' },
-  { name: 'NGOs', icon: '🏢', label: 'NGOs', raised: true },
-  { name: 'Reports', icon: '🚩', label: 'Reports' },
-  { name: 'AuditLog', icon: '📜', label: 'Audit Log' },
+  { name: 'Overview', icon: 'ðŸ“Š', label: 'Overview' },
+  { name: 'NGOs', icon: 'ðŸ¢', label: 'NGOs', raised: true },
+  { name: 'Reports', icon: 'ðŸš©', label: 'Reports' },
+  { name: 'AuditLog', icon: 'ðŸ“œ', label: 'Audit Log' },
 ];
 
 // react-native-maps has no Android native module in Expo Go, so it must load
@@ -600,153 +599,151 @@ export function AppNavigator() {
   useLogoutRedirect();
 
   return (
-    <SafeAreaProvider>
-      <NavigationContainer ref={navigationRef}>
-        <Stack.Navigator
-          initialRouteName="Splash"
-          screenOptions={{
-            headerShown: false,
+    <NavigationContainer ref={navigationRef}>
+      <Stack.Navigator
+        initialRouteName="Splash"
+        screenOptions={{
+          headerShown: false,
+          cardStyleInterpolator: ({ current, layouts }) => ({
+            cardStyle: {
+              opacity: current.progress,
+              transform: [
+                {
+                  scale: current.progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.97, 1],
+                  }),
+                },
+              ],
+            },
+          }),
+        }}
+      >
+        <Stack.Screen name="Splash" component={SplashScreen} />
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+        <Stack.Screen name="AccountType" component={AccountTypeScreen} />
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="GroupRegister" component={GroupRegisterScreen} />
+        <Stack.Screen name="GroupMain" component={GroupMainApp} />
+        <Stack.Screen name="GroupCreateChallenge" component={GroupCreateChallengeScreen} />
+        <Stack.Screen name="GroupProfile" component={GroupProfileScreen} />
+        <Stack.Screen name="GroupSettings" component={GroupSettingsScreen} />
+        <Stack.Screen name="GroupMembers" component={GroupMembersStandaloneScreen} />
+        <Stack.Screen name="EditGroupProfile" component={EditGroupProfileScreen} />
+        <Stack.Screen name="GroupStreak" component={GroupStreakScreen} />
+        <Stack.Screen name="GroupActivity" component={GroupActivityScreen} />
+        <Stack.Screen name="GroupPostUpdate" component={PostComposerScreen} />
+        <Stack.Screen name="NurseryRegister" component={NurseryRegisterScreen} />
+        <Stack.Screen name="NurseryMain" component={NurseryMainApp} />
+        <Stack.Screen name="NurseryStock" component={NurseryStockScreen} />
+        <Stack.Screen name="NurseryProfile" component={NurseryProfileScreen} />
+        <Stack.Screen name="NurseryStreakBadges" component={NurseryStreakBadgesScreen} />
+        <Stack.Screen name="NurseryReservations" component={NurseryReservationsScreen} />
+        <Stack.Screen name="NurseryStockAnalytics" component={NurseryStockAnalyticsScreen} />
+        <Stack.Screen name="NurseryMap" component={NurseryMapScreen} />
+        <Stack.Screen name="CorporateRegister" component={CorporateRegisterScreen} />
+        <Stack.Screen name="CorporateMain" component={CorporateMainApp} />
+        <Stack.Screen name="CorporateSponsorships" component={CorporateSponsorshipsScreen} />
+        <Stack.Screen name="Groups" component={GroupsScreen} />
+        <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
+        <Stack.Screen name="Main" component={MainApp} />
+        <Stack.Screen
+          name="PlantTree"
+          component={PlantTreeScreen}
+          options={{
+            presentation: 'modal',
             cardStyleInterpolator: ({ current, layouts }) => ({
               cardStyle: {
-                opacity: current.progress,
                 transform: [
                   {
-                    scale: current.progress.interpolate({
+                    translateY: current.progress.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [0.97, 1],
+                      outputRange: [layouts.screen.height, 0],
                     }),
                   },
                 ],
               },
             }),
           }}
-        >
-          <Stack.Screen name="Splash" component={SplashScreen} />
-          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-          <Stack.Screen name="AccountType" component={AccountTypeScreen} />
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Register" component={RegisterScreen} />
-          <Stack.Screen name="GroupRegister" component={GroupRegisterScreen} />
-          <Stack.Screen name="GroupMain" component={GroupMainApp} />
-          <Stack.Screen name="GroupCreateChallenge" component={GroupCreateChallengeScreen} />
-          <Stack.Screen name="GroupProfile" component={GroupProfileScreen} />
-          <Stack.Screen name="GroupSettings" component={GroupSettingsScreen} />
-          <Stack.Screen name="GroupMembers" component={GroupMembersStandaloneScreen} />
-          <Stack.Screen name="EditGroupProfile" component={EditGroupProfileScreen} />
-          <Stack.Screen name="GroupStreak" component={GroupStreakScreen} />
-          <Stack.Screen name="GroupActivity" component={GroupActivityScreen} />
-          <Stack.Screen name="GroupPostUpdate" component={PostComposerScreen} />
-          <Stack.Screen name="NurseryRegister" component={NurseryRegisterScreen} />
-          <Stack.Screen name="NurseryMain" component={NurseryMainApp} />
-          <Stack.Screen name="NurseryStock" component={NurseryStockScreen} />
-          <Stack.Screen name="NurseryProfile" component={NurseryProfileScreen} />
-          <Stack.Screen name="NurseryStreakBadges" component={NurseryStreakBadgesScreen} />
-          <Stack.Screen name="NurseryReservations" component={NurseryReservationsScreen} />
-          <Stack.Screen name="NurseryStockAnalytics" component={NurseryStockAnalyticsScreen} />
-          <Stack.Screen name="NurseryMap" component={NurseryMapScreen} />
-          <Stack.Screen name="CorporateRegister" component={CorporateRegisterScreen} />
-          <Stack.Screen name="CorporateMain" component={CorporateMainApp} />
-          <Stack.Screen name="CorporateSponsorships" component={CorporateSponsorshipsScreen} />
-          <Stack.Screen name="Groups" component={GroupsScreen} />
-          <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
-          <Stack.Screen name="Main" component={MainApp} />
-          <Stack.Screen
-            name="PlantTree"
-            component={PlantTreeScreen}
-            options={{
-              presentation: 'modal',
-              cardStyleInterpolator: ({ current, layouts }) => ({
-                cardStyle: {
-                  transform: [
-                    {
-                      translateY: current.progress.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [layouts.screen.height, 0],
-                      }),
-                    },
-                  ],
-                },
-              }),
-            }}
-          />
-          <Stack.Screen name="StreakProtection" component={StreakProtectionScreen} />
-          <Stack.Screen name="Settings" component={SettingsScreen} />
-          <Stack.Screen name="Profile" component={ProfileScreen} />
-          <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
-          <Stack.Screen name="Sessions" component={SessionsScreen} />
-          <Stack.Screen name="StaticContent" component={StaticContentScreen} />
-          <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-          <Stack.Screen name="Drives" component={DrivesListScreen} />
-          <Stack.Screen name="DriveDetail" component={DriveDetailScreen} />
-          <Stack.Screen name="AdoptTreeList" component={AdoptTreeListScreen} />
-          <Stack.Screen name="AdoptTreeDetail" component={AdoptTreeDetailScreen} />
-          <Stack.Screen name="Campaigns" component={CampaignsListScreen} />
-          <Stack.Screen name="NgoMain" component={NgoMainApp} />
-          <Stack.Screen name="NgoProfile" component={NgoProfileScreen} />
-          <Stack.Screen name="NgoCreateDrive" component={NgoCreateDriveScreen} />
-          <Stack.Screen name="NgoCreateAdoptableTree" component={NgoCreateAdoptableTreeScreen} />
-          <Stack.Screen name="NgoRegister" component={NgoRegisterScreen} />
-          <Stack.Screen name="NgoSettings" component={NgoSettingsScreen} />
-          <Stack.Screen name="NgoStaff" component={NgoStaffScreen} />
-          <Stack.Screen name="NgoCreateCampaign" component={NgoCreateCampaignScreen} />
-          <Stack.Screen name="NgoReports" component={NgoReportsScreen} />
-          <Stack.Screen name="NgoDonations" component={NgoDonationsScreen} />
-          <Stack.Screen name="NgoVolunteers" component={NgoVolunteersScreen} />
-          <Stack.Screen name="NgoLogPlantedTrees" component={NgoLogPlantedTreesScreen} />
-          <Stack.Screen name="NgoHealthCheck" component={NgoHealthCheckScreen} />
-          <Stack.Screen name="NgoPostUpdate" component={PostComposerScreen} />
-          <Stack.Screen name="NgoCommunity" component={NgoCommunityScreen} />
-          <Stack.Screen name="Map" component={NgoMapScreen} />
-          <Stack.Screen name="NgoPortfolio" component={NgoPortfolioScreen} />
-          <Stack.Screen name="NgoPortfolioEntry" component={NgoPortfolioEntryScreen} />
-          <Stack.Screen name="Notifications" component={NotificationsScreen} />
-          <Stack.Screen name="PostDetail" component={PostDetailScreen} />
-          <Stack.Screen name="PostLikes" component={PostLikesScreen} />
-          <Stack.Screen name="BlockedAccounts" component={BlockedAccountsScreen} />
-          <Stack.Screen name="NgoDirectory" component={NgoDirectoryScreen} />
-          <Stack.Screen name="NgoPublicProfile" component={NgoPublicProfileScreen} />
-          <Stack.Screen name="NurseryDirectory" component={NurseryDirectoryScreen} />
-          <Stack.Screen name="NurseryPublicProfile" component={NurseryPublicProfileScreen} />
-          <Stack.Screen name="SaplingReservation" component={SaplingReservationScreen} />
-          <Stack.Screen name="MySaplingReservations" component={MySaplingReservationsScreen} />
-          <Stack.Screen name="AddToCart" component={AddToCartScreen} />
-          <Stack.Screen name="Cart" component={CartScreen} />
-          <Stack.Screen name="Checkout" component={CheckoutScreen} />
-          <Stack.Screen name="MyOrders" component={MyOrdersScreen} />
-          <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
-          <Stack.Screen name="Wishlist" component={WishlistScreen} />
-          <Stack.Screen name="AddressBook" component={AddressBookScreen} />
-          <Stack.Screen name="NurseryOrders" component={NurseryOrdersScreen} />
-          <Stack.Screen name="NurseryOrderDetail" component={NurseryOrderDetailScreen} />
-          <Stack.Screen name="NurseryReviews" component={NurseryReviewsScreen} />
-          <Stack.Screen name="MyAdoptions" component={MyAdoptionsScreen} />
-          <Stack.Screen name="NurseryFollowers" component={NurseryFollowersScreen} />
-          <Stack.Screen name="NurseryPostUpdate" component={PostComposerScreen} />
-          <Stack.Screen name="FollowingFeed" component={FollowingFeedScreen} />
-          <Stack.Screen name="AdminMain" component={AdminMainApp} />
-          <Stack.Screen name="AdminNgoApprovalDetail" component={AdminNgoApprovalDetailScreen} />
-          <Stack.Screen
-            name="CampaignDetail"
-            component={CampaignDetailScreen}
-            options={{
-              presentation: 'modal',
-              cardStyleInterpolator: ({ current, layouts }) => ({
-                cardStyle: {
-                  transform: [
-                    {
-                      translateY: current.progress.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [layouts.screen.height, 0],
-                      }),
-                    },
-                  ],
-                },
-              }),
-            }}
-          />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </SafeAreaProvider>
+        />
+        <Stack.Screen name="StreakProtection" component={StreakProtectionScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+        <Stack.Screen name="Sessions" component={SessionsScreen} />
+        <Stack.Screen name="StaticContent" component={StaticContentScreen} />
+        <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        <Stack.Screen name="Drives" component={DrivesListScreen} />
+        <Stack.Screen name="DriveDetail" component={DriveDetailScreen} />
+        <Stack.Screen name="AdoptTreeList" component={AdoptTreeListScreen} />
+        <Stack.Screen name="AdoptTreeDetail" component={AdoptTreeDetailScreen} />
+        <Stack.Screen name="Campaigns" component={CampaignsListScreen} />
+        <Stack.Screen name="NgoMain" component={NgoMainApp} />
+        <Stack.Screen name="NgoProfile" component={NgoProfileScreen} />
+        <Stack.Screen name="NgoCreateDrive" component={NgoCreateDriveScreen} />
+        <Stack.Screen name="NgoCreateAdoptableTree" component={NgoCreateAdoptableTreeScreen} />
+        <Stack.Screen name="NgoRegister" component={NgoRegisterScreen} />
+        <Stack.Screen name="NgoSettings" component={NgoSettingsScreen} />
+        <Stack.Screen name="NgoStaff" component={NgoStaffScreen} />
+        <Stack.Screen name="NgoCreateCampaign" component={NgoCreateCampaignScreen} />
+        <Stack.Screen name="NgoReports" component={NgoReportsScreen} />
+        <Stack.Screen name="NgoDonations" component={NgoDonationsScreen} />
+        <Stack.Screen name="NgoVolunteers" component={NgoVolunteersScreen} />
+        <Stack.Screen name="NgoLogPlantedTrees" component={NgoLogPlantedTreesScreen} />
+        <Stack.Screen name="NgoHealthCheck" component={NgoHealthCheckScreen} />
+        <Stack.Screen name="NgoPostUpdate" component={PostComposerScreen} />
+        <Stack.Screen name="NgoCommunity" component={NgoCommunityScreen} />
+        <Stack.Screen name="Map" component={NgoMapScreen} />
+        <Stack.Screen name="NgoPortfolio" component={NgoPortfolioScreen} />
+        <Stack.Screen name="NgoPortfolioEntry" component={NgoPortfolioEntryScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
+        <Stack.Screen name="PostDetail" component={PostDetailScreen} />
+        <Stack.Screen name="PostLikes" component={PostLikesScreen} />
+        <Stack.Screen name="BlockedAccounts" component={BlockedAccountsScreen} />
+        <Stack.Screen name="NgoDirectory" component={NgoDirectoryScreen} />
+        <Stack.Screen name="NgoPublicProfile" component={NgoPublicProfileScreen} />
+        <Stack.Screen name="NurseryDirectory" component={NurseryDirectoryScreen} />
+        <Stack.Screen name="NurseryPublicProfile" component={NurseryPublicProfileScreen} />
+        <Stack.Screen name="SaplingReservation" component={SaplingReservationScreen} />
+        <Stack.Screen name="MySaplingReservations" component={MySaplingReservationsScreen} />
+        <Stack.Screen name="AddToCart" component={AddToCartScreen} />
+        <Stack.Screen name="Cart" component={CartScreen} />
+        <Stack.Screen name="Checkout" component={CheckoutScreen} />
+        <Stack.Screen name="MyOrders" component={MyOrdersScreen} />
+        <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
+        <Stack.Screen name="Wishlist" component={WishlistScreen} />
+        <Stack.Screen name="AddressBook" component={AddressBookScreen} />
+        <Stack.Screen name="NurseryOrders" component={NurseryOrdersScreen} />
+        <Stack.Screen name="NurseryOrderDetail" component={NurseryOrderDetailScreen} />
+        <Stack.Screen name="NurseryReviews" component={NurseryReviewsScreen} />
+        <Stack.Screen name="MyAdoptions" component={MyAdoptionsScreen} />
+        <Stack.Screen name="NurseryFollowers" component={NurseryFollowersScreen} />
+        <Stack.Screen name="NurseryPostUpdate" component={PostComposerScreen} />
+        <Stack.Screen name="FollowingFeed" component={FollowingFeedScreen} />
+        <Stack.Screen name="AdminMain" component={AdminMainApp} />
+        <Stack.Screen name="AdminNgoApprovalDetail" component={AdminNgoApprovalDetailScreen} />
+        <Stack.Screen
+          name="CampaignDetail"
+          component={CampaignDetailScreen}
+          options={{
+            presentation: 'modal',
+            cardStyleInterpolator: ({ current, layouts }) => ({
+              cardStyle: {
+                transform: [
+                  {
+                    translateY: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [layouts.screen.height, 0],
+                    }),
+                  },
+                ],
+              },
+            }),
+          }}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
 

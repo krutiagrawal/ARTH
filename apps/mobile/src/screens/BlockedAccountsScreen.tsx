@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -11,14 +11,16 @@ import { EmptyState } from '../components/common/EmptyState';
 import { resolveMediaUrl } from '../api/client';
 import { useBlocks, useUnblockTarget } from '../hooks/useSocialQueries';
 import type { ApiBlock } from '../api/social';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 /** Manage blocked people and organisations. Reachable from Settings. */
 export function BlockedAccountsScreen({ navigation }: any) {
   const { data: blocks = [], isLoading, refetch, isRefetching } = useBlocks();
   const unblock = useUnblockTarget();
+  const confirm = useConfirm();
 
   const confirmUnblock = (block: ApiBlock) => {
-    Alert.alert(`Unblock ${block.name}?`, 'You will start seeing their posts and stories again.', [
+    confirm(`Unblock ${block.name}?`, 'You will start seeing their posts and stories again.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Unblock',

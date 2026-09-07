@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Image, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,6 +18,7 @@ import { ScreenHeader } from '../components/common/ScreenHeader';
 import { Toggle } from '../components/common/Toggle';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useHaptics } from '../hooks/useHaptics';
+import { useConfirm } from '../context/ConfirmDialogContext';
 import { ApiError, resolveMediaUrl } from '../api/client';
 
 const STATUS_COPY: Record<string, { title: string; body: string }> = {
@@ -42,6 +43,7 @@ export function NurseryProfileScreen({ navigation }: any) {
   const [locationLoading, setLocationLoading] = useState(false);
   const cardAnim = useSlideUp(0, 24);
   const { medium } = useHaptics();
+  const confirm = useConfirm();
   const logoUri = logo?.uri ?? resolveMediaUrl(profile?.logoUrl) ?? null;
   const hasLocation = profile?.lat != null && profile?.lng != null;
   const statusCopy = profile && profile.status !== 'approved' && profile.status !== 'rejected' ? STATUS_COPY[profile.status] : undefined;
@@ -76,14 +78,14 @@ export function NurseryProfileScreen({ navigation }: any) {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Location permission is required to place your nursery on the map.');
+        confirm('Permission needed', 'Location permission is required to place your nursery on the map.');
         return;
       }
       const position = await Location.getCurrentPositionAsync({});
       await updateMutation.mutateAsync({ lat: position.coords.latitude, lng: position.coords.longitude });
-      Alert.alert('Location set', 'Your nursery will now appear on the map.');
+      confirm('Location set', 'Your nursery will now appear on the map.');
     } catch (e) {
-      Alert.alert('Could not get location', 'Please try again.');
+      confirm('Could not get location', 'Please try again.');
     } finally {
       setLocationLoading(false);
     }
@@ -101,14 +103,14 @@ export function NurseryProfileScreen({ navigation }: any) {
         deliveryRadiusKm: deliveryRadiusKm.trim() ? Number(deliveryRadiusKm.trim()) : undefined,
         logo: logo ?? undefined,
       });
-      Alert.alert('Saved', 'Your nursery profile has been updated.');
+      confirm('Saved', 'Your nursery profile has been updated.');
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not save your profile. Please try again.');
     }
   };
 
   const handleResubmit = () => {
-    Alert.alert('Resubmit for review?', 'Your account will go back into the review queue.', [
+    confirm('Resubmit for review?', 'Your account will go back into the review queue.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Resubmit', onPress: () => resubmitMutation.mutate() },
     ]);

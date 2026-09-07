@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
@@ -8,6 +8,7 @@ import { EmptyState } from '../components/common/EmptyState';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useNgoFollowers, useRemoveFollower } from '../hooks/useSocialQueries';
 import type { ApiFollower } from '../api/ngoFollowers';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 function FollowerRow({ follower, onRemove }: { follower: ApiFollower; onRemove: () => void }) {
   return (
@@ -41,9 +42,10 @@ export function NgoFollowersScreen() {
     q: query.trim() || undefined,
   });
   const removeFollower = useRemoveFollower();
+  const confirm = useConfirm();
 
   const confirmRemove = (follower: ApiFollower) => {
-    Alert.alert(
+    confirm(
       `Remove ${follower.user.name}?`,
       'They will stop seeing your updates in their feed. They are not told, and they can follow you again.',
       [
@@ -74,7 +76,7 @@ export function NgoFollowersScreen() {
         <TextInput
           style={styles.search}
           placeholder="Search followers"
-          placeholderTextColor={COLORS.textLight}
+          placeholderTextColor={COLORS.textMuted}
           value={query}
           onChangeText={setQuery}
           autoCapitalize="none"

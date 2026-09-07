@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,6 +17,7 @@ import { useMyDrives, useNgoProfile, useNurseryProfile } from '../hooks/useApiQu
 import { useCreatePost } from '../hooks/useSocialQueries';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useAuth } from '../context/AuthContext';
+import { useConfirm } from '../context/ConfirmDialogContext';
 import { postPhotoStory } from '../api/stories';
 import { ApiError } from '../api/client';
 
@@ -36,6 +37,7 @@ export function PostComposerScreen({ navigation, route }: any) {
   const { data: nurseryProfile } = useNurseryProfile();
   const { data: drives = [] } = useMyDrives();
   const createPost = useCreatePost();
+  const confirm = useConfirm();
 
   const groupId: string | undefined = route?.params?.groupId;
   // A group post is a member posting as themselves, tagged to the group — never the
@@ -81,7 +83,7 @@ export function PostComposerScreen({ navigation, route }: any) {
         asNursery: canPublishAsNursery,
       });
       reset();
-      Alert.alert(
+      confirm(
         'Posted',
         groupId ? 'Shared to your group.' : canPublishAsNgo || canPublishAsNursery ? 'Your followers can see this now.' : 'Shared with your friends.'
       );
@@ -107,7 +109,7 @@ export function PostComposerScreen({ navigation, route }: any) {
         asNursery: canPublishAsNursery,
       });
       reset();
-      Alert.alert('Story posted', 'It disappears in 24 hours.');
+      confirm('Story posted', 'It disappears in 24 hours.');
       navigation?.goBack?.();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not post this story. Please try again.');

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -12,6 +12,7 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { resolveMediaUrl } from '../api/client';
 import { useDeletePortfolioEntry, useMyPortfolio } from '../hooks/useSocialQueries';
 import type { ApiPortfolioEntry } from '../api/portfolio';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
@@ -92,9 +93,10 @@ function EntryCard({
 export function NgoPortfolioScreen({ navigation }: any) {
   const { data: entries = [], isLoading, refetch, isRefetching } = useMyPortfolio();
   const deleteEntry = useDeletePortfolioEntry();
+  const confirm = useConfirm();
 
   const confirmDelete = (entry: ApiPortfolioEntry) => {
-    Alert.alert('Delete this entry?', `“${entry.title}” will be removed from your profile.`, [
+    confirm('Delete this entry?', `“${entry.title}” will be removed from your profile.`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => deleteEntry.mutate(entry.id) },
     ]);

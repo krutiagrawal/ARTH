@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -11,20 +11,22 @@ import { BlurCard } from '../components/common/GlassCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useNurseryReservations, useFulfillReservation, useDeclineReservation } from '../hooks/useApiQueries';
 import type { ApiNurseryReservation } from '../api/nursery';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 function ReservationRow({ item, showActions }: { item: ApiNurseryReservation; showActions: boolean }) {
   const fulfillMutation = useFulfillReservation();
   const declineMutation = useDeclineReservation();
+  const confirm = useConfirm();
 
   const handleFulfill = () => {
-    Alert.alert('Fulfil this request?', `Give ${item.quantity} ${item.species ?? 'saplings'} to ${item.requester?.name ?? 'this planter'}. Stock will be reduced.`, [
+    confirm('Fulfil this request?', `Give ${item.quantity} ${item.species ?? 'saplings'} to ${item.requester?.name ?? 'this planter'}. Stock will be reduced.`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Fulfil', onPress: () => fulfillMutation.mutate(item.id) },
     ]);
   };
 
   const handleDecline = () => {
-    Alert.alert('Decline this request?', 'The planter will be notified.', [
+    confirm('Decline this request?', 'The planter will be notified.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Decline', style: 'destructive', onPress: () => declineMutation.mutate(item.id) },
     ]);

@@ -91,7 +91,7 @@ export function AdminNgoApprovalsScreen({ navigation }: any) {
         <TextInput
           style={styles.searchInput}
           placeholder="Search by org name"
-          placeholderTextColor="rgba(255,255,255,0.4)"
+          placeholderTextColor={ON_DARK_SURFACE.muted}
           value={query}
           onChangeText={(v: string) => {
             setQuery(v);

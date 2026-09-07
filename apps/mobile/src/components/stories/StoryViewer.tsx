@@ -4,6 +4,9 @@ import { Text } from '../common/AppText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { resolveStoryImage, type ApiStory } from '../../api/stories';
+import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
+import { RADIUS, SPACING } from '../../constants/theme';
+import { TYPOGRAPHY } from '../../constants/typography';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const STORY_DURATION = 5000;
@@ -116,13 +119,22 @@ export function StoryViewer({
           <View style={styles.headerActions}>
             {onDelete && (
               <TouchableOpacity
+                style={styles.headerIconButton}
                 onPress={() => onDelete(current.id)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel="Delete story"
               >
                 <Text style={styles.headerIcon}>🗑️</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <TouchableOpacity
+              style={styles.headerIconButton}
+              onPress={onClose}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+            >
               <Text style={styles.headerClose}>✕</Text>
             </TouchableOpacity>
           </View>
@@ -140,9 +152,12 @@ export function StoryViewer({
 }
 
 const styles = StyleSheet.create({
+  // Full-bleed media viewer, not a cream Sheet surface — an immersive near-black backdrop is
+  // intentional here (mirrors Instagram/WhatsApp-style story viewers) rather than a bug to fix,
+  // but it's now COLORS.nightDeep (the app's darkest night token) instead of a bare '#000' literal.
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: COLORS.nightDeep,
     justifyContent: 'center',
   },
   image: {
@@ -174,13 +189,13 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 3,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: ON_DARK_SURFACE.muted,
     overflow: 'hidden',
   },
   progressFill: {
     height: 3,
     borderRadius: 2,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: ON_DARK_SURFACE.primary,
   },
   header: {
     position: 'absolute',
@@ -193,32 +208,39 @@ const styles = StyleSheet.create({
   authorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: SPACING.sm,
   },
   authorAvatar: {
     fontSize: 22,
   },
   authorName: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-    textShadowColor: 'rgba(0,0,0,0.5)',
+    ...TYPOGRAPHY.h4,
+    color: ON_DARK_SURFACE.primary,
+    textShadowColor: COLORS.overlay,
     textShadowRadius: 4,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: SPACING.sm,
+  },
+  // Matches Sheet's closeButtonNight treatment (translucent circular chip) instead of bare
+  // text-on-image, so the control reads as a tappable affordance against busy photo content.
+  headerIconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.full,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerIcon: {
-    fontSize: 18,
+    fontSize: 16,
   },
   headerClose: {
-    color: '#FFFFFF',
-    fontSize: 20,
+    color: ON_DARK_SURFACE.primary,
+    fontSize: 16,
     fontWeight: '700',
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowRadius: 4,
   },
   captionWrap: {
     position: 'absolute',
@@ -227,14 +249,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   caption: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    ...TYPOGRAPHY.h4,
+    color: ON_DARK_SURFACE.primary,
     textAlign: 'center',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 16,
+    backgroundColor: COLORS.overlay,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.md,
     overflow: 'hidden',
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowRadius: 4,

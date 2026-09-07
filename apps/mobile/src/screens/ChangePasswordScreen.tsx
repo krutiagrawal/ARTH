@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,10 +11,12 @@ import { PasswordInput } from '../components/common/PasswordInput';
 import { useChangePassword } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import { GlassCard } from '../components/common/GlassCard';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 export function ChangePasswordScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const changePasswordMutation = useChangePassword();
+  const confirm = useConfirm();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -33,7 +35,7 @@ export function ChangePasswordScreen({ navigation }: any) {
     }
     try {
       await changePasswordMutation.mutateAsync({ currentPassword, newPassword });
-      Alert.alert('Password changed', 'Your password has been updated.');
+      confirm('Password changed', 'Your password has been updated.');
       navigation?.goBack?.();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not change your password. Please try again.');

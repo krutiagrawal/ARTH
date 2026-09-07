@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, Modal } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { Text } from './AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS } from '../../constants/colors';
-import { RADIUS } from '../../constants/theme';
-import { GlassCard } from './GlassCard';
+import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
+import { RADIUS, SPACING } from '../../constants/theme';
+import { TYPOGRAPHY } from '../../constants/typography';
+import { Sheet } from './Sheet';
 import { useScaleIn } from '../../hooks/useAnimations';
+import { useTimeTheme, isNightlikePeriod } from '../../hooks/useTimeTheme';
 import type { ApiAchievement } from '../../api/achievements';
 
 /**
@@ -111,42 +113,42 @@ export function AchievementDetailModal({
   achievement: ApiAchievement | null;
   onClose: () => void;
 }) {
+  const { period } = useTimeTheme();
+  const isNightMode = isNightlikePeriod(period);
+
   return (
-    <Modal visible={!!achievement} transparent animationType="fade" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={onClose}>
-        <TouchableOpacity activeOpacity={1} onPress={(e: any) => e.stopPropagation()}>
-          {achievement && (
-            <GlassCard variant="dark" style={styles.achievementModalCard}>
-              <LinearGradient
-                colors={RARITY_COLORS[achievement.rarity]}
-                style={styles.achievementModalIconBg}
-              >
-                <Text style={styles.achievementModalIcon}>{achievement.icon}</Text>
-              </LinearGradient>
-              <Text style={styles.achievementModalTitle}>{achievement.title}</Text>
-              <Text style={styles.achievementModalRarity}>{achievement.rarity.toUpperCase()}</Text>
-              <Text style={styles.achievementModalDesc}>{achievement.description}</Text>
-              {!achievement.unlocked && achievement.total !== undefined && (
-                <View style={styles.achievementModalProgressWrap}>
-                  <View style={styles.achievementProgressBar}>
-                    <View
-                      style={[
-                        styles.achievementProgressFill,
-                        { width: `${Math.min(100, (achievement.progress / achievement.total) * 100)}%` as any },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.achievementModalProgressText}>
-                    {achievement.progress} / {achievement.total}
-                  </Text>
-                </View>
-              )}
-              {achievement.unlocked && <Text style={styles.achievementModalUnlocked}>✓ Unlocked</Text>}
-            </GlassCard>
+    <Sheet visible={!!achievement} onClose={onClose} variant="fade" title={achievement?.title}>
+      {achievement && (
+        <View style={styles.achievementModalContent}>
+          <LinearGradient
+            colors={RARITY_COLORS[achievement.rarity]}
+            style={styles.achievementModalIconBg}
+          >
+            <Text style={styles.achievementModalIcon}>{achievement.icon}</Text>
+          </LinearGradient>
+          <Text style={styles.achievementModalRarity}>{achievement.rarity.toUpperCase()}</Text>
+          <Text style={[styles.achievementModalDesc, isNightMode && styles.achievementModalDescNight]}>
+            {achievement.description}
+          </Text>
+          {!achievement.unlocked && achievement.total !== undefined && (
+            <View style={styles.achievementModalProgressWrap}>
+              <View style={styles.achievementProgressBar}>
+                <View
+                  style={[
+                    styles.achievementProgressFill,
+                    { width: `${Math.min(100, (achievement.progress / achievement.total) * 100)}%` as any },
+                  ]}
+                />
+              </View>
+              <Text style={[styles.achievementModalProgressText, isNightMode && styles.achievementModalDescNight]}>
+                {achievement.progress} / {achievement.total}
+              </Text>
+            </View>
           )}
-        </TouchableOpacity>
-      </TouchableOpacity>
-    </Modal>
+          {achievement.unlocked && <Text style={styles.achievementModalUnlocked}>✓ Unlocked</Text>}
+        </View>
+      )}
+    </Sheet>
   );
 }
 
@@ -241,63 +243,48 @@ const styles = StyleSheet.create({
   rarityDotLocked: {
     opacity: 0.45,
   },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+  achievementModalContent: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  achievementModalCard: {
-    width: '100%',
-    alignItems: 'center',
-    padding: 24,
-    gap: 6,
+    gap: SPACING.xs,
   },
   achievementModalIconBg: {
     width: 64,
     height: 64,
-    borderRadius: 20,
+    borderRadius: RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: SPACING.xs,
   },
   achievementModalIcon: {
     fontSize: 32,
   },
-  achievementModalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.white,
-    textAlign: 'center',
-  },
   achievementModalRarity: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.sageLight,
-    letterSpacing: 1,
+    ...TYPOGRAPHY.label,
+    color: COLORS.sageDark,
   },
   achievementModalDesc: {
-    fontSize: 13,
-    color: COLORS.white,
+    ...TYPOGRAPHY.bodySmall,
+    color: COLORS.textPrimary,
     textAlign: 'center',
-    lineHeight: 19,
-    marginTop: 8,
+    marginTop: SPACING.sm,
+  },
+  achievementModalDescNight: {
+    color: ON_DARK_SURFACE.secondary,
   },
   achievementModalProgressWrap: {
     width: '100%',
-    marginTop: 14,
-    gap: 6,
+    marginTop: SPACING.md,
+    gap: SPACING.xs,
   },
   achievementModalProgressText: {
-    fontSize: 12,
-    color: COLORS.white,
+    ...TYPOGRAPHY.caption,
+    color: COLORS.textSecondary,
     textAlign: 'center',
   },
   achievementModalUnlocked: {
-    fontSize: 13,
+    ...TYPOGRAPHY.bodySmall,
     fontWeight: '700',
-    color: COLORS.sageLight,
-    marginTop: 14,
+    color: COLORS.sageDark,
+    marginTop: SPACING.md,
   },
 });

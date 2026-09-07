@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Image, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { View, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
 import { Text } from '../common/AppText';
 import { COLORS } from '../../constants/colors';
 import { RADIUS } from '../../constants/theme';
 import { useMyStories, useDeleteStory } from '../../hooks/useApiQueries';
 import { resolveStoryImage } from '../../api/stories';
 import { StoryViewer } from './StoryViewer';
+import { useConfirm } from '../../context/ConfirmDialogContext';
 
 const { width: SW } = Dimensions.get('window');
 const GAP = 8;
@@ -22,6 +23,7 @@ function isActive(expiresAt: string): boolean {
 export function ForestGallery() {
   const { data: stories = [] } = useMyStories();
   const deleteStoryMutation = useDeleteStory();
+  const confirm = useConfirm();
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   if (stories.length === 0) return null;
@@ -29,7 +31,7 @@ export function ForestGallery() {
   const activeCount = stories.filter((s) => isActive(s.expiresAt)).length;
 
   const handleDelete = (storyId: string) => {
-    Alert.alert('Delete snapshot', 'Remove this forest snapshot from your gallery?', [
+    confirm('Delete snapshot', 'Remove this forest snapshot from your gallery?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, TouchableOpacity, StyleSheet, TextInputProps, ViewStyle } from 'react-native';
 import { TextInput } from './AppText';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
+import { ON_DARK_SURFACE } from '../../constants/colors';
 
 interface EyeIconProps {
   visible: boolean;
@@ -40,7 +41,12 @@ interface PasswordInputProps extends Omit<TextInputProps, 'secureTextEntry'> {
  * Drop-in replacement for `<TextInput secureTextEntry />` — pass the usual TextInput props
  * plus `inputStyle` for the field styling.
  */
-export function PasswordInput({ inputStyle, iconColor = 'rgba(255,255,255,0.75)', ...rest }: PasswordInputProps) {
+export function PasswordInput({
+  inputStyle,
+  iconColor = 'rgba(255,255,255,0.75)',
+  placeholderTextColor = ON_DARK_SURFACE.muted,
+  ...rest
+}: PasswordInputProps) {
   const [show, setShow] = useState(false);
 
   // Lift the field's outer margins onto the wrapper so the input's own marginBottom/marginTop
@@ -58,6 +64,7 @@ export function PasswordInput({ inputStyle, iconColor = 'rgba(255,255,255,0.75)'
     <View style={[outerMargin, styles.wrap]}>
       <TextInput
         {...rest}
+        placeholderTextColor={placeholderTextColor}
         style={[fieldStyle, styles.input]}
         secureTextEntry={!show}
       />

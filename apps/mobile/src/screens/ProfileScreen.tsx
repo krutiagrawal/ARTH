@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,6 +16,7 @@ import { StreakCalendar } from '../components/common/StreakCalendar';
 import { AchievementGrid, AchievementDetailModal } from '../components/common/AchievementGrid';
 import { useFadeIn } from '../hooks/useAnimations';
 import { useAuth } from '../context/AuthContext';
+import { useConfirm } from '../context/ConfirmDialogContext';
 import {
   useAchievements,
   useStreakCalendar,
@@ -141,6 +142,7 @@ export function ProfileScreen({ navigation }: any) {
   const { data: leaderboard } = useLeaderboard('global');
   const selectThemeMutation = useSelectTheme();
   const [selectedAchievement, setSelectedAchievement] = useState<ApiAchievement | null>(null);
+  const confirm = useConfirm();
 
   const myRank = leaderboard?.myRank ?? null;
 
@@ -179,7 +181,7 @@ export function ProfileScreen({ navigation }: any) {
                 onPress={() =>
                   forestTheme.unlocked
                     ? selectThemeMutation.mutate(forestTheme.id)
-                    : Alert.alert('Locked', 'Keep planting trees to unlock this forest theme!')
+                    : confirm('Locked', 'Keep planting trees to unlock this forest theme!')
                 }
               >
                 <GlassCard

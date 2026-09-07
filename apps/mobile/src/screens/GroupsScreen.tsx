@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,6 +15,7 @@ import { useMyGroups, useJoinGroup, useLeaveGroup } from '../hooks/useApiQueries
 import { useSlideUp } from '../hooks/useAnimations';
 import { ApiError } from '../api/client';
 import type { ApiGroupMembership } from '../api/group';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 const ROLE_LABEL: Record<ApiGroupMembership['role'], string> = { owner: 'Owner', co_admin: 'Co-admin', member: 'Member' };
 
@@ -28,6 +29,7 @@ export function GroupsScreen({ navigation }: any) {
   const { data: memberships = [], isLoading } = useMyGroups();
   const joinMutation = useJoinGroup();
   const leaveMutation = useLeaveGroup();
+  const confirm = useConfirm();
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -37,14 +39,14 @@ export function GroupsScreen({ navigation }: any) {
     try {
       await joinMutation.mutateAsync(inviteCode.trim());
       setInviteCode('');
-      Alert.alert('Joined!', "You're now part of this group.");
+      confirm('Joined!', "You're now part of this group.");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not join with that code.');
     }
   };
 
   const handleLeave = (membership: ApiGroupMembership) => {
-    Alert.alert('Leave group?', `You'll lose access to ${membership.group.groupName}'s challenges.`, [
+    confirm('Leave group?', `You'll lose access to ${membership.group.groupName}'s challenges.`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Leave', style: 'destructive', onPress: () => leaveMutation.mutate(membership.group.id) },
     ]);

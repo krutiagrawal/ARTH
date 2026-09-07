@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -31,6 +31,7 @@ import type { ApiForestTheme } from '../api/themes';
 import { getXpProgress } from '../constants/forestLevels';
 import { getForestThemePalette } from '../constants/forestThemePalettes';
 import { formatJoinDate, daysSince } from '../utils/profileDates';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 export function GroupProfileScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -42,6 +43,7 @@ export function GroupProfileScreen({ navigation }: any) {
   const { data: leaderboard } = useGroupLeaderboard();
   const { data: themes = [] } = useGroupThemes();
   const selectThemeMutation = useSelectGroupTheme();
+  const confirm = useConfirm();
   const [selectedAchievement, setSelectedAchievement] = useState<ApiAchievement | null>(null);
   const fadeStyle = useFadeIn(0);
 
@@ -169,7 +171,7 @@ export function GroupProfileScreen({ navigation }: any) {
                 onPress={() =>
                   forestTheme.unlocked
                     ? selectThemeMutation.mutate(forestTheme.id)
-                    : Alert.alert('Locked', 'Keep planting trees to unlock this forest theme!')
+                    : confirm('Locked', 'Keep planting trees to unlock this forest theme!')
                 }
               >
                 <GlassCard

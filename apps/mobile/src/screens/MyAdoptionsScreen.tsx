@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,13 +12,15 @@ import { EmptyState } from '../components/common/EmptyState';
 import { useHaptics } from '../hooks/useHaptics';
 import { useMyAdoptions, useReleaseMyAdoption } from '../hooks/useApiQueries';
 import type { ApiAdoptableTree } from '../api/adoptions';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 function AdoptionRow({ tree, navigation }: { tree: ApiAdoptableTree; navigation: any }) {
   const releaseMutation = useReleaseMyAdoption();
   const { success } = useHaptics();
+  const confirm = useConfirm();
 
   const handleRelease = () => {
-    Alert.alert(
+    confirm(
       `Release ${tree.nickname}?`,
       'This tree will go back into the adoptable pool for someone else to care for.',
       [

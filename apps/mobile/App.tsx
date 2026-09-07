@@ -2,6 +2,7 @@ import 'react-native-gesture-handler';
 import './global.css';
 import React, { Suspense } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet, View } from 'react-native';
 import { useFonts } from 'expo-font';
 // Per-face subpath imports, not the package roots. Importing from the root pulls that package's
@@ -24,6 +25,7 @@ import { AppNavigator } from './src/navigation/AppNavigator';
 import { SoundProvider } from './src/context/SoundContext';
 import { AuthProvider } from './src/context/AuthContext';
 import { ReduceMotionProvider } from './src/context/ReduceMotionContext';
+import { ConfirmDialogProvider } from './src/context/ConfirmDialogContext';
 import { COLORS } from './src/constants/colors';
 
 const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '';
@@ -103,17 +105,21 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <QueryClientProvider client={queryClient}>
-        <ReduceMotionProvider>
-          <AuthProvider>
-            <SoundProvider>
-              <AppProviders>
-                <AppNavigator />
-              </AppProviders>
-            </SoundProvider>
-          </AuthProvider>
-        </ReduceMotionProvider>
-      </QueryClientProvider>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <ReduceMotionProvider>
+            <ConfirmDialogProvider>
+              <AuthProvider>
+                <SoundProvider>
+                  <AppProviders>
+                    <AppNavigator />
+                  </AppProviders>
+                </SoundProvider>
+              </AuthProvider>
+            </ConfirmDialogProvider>
+          </ReduceMotionProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

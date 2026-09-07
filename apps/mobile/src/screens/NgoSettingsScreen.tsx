@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Image, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,11 +18,13 @@ import { useSlideUp } from '../hooks/useAnimations';
 import { useHaptics } from '../hooks/useHaptics';
 import type { Award } from '../api/ngo';
 import { ApiError, resolveMediaUrl } from '../api/client';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 export function NgoSettingsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { data: profile, isLoading } = useNgoProfile();
   const updateMutation = useUpdateNgoProfile();
+  const confirm = useConfirm();
 
   const [orgName, setOrgName] = useState('');
   const [description, setDescription] = useState('');
@@ -94,7 +96,7 @@ export function NgoSettingsScreen({ navigation }: any) {
         followPolicy: approvalRequired ? 'approval' : 'open',
         logo: logo ?? undefined,
       });
-      Alert.alert('Saved', 'Your NGO profile has been updated.');
+      confirm('Saved', 'Your NGO profile has been updated.');
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not save your profile. Please try again.');
     }

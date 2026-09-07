@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { useUpdateMe } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import { GlassCard } from '../components/common/GlassCard';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 const AVATAR_OPTIONS = [
   '🧑‍🌾', '🌱', '🌳', '🌲', '🍃', '🌿', '🌸', '🌻',
@@ -23,6 +24,7 @@ export function EditProfileScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const updateMeMutation = useUpdateMe();
+  const confirm = useConfirm();
 
   const [name, setName] = useState(user?.name ?? '');
   const [handle, setHandle] = useState(user?.handle ?? '');
@@ -41,7 +43,7 @@ export function EditProfileScreen({ navigation }: any) {
     }
     try {
       await updateMeMutation.mutateAsync({ name: name.trim(), handle, avatarEmoji });
-      Alert.alert('Profile updated', 'Your changes have been saved.');
+      confirm('Profile updated', 'Your changes have been saved.');
       navigation?.goBack?.();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not update your profile. Please try again.');

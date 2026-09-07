@@ -3,7 +3,7 @@ import { StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacit
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { COLORS } from '../constants/colors';
+import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
 import { TYPOGRAPHY } from '../constants/typography';
 import { RADIUS, SPACING } from '../constants/theme';
 import { BlurCard } from '../components/common/GlassCard';
@@ -73,14 +73,14 @@ export function RegisterScreen({ navigation }: any) {
           <TextInput
             style={styles.input}
             placeholder="Name"
-            placeholderTextColor="rgba(255,255,255,0.55)"
+            placeholderTextColor={ON_DARK_SURFACE.muted}
             value={name}
             onChangeText={setName}
           />
           <TextInput
             style={styles.input}
             placeholder="Email"
-            placeholderTextColor="rgba(255,255,255,0.55)"
+            placeholderTextColor={ON_DARK_SURFACE.muted}
             autoCapitalize="none"
             keyboardType="email-address"
             value={email}
@@ -89,7 +89,7 @@ export function RegisterScreen({ navigation }: any) {
           <PasswordInput
             inputStyle={styles.input}
             placeholder="Password (min. 8 characters)"
-            placeholderTextColor="rgba(255,255,255,0.55)"
+            placeholderTextColor={ON_DARK_SURFACE.muted}
             value={password}
             onChangeText={setPassword}
           />

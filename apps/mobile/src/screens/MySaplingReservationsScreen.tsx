@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -12,15 +12,17 @@ import { EmptyState } from '../components/common/EmptyState';
 import { useMyReservations, useCancelReservation } from '../hooks/useApiQueries';
 import { resolveMediaUrl } from '../api/client';
 import type { ApiMyReservation } from '../api/reservations';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 function ReservationCard({ item }: { item: ApiMyReservation }) {
   const cancelMutation = useCancelReservation();
+  const confirm = useConfirm();
 
   const statusColor =
     item.status === 'fulfilled' ? COLORS.sage : item.status === 'declined' ? COLORS.coral : item.status === 'cancelled' ? COLORS.textMuted : COLORS.golden;
 
   const handleCancel = () => {
-    Alert.alert('Cancel this request?', 'The nursery will no longer see it.', [
+    confirm('Cancel this request?', 'The nursery will no longer see it.', [
       { text: 'Keep it', style: 'cancel' },
       { text: 'Cancel request', style: 'destructive', onPress: () => cancelMutation.mutate(item.id) },
     ]);

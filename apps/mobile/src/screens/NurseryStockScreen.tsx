@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Image, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Image, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -20,6 +20,7 @@ import {
 } from '../hooks/useApiQueries';
 import type { ApiSaplingStock } from '../api/nursery';
 import { ApiError, resolveMediaUrl } from '../api/client';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 function StockRow({ item, onDelete }: { item: ApiSaplingStock; onDelete: () => void }) {
   const photoUri = resolveMediaUrl(item.photoUrl);
@@ -50,6 +51,7 @@ export function NurseryStockScreen({ navigation }: any) {
   const [priceCents, setPriceCents] = useState('');
   const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const confirm = useConfirm();
 
   const pickPhoto = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -90,7 +92,7 @@ export function NurseryStockScreen({ navigation }: any) {
   };
 
   const handleDelete = (item: ApiSaplingStock) => {
-    Alert.alert('Remove stock item?', `Remove ${item.species} from your inventory.`, [
+    confirm('Remove stock item?', `Remove ${item.species} from your inventory.`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: () => deleteMutation.mutate(item.id) },
     ]);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
@@ -13,6 +13,7 @@ import { EmptyState } from '../components/common/EmptyState';
 import { usePlantedTrees, useSurvivalStats, useLogBulkHealthChecks } from '../hooks/useApiQueries';
 import type { TreeHealthStatus } from '../api/plantedTrees';
 import { useSlideUp } from '../hooks/useAnimations';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 function FadeInRow({ delay, children }: { delay: number; children: React.ReactNode }) {
   const animStyle = useSlideUp(delay, 18);
@@ -32,6 +33,7 @@ export function NgoHealthCheckScreen({ navigation }: any) {
   const { data: stats } = useSurvivalStats();
   const bulkMutation = useLogBulkHealthChecks();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const confirm = useConfirm();
 
   const trees = data?.trees ?? [];
 
@@ -46,7 +48,7 @@ export function NgoHealthCheckScreen({ navigation }: any) {
 
   const applyStatus = (status: TreeHealthStatus) => {
     if (selected.size === 0) return;
-    Alert.alert(`Mark ${selected.size} tree${selected.size === 1 ? '' : 's'} as ${STATUS_META[status].label.toLowerCase()}?`, undefined, [
+    confirm(`Mark ${selected.size} tree${selected.size === 1 ? '' : 's'} as ${STATUS_META[status].label.toLowerCase()}?`, undefined, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Confirm',

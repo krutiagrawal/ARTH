@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Image, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,12 +15,14 @@ import { ScreenHeader } from '../components/common/ScreenHeader';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useHaptics } from '../hooks/useHaptics';
 import { ApiError, resolveMediaUrl } from '../api/client';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 export function CorporateSettingsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { data: profile, isLoading } = useCorporateProfile();
   const updateMutation = useUpdateCorporateProfile();
   const resubmitMutation = useResubmitCorporateProfile();
+  const confirm = useConfirm();
 
   const [companyName, setCompanyName] = useState('');
   const [description, setDescription] = useState('');
@@ -64,14 +66,14 @@ export function CorporateSettingsScreen({ navigation }: any) {
         city: city.trim() || undefined,
         logo: logo ?? undefined,
       });
-      Alert.alert('Saved', 'Your company profile has been updated.');
+      confirm('Saved', 'Your company profile has been updated.');
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not save your profile. Please try again.');
     }
   };
 
   const handleResubmit = () => {
-    Alert.alert('Resubmit for review?', 'Your account will go back into the review queue.', [
+    confirm('Resubmit for review?', 'Your account will go back into the review queue.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Resubmit', onPress: () => resubmitMutation.mutate() },
     ]);

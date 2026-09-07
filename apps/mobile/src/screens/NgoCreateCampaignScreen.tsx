@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,10 +13,12 @@ import { ScreenHeader } from '../components/common/ScreenHeader';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useCreateCampaign } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 export function NgoCreateCampaignScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const createMutation = useCreateCampaign();
+  const confirm = useConfirm();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -38,7 +40,7 @@ export function NgoCreateCampaignScreen({ navigation }: any) {
         goalAmountCents: goalRupees ? Math.round(Number(goalRupees) * 100) : undefined,
         photo: photo ?? undefined,
       });
-      Alert.alert('Campaign created', 'Your donation campaign is live.');
+      confirm('Campaign created', 'Your donation campaign is live.');
       navigation?.goBack?.();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not create this campaign. Please try again.');

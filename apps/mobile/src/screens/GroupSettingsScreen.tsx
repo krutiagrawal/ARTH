@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Image, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Linking } from 'react-native';
+import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,6 +25,7 @@ import { deleteAccount } from '../api/auth';
 import { ApiError, resolveMediaUrl } from '../api/client';
 import type { ApiUserSettings } from '../api/settings';
 import { PRIVACY_POLICY_TEXT, TERMS_OF_SERVICE_TEXT } from '../constants/legalContent';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 const GROUP_TYPES: { value: 'family' | 'school' | 'club' | 'other'; label: string }[] = [
   { value: 'family', label: 'Family' },
@@ -62,6 +63,7 @@ export function GroupSettingsScreen({ navigation }: any) {
   const settings = fetchedSettings ?? DEFAULT_SETTINGS;
   const { override: reduceMotionOverride, setOverride: setReduceMotionOverride } = useReduceMotionContext();
   const { data: sessions } = useSessions();
+  const confirm = useConfirm();
 
   const [groupName, setGroupName] = useState('');
   const [groupType, setGroupType] = useState<'family' | 'school' | 'club' | 'other'>('other');
@@ -91,7 +93,7 @@ export function GroupSettingsScreen({ navigation }: any) {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
+    confirm(
       'Delete Account',
       'This permanently deletes your group account and cannot be undone. Are you sure?',
       [
@@ -115,7 +117,7 @@ export function GroupSettingsScreen({ navigation }: any) {
     if (canOpen) {
       Linking.openURL(url);
     } else {
-      Alert.alert('No email app found', 'Please email us directly at support@plantapp.example');
+      confirm('No email app found', 'Please email us directly at support@plantapp.example');
     }
   };
 
@@ -151,14 +153,14 @@ export function GroupSettingsScreen({ navigation }: any) {
         city: city.trim() || undefined,
         logo: logo ?? undefined,
       });
-      Alert.alert('Saved', 'Your group profile has been updated.');
+      confirm('Saved', 'Your group profile has been updated.');
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not save your profile. Please try again.');
     }
   };
 
   const handleRegenerate = () => {
-    Alert.alert('Regenerate invite code?', 'The current code will stop working immediately.', [
+    confirm('Regenerate invite code?', 'The current code will stop working immediately.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Regenerate', style: 'destructive', onPress: () => regenerateMutation.mutate() },
     ]);

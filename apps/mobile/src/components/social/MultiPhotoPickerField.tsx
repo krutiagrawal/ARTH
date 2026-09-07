@@ -1,11 +1,12 @@
 import React, { useCallback } from 'react';
-import { View, TouchableOpacity, Image, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, TouchableOpacity, Image, StyleSheet, ScrollView } from 'react-native';
 import { Text } from '../common/AppText';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS } from '../../constants/colors';
 import { RADIUS, SPACING } from '../../constants/theme';
 import { FONTS } from '../../constants/typography';
 import { useHaptics } from '../../hooks/useHaptics';
+import { useConfirm } from '../../context/ConfirmDialogContext';
 import type { PickedPhoto } from '../common/PhotoPickerField';
 
 interface MultiPhotoPickerFieldProps {
@@ -42,6 +43,7 @@ export function MultiPhotoPickerField({
   hint,
 }: MultiPhotoPickerFieldProps) {
   const { medium, selection } = useHaptics();
+  const confirm = useConfirm();
   const remaining = max - photos.length;
   const isFull = remaining <= 0;
 
@@ -56,7 +58,7 @@ export function MultiPhotoPickerField({
 
   const pickFromGallery = useCallback(async () => {
     if (isFull) {
-      Alert.alert('Photo limit reached', `You can add up to ${max} photos.`);
+      confirm('Photo limit reached', `You can add up to ${max} photos.`);
       return;
     }
     medium();
@@ -71,7 +73,7 @@ export function MultiPhotoPickerField({
 
   const captureFromCamera = useCallback(async () => {
     if (isFull) {
-      Alert.alert('Photo limit reached', `You can add up to ${max} photos.`);
+      confirm('Photo limit reached', `You can add up to ${max} photos.`);
       return;
     }
     medium();

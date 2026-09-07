@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text, TextInput } from '../common/AppText';
 import { Sheet } from '../common/Sheet';
 import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
@@ -7,6 +7,7 @@ import { RADIUS, SPACING } from '../../constants/theme';
 import { REPORT_REASONS, type ReportReason, type ReportTargetType } from '../../api/social';
 import { useReportContent } from '../../hooks/useSocialQueries';
 import { useTimeTheme, isNightlikePeriod } from '../../hooks/useTimeTheme';
+import { useConfirm } from '../../context/ConfirmDialogContext';
 
 interface ReportSheetProps {
   visible: boolean;
@@ -28,6 +29,7 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [details, setDetails] = useState('');
   const report = useReportContent();
+  const confirm = useConfirm();
   const { period } = useTimeTheme();
   const isNightMode = isNightlikePeriod(period);
 
@@ -48,13 +50,13 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
       {
         onSuccess: () => {
           close();
-          Alert.alert(
+          confirm(
             'Thanks for telling us',
             'Our team will review this. If several people report the same thing, it is hidden straight away.',
           );
         },
         onError: (error: any) => {
-          Alert.alert('Could not send report', error?.message ?? 'Please try again.');
+          confirm('Could not send report', error?.message ?? 'Please try again.');
         },
       },
     );

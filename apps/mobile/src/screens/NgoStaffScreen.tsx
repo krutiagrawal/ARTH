@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,6 +16,7 @@ import { ScreenHeader } from '../components/common/ScreenHeader';
 import { useStaff, useCreateStaff, useDeleteStaff } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import { useSlideUp } from '../hooks/useAnimations';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
   const animStyle = useSlideUp(delay, 18);
@@ -27,6 +28,7 @@ export function NgoStaffScreen({ navigation }: any) {
   const { data: staff = [], isLoading } = useStaff();
   const createMutation = useCreateStaff();
   const deleteMutation = useDeleteStaff();
+  const confirm = useConfirm();
 
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
@@ -66,7 +68,7 @@ export function NgoStaffScreen({ navigation }: any) {
   };
 
   const handleDelete = (id: string, staffName: string) => {
-    Alert.alert('Remove staff member', `Remove ${staffName} from your roster?`, [
+    confirm('Remove staff member', `Remove ${staffName} from your roster?`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: () => deleteMutation.mutate(id) },
     ]);

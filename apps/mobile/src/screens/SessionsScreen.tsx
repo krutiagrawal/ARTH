@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,6 +11,7 @@ import { GlassCard } from '../components/common/GlassCard';
 import { IconBadge } from '../components/common/IconBadge';
 import { useSessions, useRevokeSession } from '../hooks/useApiQueries';
 import type { ApiSession } from '../api/users';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -18,9 +19,10 @@ function formatDate(iso: string): string {
 
 function SessionRow({ session }: { session: ApiSession }) {
   const revokeMutation = useRevokeSession();
+  const confirm = useConfirm();
 
   const handleRevoke = () => {
-    Alert.alert(
+    confirm(
       'Revoke this session?',
       'The device signed in on this session will be signed out.',
       [

@@ -470,7 +470,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
             value={nickname}
             onChangeText={setNickname}
             placeholder="e.g. Buddy, Luna, Whisper..."
-            placeholderTextColor={COLORS.textLight}
+            placeholderTextColor={COLORS.textMuted}
           />
 
           <TouchableOpacity

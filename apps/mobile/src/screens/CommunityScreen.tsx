@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator, Modal } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { COLORS } from '../constants/colors';
+import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
 import { FONTS } from '../constants/typography';
-import { RADIUS, SHADOWS } from '../constants/theme';
+import { RADIUS, SHADOWS, SPACING } from '../constants/theme';
 import { GlassCard } from '../components/common/GlassCard';
+import { Sheet } from '../components/common/Sheet';
 import { ProgressRing } from '../components/common/ProgressRing';
 import { EmptyState } from '../components/common/EmptyState';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
@@ -179,7 +180,7 @@ function AddFriendPanel({ onClose }: { onClose: () => void }) {
         <TextInput
           style={styles.addFriendInputDark}
           placeholder="Search by name or handle..."
-          placeholderTextColor="rgba(255,255,255,0.5)"
+          placeholderTextColor={ON_DARK_SURFACE.muted}
           value={query}
           onChangeText={setQuery}
           autoCapitalize="none"
@@ -219,70 +220,70 @@ function FriendProfileModal({ userId, onClose }: { userId: string | null; onClos
   const [viewingStory, setViewingStory] = useState(false);
 
   return (
-    <Modal visible={!!userId} transparent animationType="fade" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={onClose}>
-        <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
-          <GlassCard variant="dark" style={styles.profileModalCardDark}>
-            {isLoading || !profile ? (
-              <ActivityIndicator size="small" color={COLORS.sage} style={{ paddingVertical: 40 }} />
-            ) : (
-              <>
-                <TouchableOpacity
-                  activeOpacity={stories.length > 0 ? 0.8 : 1}
-                  onPress={() => stories.length > 0 && setViewingStory(true)}
-                >
-                  {stories.length > 0 ? (
-                    <LinearGradient
-                      colors={[COLORS.golden, COLORS.sage, COLORS.forest]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.profileModalStoryRing}
-                    >
-                      <View style={styles.profileModalAvatarRinged}>
-                        <Text style={styles.profileModalAvatarEmoji}>{profile.avatarEmoji}</Text>
-                      </View>
-                    </LinearGradient>
-                  ) : (
-                    <View style={styles.profileModalAvatar}>
-                      <Text style={styles.profileModalAvatarEmoji}>{profile.avatarEmoji}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-                {stories.length > 0 && <Text style={styles.profileModalStoryHint}>Tap avatar to view story</Text>}
-                <Text style={styles.profileModalNameDark}>{profile.name}</Text>
-                <Text style={styles.profileModalHandleDark}>@{profile.handle}</Text>
-                <View style={styles.profileModalStats}>
-                  <View style={styles.profileModalStat}>
-                    <Text style={styles.profileModalStatNumDark}>{profile.treesPlantedCount}</Text>
-                    <Text style={styles.profileModalStatLabelDark}>Trees</Text>
-                  </View>
-                  <View style={styles.profileModalStat}>
-                    <Text style={styles.profileModalStatNumDark}>{profile.streakCurrent}</Text>
-                    <Text style={styles.profileModalStatLabelDark}>Streak</Text>
-                  </View>
-                  <View style={styles.profileModalStat}>
-                    <Text style={styles.profileModalStatNumDark}>{profile.badgesCount}</Text>
-                    <Text style={styles.profileModalStatLabelDark}>Badges</Text>
-                  </View>
-                  <View style={styles.profileModalStat}>
-                    <Text style={styles.profileModalStatNumDark}>Lv.{profile.level}</Text>
-                    <Text style={styles.profileModalStatLabelDark}>Level</Text>
-                  </View>
+    <Sheet
+      visible={!!userId}
+      onClose={onClose}
+      variant="fade"
+      surface="dark"
+      surfaceColor={COLORS.nightForest}
+    >
+      {isLoading || !profile ? (
+        <ActivityIndicator size="small" color={COLORS.sage} style={styles.profileModalLoading} />
+      ) : (
+        <View style={styles.profileModalContent}>
+          <TouchableOpacity
+            activeOpacity={stories.length > 0 ? 0.8 : 1}
+            onPress={() => stories.length > 0 && setViewingStory(true)}
+          >
+            {stories.length > 0 ? (
+              <LinearGradient
+                colors={[COLORS.golden, COLORS.sage, COLORS.forest]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.profileModalStoryRing}
+              >
+                <View style={styles.profileModalAvatarRinged}>
+                  <Text style={styles.profileModalAvatarEmoji}>{profile.avatarEmoji}</Text>
                 </View>
-                <TouchableOpacity
-                  style={styles.removeFriendButton}
-                  onPress={() => {
-                    removeFriendMutation.mutate(profile.id);
-                    onClose();
-                  }}
-                >
-                  <Text style={styles.removeFriendText}>Remove Friend</Text>
-                </TouchableOpacity>
-              </>
+              </LinearGradient>
+            ) : (
+              <View style={styles.profileModalAvatar}>
+                <Text style={styles.profileModalAvatarEmoji}>{profile.avatarEmoji}</Text>
+              </View>
             )}
-          </GlassCard>
-        </TouchableOpacity>
-      </TouchableOpacity>
+          </TouchableOpacity>
+          {stories.length > 0 && <Text style={styles.profileModalStoryHint}>Tap avatar to view story</Text>}
+          <Text style={styles.profileModalName}>{profile.name}</Text>
+          <Text style={styles.profileModalHandle}>@{profile.handle}</Text>
+          <View style={styles.profileModalStats}>
+            <View style={styles.profileModalStat}>
+              <Text style={styles.profileModalStatNum}>{profile.treesPlantedCount}</Text>
+              <Text style={styles.profileModalStatLabel}>Trees</Text>
+            </View>
+            <View style={styles.profileModalStat}>
+              <Text style={styles.profileModalStatNum}>{profile.streakCurrent}</Text>
+              <Text style={styles.profileModalStatLabel}>Streak</Text>
+            </View>
+            <View style={styles.profileModalStat}>
+              <Text style={styles.profileModalStatNum}>{profile.badgesCount}</Text>
+              <Text style={styles.profileModalStatLabel}>Badges</Text>
+            </View>
+            <View style={styles.profileModalStat}>
+              <Text style={styles.profileModalStatNum}>Lv.{profile.level}</Text>
+              <Text style={styles.profileModalStatLabel}>Level</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.removeFriendButton}
+            onPress={() => {
+              removeFriendMutation.mutate(profile.id);
+              onClose();
+            }}
+          >
+            <Text style={styles.removeFriendText}>Remove Friend</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {profile && stories.length > 0 && (
         <StoryViewer
@@ -293,7 +294,7 @@ function FriendProfileModal({ userId, onClose }: { userId: string | null; onClos
           onClose={() => setViewingStory(false)}
         />
       )}
-    </Modal>
+    </Sheet>
   );
 }
 
@@ -1029,18 +1030,12 @@ const styles = StyleSheet.create({
   joinButtonTextJoined: {
     color: COLORS.sage,
   },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
+  profileModalLoading: {
+    paddingVertical: SPACING.xxl,
   },
-  profileModalCardDark: {
+  profileModalContent: {
     width: '100%',
     alignItems: 'center',
-    padding: 24,
-    backgroundColor: 'rgba(13,35,24,0.92)',
   },
   profileModalAvatar: {
     width: 72,
@@ -1071,40 +1066,40 @@ const styles = StyleSheet.create({
   },
   profileModalStoryHint: {
     fontSize: 11,
-    color: COLORS.white,
-    marginBottom: 8,
+    color: ON_DARK_SURFACE.secondary,
+    marginBottom: SPACING.sm,
   },
   profileModalAvatarEmoji: {
     fontSize: 38,
   },
-  profileModalNameDark: {
+  profileModalName: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.white,
+    color: ON_DARK_SURFACE.primary,
   },
-  profileModalHandleDark: {
+  profileModalHandle: {
     fontSize: 13,
-    color: COLORS.white,
+    color: ON_DARK_SURFACE.secondary,
     marginTop: 2,
   },
   profileModalStats: {
     flexDirection: 'row',
     width: '100%',
-    marginTop: 18,
-    marginBottom: 18,
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.lg,
   },
   profileModalStat: {
     flex: 1,
     alignItems: 'center',
   },
-  profileModalStatNumDark: {
+  profileModalStatNum: {
     fontSize: 18,
     fontWeight: '800',
     color: COLORS.sageLight,
   },
-  profileModalStatLabelDark: {
+  profileModalStatLabel: {
     fontSize: 10,
-    color: COLORS.white,
+    color: ON_DARK_SURFACE.secondary,
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.5,

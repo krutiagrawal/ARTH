@@ -225,7 +225,7 @@ export function AdminReportsScreen() {
         <TextInput
           style={[styles.reasonInput, isNightMode && styles.reasonInputNight]}
           placeholder="Reason (optional — saved to the audit log)"
-          placeholderTextColor={isNightMode ? ON_DARK_SURFACE.muted : COLORS.textLight}
+          placeholderTextColor={isNightMode ? ON_DARK_SURFACE.muted : COLORS.textMuted}
           value={reason}
           onChangeText={setReason}
           multiline

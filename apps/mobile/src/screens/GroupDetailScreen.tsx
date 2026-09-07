@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,6 +12,7 @@ import { ScreenHeader } from '../components/common/ScreenHeader';
 import { useGroupChallenges, useJoinGroupChallenge } from '../hooks/useApiQueries';
 import { useSlideUp } from '../hooks/useAnimations';
 import { ApiError } from '../api/client';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 const GOAL_TYPE_LABEL: Record<string, string> = {
   trees_planted_count: 'Trees planted',
@@ -30,13 +31,14 @@ export function GroupDetailScreen({ navigation, route }: any) {
   const groupId: string | undefined = route?.params?.groupId;
   const { data: challenges = [], isLoading } = useGroupChallenges(groupId);
   const joinMutation = useJoinGroupChallenge();
+  const confirm = useConfirm();
 
   const handleJoin = async (challengeId: string) => {
     try {
       await joinMutation.mutateAsync(challengeId);
-      Alert.alert("You're in!", 'Good luck reaching the goal together.');
+      confirm("You're in!", 'Good luck reaching the goal together.');
     } catch (e) {
-      Alert.alert('Could not join', e instanceof ApiError ? e.message : 'Please try again.');
+      confirm('Could not join', e instanceof ApiError ? e.message : 'Please try again.');
     }
   };
 

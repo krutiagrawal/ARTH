@@ -3,7 +3,7 @@ import { StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacit
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { COLORS } from '../constants/colors';
+import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
 import { TYPOGRAPHY } from '../constants/typography';
 import { RADIUS, SPACING } from '../constants/theme';
 import { BlurCard } from '../components/common/GlassCard';
@@ -85,14 +85,14 @@ export function NurseryRegisterScreen({ navigation }: any) {
           <TextInput
             style={styles.input}
             placeholder="Nursery name"
-            placeholderTextColor="rgba(255,255,255,0.55)"
+            placeholderTextColor={ON_DARK_SURFACE.muted}
             value={nurseryName}
             onChangeText={setNurseryName}
           />
           <TextInput
             style={[styles.input, styles.multiline]}
             placeholder="What does your nursery grow?"
-            placeholderTextColor="rgba(255,255,255,0.55)"
+            placeholderTextColor={ON_DARK_SURFACE.muted}
             value={description}
             onChangeText={setDescription}
             multiline
@@ -100,14 +100,14 @@ export function NurseryRegisterScreen({ navigation }: any) {
           <TextInput
             style={styles.input}
             placeholder="City (optional)"
-            placeholderTextColor="rgba(255,255,255,0.55)"
+            placeholderTextColor={ON_DARK_SURFACE.muted}
             value={city}
             onChangeText={setCity}
           />
           <TextInput
             style={styles.input}
             placeholder="Contact phone (optional)"
-            placeholderTextColor="rgba(255,255,255,0.55)"
+            placeholderTextColor={ON_DARK_SURFACE.muted}
             keyboardType="phone-pad"
             value={contactPhone}
             onChangeText={setContactPhone}
@@ -117,14 +117,14 @@ export function NurseryRegisterScreen({ navigation }: any) {
           <TextInput
             style={styles.input}
             placeholder="Your name"
-            placeholderTextColor="rgba(255,255,255,0.55)"
+            placeholderTextColor={ON_DARK_SURFACE.muted}
             value={ownerName}
             onChangeText={setOwnerName}
           />
           <TextInput
             style={styles.input}
             placeholder="Email"
-            placeholderTextColor="rgba(255,255,255,0.55)"
+            placeholderTextColor={ON_DARK_SURFACE.muted}
             autoCapitalize="none"
             keyboardType="email-address"
             value={email}
@@ -133,7 +133,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
           <PasswordInput
             inputStyle={styles.input}
             placeholder="Password (min. 8 characters)"
-            placeholderTextColor="rgba(255,255,255,0.55)"
+            placeholderTextColor={ON_DARK_SURFACE.muted}
             value={password}
             onChangeText={setPassword}
           />

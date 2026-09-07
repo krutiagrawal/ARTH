@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { COLORS } from '../constants/colors';
@@ -8,6 +8,7 @@ import { EmptyState } from '../components/common/EmptyState';
 import { useGroupMembers, useSetGroupMemberRole, useRemoveGroupMember } from '../hooks/useApiQueries';
 import { useSlideUp } from '../hooks/useAnimations';
 import type { ApiGroupMember } from '../api/group';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 const ROLE_LABEL: Record<ApiGroupMember['role'], string> = { owner: 'Owner', co_admin: 'Co-admin', member: 'Member' };
 
@@ -20,6 +21,7 @@ export function GroupMembersScreen({ navigation }: any) {
   const { data: members = [], isLoading } = useGroupMembers();
   const setRole = useSetGroupMemberRole();
   const removeMember = useRemoveGroupMember();
+  const confirm = useConfirm();
 
   const openActions = (member: ApiGroupMember) => {
     if (member.role === 'owner') return;
@@ -31,14 +33,14 @@ export function GroupMembersScreen({ navigation }: any) {
         text: 'Remove from group',
         style: 'destructive',
         onPress: () =>
-          Alert.alert('Remove member?', `${member.name} will lose access to this group.`, [
+          confirm('Remove member?', `${member.name} will lose access to this group.`, [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Remove', style: 'destructive', onPress: () => removeMember.mutate(member.userId) },
           ]),
       },
       { text: 'Cancel', style: 'cancel' },
     ];
-    Alert.alert(member.name, undefined, options);
+    confirm(member.name, undefined, options);
   };
 
   return (

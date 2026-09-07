@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,6 +10,7 @@ import { RADIUS } from '../constants/theme';
 import { useGroupProfile, useUpdateGroupProfile } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import { GlassCard } from '../components/common/GlassCard';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 const AVATAR_OPTIONS = [
   '🌳', '🌲', '🌱', '🍃', '🌿', '🌻', '🦋', '🐝',
@@ -22,6 +23,7 @@ export function EditGroupProfileScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { data: profile } = useGroupProfile();
   const updateGroupMutation = useUpdateGroupProfile();
+  const confirm = useConfirm();
 
   const [groupName, setGroupName] = useState(profile?.groupName ?? '');
   const [handle, setHandle] = useState(profile?.handle ?? '');
@@ -44,7 +46,7 @@ export function EditGroupProfileScreen({ navigation }: any) {
         handle: handle || undefined,
         avatarEmoji,
       });
-      Alert.alert('Group profile updated', 'Your changes have been saved.');
+      confirm('Group profile updated', 'Your changes have been saved.');
       navigation?.goBack?.();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not update your group profile. Please try again.');

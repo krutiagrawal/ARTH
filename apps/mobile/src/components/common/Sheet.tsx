@@ -25,6 +25,14 @@ interface SheetProps {
   variant?: 'slideUp' | 'fade';
   scrollable?: boolean;
   maxHeight?: number;
+  /**
+   * 'auto' (default) picks light/night-dark chrome from the time-of-day theme, same as before.
+   * 'dark' forces the night-mode chrome (light text, translucent handle/close button) regardless
+   * of time of day — for content that's always a dark surface (e.g. a picker over a night scene),
+   * not just at night. Pair with `surfaceColor` to override the actual background hex/rgba.
+   */
+  surface?: 'auto' | 'dark';
+  surfaceColor?: string;
 }
 
 export function Sheet({
@@ -35,12 +43,14 @@ export function Sheet({
   variant = 'slideUp',
   scrollable = false,
   maxHeight,
+  surface = 'auto',
+  surfaceColor,
 }: SheetProps) {
   const insets = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();
   const effectiveAnimation = reduceMotion ? 'fade' : variant === 'slideUp' ? 'slide' : 'fade';
   const { period } = useTimeTheme();
-  const isNightMode = isNightlikePeriod(period);
+  const isNightMode = surface === 'dark' ? true : isNightlikePeriod(period);
 
   const Content = scrollable ? ScrollView : View;
   const contentProps = scrollable
@@ -55,6 +65,7 @@ export function Sheet({
           style={[
             variant === 'slideUp' ? styles.sheet : styles.card,
             isNightMode && styles.surfaceNight,
+            isNightMode && surfaceColor ? { backgroundColor: surfaceColor } : null,
             { paddingBottom: variant === 'slideUp' ? Math.max(insets.bottom, SPACING.md) : SPACING.lg },
             maxHeight ? { maxHeight } : variant === 'slideUp' ? { maxHeight: SH * 0.85 } : null,
           ]}

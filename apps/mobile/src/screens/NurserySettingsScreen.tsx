@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Image, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Linking } from 'react-native';
+import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,6 +16,7 @@ import { SettingsRow, SettingsSectionHeader, SettingsDivider } from '../componen
 import { useFadeIn } from '../hooks/useAnimations';
 import { useReduceMotionContext } from '../context/ReduceMotionContext';
 import { useAuth } from '../context/AuthContext';
+import { useConfirm } from '../context/ConfirmDialogContext';
 import { deleteAccount } from '../api/auth';
 import { resolveMediaUrl } from '../api/client';
 import type { ApiUserSettings } from '../api/settings';
@@ -50,6 +51,7 @@ export function NurserySettingsScreen({ navigation }: any) {
   const settings = fetchedSettings ?? DEFAULT_SETTINGS;
   const { override: reduceMotionOverride, setOverride: setReduceMotionOverride } = useReduceMotionContext();
   const { data: sessions } = useSessions();
+  const confirm = useConfirm();
 
   const [selectedTheme, setSelectedTheme] = useState<'light' | 'dark' | 'auto'>(
     settings.darkMode ? 'dark' : 'light'
@@ -72,7 +74,7 @@ export function NurserySettingsScreen({ navigation }: any) {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
+    confirm(
       'Delete Account',
       'This permanently deletes your nursery account and cannot be undone. Are you sure?',
       [
@@ -96,7 +98,7 @@ export function NurserySettingsScreen({ navigation }: any) {
     if (canOpen) {
       Linking.openURL(url);
     } else {
-      Alert.alert('No email app found', 'Please email us directly at support@plantapp.example');
+      confirm('No email app found', 'Please email us directly at support@plantapp.example');
     }
   };
 

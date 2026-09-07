@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image, Alert, Share } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, Share } from 'react-native';
 import { Text } from '../common/AppText';
 import Animated, {
   useSharedValue,
@@ -20,6 +20,7 @@ import { MediaCarousel } from './MediaCarousel';
 import { LikeButton } from './LikeButton';
 import { ActionSheet, type ActionSheetOption } from './ActionSheet';
 import { useHaptics } from '../../hooks/useHaptics';
+import { useConfirm } from '../../context/ConfirmDialogContext';
 
 /** "3h", "2d", "12 Mar" — compact enough for the author row. */
 function relativeTime(iso: string): string {
@@ -63,6 +64,7 @@ export function PostCard({
   isTogglingLike = false,
 }: PostCardProps) {
   const { selection, light } = useHaptics();
+  const confirm = useConfirm();
   const [expanded, setExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -110,7 +112,7 @@ export function PostCard({
           hint: 'Removes it for everyone',
           destructive: true,
           onPress: () =>
-            Alert.alert('Delete this post?', 'This cannot be undone.', [
+            confirm('Delete this post?', 'This cannot be undone.', [
               { text: 'Cancel', style: 'cancel' },
               { text: 'Delete', style: 'destructive', onPress: () => onDelete(post) },
             ]),
@@ -134,7 +136,7 @@ export function PostCard({
           hint: 'Hides their posts and stories both ways',
           destructive: true,
           onPress: () =>
-            Alert.alert(
+            confirm(
               `Block ${post.author.name}?`,
               'You will stop seeing their posts and stories, and they will stop seeing yours.',
               [

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,6 +13,7 @@ import { useSlideUp } from '../hooks/useAnimations';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField, FormFieldShell } from '../components/common/FormField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 const GOAL_TYPES: { value: 'trees_planted_count' | 'cities_count' | 'streak_days' | 'rare_species_count'; label: string }[] = [
   { value: 'trees_planted_count', label: 'Trees planted' },
@@ -47,6 +48,7 @@ function DateField({ label, value, onChange }: { label: string; value: Date; onC
 
 export function GroupCreateChallengeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
+  const confirm = useConfirm();
   const createChallengeMutation = useCreateGroupChallenge();
 
   const [title, setTitle] = useState('');
@@ -77,7 +79,7 @@ export function GroupCreateChallengeScreen({ navigation }: any) {
         startsAt: startsAt.toISOString(),
         endsAt: endsAt.toISOString(),
       });
-      Alert.alert('Challenge created', 'Your group can start joining it now.');
+      confirm('Challenge created', 'Your group can start joining it now.');
       navigation?.goBack?.();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not create this challenge. Please try again.');

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -16,6 +16,7 @@ import {
   useRemoveNurseryFollower,
 } from '../hooks/useSocialQueries';
 import type { ApiFollower } from '../api/nurseryFollowers';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 function FollowerRow({ follower, isPending, onAccept, onDecline, onRemove }: {
   follower: ApiFollower;
@@ -59,9 +60,10 @@ export function NurseryFollowersScreen({ navigation }: any) {
   const acceptMutation = useAcceptNurseryFollowRequest();
   const declineMutation = useDeclineNurseryFollowRequest();
   const removeMutation = useRemoveNurseryFollower();
+  const confirm = useConfirm();
 
   const confirmRemove = (follower: ApiFollower) => {
-    Alert.alert(`Remove ${follower.user.name}?`, 'They will stop seeing your updates. They can follow you again later.', [
+    confirm(`Remove ${follower.user.name}?`, 'They will stop seeing your updates. They can follow you again later.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: () => removeMutation.mutate(follower.followId) },
     ]);

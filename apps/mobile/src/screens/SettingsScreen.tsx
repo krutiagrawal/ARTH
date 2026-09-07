@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, Linking } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Linking } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +14,7 @@ import { Toggle } from '../components/common/Toggle';
 import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
 import { useReduceMotionContext } from '../context/ReduceMotionContext';
 import { useAuth } from '../context/AuthContext';
+import { useConfirm } from '../context/ConfirmDialogContext';
 import { useSettings, useUpdateSettings, useSessions } from '../hooks/useApiQueries';
 import { deleteAccount } from '../api/auth';
 import type { ApiUserSettings } from '../api/settings';
@@ -52,6 +53,7 @@ export function SettingsScreen({ navigation }: any) {
   const updateSettingsMutation = useUpdateSettings();
   const settings = fetchedSettings ?? DEFAULT_SETTINGS;
   const { override: reduceMotionOverride, setOverride: setReduceMotionOverride } = useReduceMotionContext();
+  const confirm = useConfirm();
 
   const handleLogout = async () => {
     await logout();
@@ -59,7 +61,7 @@ export function SettingsScreen({ navigation }: any) {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
+    confirm(
       'Delete Account',
       'This permanently deletes your account and cannot be undone. Are you sure?',
       [
@@ -101,7 +103,7 @@ export function SettingsScreen({ navigation }: any) {
     if (canOpen) {
       Linking.openURL(url);
     } else {
-      Alert.alert('No email app found', 'Please email us directly at support@plantapp.example');
+      confirm('No email app found', 'Please email us directly at support@plantapp.example');
     }
   };
 

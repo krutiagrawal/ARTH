@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -10,6 +10,7 @@ import { ScreenHeader } from '../components/common/ScreenHeader';
 import { GlassCard } from '../components/common/GlassCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useHaptics } from '../hooks/useHaptics';
+import { useConfirm } from '../context/ConfirmDialogContext';
 import { useNurseryOrder, usePackOrder, useDispatchOrder, useDeliverOrder, useCancelNurseryOrder } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 
@@ -21,6 +22,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
   const orderId: string = route?.params?.orderId;
   const insets = useSafeAreaInsets();
   const { success, error: errorHaptic } = useHaptics();
+  const confirm = useConfirm();
   const { data: order, isLoading } = useNurseryOrder(orderId);
   const packMutation = usePackOrder();
   const dispatchMutation = useDispatchOrder();
@@ -44,7 +46,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
   };
 
   const handleCancel = () => {
-    Alert.alert('Cancel this order?', 'The customer will be refunded and notified.', [
+    confirm('Cancel this order?', 'The customer will be refunded and notified.', [
       { text: 'Back', style: 'cancel' },
       { text: 'Cancel order', style: 'destructive', onPress: () => run(() => cancelMutation.mutateAsync(orderId)) },
     ]);

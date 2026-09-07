@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,6 +15,7 @@ import { PhotoPickerField, PickedPhoto } from '../components/common/PhotoPickerF
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField, FormFieldShell } from '../components/common/FormField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 interface PickupPointDraft {
   address: string;
@@ -54,6 +55,7 @@ function DateField({ label, value, onChange }: { label: string; value: Date; onC
 export function NgoCreateDriveScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const createDriveMutation = useCreateDrive();
+  const confirm = useConfirm();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -110,7 +112,7 @@ export function NgoCreateDriveScreen({ navigation }: any) {
         capacity: capacity ? Number(capacity) : undefined,
         photo: photo ?? undefined,
       });
-      Alert.alert('Drive created', 'Your drive is live.');
+      confirm('Drive created', 'Your drive is live.');
       navigation?.goBack?.();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not create this drive. Please try again.');

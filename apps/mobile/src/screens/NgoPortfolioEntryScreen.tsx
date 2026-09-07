@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   ScrollView,
-  Alert,
   Platform,
   TouchableOpacity,
   KeyboardAvoidingView,
@@ -23,6 +22,7 @@ import { resolveMediaUrl } from '../api/client';
 import type { PickedPhoto } from '../components/common/PhotoPickerField';
 import type { ApiPortfolioEntry } from '../api/portfolio';
 import { useCreatePortfolioEntry, useUpdatePortfolioEntry } from '../hooks/useSocialQueries';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 /**
  * Create/edit a past-work entry.
@@ -56,14 +56,15 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
   const create = useCreatePortfolioEntry();
   const update = useUpdatePortfolioEntry();
   const busy = create.isPending || update.isPending;
+  const confirm = useConfirm();
 
   const submit = () => {
     if (!title.trim()) {
-      Alert.alert('Add a title', 'Give this project a short name so people know what it was.');
+      confirm('Add a title', 'Give this project a short name so people know what it was.');
       return;
     }
     if (happenedOn.getTime() > Date.now()) {
-      Alert.alert(
+      confirm(
         'Pick a date in the past',
         'Past work is for drives you have already run. Use Manage → Drives to publish an upcoming one.',
       );
@@ -85,7 +86,7 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
 
     const onDone = () => navigation.goBack();
     const onFail = (error: any) =>
-      Alert.alert('Could not save', error?.message ?? 'Please try again.');
+      confirm('Could not save', error?.message ?? 'Please try again.');
 
     if (isEdit) {
       update.mutate({ id: existing!.id, input }, { onSuccess: onDone, onError: onFail });

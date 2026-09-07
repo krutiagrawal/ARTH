@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,10 +13,12 @@ import { ScreenHeader } from '../components/common/ScreenHeader';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useCreateAdoptableTree } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const createTreeMutation = useCreateAdoptableTree();
+  const confirm = useConfirm();
 
   const [nickname, setNickname] = useState('');
   const [speciesName, setSpeciesName] = useState('');
@@ -44,7 +46,7 @@ export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
         city: city.trim(),
         photo: photo ?? undefined,
       });
-      Alert.alert('Tree listed', 'This tree is now available for adoption.');
+      confirm('Tree listed', 'This tree is now available for adoption.');
       navigation?.goBack?.();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not list this tree. Please try again.');

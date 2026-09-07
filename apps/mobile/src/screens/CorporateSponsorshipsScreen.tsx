@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -13,6 +13,7 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useSponsorships, useCreateSponsorship, useDeleteSponsorship, useCorporateProfile } from '../hooks/useApiQueries';
 import type { ApiCsrSponsorship } from '../api/corporate';
 import { ApiError } from '../api/client';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 function SponsorshipRow({ item, onDelete }: { item: ApiCsrSponsorship; onDelete: () => void }) {
   return (
@@ -34,6 +35,7 @@ export function CorporateSponsorshipsScreen({ navigation }: any) {
   const { data: sponsorships = [], isLoading } = useSponsorships();
   const createMutation = useCreateSponsorship();
   const deleteMutation = useDeleteSponsorship();
+  const confirm = useConfirm();
 
   const [amount, setAmount] = useState('');
   const [driveId, setDriveId] = useState('');
@@ -64,7 +66,7 @@ export function CorporateSponsorshipsScreen({ navigation }: any) {
   };
 
   const handleDelete = (item: ApiCsrSponsorship) => {
-    Alert.alert('Remove sponsorship?', 'This record will be deleted.', [
+    confirm('Remove sponsorship?', 'This record will be deleted.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: () => deleteMutation.mutate(item.id) },
     ]);

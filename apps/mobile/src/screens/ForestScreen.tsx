@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableOpacity, ScrollView } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated, {
   useSharedValue,
@@ -53,6 +53,7 @@ import { DecorationPickerSheet } from '../components/forest/DecorationPickerShee
 import { StoryPreviewModal } from '../components/forest/StoryPreviewModal';
 import type { ApiDecorationType } from '../api/decorations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const FOREST_HEIGHT = SH;
@@ -293,6 +294,7 @@ function FloatingLeaf({ x, delay, color }: { x: number; delay: number; color: st
 
 export function ForestScreen({ navigation }: any) {
   const theme = useTimeTheme();
+  const confirm = useConfirm();
   const isNight = theme.mascotOutfit === 'night';
   const insets = useSafeAreaInsets();
   const bottomNavClearance = useBottomNavClearance();
@@ -478,7 +480,7 @@ export function ForestScreen({ navigation }: any) {
         setSnapshotBase64(base64);
       } catch (e) {
         setPreviewVisible(false);
-        Alert.alert('Snapshot failed', 'Could not capture your forest. Please try again.');
+        confirm('Snapshot failed', 'Could not capture your forest. Please try again.');
       }
     }, 450);
   };
