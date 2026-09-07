@@ -1,1 +1,13 @@
-{}
+{
+  "/api/member/proxy/[...path]/route": "app/api/member/proxy/[...path]/route.js",
+  "/api/admin/content-overview/route": "app/api/admin/content-overview/route.js",
+  "/api/admin/proxy/[...path]/route": "app/api/admin/proxy/[...path]/route.js",
+  "/api/admin/login/route": "app/api/admin/login/route.js",
+  "/dashboard/individual/explore/page": "app/dashboard/individual/explore/page.js",
+  "/(marketing)/login/page": "app/(marketing)/login/page.js",
+  "/dashboard/individual/page": "app/dashboard/individual/page.js",
+  "/dashboard/individual/adoptions/page": "app/dashboard/individual/adoptions/page.js",
+  "/admin/(shell)/page": "app/admin/(shell)/page.js",
+  "/admin/login/page": "app/admin/login/page.js",
+  "/admin/(shell)/ngos/page": "app/admin/(shell)/ngos/page.js"
+}
