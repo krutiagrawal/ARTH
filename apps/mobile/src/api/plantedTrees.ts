@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, toFormFile } from './client';
 
 export type TreeHealthStatus = 'healthy' | 'struggling' | 'dead' | 'removed';
 
@@ -52,7 +52,7 @@ export async function bulkCreatePlantedTrees(input: BulkCreatePlantedTreesInput)
   if (input.lat !== undefined) form.append('lat', String(input.lat));
   if (input.lng !== undefined) form.append('lng', String(input.lng));
   if (input.photo) {
-    form.append('photo', { uri: input.photo.uri, name: input.photo.name, type: input.photo.type } as unknown as Blob);
+    form.append('photo', toFormFile(input.photo.uri), input.photo.name);
   }
   return apiFetch('/api/ngo/planted-trees/bulk', { method: 'POST', body: form, isForm: true });
 }

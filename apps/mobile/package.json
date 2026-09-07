@@ -3,9 +3,14 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
+    "sync-lan-ip": "node scripts/sync-lan-ip.js",
+    "prestart": "npm run sync-lan-ip",
     "start": "expo start --go",
+    "prestart:dev-client": "npm run sync-lan-ip",
     "start:dev-client": "expo start --dev-client",
+    "preandroid": "npm run sync-lan-ip",
     "android": "expo start --go --android",
+    "preios": "npm run sync-lan-ip",
     "ios": "expo start --go --ios",
     "web": "expo start --web"
   },
@@ -27,6 +32,7 @@
     "expo-clipboard": "~57.0.1",
     "expo-constants": "~57.0.17",
     "expo-dev-client": "~57.0.18",
+    "expo-file-system": "~57.0.6",
     "expo-font": "~57.0.3",
     "expo-haptics": "~57.0.2",
     "expo-image-picker": "~57.0.16",

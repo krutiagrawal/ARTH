@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, toFormFile } from './client';
 
 export interface ApiDrivePickupPoint {
   id: string;
@@ -107,11 +107,7 @@ export async function createDrive(input: CreateDriveInput): Promise<ApiDrive> {
   if (input.durationMinutes) form.append('durationMinutes', String(input.durationMinutes));
   if (input.capacity) form.append('capacity', String(input.capacity));
   if (input.photo) {
-    form.append('photo', {
-      uri: input.photo.uri,
-      name: input.photo.name,
-      type: input.photo.type,
-    } as unknown as Blob);
+    form.append('photo', toFormFile(input.photo.uri), input.photo.name);
   }
 
   return apiFetch<ApiDrive>('/api/drives', { method: 'POST', body: form, isForm: true });

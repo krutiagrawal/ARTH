@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, toFormFile } from './client';
 
 export interface ApiCampaign {
   id: string;
@@ -52,7 +52,7 @@ export async function createCampaign(input: CreateCampaignInput): Promise<ApiCam
   form.append('description', input.description);
   if (input.goalAmountCents !== undefined) form.append('goalAmountCents', String(input.goalAmountCents));
   if (input.photo) {
-    form.append('photo', { uri: input.photo.uri, name: input.photo.name, type: input.photo.type } as unknown as Blob);
+    form.append('photo', toFormFile(input.photo.uri), input.photo.name);
   }
   return apiFetch<ApiCampaign>('/api/campaigns', { method: 'POST', body: form, isForm: true });
 }

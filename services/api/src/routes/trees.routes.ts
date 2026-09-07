@@ -3,7 +3,18 @@ import { MultipartFile } from '@fastify/multipart';
 import { plantTreeSchema, updateTreeSchema } from '../schemas/trees.schema';
 import { saveTreePhoto } from '../services/upload.service';
 import { plantTree } from '../services/tree.service';
+import { verifyPlantingPhoto } from '../services/aiVerification.service';
 import { BadRequestError, NotFoundError } from '../utils/errors';
+
+async function extractPhoto(body: Record<string, MultipartFile | { value: string }>) {
+  for (const part of Object.values(body ?? {})) {
+    if ((part as MultipartFile).file !== undefined || (part as MultipartFile).toBuffer) {
+      const photoFile = part as MultipartFile;
+      return { filename: photoFile.filename, mimetype: photoFile.mimetype, buffer: await photoFile.toBuffer() };
+    }
+  }
+  return undefined;
+}
 
 function serializeTree(tree: any) {
   return {
@@ -59,6 +70,19 @@ export default async function treesRoutes(fastify: FastifyInstance) {
     reply.send(serializeTree(tree));
   });
 
+  // Lets the mobile app check a photo right after capture, before the user fills in species/
+  // nickname/location — matches the "AI Scanning" step shown immediately post-capture. This is
+  // a convenience pre-check only; the real gate is on POST / below, which re-verifies so a
+  // client can't skip straight to creating a tree with a rejected photo.
+  fastify.post('/verify-photo', async (request, reply) => {
+    const body = request.body as Record<string, MultipartFile | { value: string }>;
+    const photo = await extractPhoto(body);
+    if (!photo) throw new BadRequestError('No photo provided');
+
+    const verification = await verifyPlantingPhoto(photo);
+    reply.send({ isPlanting: verification.status !== 'rejected', reason: verification.reason });
+  });
+
   fastify.post('/', async (request, reply) => {
     const body = request.body as Record<string, MultipartFile | { value: string }>;
 
@@ -77,8 +101,16 @@ export default async function treesRoutes(fastify: FastifyInstance) {
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
 
     let photoUrl: string | undefined;
+    let aiVerificationStatus: 'unverified' | 'verified' | 'rejected' = 'unverified';
     if (photoFile) {
       const buffer = await photoFile.toBuffer();
+
+      const verification = await verifyPlantingPhoto({ buffer, mimetype: photoFile.mimetype });
+      if (verification.status === 'rejected') {
+        throw new BadRequestError(verification.reason);
+      }
+      aiVerificationStatus = verification.status;
+
       photoUrl = await saveTreePhoto({
         filename: photoFile.filename,
         mimetype: photoFile.mimetype,
@@ -94,6 +126,7 @@ export default async function treesRoutes(fastify: FastifyInstance) {
       lng: parsed.data.lng,
       locationLabel: parsed.data.locationLabel,
       photoUrl,
+      aiVerificationStatus,
     });
 
     reply.status(201).send(serializeTree(tree));

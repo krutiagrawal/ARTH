@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, toFormFile } from './client';
 
 export interface ApiCorporateProfile {
   id: string;
@@ -34,7 +34,7 @@ export async function updateCorporateProfile(input: UpdateCorporateProfileInput)
   if (input.city !== undefined) form.append('city', input.city);
   if (input.industry !== undefined) form.append('industry', input.industry);
   if (input.logo) {
-    form.append('logo', { uri: input.logo.uri, name: input.logo.name, type: input.logo.type } as unknown as Blob);
+    form.append('logo', toFormFile(input.logo.uri), input.logo.name);
   }
   return apiFetch<ApiCorporateProfile>('/api/corporate/profile', { method: 'PATCH', body: form, isForm: true });
 }

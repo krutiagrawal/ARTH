@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, toFormFile } from './client';
 
 export interface ApiNgoUpdate {
   id: string;
@@ -26,7 +26,7 @@ export async function createUpdate(input: CreateUpdateInput): Promise<ApiNgoUpda
   const form = new FormData();
   if (input.caption) form.append('caption', input.caption);
   if (input.driveId) form.append('driveId', input.driveId);
-  form.append('photo', { uri: input.photo.uri, name: input.photo.name, type: input.photo.type } as unknown as Blob);
+  form.append('photo', toFormFile(input.photo.uri), input.photo.name);
   return apiFetch<ApiNgoUpdate>('/api/ngo/updates', { method: 'POST', body: form, isForm: true });
 }
 

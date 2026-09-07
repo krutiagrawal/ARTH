@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, toFormFile } from './client';
 
 export interface ApiTree {
   id: string;
@@ -38,12 +38,20 @@ export async function plantTree(input: PlantTreeInput): Promise<ApiTree> {
   form.append('lng', String(input.lng));
   if (input.locationLabel) form.append('locationLabel', input.locationLabel);
   if (input.photo) {
-    form.append('photo', {
-      uri: input.photo.uri,
-      name: input.photo.name,
-      type: input.photo.type,
-    } as unknown as Blob);
+    form.append('photo', toFormFile(input.photo.uri), input.photo.name);
   }
 
   return apiFetch<ApiTree>('/api/trees', { method: 'POST', body: form, isForm: true });
+}
+
+export interface VerifyPlantingPhotoResult {
+  isPlanting: boolean;
+  reason: string;
+}
+
+export async function verifyPlantingPhoto(photo: { uri: string; name: string; type: string }): Promise<VerifyPlantingPhotoResult> {
+  const form = new FormData();
+  form.append('photo', toFormFile(photo.uri), photo.name);
+
+  return apiFetch<VerifyPlantingPhotoResult>('/api/trees/verify-photo', { method: 'POST', body: form, isForm: true });
 }

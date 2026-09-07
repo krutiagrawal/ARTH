@@ -19,6 +19,7 @@ interface PlantTreeInput {
   lng: number;
   locationLabel?: string;
   photoUrl?: string;
+  aiVerificationStatus?: 'unverified' | 'verified' | 'rejected';
 }
 
 export async function plantTree(prisma: PrismaClient, input: PlantTreeInput) {
@@ -42,6 +43,7 @@ export async function plantTree(prisma: PrismaClient, input: PlantTreeInput) {
         photoUrl: input.photoUrl,
         co2Absorbed,
         xpEarned,
+        aiVerificationStatus: input.aiVerificationStatus,
       },
       include: { species: true },
     });

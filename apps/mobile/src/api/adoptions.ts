@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, toFormFile } from './client';
 
 export interface ApiAdoptableTree {
   id: string;
@@ -71,11 +71,7 @@ export async function createAdoptableTree(input: CreateAdoptableTreeInput): Prom
   if (input.locationLabel) form.append('locationLabel', input.locationLabel);
   form.append('city', input.city);
   if (input.photo) {
-    form.append('photo', {
-      uri: input.photo.uri,
-      name: input.photo.name,
-      type: input.photo.type,
-    } as unknown as Blob);
+    form.append('photo', toFormFile(input.photo.uri), input.photo.name);
   }
 
   return apiFetch<ApiAdoptableTree>('/api/adoptable-trees', { method: 'POST', body: form, isForm: true });

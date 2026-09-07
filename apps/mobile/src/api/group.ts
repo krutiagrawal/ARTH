@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, toFormFile } from './client';
 
 export interface ApiGroupProfile {
   id: string;
@@ -41,7 +41,7 @@ export async function updateGroupProfile(input: UpdateGroupProfileInput): Promis
   if (input.handle !== undefined) form.append('handle', input.handle);
   if (input.avatarEmoji !== undefined) form.append('avatarEmoji', input.avatarEmoji);
   if (input.logo) {
-    form.append('logo', { uri: input.logo.uri, name: input.logo.name, type: input.logo.type } as unknown as Blob);
+    form.append('logo', toFormFile(input.logo.uri), input.logo.name);
   }
   return apiFetch<ApiGroupProfile>('/api/group/profile', { method: 'PATCH', body: form, isForm: true });
 }

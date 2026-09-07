@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, toFormFile } from './client';
 
 export type PostAuthorKind = 'user' | 'ngo' | 'nursery';
 
@@ -78,7 +78,7 @@ export async function createPost(input: CreatePostInput): Promise<ApiPost> {
   if (input.asNursery) form.append('asNursery', 'true');
   // Repeated field name — the API reads every `photos` part in append order as the carousel.
   for (const photo of input.photos) {
-    form.append('photos', { uri: photo.uri, name: photo.name, type: photo.type } as unknown as Blob);
+    form.append('photos', toFormFile(photo.uri), photo.name);
   }
   return apiFetch<ApiPost>('/api/posts', { method: 'POST', body: form, isForm: true });
 }

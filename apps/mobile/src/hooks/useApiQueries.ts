@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
-import { fetchTrees, plantTree, type PlantTreeInput } from '../api/trees';
+import { fetchTrees, plantTree, verifyPlantingPhoto, type PlantTreeInput } from '../api/trees';
 import { fetchApprovedLocations, checkPlantingEligibility } from '../api/plantingLocations';
 import { fetchSpecies } from '../api/species';
 import { fetchTodayMissions, completeMission } from '../api/missions';
@@ -1064,6 +1064,12 @@ export function useAdminActionLogs(params: AdminActionLogsParams = {}) {
     queryKey: ['admin', 'action-logs', params],
     queryFn: () => fetchAdminActionLogs(params),
     enabled: isAuthenticated,
+  });
+}
+
+export function useVerifyPlantingPhoto() {
+  return useMutation({
+    mutationFn: (photo: { uri: string; name: string; type: string }) => verifyPlantingPhoto(photo),
   });
 }
 

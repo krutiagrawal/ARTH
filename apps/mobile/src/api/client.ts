@@ -1,3 +1,4 @@
+import { File } from 'expo-file-system';
 import {
   getAccessToken,
   setAccessToken,
@@ -7,6 +8,17 @@ import {
 } from './tokenStorage';
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000';
+
+/**
+ * Wraps a device photo URI (from ImagePicker etc.) for `FormData.append`. Expo SDK 57 / RN's
+ * New Architecture FormData bridge rejects the old `{uri, name, type}` object-literal trick
+ * with "Unsupported FormDataPart implementation" on Android — it now requires a real Blob-like
+ * part. `expo-file-system`'s `File` genuinely implements Blob, so it round-trips correctly.
+ * Pass the returned value as `form.append(fieldName, toFormFile(uri), filename)`.
+ */
+export function toFormFile(uri: string): File {
+  return new File(uri);
+}
 
 /**
  * Resolves a stored media path to an absolute URL the app can actually render.

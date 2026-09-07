@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, toFormFile } from './client';
 
 export interface ApiStaffMember {
   id: string;
@@ -34,7 +34,7 @@ function toStaffForm(input: CreateStaffInput | UpdateStaffInput): FormData {
   if (input.contactEmail !== undefined) form.append('contactEmail', input.contactEmail);
   if (input.contactPhone !== undefined) form.append('contactPhone', input.contactPhone);
   if (input.photo) {
-    form.append('photo', { uri: input.photo.uri, name: input.photo.name, type: input.photo.type } as unknown as Blob);
+    form.append('photo', toFormFile(input.photo.uri), input.photo.name);
   }
   return form;
 }

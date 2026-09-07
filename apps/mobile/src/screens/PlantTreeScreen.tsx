@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Image } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import Animated, {
@@ -29,7 +29,9 @@ import { useHaptics } from '../hooks/useHaptics';
 import { useSpecies } from '../hooks/useApiQueries';
 import { usePlantTree } from '../hooks/useApiQueries';
 import { useCheckPlantingEligibility } from '../hooks/useApiQueries';
+import { useVerifyPlantingPhoto } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
+import type { VerifyPlantingPhotoResult } from '../api/trees';
 import { NOT_APPROVED_MESSAGE } from '../constants/plantingLocation';
 import { getCurrentPositionWithTimeout } from '../utils/location';
 
@@ -199,12 +201,18 @@ export function PlantTreeScreen({ navigation, route }: any) {
   // it starts unknown and gets checked once GPS resolves, in the effect below.
   const [eligible, setEligible] = useState<boolean | null>(isPreVerified ? true : null);
   const [showNotApprovedModal, setShowNotApprovedModal] = useState(false);
+  const [showRejectedModal, setShowRejectedModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
   const { success, medium } = useHaptics();
   const insets = useSafeAreaInsets();
 
   const { data: speciesList = [] } = useSpecies();
   const plantTreeMutation = usePlantTree();
   const checkEligibility = useCheckPlantingEligibility();
+  const verifyPhoto = useVerifyPlantingPhoto();
+  // Kicked off the moment a photo is picked, so it runs alongside the (purely cosmetic)
+  // ScanAnimation instead of starting only once that animation finishes.
+  const verifyPromiseRef = useRef<Promise<VerifyPlantingPhotoResult> | null>(null);
   const selectedSpecies = speciesList.find(s => s.id === selectedSpeciesId) ?? null;
 
   const fetchLocation = useCallback(async () => {
@@ -256,19 +264,14 @@ export function PlantTreeScreen({ navigation, route }: any) {
     }
   }, [eligible, isPreVerified]);
 
-  const handlePickImage = useCallback(async () => {
-    medium();
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.85,
-    });
-    if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
-      setStage('scanning');
-    }
-  }, [medium]);
+  const beginVerification = useCallback((uri: string) => {
+    setImageUri(uri);
+    setStage('scanning');
+    const filename = uri.split('/').pop() || 'tree.jpg';
+    const extension = filename.split('.').pop()?.toLowerCase();
+    const mimeType = extension === 'png' ? 'image/png' : 'image/jpeg';
+    verifyPromiseRef.current = verifyPhoto.mutateAsync({ uri, name: filename, type: mimeType });
+  }, [verifyPhoto]);
 
   const handleCameraCapture = useCallback(async () => {
     medium();
@@ -277,13 +280,26 @@ export function PlantTreeScreen({ navigation, route }: any) {
       aspect: [1, 1],
       quality: 0.85,
     });
-    if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
-      setStage('scanning');
-    }
-  }, [medium]);
+    if (!result.canceled) beginVerification(result.assets[0].uri);
+  }, [medium, beginVerification]);
 
-  const handleScanComplete = useCallback(() => {
+  // Fires when the ScanAnimation's own ~3.8s animation finishes. The real verification call
+  // started back in beginVerification is usually done well before that; if it's still pending
+  // (slow network), this waits for it rather than proceeding blind. A network failure here
+  // fails open (lets the user continue) — the final submit re-verifies server-side regardless.
+  const handleScanComplete = useCallback(async () => {
+    try {
+      const result = await verifyPromiseRef.current;
+      if (result && !result.isPlanting) {
+        setRejectionReason(result.reason || "This photo doesn't look like a tree planting. Please try again.");
+        setShowRejectedModal(true);
+        setStage('upload');
+        setImageUri(null);
+        return;
+      }
+    } catch {
+      // Pre-check failed (e.g. offline) — don't block the user on it; final submit re-verifies.
+    }
     setStage('details');
     fetchLocation();
   }, [fetchLocation]);
@@ -355,10 +371,11 @@ export function PlantTreeScreen({ navigation, route }: any) {
           contentContainerStyle={[styles.uploadContent, { paddingBottom: 100 }]}
           showsVerticalScrollIndicator={false}
         >
-          {/* Upload area */}
+          {/* Camera capture — no gallery option: the planting photo must be taken live so the
+              AI verification (and the location it's captured with) reflects the real moment. */}
           <TouchableOpacity
             style={styles.uploadArea}
-            onPress={handlePickImage}
+            onPress={handleCameraCapture}
             activeOpacity={0.85}
           >
             <LinearGradient
@@ -366,8 +383,8 @@ export function PlantTreeScreen({ navigation, route }: any) {
               style={styles.uploadAreaGradient}
             >
               <View style={styles.uploadAreaInner}>
-                <Text style={styles.uploadAreaIcon}>📷</Text>
-                <Text style={styles.uploadAreaTitle}>Upload Tree Photo</Text>
+                <Text style={styles.uploadAreaIcon}>📸</Text>
+                <Text style={styles.uploadAreaTitle}>Open Camera</Text>
                 <Text style={styles.uploadAreaSubtitle}>
                   Our AI will verify your planting
                 </Text>
@@ -375,20 +392,6 @@ export function PlantTreeScreen({ navigation, route }: any) {
               <View style={styles.uploadDashedBorder} />
             </LinearGradient>
           </TouchableOpacity>
-
-          <View style={styles.orRow}>
-            <View style={styles.orLine} />
-            <Text style={styles.orText}>or</Text>
-            <View style={styles.orLine} />
-          </View>
-
-          <AnimatedButton
-            label="📸  Open Camera"
-            onPress={handleCameraCapture}
-            variant="secondary"
-            size="lg"
-            fullWidth
-          />
 
           <GlassCard variant="sage" style={styles.tipCard}>
             <Text style={styles.tipTitle}>📌 Planting Tips</Text>
@@ -536,6 +539,14 @@ export function PlantTreeScreen({ navigation, route }: any) {
         title="Not an ARTH Approved Spot"
         message={NOT_APPROVED_MESSAGE}
       />
+
+      <StatusModal
+        visible={showRejectedModal}
+        onClose={() => setShowRejectedModal(false)}
+        icon="📷"
+        title="Couldn't Verify Planting"
+        message={rejectionReason}
+      />
     </View>
   );
 }
@@ -618,21 +629,6 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     opacity: 0.6,
   } as any,
-  orRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  orLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.sand,
-  },
-  orText: {
-    fontSize: 13,
-    color: COLORS.textPrimary,
-    fontWeight: '500',
-  },
   tipCard: {
     gap: 8,
   },

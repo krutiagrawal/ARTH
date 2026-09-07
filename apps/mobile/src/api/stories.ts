@@ -1,4 +1,4 @@
-import { apiFetch, resolveMediaUrl } from './client';
+import { apiFetch, resolveMediaUrl, toFormFile } from './client';
 
 export interface ApiStory {
   id: string;
@@ -82,11 +82,7 @@ export async function postPhotoStory(input: {
   asNursery?: boolean;
 }): Promise<ApiStory> {
   const form = new FormData();
-  form.append('photo', {
-    uri: input.photo.uri,
-    name: input.photo.name,
-    type: input.photo.type,
-  } as unknown as Blob);
+  form.append('photo', toFormFile(input.photo.uri), input.photo.name);
   if (input.caption?.trim()) form.append('caption', input.caption.trim());
   if (input.asNgo) form.append('asNgo', 'true');
   if (input.asGroup) form.append('asGroup', 'true');

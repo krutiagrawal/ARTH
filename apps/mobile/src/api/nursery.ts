@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, toFormFile } from './client';
 
 export interface ApiNurseryProfile {
   id: string;
@@ -52,7 +52,7 @@ export async function updateNurseryProfile(input: UpdateNurseryProfileInput): Pr
   if (input.deliveryRadiusKm !== undefined) form.append('deliveryRadiusKm', String(input.deliveryRadiusKm));
   if (input.followPolicy !== undefined) form.append('followPolicy', input.followPolicy);
   if (input.logo) {
-    form.append('logo', { uri: input.logo.uri, name: input.logo.name, type: input.logo.type } as unknown as Blob);
+    form.append('logo', toFormFile(input.logo.uri), input.logo.name);
   }
   return apiFetch<ApiNurseryProfile>('/api/nursery/profile', { method: 'PATCH', body: form, isForm: true });
 }
@@ -105,7 +105,7 @@ function stockToForm(input: Partial<SaplingStockInput>): FormData {
   if (input.isFree !== undefined) form.append('isFree', String(input.isFree));
   if (input.priceCents !== undefined) form.append('priceCents', String(input.priceCents));
   if (input.photo) {
-    form.append('photo', { uri: input.photo.uri, name: input.photo.name, type: input.photo.type } as unknown as Blob);
+    form.append('photo', toFormFile(input.photo.uri), input.photo.name);
   }
   return form;
 }

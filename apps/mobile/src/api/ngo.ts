@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, toFormFile } from './client';
 
 export interface Award {
   title: string;
@@ -53,7 +53,7 @@ export async function updateNgoProfile(input: UpdateNgoProfileInput): Promise<Ap
   if (input.awards !== undefined) form.append('awards', JSON.stringify(input.awards));
   if (input.followPolicy !== undefined) form.append('followPolicy', input.followPolicy);
   if (input.logo) {
-    form.append('logo', { uri: input.logo.uri, name: input.logo.name, type: input.logo.type } as unknown as Blob);
+    form.append('logo', toFormFile(input.logo.uri), input.logo.name);
   }
   return apiFetch<ApiNgoProfile>('/api/ngo/profile', { method: 'PATCH', body: form, isForm: true });
 }

@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, toFormFile } from './client';
 import type { PickedPhoto } from './posts';
 
 export interface ApiPortfolioMedia {
@@ -54,7 +54,7 @@ function toForm(input: Partial<PortfolioInput>): FormData {
     if (value !== undefined && value !== null && value !== '') form.append(key, String(value));
   }
   for (const photo of input.photos ?? []) {
-    form.append('photos', { uri: photo.uri, name: photo.name, type: photo.type } as unknown as Blob);
+    form.append('photos', toFormFile(photo.uri), photo.name);
   }
   return form;
 }

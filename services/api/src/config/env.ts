@@ -24,6 +24,10 @@ const envSchema = z.object({
   EMAIL_FROM: z.string().default('PLANT <hello@plant.example.org>'),
   // Base URL of the web app, used to build the password-reset link sent by email.
   WEB_URL: z.string().default('http://localhost:3000'),
+  // Gemini (https://aistudio.google.com/apikey) — powers AI verification of tree-planting
+  // photos. Leave unset in dev and aiVerification.service.ts skips the check (photo passes
+  // through unverified) instead of blocking planting — see services/aiVerification.service.ts.
+  GEMINI_API_KEY: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
