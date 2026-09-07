@@ -241,6 +241,8 @@ enum ReportTargetType {
   story
   user
   ngo
+  nursery
+  corporate
   portfolio_entry
   order_review
 }
@@ -307,6 +309,14 @@ model User {
   createdAt              DateTime  @default(now()) @map("created_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")
   isDeleted              Boolean   @default(false) @map("is_deleted")
+
+  // Admin-initiated account block — distinct from NgoProfile/NurseryProfile/
+  // CorporateProfile.status (a content-publishing gate). isBlocked cuts off
+  // login and every authenticated API call immediately, for any role.
+  isBlocked       Boolean   @default(false) @map("is_blocked")
+  blockedAt       DateTime? @map("blocked_at")
+  blockedReason   String?   @map("blocked_reason")
+  blockedByUserId String?   @map("blocked_by_user_id")
 
   selectedForestTheme ForestTheme? @relation("SelectedTheme", fields: [selectedForestThemeId], references: [id])
 
@@ -436,6 +446,10 @@ model Tree {
   co2Absorbed          Decimal                @default(0) @map("co2_absorbed") @db.Decimal(6, 2)
   xpEarned             Int                    @default(0) @map("xp_earned")
   aiVerificationStatus TreeVerificationStatus @default(unverified) @map("ai_verification_status")
+  // Admin review of unverified/rejected AI submissions. NULL reviewedAt means
+  // it's still sitting in the admin review queue.
+  reviewedByAdminId    String?                @map("reviewed_by_admin_id")
+  reviewedAt           DateTime?              @map("reviewed_at")
   isDeleted            Boolean                @default(false) @map("is_deleted")
   createdAt            DateTime               @default(now()) @map("created_at")
   updatedAt            DateTime               @updatedAt @map("updated_at")

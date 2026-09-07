@@ -186,7 +186,7 @@ export async function cancelMyOrder(prisma: PrismaClient, userId: string, orderI
   return prisma.order.update({ where: { id: order.id }, data: { status: 'cancelled', cancelledAt: new Date() } });
 }
 
-async function restockCancelledOrder(prisma: PrismaClient, orderId: string) {
+export async function restockCancelledOrder(prisma: PrismaClient, orderId: string) {
   const order = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true } });
   if (!order) return;
 
@@ -199,6 +199,47 @@ async function restockCancelledOrder(prisma: PrismaClient, orderId: string) {
       });
     }
   });
+}
+
+// Admin-triggered refund — same Stripe refund + restock as the user/nursery
+// self-service cancel paths above, just reachable regardless of who owns the
+// order (dispute resolution). Logs to AdminActionLog like every other admin
+// mutation (see admin.service.ts).
+export async function adminRefundOrder(prisma: PrismaClient, orderId: string, input: { reason?: string; adminUserId: string }) {
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) throw new NotFoundError('Order not found');
+  if (order.status === 'cancelled') throw new ForbiddenError('This order is already cancelled');
+
+  if (order.stripePaymentIntentId) {
+    const stripe = getStripeClient();
+    await stripe.refunds.create({ payment_intent: order.stripePaymentIntentId });
+  }
+  if (order.status !== 'pending_payment') {
+    await restockCancelledOrder(prisma, order.id);
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.order.update({ where: { id: order.id }, data: { status: 'cancelled', cancelledAt: new Date() } });
+    await tx.adminActionLog.create({
+      data: {
+        actorUserId: input.adminUserId,
+        action: 'order.refunded',
+        targetType: 'Order',
+        targetId: order.id,
+        reason: input.reason ?? null,
+      },
+    });
+    return result;
+  });
+
+  await notify(prisma, {
+    userId: order.userId,
+    type: 'order_cancelled',
+    data: { orderId },
+    push: { title: 'Order refunded', body: 'ARTH support has cancelled and refunded this order.' },
+  });
+
+  return updated;
 }
 
 export async function submitOrderReview(

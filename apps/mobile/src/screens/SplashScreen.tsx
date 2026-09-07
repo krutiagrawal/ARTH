@@ -40,14 +40,21 @@ export function SplashScreen({ navigation }: any) {
   const particleOpacity = useSharedValue(0);
   const bgOpacity = useSharedValue(1);
 
-  const { isLoading: authLoading, isAuthenticated, user } = useAuth();
-  const authStateRef = useRef({ authLoading, isAuthenticated, user });
-  authStateRef.current = { authLoading, isAuthenticated, user };
+  const { isLoading: authLoading, isAuthenticated, isBlocked, user } = useAuth();
+  const authStateRef = useRef({ authLoading, isAuthenticated, isBlocked, user });
+  authStateRef.current = { authLoading, isAuthenticated, isBlocked, user };
 
   const navigateNext = async () => {
     // Wait for the auth check to settle (usually already done by the time the intro finishes).
     while (authStateRef.current.authLoading) {
       await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    // A user already blocked when they cold-launch goes straight to the
+    // blocked screen instead of their role's Main stack.
+    if (authStateRef.current.isBlocked) {
+      navigation.replace('AccountBlocked');
+      return;
     }
 
     if (authStateRef.current.isAuthenticated) {

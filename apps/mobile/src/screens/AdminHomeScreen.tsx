@@ -153,6 +153,30 @@ export function AdminHomeScreen({ navigation, onNavigateTab }: any) {
               </View>
             </GlassCard>
 
+            <GlassCard variant="dark" style={styles.card}>
+              <Text style={styles.cardTitle}>Trust &amp; safety</Text>
+              <View style={styles.statsGrid}>
+                <StatDisplay
+                  value={String(overview.blockedUsersCount ?? 0)}
+                  label="Blocked"
+                  color={COLORS.dangerLight}
+                  labelColor={ON_DARK_SURFACE.secondary}
+                />
+                <StatDisplay
+                  value={String(overview.openReportsCount ?? 0)}
+                  label="Open reports"
+                  color={ON_DARK_SURFACE.primary}
+                  labelColor={ON_DARK_SURFACE.secondary}
+                />
+                <StatDisplay
+                  value={String(overview.treesPendingReviewCount ?? 0)}
+                  label="Trees to review"
+                  color={ON_DARK_SURFACE.primary}
+                  labelColor={ON_DARK_SURFACE.secondary}
+                />
+              </View>
+            </GlassCard>
+
             <TouchableOpacity activeOpacity={0.85} onPress={() => goTab('NGOs')}>
               <GlassCard variant="dark" style={styles.linkCard}>
                 <Text style={styles.linkEmoji}>🏢</Text>
@@ -163,12 +187,32 @@ export function AdminHomeScreen({ navigation, onNavigateTab }: any) {
               </GlassCard>
             </TouchableOpacity>
 
+            <TouchableOpacity activeOpacity={0.85} onPress={() => navigation?.navigate?.('AdminAccountSearch')}>
+              <GlassCard variant="dark" style={styles.linkCard}>
+                <Text style={styles.linkEmoji}>🔎</Text>
+                <View style={styles.linkTextWrap}>
+                  <Text style={styles.linkTitle}>Accounts</Text>
+                  <Text style={styles.linkBody}>Search and block/unblock any user, NGO, nursery, or corporate.</Text>
+                </View>
+              </GlassCard>
+            </TouchableOpacity>
+
             <TouchableOpacity activeOpacity={0.85} onPress={() => goTab('AuditLog')}>
               <GlassCard variant="dark" style={styles.linkCard}>
                 <Text style={styles.linkEmoji}>📜</Text>
                 <View style={styles.linkTextWrap}>
                   <Text style={styles.linkTitle}>Audit log</Text>
                   <Text style={styles.linkBody}>See every admin action taken on the platform.</Text>
+                </View>
+              </GlassCard>
+            </TouchableOpacity>
+
+            <TouchableOpacity activeOpacity={0.85} onPress={() => goTab('More')}>
+              <GlassCard variant="dark" style={styles.linkCard}>
+                <Text style={styles.linkEmoji}>⚙️</Text>
+                <View style={styles.linkTextWrap}>
+                  <Text style={styles.linkTitle}>More</Text>
+                  <Text style={styles.linkBody}>Nurseries, corporates, operations, tree verification, catalog.</Text>
                 </View>
               </GlassCard>
             </TouchableOpacity>

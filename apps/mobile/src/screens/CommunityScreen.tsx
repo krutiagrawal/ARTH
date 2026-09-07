@@ -33,6 +33,7 @@ import {
 import { StoriesTray } from '../components/stories/StoriesTray';
 import { FollowingFeedScreen } from './FollowingFeedScreen';
 import { NotificationBell } from '../components/social/NotificationBell';
+import { ReportSheet } from '../components/social/ReportSheet';
 import { StoryViewer } from '../components/stories/StoryViewer';
 import type { ApiFriend, ApiFriendRequest } from '../api/friends';
 import type { ApiChallenge } from '../api/challenges';
@@ -218,6 +219,7 @@ function FriendProfileModal({ userId, onClose }: { userId: string | null; onClos
   const { data: stories = [] } = useUserStories(userId);
   const removeFriendMutation = useRemoveFriend();
   const [viewingStory, setViewingStory] = useState(false);
+  const [reporting, setReporting] = useState(false);
 
   return (
     <Sheet
@@ -273,15 +275,20 @@ function FriendProfileModal({ userId, onClose }: { userId: string | null; onClos
               <Text style={styles.profileModalStatLabel}>Level</Text>
             </View>
           </View>
-          <TouchableOpacity
-            style={styles.removeFriendButton}
-            onPress={() => {
-              removeFriendMutation.mutate(profile.id);
-              onClose();
-            }}
-          >
-            <Text style={styles.removeFriendText}>Remove Friend</Text>
-          </TouchableOpacity>
+          <View style={styles.profileModalActionsRow}>
+            <TouchableOpacity
+              style={styles.removeFriendButton}
+              onPress={() => {
+                removeFriendMutation.mutate(profile.id);
+                onClose();
+              }}
+            >
+              <Text style={styles.removeFriendText}>Remove Friend</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.reportUserButton} onPress={() => setReporting(true)}>
+              <Text style={styles.reportUserText}>🚩 Report</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -292,6 +299,16 @@ function FriendProfileModal({ userId, onClose }: { userId: string | null; onClos
           authorName={profile.name}
           authorAvatar={profile.avatarEmoji}
           onClose={() => setViewingStory(false)}
+        />
+      )}
+
+      {profile && (
+        <ReportSheet
+          visible={reporting}
+          onClose={() => setReporting(false)}
+          targetType="user"
+          targetId={profile.id}
+          targetLabel={profile.name}
         />
       )}
     </Sheet>
@@ -1105,8 +1122,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginTop: 2,
   },
-  removeFriendButton: {
+  profileModalActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
     width: '100%',
+  },
+  removeFriendButton: {
+    flex: 1,
     paddingVertical: 12,
     alignItems: 'center',
     borderRadius: RADIUS.lg,
@@ -1116,6 +1138,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: COLORS.coral,
+  },
+  reportUserButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: RADIUS.lg,
+    backgroundColor: 'rgba(194,74,59,0.16)',
+  },
+  reportUserText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.danger,
   },
   activityCard: {
     flexDirection: 'row',

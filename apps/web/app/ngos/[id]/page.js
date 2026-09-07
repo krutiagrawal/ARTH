@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { MapPin, Calendar, Users, Award, TreePine, HeartPulse } from 'lucide-react'
 import { apiRequest, ApiError } from '@/lib/apiClient'
 import FollowButton from './FollowButton'
+import ReportButton from './ReportButton'
 
 export async function generateMetadata({ params }) {
   const { id } = await params
@@ -57,7 +58,10 @@ export default async function NgoProfilePage({ params }) {
                 )}
               </div>
             </div>
-            <FollowButton ngoId={ngo.id} initialFollowersCount={ngo.followersCount} />
+            <div className="flex items-center gap-1">
+              <FollowButton ngoId={ngo.id} initialFollowersCount={ngo.followersCount} />
+              <ReportButton ngoId={ngo.id} orgName={ngo.orgName} />
+            </div>
           </div>
           <p className="mt-6 max-w-2xl text-muted-foreground leading-relaxed">{ngo.description}</p>
         </div>

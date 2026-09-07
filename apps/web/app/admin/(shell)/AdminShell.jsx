@@ -1,7 +1,23 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Home, ShieldCheck, FileStack, Flag, ScrollText, LogOut, ShieldAlert, Users } from 'lucide-react'
+import {
+  Home,
+  ShieldCheck,
+  FileStack,
+  Flag,
+  ScrollText,
+  LogOut,
+  ShieldAlert,
+  Users,
+  Sprout,
+  Building2,
+  Search,
+  ShieldBan,
+  PackageSearch,
+  TreePine,
+  BookOpen,
+} from 'lucide-react'
 import AppSidebar from '@/components/dashboard/AppSidebar'
 import { Button } from '@/components/ui/button'
 
@@ -16,6 +32,14 @@ export default function AdminShell({ hasAdmin, adminName, children }) {
       items: [{ label: 'Overview', href: '/admin', icon: Home, exact: true }],
     },
     {
+      label: 'Trust & safety',
+      items: [
+        { label: 'Accounts', href: '/admin/accounts', icon: Search, disabled: !hasAdmin, disabledReason: ADMIN_REASON },
+        { label: 'Reports', href: '/admin/reports', icon: ShieldBan, disabled: !hasAdmin, disabledReason: ADMIN_REASON },
+        { label: 'Tree verification', href: '/admin/tree-verification', icon: TreePine, disabled: !hasAdmin, disabledReason: ADMIN_REASON },
+      ],
+    },
+    {
       label: 'NGOs',
       items: [
         { label: 'Approvals', href: '/admin/ngos', icon: ShieldCheck, disabled: !hasAdmin, disabledReason: ADMIN_REASON },
@@ -23,14 +47,26 @@ export default function AdminShell({ hasAdmin, adminName, children }) {
       ],
     },
     {
+      label: 'Nurseries & corporates',
+      items: [
+        { label: 'Nurseries', href: '/admin/nurseries', icon: Sprout, disabled: !hasAdmin, disabledReason: ADMIN_REASON },
+        { label: 'Corporates', href: '/admin/corporates', icon: Building2, disabled: !hasAdmin, disabledReason: ADMIN_REASON },
+      ],
+    },
+    {
       label: 'Groups',
       items: [{ label: 'Groups', href: '/admin/groups', icon: Users, disabled: !hasAdmin, disabledReason: ADMIN_REASON }],
+    },
+    {
+      label: 'Operations',
+      items: [{ label: 'Drives, donations & orders', href: '/admin/ops', icon: PackageSearch, disabled: !hasAdmin, disabledReason: ADMIN_REASON }],
     },
     {
       label: 'Content',
       items: [
         { label: 'CMS', href: '/admin/content', icon: FileStack, disabled: !hasAdmin, disabledReason: ADMIN_REASON },
         { label: 'Competitions', href: '/admin/competitions', icon: Flag, disabled: !hasAdmin, disabledReason: ADMIN_REASON },
+        { label: 'Catalog', href: '/admin/catalog', icon: BookOpen, disabled: !hasAdmin, disabledReason: ADMIN_REASON },
       ],
     },
   ]

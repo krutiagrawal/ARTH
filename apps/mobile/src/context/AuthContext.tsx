@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { getAccessToken, getRefreshToken, clearTokens } from '../api/tokenStorage';
-import { setUnauthorizedHandler } from '../api/client';
+import { ApiError, setAccountBlockedHandler, setUnauthorizedHandler } from '../api/client';
 import * as authApi from '../api/auth';
 import type { ApiUser } from '../api/auth';
 
@@ -52,12 +52,16 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   setUser: React.Dispatch<React.SetStateAction<ApiUser | null>>;
+  isBlocked: boolean;
+  blockReason: string | null;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   isLoading: true,
   isAuthenticated: false,
+  isBlocked: false,
+  blockReason: null,
   login: async () => { throw new Error('AuthProvider not mounted'); },
   register: async () => {},
   registerNgo: async () => {},
@@ -72,15 +76,24 @@ const AuthContext = createContext<AuthContextValue>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<ApiUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockReason, setBlockReason] = useState<string | null>(null);
   const mountedRef = useRef(true);
 
   const forceLogout = useCallback(() => {
     if (mountedRef.current) setUser(null);
   }, []);
 
+  const handleAccountBlocked = useCallback((reason: string | null) => {
+    if (!mountedRef.current) return;
+    setIsBlocked(true);
+    setBlockReason(reason);
+  }, []);
+
   useEffect(() => {
     mountedRef.current = true;
     setUnauthorizedHandler(forceLogout);
+    setAccountBlockedHandler(handleAccountBlocked);
 
     (async () => {
       const [accessToken, refreshToken] = await Promise.all([getAccessToken(), getRefreshToken()]);
@@ -88,8 +101,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const me = await authApi.fetchMe();
           if (mountedRef.current) setUser(me);
-        } catch {
-          await clearTokens();
+        } catch (err) {
+          // A blocked account keeps its tokens — handleAccountBlocked already
+          // fired from the ACCOUNT_BLOCKED response and flipped isBlocked, so
+          // this cold-launch path must not also clear the session out from
+          // under it (that's the "logged out" path, a different case).
+          if (!(err instanceof ApiError && err.code === 'ACCOUNT_BLOCKED')) {
+            await clearTokens();
+          }
         }
       }
       if (mountedRef.current) setIsLoading(false);
@@ -98,12 +117,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       mountedRef.current = false;
       setUnauthorizedHandler(null);
+      setAccountBlockedHandler(null);
     };
-  }, [forceLogout]);
+  }, [forceLogout, handleAccountBlocked]);
 
   const login = useCallback(async (email: string, password: string) => {
     const loggedInUser = await authApi.login({ email, password });
     setUser(loggedInUser);
+    setIsBlocked(false);
+    setBlockReason(null);
     return loggedInUser;
   }, []);
 
@@ -185,6 +207,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     await authApi.logout();
     setUser(null);
+    setIsBlocked(false);
+    setBlockReason(null);
   }, []);
 
   const refreshUser = useCallback(async () => {
@@ -207,6 +231,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         refreshUser,
         setUser,
+        isBlocked,
+        blockReason,
       }}
     >
       {children}

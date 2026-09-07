@@ -54,6 +54,18 @@ export function setUnauthorizedHandler(handler: UnauthorizedHandler | null) {
   onUnauthorized = handler;
 }
 
+// Fired whenever any request comes back ACCOUNT_BLOCKED, from any screen —
+// AuthContext registers this once and flips a global isBlocked flag that
+// AppNavigator's useBlockedRedirect() reacts to. Unlike onUnauthorized, this
+// does NOT clear tokens — the account stays "signed in" so the dedicated
+// blocked screen can render instead of bouncing to the login screen.
+type AccountBlockedHandler = (reason: string | null) => void;
+let onAccountBlocked: AccountBlockedHandler | null = null;
+
+export function setAccountBlockedHandler(handler: AccountBlockedHandler | null) {
+  onAccountBlocked = handler;
+}
+
 let refreshPromise: Promise<boolean> | null = null;
 
 async function refreshAccessToken(): Promise<boolean> {
@@ -136,6 +148,7 @@ export async function apiFetch<T = unknown>(path: string, options: RequestOption
   if (!response.ok) {
     const message = typeof data === 'object' && data && 'message' in data ? String((data as any).message) : 'Request failed';
     const code = typeof data === 'object' && data && 'error' in data ? String((data as any).error) : undefined;
+    if (code === 'ACCOUNT_BLOCKED') onAccountBlocked?.(message);
     throw new ApiError(response.status, message, code);
   }
 

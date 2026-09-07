@@ -39,6 +39,12 @@ export class ForbiddenError extends AppError {
   }
 }
 
+export class AccountBlockedError extends AppError {
+  constructor(message = 'ARTH has blocked your account, contact support to unblock.') {
+    super(403, 'ACCOUNT_BLOCKED', message);
+  }
+}
+
 export class ServiceUnavailableError extends AppError {
   constructor(message = 'Service unavailable') {
     super(503, 'SERVICE_UNAVAILABLE', message);

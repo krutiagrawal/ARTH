@@ -12,7 +12,7 @@ import { EmptyState } from '../components/common/EmptyState';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { resolveMediaUrl } from '../api/client';
 import { useActOnReport, useAdminReports } from '../hooks/useSocialQueries';
-import type { ApiAdminReport, ModerationAction, ReportStatus } from '../api/admin';
+import type { ApiAdminReport, ModerationAction, ReportStatus, ReportTargetTypeFilter } from '../api/admin';
 import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
 
 const FILTERS: { key: ReportStatus | undefined; label: string }[] = [
@@ -21,6 +21,17 @@ const FILTERS: { key: ReportStatus | undefined; label: string }[] = [
   { key: 'dismissed', label: 'Dismissed' },
   { key: undefined, label: 'All' },
 ];
+
+// 'accounts' is a shorthand the backend expands to targetType in (user, ngo,
+// nursery, corporate) — default tab, since account reports are what admin
+// needs to see first/on priority.
+const TARGET_TABS: { key: ReportTargetTypeFilter; label: string }[] = [
+  { key: 'accounts', label: 'Accounts' },
+  { key: 'post', label: 'Posts' },
+  { key: 'story', label: 'Stories' },
+];
+
+const ACCOUNT_ICON: Record<string, string> = { user: '👤', ngo: '🏢', nursery: '🌱', corporate: '🏬' };
 
 const REASON_LABELS: Record<string, string> = {
   spam: 'Spam',
@@ -35,11 +46,16 @@ const REASON_LABELS: Record<string, string> = {
 function ReportRow({ report, onAct }: { report: ApiAdminReport; onAct: (a: ModerationAction) => void }) {
   const thumb = resolveMediaUrl(report.post?.thumbnailUrl);
   const isOpen = report.status === 'open';
+  const account = report.account;
 
   return (
     <View style={styles.card}>
       <View style={styles.cardTop}>
-        {thumb ? (
+        {account ? (
+          <View style={[styles.thumb, styles.thumbEmpty]}>
+            <Text style={styles.thumbEmptyIcon}>{ACCOUNT_ICON[account.role] ?? '👤'}</Text>
+          </View>
+        ) : thumb ? (
           <Image source={{ uri: thumb }} style={styles.thumb} />
         ) : (
           <View style={[styles.thumb, styles.thumbEmpty]}>
@@ -53,6 +69,11 @@ function ReportRow({ report, onAct }: { report: ApiAdminReport; onAct: (a: Moder
               <Text style={styles.reasonText}>{REASON_LABELS[report.reason] ?? report.reason}</Text>
             </View>
             <Text style={styles.targetType}>{report.targetType.replace('_', ' ')}</Text>
+            {account?.isBlocked && (
+              <View style={styles.hiddenBadge}>
+                <Text style={styles.hiddenText}>BLOCKED</Text>
+              </View>
+            )}
             {report.post?.isHidden && (
               <View style={styles.hiddenBadge}>
                 <Text style={styles.hiddenText}>HIDDEN</Text>
@@ -60,11 +81,18 @@ function ReportRow({ report, onAct }: { report: ApiAdminReport; onAct: (a: Moder
             )}
           </View>
 
-          <Text style={styles.caption} numberOfLines={2}>
-            {report.post
-              ? report.post.caption || '(no caption)'
-              : 'The reported content no longer exists.'}
-          </Text>
+          {account ? (
+            <>
+              <Text style={styles.caption} numberOfLines={1}>{account.name}</Text>
+              <Text style={styles.author} numberOfLines={1}>@{account.handle} · {account.role}</Text>
+            </>
+          ) : (
+            <Text style={styles.caption} numberOfLines={2}>
+              {report.post
+                ? report.post.caption || '(no caption)'
+                : 'The reported content no longer exists.'}
+            </Text>
+          )}
 
           {report.post?.authorName ? (
             <Text style={styles.author} numberOfLines={1}>
@@ -83,21 +111,36 @@ function ReportRow({ report, onAct }: { report: ApiAdminReport; onAct: (a: Moder
 
       {isOpen ? (
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.dismissBtn} onPress={() => onAct('dismiss')} activeOpacity={0.8}>
-            <Text style={styles.dismissText}>Dismiss</Text>
-          </TouchableOpacity>
-          {report.post?.isHidden ? (
-            <TouchableOpacity style={styles.unhideBtn} onPress={() => onAct('unhide')} activeOpacity={0.8}>
-              <Text style={styles.unhideText}>Unhide</Text>
-            </TouchableOpacity>
+          {account ? (
+            <>
+              <TouchableOpacity style={styles.dismissBtn} onPress={() => onAct('dismiss')} activeOpacity={0.8}>
+                <Text style={styles.dismissText}>Dismiss</Text>
+              </TouchableOpacity>
+              {!account.isBlocked && (
+                <TouchableOpacity style={styles.deleteBtn} onPress={() => onAct('block_account')} activeOpacity={0.8}>
+                  <Text style={styles.deleteText}>Block</Text>
+                </TouchableOpacity>
+              )}
+            </>
           ) : (
-            <TouchableOpacity style={styles.hideBtn} onPress={() => onAct('hide')} activeOpacity={0.8}>
-              <Text style={styles.hideText}>Hide</Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity style={styles.dismissBtn} onPress={() => onAct('dismiss')} activeOpacity={0.8}>
+                <Text style={styles.dismissText}>Dismiss</Text>
+              </TouchableOpacity>
+              {report.post?.isHidden ? (
+                <TouchableOpacity style={styles.unhideBtn} onPress={() => onAct('unhide')} activeOpacity={0.8}>
+                  <Text style={styles.unhideText}>Unhide</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={styles.hideBtn} onPress={() => onAct('hide')} activeOpacity={0.8}>
+                  <Text style={styles.hideText}>Hide</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={styles.deleteBtn} onPress={() => onAct('delete')} activeOpacity={0.8}>
+                <Text style={styles.deleteText}>Delete</Text>
+              </TouchableOpacity>
+            </>
           )}
-          <TouchableOpacity style={styles.deleteBtn} onPress={() => onAct('delete')} activeOpacity={0.8}>
-            <Text style={styles.deleteText}>Delete</Text>
-          </TouchableOpacity>
         </View>
       ) : (
         <Text style={styles.resolved}>
@@ -121,12 +164,13 @@ export function AdminReportsScreen() {
   const insets = useSafeAreaInsets();
   const clearance = useBottomNavClearance();
   const [filter, setFilter] = useState<ReportStatus | undefined>('open');
+  const [targetTab, setTargetTab] = useState<ReportTargetTypeFilter>('accounts');
   const [pending, setPending] = useState<{ report: ApiAdminReport; action: ModerationAction } | null>(null);
   const [reason, setReason] = useState('');
   const { period } = useTimeTheme();
   const isNightMode = isNightlikePeriod(period);
 
-  const { data, isLoading, refetch, isRefetching } = useAdminReports(filter);
+  const { data, isLoading, refetch, isRefetching } = useAdminReports(filter, targetTab);
   const act = useActOnReport();
 
   const confirm = () => {
@@ -150,8 +194,21 @@ export function AdminReportsScreen() {
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.title}>Reported content</Text>
         <Text style={styles.subtitle}>
-          {data?.openCount ?? 0} open · posts auto-hide after 3 reports
+          {data?.accountOpenCount ?? 0} open account report{data?.accountOpenCount === 1 ? '' : 's'} · posts auto-hide after 3 reports
         </Text>
+      </View>
+
+      <View style={styles.filterRow}>
+        {TARGET_TABS.map((t) => (
+          <TouchableOpacity
+            key={t.key}
+            style={[styles.chip, targetTab === t.key && styles.chipActive]}
+            onPress={() => setTargetTab(t.key)}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.chipText, targetTab === t.key && styles.chipTextActive]}>{t.label}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       <View style={styles.filterRow}>
@@ -203,23 +260,27 @@ export function AdminReportsScreen() {
           setReason('');
         }}
         title={
-          pending?.action === 'dismiss'
-            ? 'Dismiss this report?'
-            : pending?.action === 'delete'
-              ? 'Delete this content?'
-              : pending?.action === 'unhide'
-                ? 'Make this visible again?'
-                : 'Hide this content?'
+          pending?.action === 'block_account'
+            ? 'Block this account?'
+            : pending?.action === 'dismiss'
+              ? 'Dismiss this report?'
+              : pending?.action === 'delete'
+                ? 'Delete this content?'
+                : pending?.action === 'unhide'
+                  ? 'Make this visible again?'
+                  : 'Hide this content?'
         }
       >
         <Text style={[styles.sheetBody, isNightMode && styles.sheetBodyNight]}>
-          {pending?.action === 'delete'
-            ? 'This removes the content permanently for everyone. It cannot be undone.'
-            : pending?.action === 'dismiss'
-              ? 'The content stays up and the report is closed.'
-              : pending?.action === 'unhide'
-                ? 'The content becomes visible in feeds again.'
-                : 'The content disappears from every feed. Only its author still sees it.'}
+          {pending?.action === 'block_account'
+            ? 'They immediately lose access on web and mobile — every signed-in request will be rejected until unblocked.'
+            : pending?.action === 'delete'
+              ? 'This removes the content permanently for everyone. It cannot be undone.'
+              : pending?.action === 'dismiss'
+                ? 'The content stays up and the report is closed.'
+                : pending?.action === 'unhide'
+                  ? 'The content becomes visible in feeds again.'
+                  : 'The content disappears from every feed. Only its author still sees it.'}
         </Text>
 
         <TextInput
@@ -234,7 +295,7 @@ export function AdminReportsScreen() {
         <TouchableOpacity
           style={[
             styles.confirmBtn,
-            pending?.action === 'delete' && styles.confirmDanger,
+            (pending?.action === 'delete' || pending?.action === 'block_account') && styles.confirmDanger,
             act.isPending && styles.busy,
           ]}
           onPress={confirm}

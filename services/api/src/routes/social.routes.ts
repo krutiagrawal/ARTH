@@ -13,7 +13,7 @@ const cursorQuerySchema = z.object({
 });
 
 const reportSchema = z.object({
-  targetType: z.enum(['post', 'story', 'user', 'ngo', 'portfolio_entry', 'order_review']),
+  targetType: z.enum(['post', 'story', 'user', 'ngo', 'nursery', 'corporate', 'portfolio_entry', 'order_review']),
   targetId: z.string().uuid(),
   reason: z.enum(['spam', 'harassment', 'hate', 'misinformation', 'nudity', 'violence', 'other']),
   details: z.string().max(1000).optional(),

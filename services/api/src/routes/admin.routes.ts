@@ -1,17 +1,22 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import * as adminService from '../services/admin.service';
+import * as adminOpsService from '../services/adminOps.service';
+import * as adminCatalogService from '../services/adminCatalog.service';
 import { BadRequestError } from '../utils/errors';
 import * as reportService from '../services/report.service';
 
 const reportsQuerySchema = z.object({
   status: z.enum(['open', 'actioned', 'dismissed']).optional(),
+  // 'accounts' is a shorthand meaning targetType in (user, ngo, nursery, corporate) —
+  // the default view for the admin Reports queue, per the "priority" surfacing ask.
+  targetType: z.enum(['accounts', 'post', 'story', 'user', 'ngo', 'nursery', 'corporate', 'portfolio_entry', 'order_review']).optional(),
   page: z.coerce.number().int().min(1).optional(),
   take: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 const reportActionSchema = z.object({
-  action: z.enum(['hide', 'unhide', 'delete', 'dismiss']),
+  action: z.enum(['hide', 'unhide', 'delete', 'dismiss', 'block_account']),
   reason: z.string().max(500).optional(),
 });
 
@@ -86,6 +91,22 @@ const paginationQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
   take: z.coerce.number().int().min(1).max(50).optional(),
 });
+
+const reasonBodySchema = z.object({ reason: z.string().max(500).optional() });
+
+const searchAccountsQuerySchema = z.object({
+  q: z.string().max(200).optional(),
+  type: z.enum(['user', 'ngo', 'nursery', 'corporate']).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  take: z.coerce.number().int().min(1).max(50).optional(),
+});
+
+const blockAccountSchema = z.object({ reason: z.string().max(500).optional() });
+
+const reviewTreeSchema = z.object({ decision: z.enum(['approve', 'reject']) });
+
+const CATALOG_MODELS = ['species', 'achievements', 'challenges', 'missions', 'themes', 'decorations'] as const;
+const catalogModelParamSchema = z.enum(CATALOG_MODELS);
 
 function serializeGroup(group: any) {
   return {
@@ -228,6 +249,133 @@ export default async function adminRoutes(fastify: FastifyInstance) {
     const parsed = reportsQuerySchema.safeParse(request.query);
     if (!parsed.success) throw new BadRequestError('Invalid query parameters');
     reply.send(await reportService.listReports(fastify.prisma, parsed.data));
+  });
+
+  // ---------- Account search & blocking (User/NGO/Nursery/Corporate) ----------
+
+  fastify.get('/accounts', async (request, reply) => {
+    const parsed = searchAccountsQuerySchema.safeParse(request.query);
+    if (!parsed.success) throw new BadRequestError('Invalid query parameters');
+    reply.send(await adminService.searchAccounts(fastify.prisma, parsed.data));
+  });
+
+  fastify.post<{ Params: { userId: string } }>('/accounts/:userId/block', async (request, reply) => {
+    const parsed = blockAccountSchema.safeParse(request.body ?? {});
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    const account = await adminService.blockAccount(fastify.prisma, request.params.userId, {
+      reason: parsed.data.reason,
+      adminUserId: request.user!.id,
+    });
+    reply.send(account);
+  });
+
+  fastify.post<{ Params: { userId: string } }>('/accounts/:userId/unblock', async (request, reply) => {
+    const account = await adminService.unblockAccount(fastify.prisma, request.params.userId, request.user!.id);
+    reply.send(account);
+  });
+
+  // ---------- AI tree-photo verification review queue ----------
+
+  fastify.get('/trees/review-queue', async (request, reply) => {
+    const parsed = paginationQuerySchema.safeParse(request.query);
+    if (!parsed.success) throw new BadRequestError('Invalid query parameters');
+    reply.send(await adminService.listTreesForReview(fastify.prisma, parsed.data));
+  });
+
+  fastify.patch<{ Params: { id: string } }>('/trees/:id/review', async (request, reply) => {
+    const parsed = reviewTreeSchema.safeParse(request.body);
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    const tree = await adminService.reviewTree(fastify.prisma, request.params.id, {
+      decision: parsed.data.decision,
+      adminUserId: request.user!.id,
+    });
+    reply.send(tree);
+  });
+
+  // ---------- Ops oversight: Drives / Donations / Orders ----------
+
+  fastify.get('/drives', async (request, reply) => {
+    const parsed = paginationQuerySchema.safeParse(request.query);
+    if (!parsed.success) throw new BadRequestError('Invalid query parameters');
+    reply.send(await adminOpsService.listDrives(fastify.prisma, parsed.data));
+  });
+
+  fastify.patch<{ Params: { id: string } }>('/drives/:id/cancel', async (request, reply) => {
+    const parsed = reasonBodySchema.safeParse(request.body ?? {});
+    if (!parsed.success) throw new BadRequestError('Invalid input');
+
+    const drive = await adminOpsService.adminCancelDrive(fastify.prisma, request.params.id, {
+      reason: parsed.data.reason,
+      adminUserId: request.user!.id,
+    });
+    reply.send(drive);
+  });
+
+  fastify.get('/donations', async (request, reply) => {
+    const parsed = paginationQuerySchema.safeParse(request.query);
+    if (!parsed.success) throw new BadRequestError('Invalid query parameters');
+    reply.send(await adminOpsService.listDonations(fastify.prisma, parsed.data));
+  });
+
+  fastify.patch<{ Params: { id: string } }>('/donations/:id/refund', async (request, reply) => {
+    const parsed = reasonBodySchema.safeParse(request.body ?? {});
+    if (!parsed.success) throw new BadRequestError('Invalid input');
+
+    const donation = await adminOpsService.adminRefundDonation(fastify.prisma, request.params.id, {
+      reason: parsed.data.reason,
+      adminUserId: request.user!.id,
+    });
+    reply.send(donation);
+  });
+
+  fastify.get('/orders', async (request, reply) => {
+    const parsed = paginationQuerySchema.safeParse(request.query);
+    if (!parsed.success) throw new BadRequestError('Invalid query parameters');
+    reply.send(await adminOpsService.listOrders(fastify.prisma, parsed.data));
+  });
+
+  fastify.patch<{ Params: { id: string } }>('/orders/:id/refund', async (request, reply) => {
+    const parsed = reasonBodySchema.safeParse(request.body ?? {});
+    if (!parsed.success) throw new BadRequestError('Invalid input');
+
+    const order = await adminOpsService.adminRefundOrder(fastify.prisma, request.params.id, {
+      reason: parsed.data.reason,
+      adminUserId: request.user!.id,
+    });
+    reply.send(order);
+  });
+
+  // ---------- Catalog management (species/achievements/challenges/missions/themes/decorations) ----------
+
+  fastify.get<{ Params: { model: string } }>('/catalog/:model', async (request, reply) => {
+    const parsedModel = catalogModelParamSchema.safeParse(request.params.model);
+    if (!parsedModel.success) throw new BadRequestError('Unknown catalog type');
+    reply.send(await adminCatalogService.listCatalogItems(fastify.prisma, parsedModel.data));
+  });
+
+  fastify.post<{ Params: { model: string } }>('/catalog/:model', async (request, reply) => {
+    const parsedModel = catalogModelParamSchema.safeParse(request.params.model);
+    if (!parsedModel.success) throw new BadRequestError('Unknown catalog type');
+    const item = await adminCatalogService.createCatalogItem(
+      fastify.prisma,
+      parsedModel.data,
+      (request.body ?? {}) as Record<string, unknown>,
+    );
+    reply.status(201).send(item);
+  });
+
+  fastify.patch<{ Params: { model: string; id: string } }>('/catalog/:model/:id', async (request, reply) => {
+    const parsedModel = catalogModelParamSchema.safeParse(request.params.model);
+    if (!parsedModel.success) throw new BadRequestError('Unknown catalog type');
+    const item = await adminCatalogService.updateCatalogItem(
+      fastify.prisma,
+      parsedModel.data,
+      request.params.id,
+      (request.body ?? {}) as Record<string, unknown>,
+    );
+    reply.send(item);
   });
 
   fastify.patch<{ Params: { id: string } }>('/reports/:id', async (request, reply) => {

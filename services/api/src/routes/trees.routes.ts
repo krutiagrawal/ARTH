@@ -31,6 +31,7 @@ function serializeTree(tree: any) {
     photoUri: tree.photoUrl,
     co2Absorbed: Number(tree.co2Absorbed),
     xpEarned: tree.xpEarned,
+    aiVerificationStatus: tree.aiVerificationStatus,
   };
 }
 
@@ -106,9 +107,11 @@ export default async function treesRoutes(fastify: FastifyInstance) {
       const buffer = await photoFile.toBuffer();
 
       const verification = await verifyPlantingPhoto({ buffer, mimetype: photoFile.mimetype });
-      if (verification.status === 'rejected') {
-        throw new BadRequestError(verification.reason);
-      }
+      // A rejected photo used to be hard-blocked here (400, nothing saved).
+      // It's now persisted with status 'rejected' instead, so an admin can
+      // review it — see admin.service.ts's listTreesForReview/reviewTree.
+      // XP/counters are withheld for 'rejected' until an admin approves it
+      // (tree.service.ts's plantTree skips them for this status).
       aiVerificationStatus = verification.status;
 
       photoUrl = await saveTreePhoto({

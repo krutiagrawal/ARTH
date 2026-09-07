@@ -2,7 +2,7 @@ import { apiFetch } from './client';
 
 // ---------- Moderation ----------
 
-export type ReportTargetType = 'post' | 'story' | 'user' | 'ngo' | 'portfolio_entry';
+export type ReportTargetType = 'post' | 'story' | 'user' | 'ngo' | 'nursery' | 'corporate' | 'portfolio_entry';
 export type ReportReason =
   | 'spam'
   | 'harassment'

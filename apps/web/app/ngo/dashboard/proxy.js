@@ -17,6 +17,7 @@ export async function proxy(path, opts = {}) {
   if (!res.ok) {
     const err = new Error((data && data.message) || 'Something went wrong.')
     err.status = res.status
+    err.code = data && data.error
     throw err
   }
   return data

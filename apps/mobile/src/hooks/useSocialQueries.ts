@@ -53,7 +53,7 @@ import {
   reportContent,
   unblockTarget,
 } from '../api/social';
-import { actOnAdminReport, fetchAdminReports, type ModerationAction, type ReportStatus } from '../api/admin';
+import { actOnAdminReport, fetchAdminReports, type ModerationAction, type ReportStatus, type ReportTargetTypeFilter } from '../api/admin';
 import { markStoryViewed } from '../api/stories';
 
 /**
@@ -75,7 +75,8 @@ export const socialKeys = {
   notifications: ['notifications'] as const,
   unreadCount: ['notifications', 'unread'] as const,
   blocks: ['blocks'] as const,
-  adminReports: (status?: ReportStatus) => ['admin', 'reports', status ?? 'all'] as const,
+  adminReports: (status?: ReportStatus, targetType?: ReportTargetTypeFilter) =>
+    ['admin', 'reports', status ?? 'all', targetType ?? 'all'] as const,
 };
 
 /** Every cached list that can contain posts, for cross-list cache surgery after a like/delete. */
@@ -456,11 +457,11 @@ export function useUnblockTarget() {
   });
 }
 
-export function useAdminReports(status?: ReportStatus) {
+export function useAdminReports(status?: ReportStatus, targetType?: ReportTargetTypeFilter) {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: socialKeys.adminReports(status),
-    queryFn: () => fetchAdminReports({ status }),
+    queryKey: socialKeys.adminReports(status, targetType),
+    queryFn: () => fetchAdminReports({ status, targetType }),
     enabled: isAuthenticated,
   });
 }
@@ -473,6 +474,8 @@ export function useActOnReport() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'actionLogs'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] });
     },
   });
 }

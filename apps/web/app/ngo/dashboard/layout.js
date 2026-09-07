@@ -5,6 +5,7 @@ import { Home, CalendarDays, TreePine, HeartHandshake, Settings as SettingsIcon,
 import AppSidebar from '@/components/dashboard/AppSidebar'
 import SidebarScenery from '@/components/dashboard/SidebarScenery'
 import { Button } from '@/components/ui/button'
+import AccountBlockedScreen from '@/components/dashboard/AccountBlockedScreen'
 import { NgoProfileProvider, useNgoProfile } from './NgoProfileContext'
 
 const SECTIONS = [
@@ -27,7 +28,7 @@ const SECTIONS = [
 
 function NgoShell({ children }) {
   const router = useRouter()
-  const { profile, loading, error, refresh } = useNgoProfile()
+  const { profile, loading, error, blocked, blockReason, refresh } = useNgoProfile()
 
   const logout = async () => {
     await fetch('/api/ngo/logout', { method: 'POST' })
@@ -36,6 +37,8 @@ function NgoShell({ children }) {
 
   const orgName = loading ? 'Loading…' : profile?.orgName || 'Your organization'
   const initial = (profile?.orgName || 'N').charAt(0).toUpperCase()
+
+  if (blocked) return <AccountBlockedScreen reason={blockReason} onSignOut={logout} />
 
   return (
     <AppSidebar

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Image, Linking } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { BlurView } from 'expo-blur';
@@ -10,6 +10,7 @@ import { RADIUS } from '../constants/theme';
 import { GlassCard, BlurCard } from '../components/common/GlassCard';
 import { LocationActions } from '../components/common/LocationActions';
 import { EmptyState } from '../components/common/EmptyState';
+import { ReportSheet } from '../components/social/ReportSheet';
 import { useNurseryPublicProfile, useFollowNursery, useUnfollowNursery } from '../hooks/useApiQueries';
 import { resolveMediaUrl } from '../api/client';
 import type { ApiSaplingStock } from '../api/nursery';
@@ -54,6 +55,7 @@ export function NurseryPublicProfileScreen({ route, navigation }: any) {
   const { data: profile, isLoading } = useNurseryPublicProfile(nurseryId);
   const followMutation = useFollowNursery();
   const unfollowMutation = useUnfollowNursery();
+  const [reporting, setReporting] = useState(false);
 
   const status = profile?.followStatus ?? null;
   const isFollowingOrPending = status === 'accepted' || status === 'pending';
@@ -79,11 +81,18 @@ export function NurseryPublicProfileScreen({ route, navigation }: any) {
           </BlurView>
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{profile?.nurseryName ?? 'Nursery'}</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Cart')} style={styles.backButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
-            <Text style={styles.backIcon}>🛒</Text>
-          </BlurView>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={() => setReporting(true)} style={styles.backButton} hitSlop={8}>
+            <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+              <Text style={styles.backIcon}>🚩</Text>
+            </BlurView>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Cart')} style={styles.backButton}>
+            <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+              <Text style={styles.backIcon}>🛒</Text>
+            </BlurView>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {isLoading || !profile ? (
@@ -151,6 +160,14 @@ export function NurseryPublicProfileScreen({ route, navigation }: any) {
           )}
         </ScrollView>
       )}
+
+      <ReportSheet
+        visible={reporting}
+        onClose={() => setReporting(false)}
+        targetType="nursery"
+        targetId={nurseryId}
+        targetLabel="this nursery"
+      />
     </View>
   );
 }
@@ -158,6 +175,7 @@ export function NurseryPublicProfileScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
+  headerActions: { flexDirection: 'row', gap: 10 },
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(94,133,80,0.2)' },
   backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },

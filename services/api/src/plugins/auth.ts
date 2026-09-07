@@ -2,7 +2,7 @@ import fp from 'fastify-plugin';
 import { UserRole } from '@plant/db';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { verifyAccessToken } from '../utils/jwt';
-import { ForbiddenError, UnauthorizedError } from '../utils/errors';
+import { AccountBlockedError, ForbiddenError, UnauthorizedError } from '../utils/errors';
 
 export default fp(async function authPlugin(fastify: FastifyInstance) {
   fastify.decorate('authenticate', async function (request: FastifyRequest, _reply: FastifyReply) {
@@ -13,12 +13,23 @@ export default fp(async function authPlugin(fastify: FastifyInstance) {
 
     const token = header.slice('Bearer '.length);
 
+    let payload;
     try {
-      const payload = verifyAccessToken(token);
-      request.user = { id: payload.sub, email: payload.email, role: payload.role as UserRole };
+      payload = verifyAccessToken(token);
     } catch {
       throw new UnauthorizedError('Invalid or expired token');
     }
+
+    // DB check (not just JWT verification) so a block takes effect on the
+    // very next request instead of waiting for the access token to expire.
+    const user = await fastify.prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { isDeleted: true, isBlocked: true },
+    });
+    if (!user || user.isDeleted) throw new UnauthorizedError('Invalid or expired token');
+    if (user.isBlocked) throw new AccountBlockedError();
+
+    request.user = { id: payload.sub, email: payload.email, role: payload.role as UserRole };
   });
 
   fastify.decorate('requireRole', function (...roles: UserRole[]) {

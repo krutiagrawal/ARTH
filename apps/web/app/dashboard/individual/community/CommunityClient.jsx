@@ -3,13 +3,14 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Search, UserPlus, Check, X, Flame, TreePine, Newspaper } from 'lucide-react'
+import { Search, UserPlus, Check, X, Flame, TreePine, Newspaper, Flag } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
+import ReportDialog from '@/components/dashboard/ReportDialog'
 import { proxy } from '@/lib/memberProxy'
 
 function EmojiAvatar({ emoji, size = 'h-11 w-11', online = false, text = 'text-lg' }) {
@@ -150,6 +151,7 @@ function FriendsPanel() {
   const [results, setResults] = useState(null)
   const [searching, setSearching] = useState(false)
   const [busyId, setBusyId] = useState(null)
+  const [reportTarget, setReportTarget] = useState(null)
 
   const load = () => {
     proxy('/friends').then(setFriends).catch((err) => toast.error(err.message || 'Could not load your friends.'))
@@ -243,15 +245,28 @@ function FriendsPanel() {
                       <p className="text-xs text-muted-foreground truncate">@{u.handle} · Level {u.level}</p>
                     </div>
                   </div>
-                  <Button size="sm" variant="outline" className="rounded-full shrink-0" disabled={busyId === u.id} onClick={() => sendRequest(u.id)}>
-                    <UserPlus className="h-3.5 w-3.5" /> Add
-                  </Button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Button size="sm" variant="outline" className="rounded-full" disabled={busyId === u.id} onClick={() => sendRequest(u.id)}>
+                      <UserPlus className="h-3.5 w-3.5" /> Add
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full text-muted-foreground hover:text-destructive" onClick={() => setReportTarget(u)}>
+                      <Flag className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </div>
       )}
+
+      <ReportDialog
+        open={Boolean(reportTarget)}
+        onOpenChange={(open) => !open && setReportTarget(null)}
+        targetType="user"
+        targetId={reportTarget?.id}
+        targetLabel={reportTarget?.name}
+      />
 
       {requests !== null && requests.length > 0 && (
         <div>

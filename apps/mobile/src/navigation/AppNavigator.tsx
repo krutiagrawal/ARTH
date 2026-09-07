@@ -95,13 +95,23 @@ import { AdminNgoApprovalsScreen } from '../screens/AdminNgoApprovalsScreen';
 import { AdminNgoApprovalDetailScreen } from '../screens/AdminNgoApprovalDetailScreen';
 import { AdminAuditLogScreen } from '../screens/AdminAuditLogScreen';
 import { AdminReportsScreen } from '../screens/AdminReportsScreen';
+import { AccountBlockedScreen } from '../screens/AccountBlockedScreen';
+import { AdminMoreScreen } from '../screens/AdminMoreScreen';
+import { AdminAccountSearchScreen } from '../screens/AdminAccountSearchScreen';
+import { AdminNurseryApprovalsScreen } from '../screens/AdminNurseryApprovalsScreen';
+import { AdminNurseryApprovalDetailScreen } from '../screens/AdminNurseryApprovalDetailScreen';
+import { AdminCorporateApprovalsScreen } from '../screens/AdminCorporateApprovalsScreen';
+import { AdminCorporateApprovalDetailScreen } from '../screens/AdminCorporateApprovalDetailScreen';
+import { AdminOpsScreen } from '../screens/AdminOpsScreen';
+import { AdminTreeReviewScreen } from '../screens/AdminTreeReviewScreen';
+import { AdminCatalogScreen } from '../screens/AdminCatalogScreen';
 
 import { BottomNav, NavSurface, TabName, TabItem, USER_TABS } from '../components/navigation/BottomNav';
 import { useTimeTheme } from '../hooks/useTimeTheme';
 import { usePushRegistration } from '../hooks/usePushRegistration';
 
 export type NgoTabName = 'Home' | 'Community' | 'Post' | 'Manage' | 'More';
-export type AdminTabName = 'Overview' | 'NGOs' | 'Reports' | 'AuditLog';
+export type AdminTabName = 'Overview' | 'NGOs' | 'Reports' | 'AuditLog' | 'More';
 export type GroupTabName = 'Home' | 'Manage' | 'Activity' | 'Settings';
 
 const GROUP_TABS: TabItem[] = [
@@ -145,6 +155,7 @@ const ADMIN_TABS: TabItem[] = [
   { name: 'NGOs', icon: 'ðŸ¢', label: 'NGOs', raised: true },
   { name: 'Reports', icon: 'ðŸš©', label: 'Reports' },
   { name: 'AuditLog', icon: 'ðŸ“œ', label: 'Audit Log' },
+  { name: 'More', icon: '⚙️', label: 'More' },
 ];
 
 // react-native-maps has no Android native module in Expo Go, so it must load
@@ -360,6 +371,15 @@ export type RootStackParamList = {
   FollowingFeed: undefined;
   AdminMain: undefined;
   AdminNgoApprovalDetail: { ngo: import('../api/admin').ApiAdminNgo };
+  AccountBlocked: undefined;
+  AdminAccountSearch: undefined;
+  AdminNurseryApprovals: undefined;
+  AdminNurseryApprovalDetail: { nursery: import('../api/admin').ApiAdminNursery };
+  AdminCorporateApprovals: undefined;
+  AdminCorporateApprovalDetail: { corporate: import('../api/admin').ApiAdminCorporate };
+  AdminOps: undefined;
+  AdminTreeReview: undefined;
+  AdminCatalog: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -384,6 +404,23 @@ function useLogoutRedirect() {
       navigationRef.reset({ index: 0, routes: [{ name: 'Login' }] });
     }
   }, [isLoading, isAuthenticated]);
+}
+
+/**
+ * Redirects to the AccountBlocked screen the instant isBlocked flips true —
+ * same shape as useLogoutRedirect above, fired from AuthContext's
+ * onAccountBlocked handler (see api/client.ts) rather than a nav-time check,
+ * so a block that happens mid-session (not just at cold launch) still takes
+ * the user off whatever screen they're on immediately.
+ */
+function useBlockedRedirect() {
+  const { isBlocked } = useAuth();
+
+  useEffect(() => {
+    if (isBlocked && navigationRef.isReady()) {
+      navigationRef.reset({ index: 0, routes: [{ name: 'AccountBlocked' }] });
+    }
+  }, [isBlocked]);
 }
 
 function MainApp({ navigation }: any) {
@@ -560,6 +597,7 @@ const ADMIN_NAV_SURFACE: Record<AdminTabName, NavSurface> = {
   NGOs: { background: '#2C3E6B', tint: 'dark' },
   Reports: { background: '#2C3E6B', tint: 'dark' },
   AuditLog: { background: '#2C3E6B', tint: 'dark' },
+  More: { background: '#2C3E6B', tint: 'dark' },
 };
 
 function AdminMainApp({ navigation }: any) {
@@ -575,6 +613,8 @@ function AdminMainApp({ navigation }: any) {
         return <AdminReportsScreen />;
       case 'AuditLog':
         return <AdminAuditLogScreen navigation={navigation} />;
+      case 'More':
+        return <AdminMoreScreen navigation={navigation} />;
       default:
         return <AdminHomeScreen navigation={navigation} />;
     }
@@ -597,6 +637,7 @@ export function AppNavigator() {
   // Registers this device for push once signed in. A silent no-op in Expo Go — see the hook.
   usePushRegistration();
   useLogoutRedirect();
+  useBlockedRedirect();
 
   return (
     <NavigationContainer ref={navigationRef}>
@@ -723,6 +764,15 @@ export function AppNavigator() {
         <Stack.Screen name="FollowingFeed" component={FollowingFeedScreen} />
         <Stack.Screen name="AdminMain" component={AdminMainApp} />
         <Stack.Screen name="AdminNgoApprovalDetail" component={AdminNgoApprovalDetailScreen} />
+        <Stack.Screen name="AccountBlocked" component={AccountBlockedScreen} />
+        <Stack.Screen name="AdminAccountSearch" component={AdminAccountSearchScreen} />
+        <Stack.Screen name="AdminNurseryApprovals" component={AdminNurseryApprovalsScreen} />
+        <Stack.Screen name="AdminNurseryApprovalDetail" component={AdminNurseryApprovalDetailScreen} />
+        <Stack.Screen name="AdminCorporateApprovals" component={AdminCorporateApprovalsScreen} />
+        <Stack.Screen name="AdminCorporateApprovalDetail" component={AdminCorporateApprovalDetailScreen} />
+        <Stack.Screen name="AdminOps" component={AdminOpsScreen} />
+        <Stack.Screen name="AdminTreeReview" component={AdminTreeReviewScreen} />
+        <Stack.Screen name="AdminCatalog" component={AdminCatalogScreen} />
         <Stack.Screen
           name="CampaignDetail"
           component={CampaignDetailScreen}

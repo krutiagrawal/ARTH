@@ -10,7 +10,7 @@ import { generateResetToken, hashResetToken, RESET_TOKEN_TTL_MS } from '../utils
 import { generateInviteCode } from '../utils/inviteCode';
 import { sendEmail } from './email.service';
 import { env } from '../config/env';
-import { ConflictError, NotFoundError, UnauthorizedError, BadRequestError } from '../utils/errors';
+import { AccountBlockedError, ConflictError, NotFoundError, UnauthorizedError, BadRequestError } from '../utils/errors';
 
 interface RegisterInput {
   email: string;
@@ -341,6 +341,7 @@ export async function registerCorporate(prisma: PrismaClient, input: RegisterCor
 export async function login(prisma: PrismaClient, input: LoginInput) {
   const user = await prisma.user.findUnique({ where: { email: input.email } });
   if (!user || user.isDeleted) throw new UnauthorizedError('Invalid credentials');
+  if (user.isBlocked) throw new AccountBlockedError();
 
   const valid = await comparePassword(input.password, user.passwordHash);
   if (!valid) throw new UnauthorizedError('Invalid credentials');
@@ -408,6 +409,7 @@ const REUSE_GRACE_MS = 10_000;
 async function rotateFrom(prisma: PrismaClient, tokenRow: { id: string; userId: string; deviceInfo: string | null }) {
   const user = await prisma.user.findUnique({ where: { id: tokenRow.userId } });
   if (!user || user.isDeleted) throw new UnauthorizedError('User not found');
+  if (user.isBlocked) throw new AccountBlockedError();
 
   const accessToken = signAccessToken({ sub: user.id, email: user.email, role: user.role });
   const newRefreshToken = generateRefreshToken();

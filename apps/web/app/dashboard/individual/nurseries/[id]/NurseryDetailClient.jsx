@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { ArrowLeft, MapPin, Phone, ShoppingCart, Sprout, Star } from 'lucide-react'
+import { ArrowLeft, Flag, MapPin, Phone, ShoppingCart, Sprout, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
+import ReportDialog from '@/components/dashboard/ReportDialog'
 import { proxy } from '@/lib/memberProxy'
 
 function formatRupees(cents) {
@@ -29,6 +30,7 @@ function EmptyStockIllustration() {
 export default function NurseryDetailClient({ nurseryId }) {
   const [profile, setProfile] = useState(null)
   const [addingId, setAddingId] = useState(null)
+  const [reportOpen, setReportOpen] = useState(false)
 
   useEffect(() => {
     proxy(`/nurseries/${nurseryId}`)
@@ -85,11 +87,16 @@ export default function NurseryDetailClient({ nurseryId }) {
                 )}
               </div>
             </div>
-            <Button asChild variant="secondary" className="rounded-full shrink-0 shadow">
-              <Link href="/dashboard/individual/orders/cart">
-                <ShoppingCart className="h-4 w-4" /> Cart
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button asChild variant="secondary" className="rounded-full shadow">
+                <Link href="/dashboard/individual/orders/cart">
+                  <ShoppingCart className="h-4 w-4" /> Cart
+                </Link>
+              </Button>
+              <Button variant="ghost" size="icon" className="rounded-full bg-black/20 text-white hover:bg-black/30 hover:text-white" onClick={() => setReportOpen(true)}>
+                <Flag className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -102,6 +109,8 @@ export default function NurseryDetailClient({ nurseryId }) {
           )}
         </div>
       </div>
+
+      <ReportDialog open={reportOpen} onOpenChange={setReportOpen} targetType="nursery" targetId={nurseryId} targetLabel={profile.nurseryName} />
 
       <div>
         <p className="eyebrow mb-4">Available saplings</p>

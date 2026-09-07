@@ -185,6 +185,27 @@ import {
   AdminNgosFilter,
   AdminActionLogsParams,
   NgoApprovalStatus,
+  fetchAdminNurseries,
+  setAdminNurseryStatus,
+  fetchAdminCorporates,
+  setAdminCorporateStatus,
+  AdminOrgFilter,
+  searchAdminAccounts,
+  blockAdminAccount,
+  unblockAdminAccount,
+  AdminAccountType,
+  fetchAdminTreeReviewQueue,
+  reviewAdminTree,
+  fetchAdminDrives,
+  cancelAdminDrive,
+  fetchAdminDonations,
+  refundAdminDonation,
+  fetchAdminOrders,
+  refundAdminOrder,
+  fetchAdminCatalog,
+  createAdminCatalogItem,
+  updateAdminCatalogItem,
+  AdminCatalogModel,
 } from '../api/admin';
 import { fetchAddresses, createAddress, updateAddress, deleteAddress, UpsertAddressInput } from '../api/addresses';
 import { fetchCart, addCartItem, updateCartItem, removeCartItem, clearCart } from '../api/cart';
@@ -1064,6 +1085,164 @@ export function useAdminActionLogs(params: AdminActionLogsParams = {}) {
     queryKey: ['admin', 'action-logs', params],
     queryFn: () => fetchAdminActionLogs(params),
     enabled: isAuthenticated,
+  });
+}
+
+export function useAdminNurseries(filter: AdminOrgFilter = {}) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['admin', 'nurseries', filter],
+    queryFn: () => fetchAdminNurseries(filter),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useSetAdminNurseryStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status, rejectionReason }: { id: string; status: NgoApprovalStatus; rejectionReason?: string }) =>
+      setAdminNurseryStatus(id, { status, rejectionReason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'nurseries'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] });
+    },
+  });
+}
+
+export function useAdminCorporates(filter: AdminOrgFilter = {}) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['admin', 'corporates', filter],
+    queryFn: () => fetchAdminCorporates(filter),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useSetAdminCorporateStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status, rejectionReason }: { id: string; status: NgoApprovalStatus; rejectionReason?: string }) =>
+      setAdminCorporateStatus(id, { status, rejectionReason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'corporates'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] });
+    },
+  });
+}
+
+export function useAdminAccounts(filter: { q?: string; type?: AdminAccountType; page?: number; take?: number } = {}) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['admin', 'accounts', filter],
+    queryFn: () => searchAdminAccounts(filter),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useBlockAdminAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, reason }: { userId: string; reason?: string }) => blockAdminAccount(userId, { reason }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'reports'] });
+    },
+  });
+}
+
+export function useUnblockAdminAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => unblockAdminAccount(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] });
+    },
+  });
+}
+
+export function useAdminTreeReviewQueue(params: { page?: number; take?: number } = {}) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['admin', 'trees', 'review-queue', params],
+    queryFn: () => fetchAdminTreeReviewQueue(params),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useReviewAdminTree() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, decision }: { id: string; decision: 'approve' | 'reject' }) => reviewAdminTree(id, decision),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'trees'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] });
+    },
+  });
+}
+
+export function useAdminDrives(params: { page?: number; take?: number } = {}) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({ queryKey: ['admin', 'drives', params], queryFn: () => fetchAdminDrives(params), enabled: isAuthenticated });
+}
+
+export function useCancelAdminDrive() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) => cancelAdminDrive(id, reason),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'drives'] }),
+  });
+}
+
+export function useAdminDonations(params: { page?: number; take?: number } = {}) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({ queryKey: ['admin', 'donations', params], queryFn: () => fetchAdminDonations(params), enabled: isAuthenticated });
+}
+
+export function useRefundAdminDonation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) => refundAdminDonation(id, reason),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'donations'] }),
+  });
+}
+
+export function useAdminOrders(params: { page?: number; take?: number } = {}) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({ queryKey: ['admin', 'orders', params], queryFn: () => fetchAdminOrders(params), enabled: isAuthenticated });
+}
+
+export function useRefundAdminOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) => refundAdminOrder(id, reason),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] }),
+  });
+}
+
+export function useAdminCatalog(model: AdminCatalogModel) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['admin', 'catalog', model],
+    queryFn: () => fetchAdminCatalog(model),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useCreateAdminCatalogItem(model: AdminCatalogModel) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) => createAdminCatalogItem(model, body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'catalog', model] }),
+  });
+}
+
+export function useUpdateAdminCatalogItem(model: AdminCatalogModel) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) => updateAdminCatalogItem(model, id, body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'catalog', model] }),
   });
 }
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Users, ShieldCheck, CalendarDays, Sprout, IndianRupee, FileStack, Mail, LogIn, Users2 } from 'lucide-react'
+import { Users, ShieldCheck, CalendarDays, Sprout, IndianRupee, FileStack, Mail, LogIn, Users2, ShieldBan, Flag, TreePine, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import StatTile from '@/components/dashboard/StatTile'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
@@ -95,6 +95,41 @@ export default function OverviewClient() {
           <p className="mt-3 text-xs text-muted-foreground">
             NGOs by status: {Object.entries(platform.data.ngosByStatus).map(([k, v]) => `${v} ${k}`).join(' · ') || 'none yet'}
           </p>
+        )}
+      </section>
+
+      <section>
+        <h2 className="eyebrow mb-4">Trust &amp; safety</h2>
+        {platform.loading ? (
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <StatTile key={i} loading />
+            ))}
+          </div>
+        ) : !platform.signedIn ? (
+          <SignInPrompt label="Trust & safety stats are hidden" href="/admin/login" />
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">
+            <StatTile
+              label="Nurseries"
+              value={`${platform.data.nurseriesByStatus?.approved ?? 0} approved`}
+              description="Currently publishing"
+              icon={Sprout}
+              tone="sand"
+              href="/admin/nurseries"
+            />
+            <StatTile
+              label="Corporates"
+              value={`${platform.data.corporatesByStatus?.approved ?? 0} approved`}
+              description="Currently publishing"
+              icon={Building2}
+              tone="primary"
+              href="/admin/corporates"
+            />
+            <StatTile label="Blocked accounts" value={platform.data.blockedUsersCount ?? 0} description="All account types" icon={ShieldBan} tone="primary" href="/admin/accounts" />
+            <StatTile label="Open reports" value={platform.data.openReportsCount ?? 0} description="Awaiting review" icon={Flag} tone="sand" href="/admin/reports" />
+            <StatTile label="Trees to review" value={platform.data.treesPendingReviewCount ?? 0} description="AI flagged/unverified" icon={TreePine} tone="primary" href="/admin/tree-verification" />
+          </div>
         )}
       </section>
 

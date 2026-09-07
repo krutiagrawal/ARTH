@@ -1,5 +1,6 @@
-import { NgoApprovalStatus, PrismaClient } from '@plant/db';
-import { NotFoundError } from '../utils/errors';
+import { NgoApprovalStatus, Prisma, PrismaClient, UserRole } from '@plant/db';
+import { ForbiddenError, NotFoundError } from '../utils/errors';
+import { addXp } from './xp.service';
 
 interface ListNgosFilter {
   status?: NgoApprovalStatus;
@@ -302,21 +303,236 @@ export async function listActionLogs(prisma: PrismaClient, filter: PaginationFil
 }
 
 export async function getOverviewStats(prisma: PrismaClient) {
-  const [usersByRole, ngosByStatus, groupsCount, drivesCount, adoptedTreesCount, succeededDonations] = await Promise.all([
+  const [
+    usersByRole,
+    ngosByStatus,
+    nurseriesByStatus,
+    corporatesByStatus,
+    groupsCount,
+    drivesCount,
+    adoptedTreesCount,
+    succeededDonations,
+    blockedUsersCount,
+    openReportsCount,
+    treesPendingReviewCount,
+  ] = await Promise.all([
     prisma.user.groupBy({ by: ['role'], _count: true }),
     prisma.ngoProfile.groupBy({ by: ['status'], _count: true }),
+    prisma.nurseryProfile.groupBy({ by: ['status'], _count: true }),
+    prisma.corporateProfile.groupBy({ by: ['status'], _count: true }),
     prisma.groupProfile.count(),
     prisma.drive.count(),
     prisma.adoptableTree.count({ where: { status: 'adopted' } }),
     prisma.donation.findMany({ where: { status: 'succeeded' }, select: { amountCents: true } }),
+    prisma.user.count({ where: { isBlocked: true } }),
+    prisma.contentReport.count({ where: { status: 'open' } }),
+    prisma.tree.count({ where: { aiVerificationStatus: { in: ['unverified', 'rejected'] }, reviewedAt: null } }),
   ]);
 
   return {
     usersByRole: Object.fromEntries(usersByRole.map((r) => [r.role, r._count])),
     ngosByStatus: Object.fromEntries(ngosByStatus.map((r) => [r.status, r._count])),
+    nurseriesByStatus: Object.fromEntries(nurseriesByStatus.map((r) => [r.status, r._count])),
+    corporatesByStatus: Object.fromEntries(corporatesByStatus.map((r) => [r.status, r._count])),
     groupsCount,
     drivesCount,
     adoptedTreesCount,
     totalDonatedCents: succeededDonations.reduce((sum, d) => sum + d.amountCents, 0),
+    blockedUsersCount,
+    openReportsCount,
+    treesPendingReviewCount,
   };
+}
+
+// ---------- Account search & blocking (User/NGO/Nursery/Corporate — Group is
+// out of scope, it keeps its own separate suspend/active workflow above) ----------
+
+interface SearchAccountsFilter {
+  q?: string;
+  type?: 'user' | 'ngo' | 'nursery' | 'corporate';
+  page?: number;
+  take?: number;
+}
+
+const ROLE_BY_ACCOUNT_TYPE: Record<NonNullable<SearchAccountsFilter['type']>, UserRole> = {
+  user: 'user',
+  ngo: 'ngo',
+  nursery: 'nursery',
+  corporate: 'corporate',
+};
+
+const ACCOUNT_SELECT = {
+  id: true,
+  email: true,
+  name: true,
+  handle: true,
+  role: true,
+  isBlocked: true,
+  blockedAt: true,
+  blockedReason: true,
+  createdAt: true,
+  ngoProfile: { select: { id: true, orgName: true, status: true } },
+  nurseryProfile: { select: { id: true, nurseryName: true, status: true } },
+  corporateProfile: { select: { id: true, companyName: true, status: true } },
+} satisfies Prisma.UserSelect;
+
+// One query against User covers all four account types since NgoProfile/
+// NurseryProfile/CorporateProfile are 1:1 children of User — no cross-table
+// union needed.
+export async function searchAccounts(prisma: PrismaClient, filter: SearchAccountsFilter = {}) {
+  const take = Math.min(filter.take ?? 50, 50);
+  const page = Math.max(filter.page ?? 1, 1);
+
+  const where: Prisma.UserWhereInput = {
+    role: filter.type ? ROLE_BY_ACCOUNT_TYPE[filter.type] : { not: 'admin' },
+    isDeleted: false,
+    ...(filter.q
+      ? {
+          OR: [
+            { name: { contains: filter.q, mode: 'insensitive' } },
+            { email: { contains: filter.q, mode: 'insensitive' } },
+            { handle: { contains: filter.q, mode: 'insensitive' } },
+            { ngoProfile: { orgName: { contains: filter.q, mode: 'insensitive' } } },
+            { nurseryProfile: { nurseryName: { contains: filter.q, mode: 'insensitive' } } },
+            { corporateProfile: { companyName: { contains: filter.q, mode: 'insensitive' } } },
+          ],
+        }
+      : {}),
+  };
+
+  const [accounts, total] = await Promise.all([
+    prisma.user.findMany({ where, select: ACCOUNT_SELECT, orderBy: { createdAt: 'desc' }, take, skip: (page - 1) * take }),
+    prisma.user.count({ where }),
+  ]);
+
+  return { accounts, total };
+}
+
+interface BlockAccountInput {
+  reason?: string;
+  adminUserId: string;
+}
+
+export async function blockAccount(prisma: PrismaClient, targetUserId: string, input: BlockAccountInput) {
+  const target = await prisma.user.findUnique({ where: { id: targetUserId } });
+  if (!target) throw new NotFoundError('Account not found');
+  if (target.role === 'admin') throw new ForbiddenError('Admin accounts cannot be blocked');
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.user.update({
+      where: { id: targetUserId },
+      data: {
+        isBlocked: true,
+        blockedAt: new Date(),
+        blockedReason: input.reason ?? null,
+        blockedByUserId: input.adminUserId,
+      },
+      select: ACCOUNT_SELECT,
+    });
+
+    await tx.adminActionLog.create({
+      data: {
+        actorUserId: input.adminUserId,
+        action: 'user.blocked',
+        targetType: 'User',
+        targetId: targetUserId,
+        reason: input.reason ?? null,
+      },
+    });
+
+    return updated;
+  });
+}
+
+export async function unblockAccount(prisma: PrismaClient, targetUserId: string, adminUserId: string) {
+  const target = await prisma.user.findUnique({ where: { id: targetUserId } });
+  if (!target) throw new NotFoundError('Account not found');
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.user.update({
+      where: { id: targetUserId },
+      data: { isBlocked: false, blockedAt: null, blockedReason: null, blockedByUserId: null },
+      select: ACCOUNT_SELECT,
+    });
+
+    await tx.adminActionLog.create({
+      data: { actorUserId: adminUserId, action: 'user.unblocked', targetType: 'User', targetId: targetUserId },
+    });
+
+    return updated;
+  });
+}
+
+// ---------- AI tree-photo verification review queue ----------
+
+export async function listTreesForReview(prisma: PrismaClient, filter: PaginationFilter = {}) {
+  const take = Math.min(filter.take ?? 50, 50);
+  const page = Math.max(filter.page ?? 1, 1);
+
+  const where: Prisma.TreeWhereInput = {
+    aiVerificationStatus: { in: ['unverified', 'rejected'] },
+    reviewedAt: null,
+    isDeleted: false,
+  };
+
+  const [trees, total] = await Promise.all([
+    prisma.tree.findMany({
+      where,
+      include: {
+        species: { select: { commonName: true, emoji: true } },
+        user: { select: { id: true, name: true, handle: true, email: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take,
+      skip: (page - 1) * take,
+    }),
+    prisma.tree.count({ where }),
+  ]);
+
+  return { trees, total };
+}
+
+export async function reviewTree(
+  prisma: PrismaClient,
+  treeId: string,
+  input: { decision: 'approve' | 'reject'; adminUserId: string },
+) {
+  const tree = await prisma.tree.findUnique({ where: { id: treeId } });
+  if (!tree) throw new NotFoundError('Tree not found');
+  if (tree.reviewedAt) throw new ForbiddenError('This submission has already been reviewed');
+
+  // 'unverified'/'verified' trees already received XP at creation time
+  // (plantTree() awards it unconditionally). Only a 'rejected' tree had its
+  // XP withheld — approving one now is the one case that must award it.
+  const shouldAwardWithheldXp = input.decision === 'approve' && tree.aiVerificationStatus === 'rejected';
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.tree.update({
+      where: { id: treeId },
+      data: {
+        aiVerificationStatus: input.decision === 'approve' ? 'verified' : tree.aiVerificationStatus,
+        reviewedAt: new Date(),
+        reviewedByAdminId: input.adminUserId,
+      },
+    });
+
+    if (shouldAwardWithheldXp) {
+      await addXp(tx, tree.userId, tree.xpEarned, 'tree_planted', 'tree', tree.id);
+      await tx.user.update({
+        where: { id: tree.userId },
+        data: { treesPlantedCount: { increment: 1 }, totalCo2Absorbed: { increment: tree.co2Absorbed } },
+      });
+    }
+
+    await tx.adminActionLog.create({
+      data: {
+        actorUserId: input.adminUserId,
+        action: input.decision === 'approve' ? 'tree.review_approved' : 'tree.review_rejected',
+        targetType: 'Tree',
+        targetId: treeId,
+      },
+    });
+
+    return updated;
+  });
 }

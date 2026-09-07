@@ -48,6 +48,14 @@ export async function plantTree(prisma: PrismaClient, input: PlantTreeInput) {
       include: { species: true },
     });
 
+    // A photo the AI rejected is persisted (so an admin can review it — see
+    // admin.service.ts's reviewTree) but none of the rewards below fire until
+    // that review approves it, so a bad submission can't earn XP in the
+    // meantime. reviewTree() awards this same set (XP + counters) on approval.
+    if (input.aiVerificationStatus === 'rejected') {
+      return tree;
+    }
+
     await tx.user.update({
       where: { id: input.userId },
       data: {

@@ -2,6 +2,12 @@ import { Prisma, PrismaClient, ReportReason, ReportStatus, ReportTargetType } fr
 import { BadRequestError, NotFoundError } from '../utils/errors';
 import { applyAutoHideIfNeeded } from './post.service';
 import { notify } from './notification.service';
+import { blockAccount } from './admin.service';
+
+// Reports against these four target types are the "account reports" the
+// admin Reports queue surfaces first/by default — see listReports's
+// targetType filter and AdminReportsScreen/AdminReportsClient's default tab.
+export const ACCOUNT_TARGET_TYPES: ReportTargetType[] = ['user', 'ngo', 'nursery', 'corporate'];
 
 interface ReportInput {
   targetType: ReportTargetType;
@@ -22,6 +28,10 @@ async function assertTargetExists(prisma: PrismaClient, targetType: ReportTarget
         return prisma.user.findFirst({ where: { id: targetId, isDeleted: false }, select: { id: true } });
       case 'ngo':
         return prisma.ngoProfile.findUnique({ where: { id: targetId }, select: { id: true } });
+      case 'nursery':
+        return prisma.nurseryProfile.findUnique({ where: { id: targetId }, select: { id: true } });
+      case 'corporate':
+        return prisma.corporateProfile.findUnique({ where: { id: targetId }, select: { id: true } });
       case 'portfolio_entry':
         return prisma.ngoPortfolioEntry.findUnique({ where: { id: targetId }, select: { id: true } });
       case 'order_review':
@@ -89,18 +99,56 @@ function serializeReport(r: any) {
           authorName: r.post.ngo?.orgName ?? r.post.user?.name ?? null,
         }
       : null,
+    // Populated only for account-type reports (user/ngo/nursery/corporate) —
+    // lets the admin queue render name/type/blocked-state without a second
+    // request, and gives the client the userId a "Block" button needs.
+    account: r.account
+      ? {
+          userId: r.account.id,
+          name: r.account.name,
+          handle: r.account.handle,
+          role: r.account.role,
+          isBlocked: r.account.isBlocked,
+        }
+      : null,
   };
+}
+
+async function attachAccountTarget<T extends { targetType: ReportTargetType; targetId: string }>(
+  prisma: PrismaClient,
+  report: T,
+): Promise<T & { account: { id: string; name: string; handle: string; role: string; isBlocked: boolean } | null }> {
+  if (!ACCOUNT_TARGET_TYPES.includes(report.targetType)) return { ...report, account: null };
+
+  const userSelect = { id: true, name: true, handle: true, role: true, isBlocked: true } as const;
+  const account =
+    report.targetType === 'user'
+      ? await prisma.user.findUnique({ where: { id: report.targetId }, select: userSelect })
+      : report.targetType === 'ngo'
+        ? (await prisma.ngoProfile.findUnique({ where: { id: report.targetId }, select: { user: { select: userSelect } } }))?.user ?? null
+        : report.targetType === 'nursery'
+          ? (await prisma.nurseryProfile.findUnique({ where: { id: report.targetId }, select: { user: { select: userSelect } } }))?.user ?? null
+          : (await prisma.corporateProfile.findUnique({ where: { id: report.targetId }, select: { user: { select: userSelect } } }))?.user ?? null;
+
+  return { ...report, account: account ?? null };
 }
 
 export async function listReports(
   prisma: PrismaClient,
-  filter: { status?: ReportStatus; page?: number; take?: number } = {},
+  filter: { status?: ReportStatus; targetType?: ReportTargetType | 'accounts'; page?: number; take?: number } = {},
 ) {
   const take = Math.min(filter.take ?? 25, 100);
   const page = Math.max(filter.page ?? 1, 1);
-  const where: Prisma.ContentReportWhereInput = filter.status ? { status: filter.status } : {};
+  const where: Prisma.ContentReportWhereInput = {
+    ...(filter.status ? { status: filter.status } : {}),
+    ...(filter.targetType === 'accounts'
+      ? { targetType: { in: ACCOUNT_TARGET_TYPES } }
+      : filter.targetType
+        ? { targetType: filter.targetType }
+        : {}),
+  };
 
-  const [rows, total, openCount] = await Promise.all([
+  const [rows, total, openCount, accountOpenCount] = await Promise.all([
     prisma.contentReport.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -123,12 +171,14 @@ export async function listReports(
     }),
     prisma.contentReport.count({ where }),
     prisma.contentReport.count({ where: { status: 'open' } }),
+    prisma.contentReport.count({ where: { status: 'open', targetType: { in: ACCOUNT_TARGET_TYPES } } }),
   ]);
 
-  return { total, openCount, reports: rows.map(serializeReport) };
+  const withAccounts = await Promise.all(rows.map((r) => attachAccountTarget(prisma, r)));
+  return { total, openCount, accountOpenCount, reports: withAccounts.map(serializeReport) };
 }
 
-export type ModerationAction = 'hide' | 'unhide' | 'delete' | 'dismiss';
+export type ModerationAction = 'hide' | 'unhide' | 'delete' | 'dismiss' | 'block_account';
 
 /**
  * Resolves a report and applies the chosen action to its target.
@@ -146,7 +196,14 @@ export async function actOnReport(
   const report = await prisma.contentReport.findUnique({ where: { id: reportId } });
   if (!report) throw new NotFoundError('Report not found');
 
-  if (report.targetType === 'post') {
+  if (action === 'block_account') {
+    if (!ACCOUNT_TARGET_TYPES.includes(report.targetType)) {
+      throw new BadRequestError('This report is not against an account');
+    }
+    const { account } = await attachAccountTarget(prisma, report);
+    if (!account) throw new NotFoundError('The reported account no longer exists');
+    await blockAccount(prisma, account.id, { reason: reason ?? `Blocked from report ${reportId}`, adminUserId });
+  } else if (report.targetType === 'post') {
     const post = await prisma.post.findUnique({ where: { id: report.targetId }, select: { id: true } });
     if (post) {
       if (action === 'hide') await prisma.post.update({ where: { id: post.id }, data: { isHidden: true } });

@@ -5,6 +5,7 @@ import { Home, Users, Trophy, Settings as SettingsIcon, LogOut, ChevronDown, Wif
 import AppSidebar from '@/components/dashboard/AppSidebar'
 import SidebarScenery from '@/components/dashboard/SidebarScenery'
 import { Button } from '@/components/ui/button'
+import AccountBlockedScreen from '@/components/dashboard/AccountBlockedScreen'
 import { GroupProfileProvider, useGroupProfile } from './GroupProfileContext'
 
 const SECTIONS = [
@@ -20,7 +21,7 @@ const SECTIONS = [
 
 function GroupShell({ children }) {
   const router = useRouter()
-  const { profile, loading, error, refresh } = useGroupProfile()
+  const { profile, loading, error, blocked, blockReason, refresh } = useGroupProfile()
 
   const logout = async () => {
     await fetch('/api/group/logout', { method: 'POST' })
@@ -29,6 +30,8 @@ function GroupShell({ children }) {
 
   const groupName = loading ? 'Loading…' : profile?.groupName || 'Your group'
   const initial = (profile?.groupName || 'G').charAt(0).toUpperCase()
+
+  if (blocked) return <AccountBlockedScreen reason={blockReason} onSignOut={logout} />
 
   return (
     <AppSidebar
