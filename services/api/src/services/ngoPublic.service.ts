@@ -38,7 +38,18 @@ export async function browseNgos(prisma: PrismaClient, filter: BrowseFilter = {}
 export async function getPublicProfile(prisma: PrismaClient, ngoId: string, viewerUserId?: string) {
   const ngo = await prisma.ngoProfile.findFirst({ where: { id: ngoId, status: 'approved' } });
   if (!ngo) throw new NotFoundError('NGO not found');
+  return assembleNgoProfile(prisma, ngo, viewerUserId);
+}
 
+// Same assembly as getPublicProfile but for a pre-fetched profile row that
+// hasn't been gated on status — admin needs to view pending/suspended NGOs too.
+export async function getAdminNgoProfile(prisma: PrismaClient, ngoId: string) {
+  const ngo = await prisma.ngoProfile.findUnique({ where: { id: ngoId } });
+  if (!ngo) throw new NotFoundError('NGO not found');
+  return assembleNgoProfile(prisma, ngo);
+}
+
+async function assembleNgoProfile(prisma: PrismaClient, ngo: { id: string } & Record<string, any>, viewerUserId?: string) {
   const [followersCount, follow, featuredDrives, recentPosts, impact, staff, portfolio, portfolioImpact] =
     await Promise.all([
       // Pending requests are not followers yet, so they must not inflate the public count.

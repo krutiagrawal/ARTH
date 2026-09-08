@@ -7,6 +7,20 @@ import { Button } from '@/components/ui/button'
 import StatTile from '@/components/dashboard/StatTile'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 
+const ROLE_TYPE_LINK = { user: 'user', ngo: 'ngo', nursery: 'nursery', corporate: 'corporate' }
+
+function roleBreakdown(usersByRole) {
+  return Object.entries(usersByRole).map(([role, value]) => ({
+    label: role,
+    value,
+    href: ROLE_TYPE_LINK[role] ? `/admin/accounts?type=${ROLE_TYPE_LINK[role]}` : undefined,
+  }))
+}
+
+function statusBreakdown(byStatus, basePath) {
+  return Object.entries(byStatus).map(([status, value]) => ({ label: status, value, href: `${basePath}?status=${status}` }))
+}
+
 function SignInPrompt({ label, href }) {
   return (
     <div className="rounded-3xl border border-dashed border-border/70 p-8 text-center">
@@ -70,6 +84,7 @@ export default function OverviewClient() {
               description="Across all roles"
               icon={Users}
               tone="primary"
+              breakdown={roleBreakdown(platform.data.usersByRole)}
             />
             <StatTile
               label="NGOs"
@@ -77,17 +92,18 @@ export default function OverviewClient() {
               description="Currently publishing"
               icon={ShieldCheck}
               tone="sand"
-              href="/admin/ngos"
+              breakdown={statusBreakdown(platform.data.ngosByStatus, '/admin/ngos')}
             />
             <StatTile label="Groups" value={platform.data.groupsCount ?? 0} description="All-time" icon={Users2} tone="primary" href="/admin/groups" />
-            <StatTile label="Drives" value={platform.data.drivesCount} description="Created all-time" icon={CalendarDays} tone="primary" />
-            <StatTile label="Trees adopted" value={platform.data.adoptedTreesCount} description="Across all NGOs" icon={Sprout} tone="sand" />
+            <StatTile label="Drives" value={platform.data.drivesCount} description="Created all-time" icon={CalendarDays} tone="primary" href="/admin/ops?tab=drives" />
+            <StatTile label="Trees adopted" value={platform.data.adoptedTreesCount} description="Across all NGOs" icon={Sprout} tone="sand" href="/admin/ops?tab=orders" />
             <StatTile
               label="Total donated"
               value={`₹${(platform.data.totalDonatedCents / 100).toLocaleString()}`}
               description="Succeeded donations"
               icon={IndianRupee}
               tone="primary"
+              href="/admin/ops?tab=donations"
             />
           </div>
         )}
@@ -116,7 +132,7 @@ export default function OverviewClient() {
               description="Currently publishing"
               icon={Sprout}
               tone="sand"
-              href="/admin/nurseries"
+              breakdown={statusBreakdown(platform.data.nurseriesByStatus ?? {}, '/admin/nurseries')}
             />
             <StatTile
               label="Corporates"
@@ -124,10 +140,10 @@ export default function OverviewClient() {
               description="Currently publishing"
               icon={Building2}
               tone="primary"
-              href="/admin/corporates"
+              breakdown={statusBreakdown(platform.data.corporatesByStatus ?? {}, '/admin/corporates')}
             />
-            <StatTile label="Blocked accounts" value={platform.data.blockedUsersCount ?? 0} description="All account types" icon={ShieldBan} tone="primary" href="/admin/accounts" />
-            <StatTile label="Open reports" value={platform.data.openReportsCount ?? 0} description="Awaiting review" icon={Flag} tone="sand" href="/admin/reports" />
+            <StatTile label="Blocked accounts" value={platform.data.blockedUsersCount ?? 0} description="All account types" icon={ShieldBan} tone="primary" href="/admin/accounts?blocked=1" />
+            <StatTile label="Open reports" value={platform.data.openReportsCount ?? 0} description="Awaiting review" icon={Flag} tone="sand" href="/admin/reports?status=open" />
             <StatTile label="Trees to review" value={platform.data.treesPendingReviewCount ?? 0} description="AI flagged/unverified" icon={TreePine} tone="primary" href="/admin/tree-verification" />
           </div>
         )}

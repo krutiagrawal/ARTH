@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import ReportDialog from '@/components/dashboard/ReportDialog'
 import { proxy } from '@/lib/memberProxy'
+import { resolveMediaUrl } from '@/lib/media'
 
 function formatRupees(cents) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`
@@ -68,7 +69,7 @@ export default function NurseryDetailClient({ nurseryId }) {
       <div className="rounded-3xl border border-border/70 bg-card soft-shadow overflow-hidden">
         <div className="relative aspect-[21/9] bg-gradient-to-br from-primary/20 to-sand/25">
           {profile.coverPhotoUrl ? (
-            <img src={profile.coverPhotoUrl} alt={profile.nurseryName} className="h-full w-full object-cover" />
+            <img src={resolveMediaUrl(profile.coverPhotoUrl)} alt={profile.nurseryName} className="h-full w-full object-cover" />
           ) : (
             <div className="h-full w-full grid place-items-center text-6xl">🌿</div>
           )}
@@ -125,7 +126,7 @@ export default function NurseryDetailClient({ nurseryId }) {
               <div key={item.id} className="flex items-center gap-4 rounded-2xl border border-border/70 bg-card p-4 soft-shadow">
                 <div className="h-16 w-16 shrink-0 rounded-xl overflow-hidden bg-primary/10 grid place-items-center">
                   {item.photoUrl ? (
-                    <img src={item.photoUrl} alt={item.species} className="h-full w-full object-cover" />
+                    <img src={resolveMediaUrl(item.photoUrl)} alt={item.species} className="h-full w-full object-cover" />
                   ) : (
                     <Sprout className="h-6 w-6 text-primary" />
                   )}

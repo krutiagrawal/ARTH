@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import { proxy } from '@/lib/memberProxy'
+import { resolveMediaUrl } from '@/lib/media'
 
 function GreenhouseIllustration() {
   return (
@@ -76,7 +77,7 @@ export default function NurseriesClient() {
             >
               <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-primary/15 to-sand/25">
                 {n.logoUrl ? (
-                  <img src={n.logoUrl} alt={n.nurseryName} className="h-full w-full object-cover transition-transform duration-[1200ms] group-hover:scale-105" />
+                  <img src={resolveMediaUrl(n.logoUrl)} alt={n.nurseryName} className="h-full w-full object-cover transition-transform duration-[1200ms] group-hover:scale-105" />
                 ) : (
                   <div className="h-full w-full grid place-items-center text-5xl">🌿</div>
                 )}

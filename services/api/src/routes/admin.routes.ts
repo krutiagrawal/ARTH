@@ -97,6 +97,7 @@ const reasonBodySchema = z.object({ reason: z.string().max(500).optional() });
 const searchAccountsQuerySchema = z.object({
   q: z.string().max(200).optional(),
   type: z.enum(['user', 'ngo', 'nursery', 'corporate']).optional(),
+  isBlocked: z.coerce.boolean().optional(),
   page: z.coerce.number().int().min(1).optional(),
   take: z.coerce.number().int().min(1).max(50).optional(),
 });
@@ -257,6 +258,10 @@ export default async function adminRoutes(fastify: FastifyInstance) {
     const parsed = searchAccountsQuerySchema.safeParse(request.query);
     if (!parsed.success) throw new BadRequestError('Invalid query parameters');
     reply.send(await adminService.searchAccounts(fastify.prisma, parsed.data));
+  });
+
+  fastify.get<{ Params: { userId: string } }>('/accounts/:userId/profile', async (request, reply) => {
+    reply.send(await adminService.getAccountProfile(fastify.prisma, request.params.userId));
   });
 
   fastify.post<{ Params: { userId: string } }>('/accounts/:userId/block', async (request, reply) => {

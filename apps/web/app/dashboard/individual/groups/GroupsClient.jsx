@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import { proxy } from '@/lib/memberProxy'
+import { resolveMediaUrl } from '@/lib/media'
 
 const ROLE_LABEL = { owner: 'Owner', co_admin: 'Co-admin', member: 'Member' }
 
@@ -25,7 +26,7 @@ function GroupAvatar({ group, size = 'h-14 w-14' }) {
   if (group.logoUrl) {
     return (
       <div className={`${size} shrink-0 rounded-2xl overflow-hidden bg-secondary`}>
-        <img src={group.logoUrl} alt={group.groupName} className="h-full w-full object-cover" />
+        <img src={resolveMediaUrl(group.logoUrl)} alt={group.groupName} className="h-full w-full object-cover" />
       </div>
     )
   }

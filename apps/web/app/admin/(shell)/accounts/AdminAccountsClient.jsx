@@ -1,14 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
-import { Search, MoreHorizontal, Users, ShieldBan, ShieldCheck } from 'lucide-react'
+import { Search, Users, ShieldBan, ShieldCheck, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import DataTable from '@/components/dashboard/DataTable'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
@@ -23,11 +22,17 @@ const TYPE_FILTERS = [
   { value: 'corporate', label: 'Corporates' },
 ]
 
+const APPROVAL_VARIANT = { pending: 'outline', approved: 'default', rejected: 'destructive', suspended: 'secondary' }
+
 function orgNameFor(account) {
   return account.ngoProfile?.orgName ?? account.nurseryProfile?.nurseryName ?? account.corporateProfile?.companyName ?? null
 }
 
-function AccountDetailSheet({ account, onOpenChange, onAction }) {
+function approvalStatusFor(account) {
+  return account.ngoProfile?.status ?? account.nurseryProfile?.status ?? account.corporateProfile?.status ?? null
+}
+
+function RowActions({ account, onAction, onViewProfile }) {
   const [confirm, setConfirm] = useState(null) // 'block' | 'unblock'
   const [reason, setReason] = useState('')
   const [working, setWorking] = useState(false)
@@ -40,7 +45,6 @@ function AccountDetailSheet({ account, onOpenChange, onAction }) {
       toast.success(confirm === 'block' ? 'Account blocked.' : 'Account unblocked.')
       setConfirm(null)
       setReason('')
-      onOpenChange(false)
     } catch (err) {
       toast.error(err.message || 'Something went wrong.')
     } finally {
@@ -48,53 +52,20 @@ function AccountDetailSheet({ account, onOpenChange, onAction }) {
     }
   }
 
-  if (!account) return null
-  const orgName = orgNameFor(account)
-
   return (
-    <>
-      <Sheet open={Boolean(account)} onOpenChange={onOpenChange}>
-        <SheetContent className="overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="font-serif">{orgName || account.name}</SheetTitle>
-            <SheetDescription>
-              @{account.handle} · {account.email}
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="mt-6 space-y-6">
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline" className="capitalize">{account.role}</Badge>
-              {account.isBlocked ? (
-                <Badge variant="destructive">Blocked</Badge>
-              ) : (
-                <Badge variant="secondary">Active</Badge>
-              )}
-            </div>
-
-            {account.isBlocked && account.blockedReason && (
-              <p className="text-sm text-muted-foreground">Block reason: &ldquo;{account.blockedReason}&rdquo;</p>
-            )}
-            {account.isBlocked && account.blockedAt && (
-              <p className="text-xs text-muted-foreground">Blocked on {new Date(account.blockedAt).toLocaleString()}</p>
-            )}
-
-            <p className="text-xs text-muted-foreground">Joined {new Date(account.createdAt).toLocaleDateString()}</p>
-
-            <div className="flex flex-wrap gap-2">
-              {account.isBlocked ? (
-                <Button className="rounded-full" onClick={() => setConfirm('unblock')}>
-                  <ShieldCheck className="h-4 w-4" /> Unblock
-                </Button>
-              ) : (
-                <Button variant="destructive" className="rounded-full" onClick={() => setConfirm('block')}>
-                  <ShieldBan className="h-4 w-4" /> Block
-                </Button>
-              )}
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+    <div className="flex items-center justify-end gap-1.5">
+      {account.isBlocked ? (
+        <Button size="sm" className="rounded-full h-8" onClick={() => setConfirm('unblock')}>
+          <ShieldCheck className="h-3.5 w-3.5" /> Unblock
+        </Button>
+      ) : (
+        <Button size="sm" variant="destructive" className="rounded-full h-8" onClick={() => setConfirm('block')}>
+          <ShieldBan className="h-3.5 w-3.5" /> Block
+        </Button>
+      )}
+      <Button size="sm" variant="ghost" className="rounded-full h-8" onClick={() => onViewProfile(account)}>
+        <ExternalLink className="h-3.5 w-3.5" /> Profile
+      </Button>
 
       <ConfirmDialog
         open={Boolean(confirm)}
@@ -117,17 +88,22 @@ function AccountDetailSheet({ account, onOpenChange, onAction }) {
           </label>
         )}
       </ConfirmDialog>
-    </>
+    </div>
   )
 }
 
 export default function AdminAccountsClient() {
-  const [type, setType] = useState('')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [type, setType] = useState(() => {
+    const initial = searchParams.get('type') ?? ''
+    return TYPE_FILTERS.some((f) => f.value === initial) ? initial : ''
+  })
+  const [blockedOnly, setBlockedOnly] = useState(() => searchParams.get('blocked') === '1')
   const [q, setQ] = useState('')
   const [debouncedQ, setDebouncedQ] = useState('')
   const [accounts, setAccounts] = useState([])
   const [loading, setLoading] = useState(true)
-  const [selected, setSelected] = useState(null)
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQ(q), 300)
@@ -140,6 +116,7 @@ export default function AdminAccountsClient() {
       const params = new URLSearchParams()
       if (debouncedQ) params.set('q', debouncedQ)
       if (type) params.set('type', type)
+      if (blockedOnly) params.set('isBlocked', '1')
       const data = await proxy(`/admin/accounts?${params.toString()}`)
       setAccounts(data.accounts)
     } catch (err) {
@@ -147,16 +124,21 @@ export default function AdminAccountsClient() {
     } finally {
       setLoading(false)
     }
-  }, [debouncedQ, type])
+  }, [debouncedQ, type, blockedOnly])
 
   useEffect(() => {
     load()
   }, [load])
 
-  const handleAction = async (userId, action, reason) => {
-    await proxy(`/admin/accounts/${userId}/${action}`, { method: 'POST', body: action === 'block' ? { reason: reason || undefined } : undefined })
-    await load()
-  }
+  const handleAction = useCallback(
+    async (userId, action, reason) => {
+      await proxy(`/admin/accounts/${userId}/${action}`, { method: 'POST', body: action === 'block' ? { reason: reason || undefined } : undefined })
+      await load()
+    },
+    [load],
+  )
+
+  const goToProfile = useCallback((account) => router.push(`/admin/accounts/${account.id}`), [router])
 
   const columns = useMemo(
     () => [
@@ -179,9 +161,27 @@ export default function AdminAccountsClient() {
         cell: ({ row }) => <Badge variant="outline" className="capitalize">{row.original.role}</Badge>,
       },
       {
+        id: 'approvalStatus',
+        header: 'Approval',
+        cell: ({ row }) => {
+          const status = approvalStatusFor(row.original)
+          if (!status) return <span className="text-xs text-muted-foreground">—</span>
+          return <Badge variant={APPROVAL_VARIANT[status]} className="capitalize">{status}</Badge>
+        },
+      },
+      {
         accessorKey: 'isBlocked',
         header: 'Status',
-        cell: ({ row }) => (row.original.isBlocked ? <Badge variant="destructive">Blocked</Badge> : <Badge variant="secondary">Active</Badge>),
+        cell: ({ row }) => (
+          <div>
+            {row.original.isBlocked ? <Badge variant="destructive">Blocked</Badge> : <Badge variant="secondary">Active</Badge>}
+            {row.original.isBlocked && row.original.blockedReason && (
+              <p className="text-xs text-muted-foreground mt-1 max-w-[220px] truncate" title={row.original.blockedReason}>
+                &ldquo;{row.original.blockedReason}&rdquo;
+              </p>
+            )}
+          </div>
+        ),
       },
       {
         accessorKey: 'createdAt',
@@ -191,21 +191,10 @@ export default function AdminAccountsClient() {
       {
         id: 'actions',
         header: '',
-        cell: ({ row }) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelected(row.original)}>View details</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ),
+        cell: ({ row }) => <RowActions account={row.original} onAction={handleAction} onViewProfile={goToProfile} />,
       },
     ],
-    [],
+    [handleAction, goToProfile],
   )
 
   return (
@@ -226,18 +215,28 @@ export default function AdminAccountsClient() {
             className="pl-9 rounded-full h-10"
           />
         </div>
-        <div className="flex gap-2 border-b border-border/70 sm:border-0">
-          {TYPE_FILTERS.map((f) => (
-            <button
-              key={f.value}
-              onClick={() => setType(f.value)}
-              className={`px-3 py-2 text-sm border-b-2 -mb-px transition sm:rounded-full sm:border-0 sm:px-3 sm:py-1.5 ${
-                type === f.value ? 'border-primary text-foreground sm:bg-primary sm:text-primary-foreground' : 'border-transparent text-muted-foreground hover:text-foreground sm:bg-muted'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex gap-2 border-b border-border/70 sm:border-0">
+            {TYPE_FILTERS.map((f) => (
+              <button
+                key={f.value}
+                onClick={() => setType(f.value)}
+                className={`px-3 py-2 text-sm border-b-2 -mb-px transition sm:rounded-full sm:border-0 sm:px-3 sm:py-1.5 ${
+                  type === f.value ? 'border-primary text-foreground sm:bg-primary sm:text-primary-foreground' : 'border-transparent text-muted-foreground hover:text-foreground sm:bg-muted'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setBlockedOnly((v) => !v)}
+            className={`rounded-full px-3 py-1.5 text-sm transition ${
+              blockedOnly ? 'bg-destructive text-destructive-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Blocked only
+          </button>
         </div>
       </div>
 
@@ -247,8 +246,6 @@ export default function AdminAccountsClient() {
         loading={loading}
         emptyState={<EmptyState icon={Users} title="No matching accounts" body="Try a different search or filter." />}
       />
-
-      <AccountDetailSheet account={selected} onOpenChange={(open) => !open && setSelected(null)} onAction={handleAction} />
     </DashboardPageShell>
   )
 }

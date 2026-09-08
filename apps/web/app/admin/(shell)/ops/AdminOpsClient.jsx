@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { Ban, PackageSearch } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -103,7 +104,9 @@ function Row({ tab, item, onAction }) {
 }
 
 export default function AdminOpsClient() {
-  const [tab, setTab] = useState('drives')
+  const searchParams = useSearchParams()
+  const initialTab = searchParams.get('tab')
+  const [tab, setTab] = useState(TABS.some((t) => t.value === initialTab) ? initialTab : 'drives')
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
 

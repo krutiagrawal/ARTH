@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ImagePlus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { resolveMediaUrl } from '@/lib/media'
 
 /**
  * Controlled file input + thumbnail preview. No existing NGO form exposes a
@@ -32,7 +33,7 @@ export default function PhotoUploadField({ label = 'Photo', value, onChange, cur
         <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-[8px] border border-border/70 bg-muted">
           {displayUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- blob:/relative preview URL, not a static asset
-            <img src={displayUrl} alt="" className="h-full w-full object-cover" />
+            <img src={resolveMediaUrl(displayUrl)} alt="" className="h-full w-full object-cover" />
           ) : (
             <ImagePlus className="h-4 w-4 text-muted-foreground" />
           )}

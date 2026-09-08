@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import LocationActions from '@/components/dashboard-individual/LocationActions'
 import { proxy } from '@/lib/memberProxy'
+import { resolveMediaUrl } from '@/lib/media'
 
 export default function AdoptionDetailClient({ treeId }) {
   const [tree, setTree] = useState(null)
@@ -55,7 +56,7 @@ export default function AdoptionDetailClient({ treeId }) {
       <div className="rounded-3xl border border-border/70 bg-card soft-shadow overflow-hidden">
         <div className="relative aspect-[16/9] bg-secondary">
           {tree.photoUri && !photoBroken ? (
-            <img src={tree.photoUri} alt={tree.nickname} onError={() => setPhotoBroken(true)} className="h-full w-full object-cover" />
+            <img src={resolveMediaUrl(tree.photoUri)} alt={tree.nickname} onError={() => setPhotoBroken(true)} className="h-full w-full object-cover" />
           ) : (
             <div className="h-full w-full grid place-items-center bg-gradient-to-br from-primary/15 to-sand/20">
               <TreePine className="h-16 w-16 text-primary/40" />

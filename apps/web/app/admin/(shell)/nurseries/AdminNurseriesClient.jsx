@@ -1,13 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
-import { MoreHorizontal, Sprout, ShieldCheck, ShieldX, ShieldAlert, ShieldQuestion } from 'lucide-react'
+import { Sprout, ShieldCheck, ShieldX, ShieldAlert, ShieldQuestion } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import DataTable from '@/components/dashboard/DataTable'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
@@ -123,8 +123,90 @@ function NurseryDetailSheet({ nursery, onOpenChange, onAction }) {
   )
 }
 
+const CONFIRM_COPY = {
+  approve: { title: 'Approve this nursery?', confirmLabel: 'Approve', body: 'They can immediately start listing stock and taking orders.', status: 'approved' },
+  reject: { title: 'Reject this application?', confirmLabel: 'Reject', body: 'They can edit their details and resubmit.', status: 'rejected' },
+  suspend: { title: 'Suspend this nursery?', confirmLabel: 'Suspend', body: "They keep read access but can't publish anything new until reinstated.", status: 'suspended' },
+  reinstate: { title: 'Reinstate this nursery?', confirmLabel: 'Reinstate', body: 'They regain full publishing access.', status: 'approved' },
+}
+
+function RowActions({ nursery, onAction, onViewDetails }) {
+  const [confirm, setConfirm] = useState(null)
+  const [reason, setReason] = useState('')
+  const [working, setWorking] = useState(false)
+
+  const runAction = async () => {
+    if (!confirm) return
+    const { status } = CONFIRM_COPY[confirm]
+    setWorking(true)
+    try {
+      await onAction(nursery.id, status, reason)
+      toast.success(`Nursery ${confirm === 'reinstate' ? 'reinstated' : status}.`)
+      setConfirm(null)
+      setReason('')
+    } catch (err) {
+      toast.error(err.message || 'Something went wrong.')
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-end gap-1.5">
+      {nursery.status === 'pending' && (
+        <>
+          <Button size="sm" className="rounded-full h-8" onClick={() => setConfirm('approve')}>
+            <ShieldCheck className="h-3.5 w-3.5" /> Approve
+          </Button>
+          <Button size="sm" variant="outline" className="rounded-full h-8" onClick={() => setConfirm('reject')}>
+            <ShieldX className="h-3.5 w-3.5" /> Reject
+          </Button>
+        </>
+      )}
+      {nursery.status === 'approved' && (
+        <Button size="sm" variant="outline" className="rounded-full h-8" onClick={() => setConfirm('suspend')}>
+          <ShieldAlert className="h-3.5 w-3.5" /> Suspend
+        </Button>
+      )}
+      {nursery.status === 'suspended' && (
+        <Button size="sm" className="rounded-full h-8" onClick={() => setConfirm('reinstate')}>
+          <ShieldQuestion className="h-3.5 w-3.5" /> Reinstate
+        </Button>
+      )}
+      {nursery.status === 'rejected' && (
+        <Button size="sm" className="rounded-full h-8" onClick={() => setConfirm('approve')}>
+          <ShieldCheck className="h-3.5 w-3.5" /> Approve
+        </Button>
+      )}
+      <Button size="sm" variant="ghost" className="rounded-full h-8" onClick={() => onViewDetails(nursery)}>
+        Details
+      </Button>
+
+      <ConfirmDialog
+        open={Boolean(confirm)}
+        onOpenChange={(open) => !open && setConfirm(null)}
+        title={confirm ? CONFIRM_COPY[confirm].title : ''}
+        description={confirm ? CONFIRM_COPY[confirm].body : ''}
+        confirmLabel={confirm ? CONFIRM_COPY[confirm].confirmLabel : ''}
+        destructive={confirm === 'reject' || confirm === 'suspend'}
+        loading={working}
+        onConfirm={runAction}
+      >
+        {(confirm === 'reject' || confirm === 'suspend') && (
+          <label className="block">
+            <span className="eyebrow">Reason (shown to the nursery)</span>
+            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} className="mt-2" />
+          </label>
+        )}
+      </ConfirmDialog>
+    </div>
+  )
+}
+
 export default function AdminNurseriesClient() {
-  const [filter, setFilter] = useState('pending')
+  const searchParams = useSearchParams()
+  const initialStatus = searchParams.get('status')
+  const [filter, setFilter] = useState(FILTERS.includes(initialStatus) ? initialStatus : 'pending')
   const [nurseries, setNurseries] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
@@ -180,21 +262,10 @@ export default function AdminNurseriesClient() {
       {
         id: 'actions',
         header: '',
-        cell: ({ row }) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSelected(row.original)}>View details</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ),
+        cell: ({ row }) => <RowActions nursery={row.original} onAction={handleAction} onViewDetails={setSelected} />,
       },
     ],
-    [],
+    [handleAction],
   )
 
   return (

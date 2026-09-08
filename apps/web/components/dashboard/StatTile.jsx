@@ -3,9 +3,10 @@
 import { useId } from 'react'
 import Link from 'next/link'
 import { ResponsiveContainer, AreaChart, Area } from 'recharts'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 const TONE_STYLES = {
   primary: {
@@ -27,6 +28,9 @@ const TONE_STYLES = {
  * `tone`: 'primary' | 'sand' — alternates card accent color across a grid.
  * `href`: optional — renders a small circular arrow-link button next to
  * `description`.
+ * `breakdown`: optional array of `{ label, value, href? }` — when present,
+ * takes over from `href` and renders a popover with the sub-counts that make
+ * up this card's total, each linking through to its own filtered list.
  */
 export default function StatTile({
   label,
@@ -35,6 +39,7 @@ export default function StatTile({
   description,
   tone = 'primary',
   href,
+  breakdown,
   sparklineData,
   loading = false,
   className,
@@ -91,13 +96,51 @@ export default function StatTile({
 
       <div className="mt-2 flex items-center justify-between gap-2">
         {description && <p className="text-xs text-muted-foreground truncate">{description}</p>}
-        {href && (
-          <Link
-            href={href}
-            className={cn('grid h-6 w-6 shrink-0 place-items-center rounded-full transition-colors', styles.arrow)}
-          >
-            <ArrowRight className="h-3 w-3" />
-          </Link>
+        {breakdown && breakdown.length > 0 ? (
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className={cn('grid h-6 w-6 shrink-0 place-items-center rounded-full transition-colors', styles.arrow)}
+              >
+                <ArrowRight className="h-3 w-3" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-60 p-2" align="end">
+              <p className="px-2 pb-1.5 text-xs font-medium text-muted-foreground">{label} breakdown</p>
+              <div className="space-y-0.5">
+                {breakdown.map((row) =>
+                  row.href ? (
+                    <Link
+                      key={row.label}
+                      href={row.href}
+                      className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm capitalize transition-colors hover:bg-muted"
+                    >
+                      <span>{row.label}</span>
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        {row.value}
+                        <ChevronRight className="h-3 w-3" />
+                      </span>
+                    </Link>
+                  ) : (
+                    <div key={row.label} className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm capitalize">
+                      <span>{row.label}</span>
+                      <span className="text-muted-foreground">{row.value}</span>
+                    </div>
+                  ),
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+        ) : (
+          href && (
+            <Link
+              href={href}
+              className={cn('grid h-6 w-6 shrink-0 place-items-center rounded-full transition-colors', styles.arrow)}
+            >
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          )
         )}
       </div>
     </div>

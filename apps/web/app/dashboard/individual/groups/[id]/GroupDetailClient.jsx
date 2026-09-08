@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import { proxy } from '@/lib/memberProxy'
+import { resolveMediaUrl } from '@/lib/media'
 
 const GOAL_TYPE_LABEL = {
   trees_planted_count: 'Trees planted',
@@ -72,7 +73,7 @@ export default function GroupDetailClient({ groupId }) {
         <div className="rounded-3xl border border-border/70 bg-card p-6 soft-shadow flex items-start gap-5">
           {group.logoUrl ? (
             <div className="h-16 w-16 shrink-0 rounded-2xl overflow-hidden bg-secondary">
-              <img src={group.logoUrl} alt={group.groupName} className="h-full w-full object-cover" />
+              <img src={resolveMediaUrl(group.logoUrl)} alt={group.groupName} className="h-full w-full object-cover" />
             </div>
           ) : (
             <div className={`h-16 w-16 shrink-0 grid place-items-center rounded-2xl ${style.className}`}>

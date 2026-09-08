@@ -42,7 +42,7 @@
     --sidebar-foreground: 24 25% 18%;
     --sidebar-primary: 106 22% 69%;
     --sidebar-primary-foreground: 42 55% 95%;
-    --sidebar-accent: 40 30% 90%;
+    --sidebar-accent: 106 22% 69%;
     --sidebar-accent-foreground: 24 25% 18%;
     --sidebar-border: 36 22% 82%;
     --sidebar-ring: 106 22% 69%;
@@ -77,8 +77,8 @@
     --sidebar-foreground: 42 40% 92%;
     --sidebar-primary: 106 22% 72%;
     --sidebar-primary-foreground: 24 18% 10%;
-    --sidebar-accent: 24 18% 18%;
-    --sidebar-accent-foreground: 42 40% 92%;
+    --sidebar-accent: 106 22% 72%;
+    --sidebar-accent-foreground: 24 25% 18%;
     --sidebar-border: 24 18% 22%;
     --sidebar-ring: 106 22% 72%;
   }

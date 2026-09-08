@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { MapPin } from 'lucide-react'
 import { apiRequest } from '@/lib/apiClient'
+import { resolveMediaUrl } from '@/lib/media'
 
 export const metadata = {
   title: 'NGOs',
@@ -61,7 +62,7 @@ export default async function NgosPage({ searchParams }) {
                 <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary">
                   {n.logoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={n.logoUrl} alt="" className="h-full w-full object-cover" />
+                    <img src={resolveMediaUrl(n.logoUrl)} alt="" className="h-full w-full object-cover" />
                   ) : (
                     <span className="font-serif text-lg">{n.orgName.charAt(0)}</span>
                   )}

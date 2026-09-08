@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { MapPin, Calendar, Users, Award, TreePine, HeartPulse } from 'lucide-react'
 import { apiRequest, ApiError } from '@/lib/apiClient'
+import { resolveMediaUrl } from '@/lib/media'
 import FollowButton from './FollowButton'
 import ReportButton from './ReportButton'
 
@@ -33,7 +34,7 @@ export default async function NgoProfilePage({ params }) {
             <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary border border-border/70">
               {ngo.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={ngo.logoUrl} alt="" className="h-full w-full object-cover" />
+                <img src={resolveMediaUrl(ngo.logoUrl)} alt="" className="h-full w-full object-cover" />
               ) : (
                 <span className="font-serif text-3xl">{ngo.orgName.charAt(0)}</span>
               )}
@@ -110,7 +111,7 @@ export default async function NgoProfilePage({ params }) {
               <div key={d.id} className="rounded-3xl border border-border/70 bg-card soft-shadow overflow-hidden">
                 {d.photoUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={d.photoUrl} alt={d.title} className="h-36 w-full object-cover" />
+                  <img src={resolveMediaUrl(d.photoUrl)} alt={d.title} className="h-36 w-full object-cover" />
                 )}
                 <div className="p-4">
                   <h3 className="font-serif text-lg">{d.title}</h3>
@@ -134,7 +135,7 @@ export default async function NgoProfilePage({ params }) {
               <div key={u.id} className="rounded-3xl border border-border/70 bg-card soft-shadow overflow-hidden">
                 {u.photoUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={u.photoUrl} alt="" className="h-40 w-full object-cover" />
+                  <img src={resolveMediaUrl(u.photoUrl)} alt="" className="h-40 w-full object-cover" />
                 )}
                 <div className="p-4">
                   {u.driveTitle && <p className="text-xs text-primary font-medium">{u.driveTitle}</p>}

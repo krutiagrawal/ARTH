@@ -1,6 +1,9 @@
 import { NgoApprovalStatus, Prisma, PrismaClient, UserRole } from '@plant/db';
 import { ForbiddenError, NotFoundError } from '../utils/errors';
 import { addXp } from './xp.service';
+import { getAdminNgoProfile } from './ngoPublic.service';
+import { getAdminNurseryProfile } from './nurseryPublic.service';
+import { serializePost, viewerInclude } from './post.service';
 
 interface ListNgosFilter {
   status?: NgoApprovalStatus;
@@ -350,6 +353,7 @@ export async function getOverviewStats(prisma: PrismaClient) {
 interface SearchAccountsFilter {
   q?: string;
   type?: 'user' | 'ngo' | 'nursery' | 'corporate';
+  isBlocked?: boolean;
   page?: number;
   take?: number;
 }
@@ -386,6 +390,7 @@ export async function searchAccounts(prisma: PrismaClient, filter: SearchAccount
   const where: Prisma.UserWhereInput = {
     role: filter.type ? ROLE_BY_ACCOUNT_TYPE[filter.type] : { not: 'admin' },
     isDeleted: false,
+    ...(filter.isBlocked !== undefined ? { isBlocked: filter.isBlocked } : {}),
     ...(filter.q
       ? {
           OR: [
@@ -406,6 +411,58 @@ export async function searchAccounts(prisma: PrismaClient, filter: SearchAccount
   ]);
 
   return { accounts, total };
+}
+
+// Full profile view for the Accounts page's "Profile" link — identity fields
+// plus a role-specific content block (posts/images/sponsorships) so admin can
+// see everything an account has published, not just moderation metadata.
+export async function getAccountProfile(prisma: PrismaClient, userId: string) {
+  const account = await prisma.user.findUnique({ where: { id: userId }, select: ACCOUNT_SELECT });
+  if (!account) throw new NotFoundError('Account not found');
+
+  if (account.role === 'ngo' && account.ngoProfile) {
+    const content = await getAdminNgoProfile(prisma, account.ngoProfile.id);
+    return { account, kind: 'ngo' as const, content };
+  }
+
+  if (account.role === 'nursery' && account.nurseryProfile) {
+    const content = await getAdminNurseryProfile(prisma, account.nurseryProfile.id);
+    return { account, kind: 'nursery' as const, content };
+  }
+
+  if (account.role === 'corporate' && account.corporateProfile) {
+    const corporate = await prisma.corporateProfile.findUnique({ where: { id: account.corporateProfile.id } });
+    const sponsorships = await prisma.csrSponsorship.findMany({
+      where: { corporateId: account.corporateProfile.id },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      include: { drive: { select: { id: true, title: true } } },
+    });
+    return { account, kind: 'corporate' as const, content: { ...corporate, sponsorships } };
+  }
+
+  // Individual/group accounts: no dedicated profile row — surface their post
+  // history and planted trees directly.
+  const [posts, trees] = await Promise.all([
+    prisma.post.findMany({
+      where: { authorType: 'user', userId, isHidden: false },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+      include: viewerInclude(),
+    }),
+    prisma.tree.findMany({
+      where: { userId, isDeleted: false },
+      orderBy: { plantedAt: 'desc' },
+      take: 30,
+      include: { species: { select: { commonName: true, emoji: true } } },
+    }),
+  ]);
+
+  return {
+    account,
+    kind: 'user' as const,
+    content: { posts: posts.map((p) => serializePost(p as any)), trees },
+  };
 }
 
 interface BlockAccountInput {

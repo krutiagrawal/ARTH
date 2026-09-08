@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import LocationActions from '@/components/dashboard-individual/LocationActions'
 import SponsorPlantDialog from '../SponsorPlantDialog'
 import { proxy } from '@/lib/memberProxy'
+import { resolveMediaUrl } from '@/lib/media'
 
 function formatRupees(cents) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`
@@ -68,7 +69,7 @@ export default function DriveDetailClient({ driveId }) {
       <div className="rounded-3xl border border-border/70 bg-card soft-shadow overflow-hidden">
         <div className="relative aspect-[16/9] bg-secondary">
           {drive.photoUri && !photoBroken ? (
-            <img src={drive.photoUri} alt={drive.title} onError={() => setPhotoBroken(true)} className="h-full w-full object-cover" />
+            <img src={resolveMediaUrl(drive.photoUri)} alt={drive.title} onError={() => setPhotoBroken(true)} className="h-full w-full object-cover" />
           ) : (
             <div className="h-full w-full grid place-items-center bg-gradient-to-br from-primary/15 to-sand/20">
               <CalendarDays className="h-16 w-16 text-primary/40" />

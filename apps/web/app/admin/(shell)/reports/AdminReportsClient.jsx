@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { Flag, ShieldBan, EyeOff, Eye, Trash2, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -123,8 +124,11 @@ function ReportRow({ report, onAction }) {
 }
 
 export default function AdminReportsClient() {
-  const [tab, setTab] = useState('accounts')
-  const [status, setStatus] = useState('open')
+  const searchParams = useSearchParams()
+  const initialTab = searchParams.get('type')
+  const initialStatus = searchParams.get('status')
+  const [tab, setTab] = useState(TABS.some((t) => t.value === initialTab) ? initialTab : 'accounts')
+  const [status, setStatus] = useState(STATUS_FILTERS.includes(initialStatus) ? initialStatus : 'open')
   const [reports, setReports] = useState([])
   const [accountOpenCount, setAccountOpenCount] = useState(0)
   const [loading, setLoading] = useState(true)

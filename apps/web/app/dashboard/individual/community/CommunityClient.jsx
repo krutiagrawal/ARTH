@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import ReportDialog from '@/components/dashboard/ReportDialog'
 import { proxy } from '@/lib/memberProxy'
+import { resolveMediaUrl } from '@/lib/media'
 
 function EmojiAvatar({ emoji, size = 'h-11 w-11', online = false, text = 'text-lg' }) {
   return (
@@ -89,7 +90,7 @@ function FollowingPanel() {
               >
                 <div className="h-12 w-12 shrink-0 rounded-xl overflow-hidden bg-secondary">
                   {n.logoUrl ? (
-                    <img src={n.logoUrl} alt={n.orgName} className="h-full w-full object-cover" />
+                    <img src={resolveMediaUrl(n.logoUrl)} alt={n.orgName} className="h-full w-full object-cover" />
                   ) : (
                     <div className="h-full w-full grid place-items-center text-primary">
                       <Newspaper className="h-5 w-5" />
@@ -121,7 +122,7 @@ function FollowingPanel() {
             feed.map((u) => (
               <div key={u.id} className="rounded-3xl border border-border/70 bg-card p-5 soft-shadow flex gap-4">
                 {u.photoUrl ? (
-                  <img src={u.photoUrl} alt="" className="h-20 w-20 shrink-0 rounded-2xl object-cover" />
+                  <img src={resolveMediaUrl(u.photoUrl)} alt="" className="h-20 w-20 shrink-0 rounded-2xl object-cover" />
                 ) : (
                   <div className="h-20 w-20 shrink-0 rounded-2xl bg-primary/10 grid place-items-center text-primary">
                     <Newspaper className="h-6 w-6" />

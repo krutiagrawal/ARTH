@@ -86,7 +86,18 @@ export async function browseNurseries(prisma: PrismaClient, filter: BrowseFilter
 export async function getPublicNurseryProfile(prisma: PrismaClient, nurseryId: string, viewerUserId?: string) {
   const nursery = await prisma.nurseryProfile.findFirst({ where: { id: nurseryId, status: 'approved' } });
   if (!nursery) throw new NotFoundError('Nursery not found');
+  return assembleNurseryProfile(prisma, nursery, viewerUserId);
+}
 
+// Same assembly as getPublicNurseryProfile but for a pre-fetched profile row
+// that hasn't been gated on status — admin needs to view pending/suspended nurseries too.
+export async function getAdminNurseryProfile(prisma: PrismaClient, nurseryId: string) {
+  const nursery = await prisma.nurseryProfile.findUnique({ where: { id: nurseryId } });
+  if (!nursery) throw new NotFoundError('Nursery not found');
+  return assembleNurseryProfile(prisma, nursery);
+}
+
+async function assembleNurseryProfile(prisma: PrismaClient, nursery: { id: string } & Record<string, any>, viewerUserId?: string) {
   const [stock, followersCount, follow, recentPosts] = await Promise.all([
     prisma.saplingStock.findMany({ where: { nurseryId: nursery.id, quantity: { gt: 0 } }, orderBy: { species: 'asc' } }),
     prisma.follow.count({ where: { nurseryId: nursery.id, status: 'accepted' } }),

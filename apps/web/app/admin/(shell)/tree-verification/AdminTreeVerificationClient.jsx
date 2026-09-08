@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import { proxy } from '@/lib/adminProxyClient'
+import { resolveMediaUrl } from '@/lib/media'
 
 const STATUS_VARIANT = { unverified: 'outline', rejected: 'destructive' }
 
@@ -31,7 +32,7 @@ function TreeRow({ tree, onReview }) {
     <div className="rounded-3xl border border-border/70 bg-card soft-shadow p-5 flex flex-wrap items-center gap-4">
       {tree.photoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={tree.photoUrl} alt="" className="h-16 w-16 rounded-2xl object-cover shrink-0" />
+        <img src={resolveMediaUrl(tree.photoUrl)} alt="" className="h-16 w-16 rounded-2xl object-cover shrink-0" />
       ) : (
         <div className="h-16 w-16 rounded-2xl bg-muted shrink-0 grid place-items-center text-2xl">{tree.species?.emoji || '🌳'}</div>
       )}

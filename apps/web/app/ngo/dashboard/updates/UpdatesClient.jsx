@@ -11,6 +11,7 @@ import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
 import { useResourceCrud } from '../useResourceCrud'
 import { updateFields } from '../resourceFields'
 import { proxy } from '../proxy'
+import { resolveMediaUrl } from '@/lib/media'
 
 export default function UpdatesClient() {
   const { items, loading, create, remove } = useResourceCrud('/ngo/updates', '/ngo/updates')
@@ -86,7 +87,7 @@ export default function UpdatesClient() {
             <div key={u.id} className="rounded-3xl border border-border/70 bg-card soft-shadow overflow-hidden">
               {u.photoUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={u.photoUrl} alt="" className="h-40 w-full object-cover" />
+                <img src={resolveMediaUrl(u.photoUrl)} alt="" className="h-40 w-full object-cover" />
               )}
               <div className="p-4">
                 {u.driveTitle && <p className="text-xs text-primary font-medium">{u.driveTitle}</p>}

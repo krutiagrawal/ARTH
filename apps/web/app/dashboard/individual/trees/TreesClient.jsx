@@ -7,6 +7,7 @@ import { Camera, MapPin, Sprout } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import { proxy } from '@/lib/memberProxy'
+import { resolveMediaUrl } from '@/lib/media'
 
 export default function TreesClient() {
   const [trees, setTrees] = useState(null)
@@ -64,7 +65,7 @@ export default function TreesClient() {
               >
                 <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
                   {t.photoUri ? (
-                    <img src={t.photoUri} alt={t.nickname} className="h-full w-full object-cover transition-transform duration-[1200ms] group-hover:scale-105" />
+                    <img src={resolveMediaUrl(t.photoUri)} alt={t.nickname} className="h-full w-full object-cover transition-transform duration-[1200ms] group-hover:scale-105" />
                   ) : (
                     <div className="h-full w-full grid place-items-center text-4xl">{t.speciesEmoji || '🌱'}</div>
                   )}
