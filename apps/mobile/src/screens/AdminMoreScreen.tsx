@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS, GRADIENTS, ON_DARK_SURFACE } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { IconBadge } from '../components/common/IconBadge';
 import { useAuth } from '../context/AuthContext';
 import { useSlideUp } from '../hooks/useAnimations';
@@ -37,7 +37,7 @@ function MenuRow({ delay, item, onPress }: { delay: number; item: MenuItem; onPr
   return (
     <Animated.View style={animStyle}>
       <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-        <GlassCard variant="dark" style={styles.card} noPadding>
+        <BorderCard style={styles.card} noPadding>
           <View style={styles.cardRow}>
             <IconBadge icon={item.emoji} color={item.color} size={52} round />
             <View style={styles.cardTextColumn}>
@@ -46,7 +46,7 @@ function MenuRow({ delay, item, onPress }: { delay: number; item: MenuItem; onPr
             </View>
             <Text style={styles.chevron}>›</Text>
           </View>
-        </GlassCard>
+        </BorderCard>
       </TouchableOpacity>
     </Animated.View>
   );

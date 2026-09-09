@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { COLORS } from '../constants/colors';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useOwnGroupChallenges } from '../hooks/useApiQueries';
 import { useSlideUp } from '../hooks/useAnimations';
@@ -33,7 +33,7 @@ export function GroupChallengesScreen({ navigation }: any) {
         const pct = Math.min(100, Math.round((c.progress / c.goalTotal) * 100));
         return (
           <FadeInRow key={c.id} delay={i * 60}>
-            <GlassCard variant="warm" style={styles.card}>
+            <BorderCard style={styles.card}>
               <Text style={styles.cardTitle}>{c.title}</Text>
               <Text style={styles.cardMeta}>{GOAL_TYPE_LABEL[c.goalType]} · {c.participantCount} joined</Text>
               <View style={styles.progressTrack}>
@@ -43,7 +43,7 @@ export function GroupChallengesScreen({ navigation }: any) {
                 <Text style={styles.progressText}>{c.progress} / {c.goalTotal}</Text>
                 <Text style={styles.progressText}>Ends {new Date(c.endsAt).toLocaleDateString()}</Text>
               </View>
-            </GlassCard>
+            </BorderCard>
           </FadeInRow>
         );
       })}

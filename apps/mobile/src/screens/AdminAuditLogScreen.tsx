@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS, GRADIENTS, ON_DARK_SURFACE } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
@@ -51,7 +51,7 @@ export function AdminAuditLogScreen({ navigation }: any) {
         )}
         {logs.map((log, i) => (
           <FadeInRow key={log.id} delay={i * 50}>
-            <GlassCard variant="dark" style={styles.card}>
+            <BorderCard style={styles.card}>
               <View style={styles.cardHeaderRow}>
                 <Text style={styles.action}>{actionLabel(log.action)}</Text>
                 <Text style={styles.timestamp}>{new Date(log.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</Text>
@@ -59,7 +59,7 @@ export function AdminAuditLogScreen({ navigation }: any) {
               <Text style={styles.target}>{log.targetType} · {log.targetId}</Text>
               <Text style={styles.actor}>by {log.actor.name} (@{log.actor.handle})</Text>
               {log.reason && <Text style={styles.reason}>"{log.reason}"</Text>}
-            </GlassCard>
+            </BorderCard>
           </FadeInRow>
         ))}
 

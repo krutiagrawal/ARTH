@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS, GRADIENTS, ON_DARK_SURFACE } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
@@ -35,7 +35,7 @@ export function AdminTreeReviewScreen() {
         {!isLoading && trees.length === 0 && <EmptyState icon="🌳" title="Queue is empty" body="No submissions waiting for review." tint="dark" />}
 
         {trees.map((tree) => (
-          <GlassCard key={tree.id} variant="dark" style={styles.card}>
+          <BorderCard key={tree.id} style={styles.card}>
             <View style={styles.cardRow}>
               {tree.photoUrl ? (
                 <Image source={{ uri: resolveMediaUrl(tree.photoUrl) }} style={styles.photo} />
@@ -71,7 +71,7 @@ export function AdminTreeReviewScreen() {
                 style={styles.actionButton}
               />
             </View>
-          </GlassCard>
+          </BorderCard>
         ))}
       </ScrollView>
     </View>

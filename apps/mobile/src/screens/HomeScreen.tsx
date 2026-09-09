@@ -147,7 +147,7 @@ function HeroSection({
           )}
         </View>
         <View style={styles.headerRight}>
-          <MuteButton style={styles.muteInHeader} />
+          <MuteButton style={styles.muteInHeader} glass />
           <TouchableOpacity style={styles.avatarButton} onPress={() => navigation.navigate('Profile')}>
             <LinearGradient
               colors={[COLORS.sageLight, COLORS.forest]}

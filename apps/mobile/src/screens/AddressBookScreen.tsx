@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { GlassCard, BlurCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { EmptyState } from '../components/common/EmptyState';
 import { useAddresses, useCreateAddress, useUpdateAddress, useDeleteAddress } from '../hooks/useApiQueries';
@@ -19,7 +18,7 @@ function AddressCard({ address }: { address: ApiAddress }) {
   const deleteMutation = useDeleteAddress();
 
   return (
-    <BlurCard tint="light" noPadding style={styles.row}>
+    <BorderCard noPadding style={styles.row}>
       <View style={{ flex: 1 }}>
         <View style={styles.rowHeader}>
           <Text style={styles.label}>{address.label || 'Address'}</Text>
@@ -39,7 +38,7 @@ function AddressCard({ address }: { address: ApiAddress }) {
           </TouchableOpacity>
         </View>
       </View>
-    </BlurCard>
+    </BorderCard>
   );
 }
 
@@ -82,9 +81,9 @@ export function AddressBookScreen({ navigation }: any) {
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+          <View style={styles.backBlur}>
             <Text style={styles.backIcon}>←</Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Delivery Addresses</Text>
         <View style={{ width: 40 }} />
@@ -101,14 +100,14 @@ export function AddressBookScreen({ navigation }: any) {
           )}
 
           {showForm ? (
-            <GlassCard variant="warm" style={styles.card}>
+            <BorderCard style={styles.card}>
               <TextInput style={styles.input} placeholder="Flat / street / society" placeholderTextColor={COLORS.textMuted} value={line1} onChangeText={setLine1} />
               <TextInput style={styles.input} placeholder="Pincode" placeholderTextColor={COLORS.textMuted} value={pincode} onChangeText={setPincode} keyboardType="number-pad" />
               <TouchableOpacity style={styles.locationButton} onPress={useCurrentLocation} disabled={locating}>
                 <Text style={styles.locationButtonText}>{locating ? 'Locating…' : coords ? '📍 Location captured' : '📍 Use current location'}</Text>
               </TouchableOpacity>
               <AnimatedButton label="Save address" onPress={handleAdd} variant="primary" size="md" fullWidth disabled={createMutation.isPending} />
-            </GlassCard>
+            </BorderCard>
           ) : (
             <TouchableOpacity onPress={() => setShowForm(true)} style={styles.addAddressButton}>
               <Text style={styles.addAddressText}>+ Add a new address</Text>
@@ -124,8 +123,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
   backButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(94,133,80,0.2)' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
   row: { borderRadius: RADIUS.md, padding: 14, marginBottom: 10 },

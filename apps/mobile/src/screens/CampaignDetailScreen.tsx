@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useStripe } from '@stripe/stripe-react-native';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useHaptics } from '../hooks/useHaptics';
 import { useCampaign, useCreateDonationIntent } from '../hooks/useApiQueries';
@@ -83,9 +82,9 @@ export function CampaignDetailScreen({ navigation, route }: any) {
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+          <View style={styles.backBlur}>
             <Text style={styles.backIcon}>←</Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>Campaign</Text>
         <View style={{ width: 40 }} />
@@ -95,7 +94,7 @@ export function CampaignDetailScreen({ navigation, route }: any) {
         <ActivityIndicator color={COLORS.sage} style={styles.loader} />
       ) : (
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
-          <GlassCard variant="warm" style={styles.card}>
+          <BorderCard style={styles.card}>
             <Text style={styles.title}>{campaign.title}</Text>
             <Text style={styles.ngoName}>{campaign.ngoName}</Text>
             <View style={styles.divider} />
@@ -104,7 +103,7 @@ export function CampaignDetailScreen({ navigation, route }: any) {
               {formatRupees(campaign.raisedAmountCents)}
               {campaign.goalAmountCents ? ` raised of ${formatRupees(campaign.goalAmountCents)}` : ' raised so far'}
             </Text>
-          </GlassCard>
+          </BorderCard>
 
           {donated ? (
             <View style={styles.successBanner}>
@@ -168,8 +167,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
   backButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(94,133,80,0.2)' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
   loader: { marginTop: 60 },
   scrollContent: { paddingHorizontal: 20 },
@@ -193,10 +192,10 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 14, fontWeight: '600', color: COLORS.forest },
   chipTextSelected: { color: COLORS.white },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: 'rgba(94,133,80,0.2)',
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
     paddingHorizontal: 16,
     height: 48,
     fontSize: 14,

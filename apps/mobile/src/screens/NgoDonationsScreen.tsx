@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { DonationJarIllustration } from '../components/common/DonationJarIllustration';
 import { SectionHeader } from '../components/common/SectionHeader';
@@ -56,14 +56,14 @@ export function NgoDonationsScreen({ navigation }: any) {
         {summary.length > 0 && (
           <>
           <SectionHeader title="By campaign" />
-          <GlassCard variant="warm" style={styles.summaryCard}>
+          <BorderCard style={styles.summaryCard}>
             {summary.map((row) => (
               <View key={row.campaignId} style={styles.summaryRow}>
                 <Text style={styles.summaryLabel} numberOfLines={1}>{row.campaignTitle}</Text>
                 <Text style={styles.summaryValue}>₹{(row.totalAmountCents / 100).toLocaleString()} ({row.donationCount})</Text>
               </View>
             ))}
-          </GlassCard>
+          </BorderCard>
           </>
         )}
 
@@ -99,7 +99,7 @@ export function NgoDonationsScreen({ navigation }: any) {
         )}
         {donations.map((d, i) => (
           <FadeInRow key={d.id} delay={i * 60}>
-            <GlassCard variant="warm" style={styles.card}>
+            <BorderCard style={styles.card}>
               <View style={styles.cardRow}>
                 <IconBadge icon={STATUS_BADGE[d.status]?.icon ?? '💰'} color={STATUS_BADGE[d.status]?.color ?? COLORS.sage} size={36} />
                 <View style={{ flex: 1 }}>
@@ -111,7 +111,7 @@ export function NgoDonationsScreen({ navigation }: any) {
                   <Text style={styles.statusText}>{d.status}</Text>
                 </View>
               </View>
-            </GlassCard>
+            </BorderCard>
           </FadeInRow>
         ))}
       </ScrollView>
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   summaryLabel: { fontSize: 12, color: COLORS.textSecondary, flex: 1 },
   summaryValue: { fontSize: 12, color: COLORS.textPrimary, fontWeight: '600' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
-  chip: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: RADIUS.full, backgroundColor: 'rgba(255,255,255,0.6)', borderWidth: 1, borderColor: COLORS.sand },
+  chip: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: RADIUS.full, backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
   chipSelected: { backgroundColor: COLORS.forest, borderColor: COLORS.forest },
   chipText: { fontSize: 12, color: COLORS.textPrimary, fontWeight: '600' },
   chipTextSelected: { color: COLORS.white },

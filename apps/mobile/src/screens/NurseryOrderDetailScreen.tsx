@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useHaptics } from '../hooks/useHaptics';
 import { useConfirm } from '../context/ConfirmDialogContext';
@@ -63,7 +63,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
-          <GlassCard variant="warm" style={styles.card}>
+          <BorderCard style={styles.card}>
             <Text style={styles.customer}>{order.user.name}</Text>
             <Text style={styles.handle}>@{order.user.handle}</Text>
             <View style={styles.divider} />
@@ -78,14 +78,14 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalValue}>{formatRupees(order.totalCents)}</Text>
             </View>
-          </GlassCard>
+          </BorderCard>
 
           <Text style={styles.sectionTitle}>Deliver to</Text>
-          <GlassCard variant="warm" style={styles.card}>
+          <BorderCard style={styles.card}>
             <Text style={styles.addressText}>
               {[order.address.line1, order.address.line2, order.address.landmark, `${order.address.city} ${order.address.pincode}`].filter(Boolean).join(', ')}
             </Text>
-          </GlassCard>
+          </BorderCard>
 
           {actionError ? <Text style={styles.errorText}>{actionError}</Text> : null}
 

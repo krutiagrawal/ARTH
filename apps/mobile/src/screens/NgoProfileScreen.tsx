@@ -1,12 +1,11 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { ActionSheet, type ActionSheetOption } from '../components/social/ActionSheet';
 import { ReportSheet } from '../components/social/ReportSheet';
 import { ProfileHeader } from '../components/profile/ProfileHeader';
@@ -40,7 +39,7 @@ import type { NgoStreakWeek } from '../api/ngoStreaks';
  * whose 2D week-of-days shape doesn't match this 1D week-only data. */
 function NgoStreakRow({ streakCurrent, weeks }: { streakCurrent: number; weeks: NgoStreakWeek[] }) {
   return (
-    <GlassCard variant="dark" style={styles.streakCard}>
+    <BorderCard style={styles.streakCard}>
       <View style={styles.streakHeader}>
         <View>
           <Text style={styles.streakTitle}>Posting Streak</Text>
@@ -61,7 +60,7 @@ function NgoStreakRow({ streakCurrent, weeks }: { streakCurrent: number; weeks: 
           </View>
         ))}
       </View>
-    </GlassCard>
+    </BorderCard>
   );
 }
 
@@ -165,9 +164,9 @@ export function NgoProfileScreen({ route, navigation }: any) {
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         {!isOwn ? (
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
-            <BlurView intensity={25} tint="dark" style={styles.iconBlur}>
+            <View style={styles.iconBlur}>
               <Text style={styles.iconText}>←</Text>
-            </BlurView>
+            </View>
           </TouchableOpacity>
         ) : (
           <View style={styles.iconButton} />
@@ -175,9 +174,9 @@ export function NgoProfileScreen({ route, navigation }: any) {
         <Text style={styles.topBarTitle} numberOfLines={1}>{name}</Text>
         {isOwn ? (
           <TouchableOpacity onPress={() => navigation.navigate('NgoSettings')} style={styles.iconButton}>
-            <BlurView intensity={25} tint="dark" style={styles.iconBlur}>
+            <View style={styles.iconBlur}>
               <Text style={styles.iconText}>⚙️</Text>
-            </BlurView>
+            </View>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity onPress={() => setMenuOpen(true)} style={styles.iconButton} hitSlop={8}>
@@ -241,7 +240,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
               <ProfileTabBar activeTab={tab} onChange={setTab} />
               {tab === 'contributions' && (
                 <View style={styles.tabBody}>
-                  <GlassCard variant="dark" style={styles.contributionsCard}>
+                  <BorderCard style={styles.contributionsCard}>
                     <Text style={styles.contributionsTitle}>🌍 Impact so far</Text>
                     <View style={styles.contributionsRow}>
                       <View style={styles.contributionsStat}>
@@ -263,7 +262,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
                         <Text style={styles.contributionsLabel}>{isOwn ? 'Volunteers' : 'Followers'}</Text>
                       </View>
                     </View>
-                  </GlassCard>
+                  </BorderCard>
                 </View>
               )}
               {tab === 'achievements' && (
@@ -306,24 +305,24 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
   },
-  iconText: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  iconText: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   topBarTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center', marginHorizontal: 8 },
   menuDots: { fontSize: 20, color: COLORS.textSecondary },
   tabBody: { paddingHorizontal: 16, paddingTop: 16 },
   contributionsCard: { gap: 12 },
-  contributionsTitle: { fontSize: 16, fontWeight: '700', color: COLORS.white },
+  contributionsTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
   contributionsRow: { flexDirection: 'row', justifyContent: 'space-around' },
   contributionsStat: { alignItems: 'center' },
-  contributionsNum: { fontSize: 22, fontWeight: '800', color: COLORS.white },
-  contributionsLabel: { fontSize: 10, color: 'rgba(255,255,255,0.8)', marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.4 },
+  contributionsNum: { fontSize: 22, fontWeight: '800', color: COLORS.textPrimary },
+  contributionsLabel: { fontSize: 10, color: COLORS.textSecondary, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.4 },
   streakCard: { gap: 12, marginBottom: 16 },
   streakHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  streakTitle: { fontSize: 16, fontWeight: '700', color: COLORS.white },
-  streakSub: { fontSize: 12, color: COLORS.white, marginTop: 2 },
+  streakTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
+  streakSub: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   streakBadge: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   streakBadgeNum: { fontSize: 24, fontWeight: '800', color: COLORS.streakFire },
   streakBadgeFire: { fontSize: 20 },
@@ -331,7 +330,7 @@ const styles = StyleSheet.create({
   streakPillWrap: { flex: 1, alignItems: 'center', gap: 4 },
   streakPill: { width: '100%', height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   streakPillFilled: { backgroundColor: COLORS.sage },
-  streakPillEmpty: { backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
+  streakPillEmpty: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
   streakPillCheck: { fontSize: 12, color: COLORS.white, fontWeight: '700' },
-  streakPillLabel: { fontSize: 8, color: COLORS.white, fontWeight: '600' },
+  streakPillLabel: { fontSize: 8, color: COLORS.textSecondary, fontWeight: '600' },
 });

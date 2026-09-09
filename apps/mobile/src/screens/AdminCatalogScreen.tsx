@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS, GRADIENTS, ON_DARK_SURFACE } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { Sheet } from '../components/common/Sheet';
@@ -102,7 +102,7 @@ export function AdminCatalogScreen() {
           <EmptyState icon="📚" title="Nothing here yet" body={`Create your first ${config.label.toLowerCase()}.`} tint="dark" />
         )}
         {(items ?? []).map((item: any) => (
-          <GlassCard key={item.id} variant="dark" style={styles.card}>
+          <BorderCard key={item.id} style={styles.card}>
             <View style={styles.cardHeaderRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle} numberOfLines={1}>{String(item[primaryField])}</Text>
@@ -128,7 +128,7 @@ export function AdminCatalogScreen() {
                 />
               )}
             </View>
-          </GlassCard>
+          </BorderCard>
         ))}
       </ScrollView>
 

@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { COLORS } from '../constants/colors';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { IconBadge } from '../components/common/IconBadge';
 import { useMyAdoptableTrees } from '../hooks/useApiQueries';
@@ -42,7 +42,7 @@ export function NgoTreesScreen({ navigation }: any) {
         )}
         {trees.map((tree, i) => (
           <FadeInRow key={tree.id} delay={i * 60}>
-            <GlassCard variant="warm" style={styles.card}>
+            <BorderCard style={styles.card}>
               <View style={styles.cardRow}>
                 <IconBadge icon="🌳" color={COLORS.forest} size={40} />
                 <View style={styles.cardBody}>
@@ -59,7 +59,7 @@ export function NgoTreesScreen({ navigation }: any) {
                   />
                 </View>
               </View>
-            </GlassCard>
+            </BorderCard>
           </FadeInRow>
         ))}
       </ScrollView>

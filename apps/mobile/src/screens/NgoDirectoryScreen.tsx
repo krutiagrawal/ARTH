@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useBrowseNgos } from '../hooks/useApiQueries';
 import { resolveMediaUrl } from '../api/client';
@@ -25,15 +24,15 @@ export function NgoDirectoryScreen({ navigation }: any) {
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+          <View style={styles.backBlur}>
             <Text style={styles.backIcon}>←</Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>NGOs</Text>
         <TouchableOpacity onPress={() => navigation.navigate('FollowingFeed')} style={styles.feedButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+          <View style={styles.backBlur}>
             <Text style={styles.feedIcon}>📰</Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -54,7 +53,7 @@ export function NgoDirectoryScreen({ navigation }: any) {
         )}
         {ngos.map((ngo) => (
           <TouchableOpacity key={ngo.id} onPress={() => navigation.navigate('NgoPublicProfile', { ngoId: ngo.id })} activeOpacity={0.85}>
-            <GlassCard variant="warm" style={styles.card}>
+            <BorderCard style={styles.card}>
               <View style={styles.cardRow}>
                 {ngo.logoUrl ? (
                   <Image source={{ uri: resolveMediaUrl(ngo.logoUrl) }} style={styles.logo} />
@@ -67,7 +66,7 @@ export function NgoDirectoryScreen({ navigation }: any) {
                   <Text style={styles.cardBody} numberOfLines={2}>{ngo.description}</Text>
                 </View>
               </View>
-            </GlassCard>
+            </BorderCard>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -80,12 +79,12 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 8 },
   backButton: { width: 40, height: 40 },
   feedButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(94,133,80,0.2)' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   feedIcon: { fontSize: 16 },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
   searchWrap: { paddingHorizontal: 20, paddingBottom: 12 },
-  searchInput: { backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.sand, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: COLORS.textPrimary },
+  searchInput: { backgroundColor: 'transparent', borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.warmBrown, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: COLORS.textPrimary },
   scrollContent: { paddingHorizontal: 20 },
   loader: { marginTop: 40 },
   card: { marginBottom: 12 },

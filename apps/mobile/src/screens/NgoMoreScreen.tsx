@@ -8,7 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { FONTS } from '../constants/typography';
 import { RADIUS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { IconBadge } from '../components/common/IconBadge';
 import { LeafBranch } from '../components/common/LeafBranch';
 import { useAuth } from '../context/AuthContext';
@@ -41,7 +41,7 @@ function MenuRow({ delay, item, onPress }: { delay: number; item: MenuItem; onPr
   return (
     <Animated.View style={animStyle}>
       <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-        <GlassCard variant="warm" style={styles.card} borderRadius={22} noPadding>
+        <BorderCard style={styles.card} borderRadius={22} noPadding>
           <View style={styles.cardRow}>
             <IconBadge icon={item.emoji} color={item.color} size={52} round />
             <View style={styles.cardTextColumn}>
@@ -50,7 +50,7 @@ function MenuRow({ delay, item, onPress }: { delay: number; item: MenuItem; onPr
             </View>
             <Text style={styles.chevron}>›</Text>
           </View>
-        </GlassCard>
+        </BorderCard>
       </TouchableOpacity>
     </Animated.View>
   );

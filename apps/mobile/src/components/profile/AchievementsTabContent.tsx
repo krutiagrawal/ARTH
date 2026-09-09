@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text } from '../common/AppText';
-import { GlassCard } from '../common/GlassCard';
+import { BorderCard } from '../common/BorderCard';
 import { ProgressRing } from '../common/ProgressRing';
 import { AchievementGrid, AchievementDetailModal } from '../common/AchievementGrid';
 import { StreakCalendar } from '../common/StreakCalendar';
@@ -38,7 +38,7 @@ export function AchievementsTabContent({
   return (
     <View style={styles.wrap}>
       {xpProgress && xp ? (
-        <GlassCard variant="dark" style={styles.xpCard}>
+        <BorderCard style={styles.xpCard}>
           <View style={styles.xpRow}>
             <View>
               <Text style={styles.xpLevelLabel}>{getForestLevelLabel(xp.level)}</Text>
@@ -51,11 +51,11 @@ export function AchievementsTabContent({
               strokeWidth={6}
               progress={xpProgress.progress}
               color={COLORS.golden}
-              trackColor="rgba(255,255,255,0.15)"
+              trackColor="rgba(0,0,0,0.08)"
               label={`${Math.round(xpProgress.progress * 100)}%`}
             />
           </View>
-        </GlassCard>
+        </BorderCard>
       ) : null}
 
       {customStreak}
@@ -74,6 +74,6 @@ const styles = StyleSheet.create({
   wrap: { paddingHorizontal: 16, paddingTop: 16, gap: 16 },
   xpCard: { gap: 8 },
   xpRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  xpLevelLabel: { fontSize: 16, fontWeight: '700', color: COLORS.white },
-  xpSubLabel: { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+  xpLevelLabel: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
+  xpSubLabel: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
 });

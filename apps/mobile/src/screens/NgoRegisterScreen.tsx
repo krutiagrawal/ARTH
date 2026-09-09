@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
 import { TYPOGRAPHY } from '../constants/typography';
 import { RADIUS, SPACING } from '../constants/theme';
-import { BlurCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { PasswordInput } from '../components/common/PasswordInput';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useAuth } from '../context/AuthContext';
@@ -75,7 +75,7 @@ export function NgoRegisterScreen({ navigation }: any) {
         <Text style={styles.logo}>ARTH</Text>
         <Text style={styles.tagline}>for NGOs & organizations</Text>
 
-        <BlurCard tint="dark" intensity={40} style={styles.card}>
+        <BorderCard style={styles.card}>
           <Text style={styles.title}>Register your NGO</Text>
           <Text style={styles.subtitle}>
             Your account will be reviewed before you can publish drives or campaigns.
@@ -160,7 +160,7 @@ export function NgoRegisterScreen({ navigation }: any) {
               Not an NGO? <Text style={styles.switchLink}>Choose a different account type</Text>
             </Text>
           </TouchableOpacity>
-        </BlurCard>
+        </BorderCard>
       </ScrollView>
     </KeyboardAvoidingView>
   );

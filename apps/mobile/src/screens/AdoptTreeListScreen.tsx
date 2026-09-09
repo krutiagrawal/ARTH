@@ -1,12 +1,11 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useMyLocation } from '../hooks/useMyLocation';
 import { useAdoptableTrees } from '../hooks/useApiQueries';
@@ -25,9 +24,9 @@ export function AdoptTreeListScreen({ navigation }: any) {
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+          <View style={styles.backBlur}>
             <Text style={styles.backIcon}>←</Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>Adopt a Tree</Text>
         <View style={{ width: 40 }} />
@@ -47,7 +46,7 @@ export function AdoptTreeListScreen({ navigation }: any) {
               navigation.navigate('AdoptTreeDetail', { treeId: tree.id });
             }}
           >
-            <GlassCard variant="warm" style={styles.card}>
+            <BorderCard style={styles.card}>
               <Text style={styles.cardTitle}>{tree.nickname}</Text>
               <Text style={styles.cardSubtitle}>{tree.speciesName} · {tree.ngoName}</Text>
               <View style={styles.metaRow}>
@@ -56,7 +55,7 @@ export function AdoptTreeListScreen({ navigation }: any) {
                   {tree.distanceKm != null ? ` · ${tree.distanceKm.toFixed(0)} km` : ''}
                 </Text>
               </View>
-            </GlassCard>
+            </BorderCard>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -68,8 +67,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
   backButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(94,133,80,0.2)' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
   loader: { marginTop: 40 },

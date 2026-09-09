@@ -1,12 +1,11 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { ProfileHeader } from '../components/profile/ProfileHeader';
 import { ProfileTabBar, type ProfileTabKey } from '../components/profile/ProfileTabBar';
 import { PostGrid } from '../components/profile/PostGrid';
@@ -104,23 +103,23 @@ export function GroupProfileScreen({ route, navigation }: any) {
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         {!isOwn ? (
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
-            <BlurView intensity={25} tint="dark" style={styles.iconBlur}>
+            <View style={styles.iconBlur}>
               <Text style={styles.iconText}>←</Text>
-            </BlurView>
+            </View>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity onPress={() => navigation.navigate('GroupMembers')} style={styles.iconButton}>
-            <BlurView intensity={25} tint="dark" style={styles.iconBlur}>
+            <View style={styles.iconBlur}>
               <Text style={styles.iconText}>👥</Text>
-            </BlurView>
+            </View>
           </TouchableOpacity>
         )}
         <Text style={styles.topBarTitle} numberOfLines={1}>{name}</Text>
         {isOwn ? (
           <TouchableOpacity onPress={() => navigation.navigate('GroupSettings')} style={styles.iconButton}>
-            <BlurView intensity={25} tint="dark" style={styles.iconBlur}>
+            <View style={styles.iconBlur}>
               <Text style={styles.iconText}>⚙️</Text>
-            </BlurView>
+            </View>
           </TouchableOpacity>
         ) : (
           <View style={styles.iconButton} />
@@ -171,7 +170,7 @@ export function GroupProfileScreen({ route, navigation }: any) {
               <ProfileTabBar activeTab={tab} onChange={setTab} />
               {tab === 'contributions' && (
                 <View style={styles.tabBody}>
-                  <GlassCard variant="dark" style={styles.contributionsCard}>
+                  <BorderCard style={styles.contributionsCard}>
                     <Text style={styles.contributionsTitle}>🌍 Group impact</Text>
                     <View style={styles.contributionsRow}>
                       <View style={styles.contributionsStat}>
@@ -187,7 +186,7 @@ export function GroupProfileScreen({ route, navigation }: any) {
                         <Text style={styles.contributionsLabel}>Members</Text>
                       </View>
                     </View>
-                  </GlassCard>
+                  </BorderCard>
                 </View>
               )}
               {tab === 'achievements' && (
@@ -229,17 +228,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
   },
-  iconText: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  iconText: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   topBarTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center', marginHorizontal: 8 },
   tabBody: { paddingHorizontal: 16, paddingTop: 16 },
   contributionsCard: { gap: 12 },
-  contributionsTitle: { fontSize: 16, fontWeight: '700', color: COLORS.white },
+  contributionsTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
   contributionsRow: { flexDirection: 'row', justifyContent: 'space-around' },
   contributionsStat: { alignItems: 'center' },
-  contributionsNum: { fontSize: 22, fontWeight: '800', color: COLORS.white },
-  contributionsLabel: { fontSize: 10, color: 'rgba(255,255,255,0.8)', marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.4 },
+  contributionsNum: { fontSize: 22, fontWeight: '800', color: COLORS.textPrimary },
+  contributionsLabel: { fontSize: 10, color: COLORS.textMuted, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.4 },
 });

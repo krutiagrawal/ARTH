@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Linking } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useHaptics } from '../hooks/useHaptics';
 import { useMyOrder, useCancelOrder, useSubmitOrderReview } from '../hooks/useApiQueries';
@@ -53,14 +52,14 @@ function ReviewForm({ orderId }: { orderId: string }) {
 
   if (submitted) {
     return (
-      <GlassCard variant="warm" style={styles.card}>
+      <BorderCard style={styles.card}>
         <Text style={styles.reviewThanks}>Thanks for your review! 🌱</Text>
-      </GlassCard>
+      </BorderCard>
     );
   }
 
   return (
-    <GlassCard variant="warm" style={styles.card}>
+    <BorderCard style={styles.card}>
       <Text style={styles.sectionTitle}>Rate this nursery</Text>
       <View style={styles.starsRow}>
         {[1, 2, 3, 4, 5].map((n) => (
@@ -89,7 +88,7 @@ function ReviewForm({ orderId }: { orderId: string }) {
         fullWidth
         disabled={submitMutation.isPending}
       />
-    </GlassCard>
+    </BorderCard>
   );
 }
 
@@ -122,9 +121,9 @@ export function OrderDetailScreen({ route, navigation }: any) {
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+          <View style={styles.backBlur}>
             <Text style={styles.backIcon}>←</Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Order</Text>
         <View style={{ width: 40 }} />
@@ -162,10 +161,10 @@ export function OrderDetailScreen({ route, navigation }: any) {
           )}
 
           {order.status === 'out_for_delivery' && order.deliveryOtp && (
-            <GlassCard variant="warm" style={styles.card}>
+            <BorderCard style={styles.card}>
               <Text style={styles.otpLabel}>Delivery OTP — share this with the rider</Text>
               <Text style={styles.otpValue}>{order.deliveryOtp}</Text>
-            </GlassCard>
+            </BorderCard>
           )}
 
           {order.tracking?.riderName && (
@@ -178,7 +177,7 @@ export function OrderDetailScreen({ route, navigation }: any) {
           )}
 
           <Text style={styles.sectionTitle}>{order.nursery.nurseryName}</Text>
-          <GlassCard variant="warm" style={styles.card}>
+          <BorderCard style={styles.card}>
             {order.items.map((item, idx) => (
               <View key={idx} style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>{item.species} × {item.quantity}</Text>
@@ -194,21 +193,21 @@ export function OrderDetailScreen({ route, navigation }: any) {
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalValue}>{formatRupees(order.totalCents)}</Text>
             </View>
-          </GlassCard>
+          </BorderCard>
 
           <Text style={styles.sectionTitle}>Delivering to</Text>
-          <GlassCard variant="warm" style={styles.card}>
+          <BorderCard style={styles.card}>
             <Text style={styles.addressText}>
               {[order.address.line1, order.address.line2, order.address.landmark, `${order.address.city} ${order.address.pincode}`].filter(Boolean).join(', ')}
             </Text>
-          </GlassCard>
+          </BorderCard>
 
           {order.status === 'delivered' && !order.review && <ReviewForm orderId={order.id} />}
           {order.review && (
-            <GlassCard variant="warm" style={styles.card}>
+            <BorderCard style={styles.card}>
               <Text style={styles.reviewThanks}>Your rating: {'★'.repeat(order.review.nurseryRating)}</Text>
               {order.review.comment ? <Text style={styles.addressText}>{order.review.comment}</Text> : null}
-            </GlassCard>
+            </BorderCard>
           )}
 
           {actionError ? <Text style={styles.errorText}>{actionError}</Text> : null}
@@ -233,8 +232,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
   backButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(94,133,80,0.2)' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
   timeline: { flexDirection: 'row', marginBottom: 20, marginTop: 8 },

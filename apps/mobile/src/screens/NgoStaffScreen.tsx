@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { IconBadge } from '../components/common/IconBadge';
 import { EmptyState } from '../components/common/EmptyState';
 import { PhotoPickerField, PickedPhoto } from '../components/common/PhotoPickerField';
@@ -130,7 +130,7 @@ export function NgoStaffScreen({ navigation }: any) {
         )}
         {staff.map((member, i) => (
           <FadeInRow key={member.id} delay={i * 60}>
-            <GlassCard variant="warm" style={styles.card}>
+            <BorderCard style={styles.card}>
               <View style={styles.cardRow}>
                 <IconBadge icon="🧑‍🤝‍🧑" color={COLORS.warmBrown} size={40} />
                 <View style={{ flex: 1 }}>
@@ -144,7 +144,7 @@ export function NgoStaffScreen({ navigation }: any) {
                   <Text style={styles.removeText}>Remove</Text>
                 </TouchableOpacity>
               </View>
-            </GlassCard>
+            </BorderCard>
           </FadeInRow>
         ))}
       </ScrollView>

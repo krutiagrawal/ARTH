@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -9,7 +8,7 @@ import { useStripe } from '@stripe/stripe-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { LocationActions } from '../components/common/LocationActions';
 import { useHaptics } from '../hooks/useHaptics';
@@ -93,9 +92,9 @@ export function DriveDetailScreen({ navigation, route }: any) {
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+          <View style={styles.backBlur}>
             <Text style={styles.backIcon}>←</Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>Drive Details</Text>
         <View style={{ width: 40 }} />
@@ -105,7 +104,7 @@ export function DriveDetailScreen({ navigation, route }: any) {
         <ActivityIndicator color={COLORS.sage} style={styles.loader} />
       ) : (
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
-          <GlassCard variant="warm" style={styles.card}>
+          <BorderCard style={styles.card}>
             <Text style={styles.title}>{drive.title}</Text>
             <Text style={styles.ngoName}>Hosted by {drive.ngoName}</Text>
 
@@ -126,7 +125,7 @@ export function DriveDetailScreen({ navigation, route }: any) {
                 {drive.confirmedCount} going{drive.capacity != null ? ` of ${drive.capacity} spots` : ' · open to everyone'}
               </Text>
             </View>
-          </GlassCard>
+          </BorderCard>
 
           <LocationActions
             label={drive.transportMode === 'ngo_provided' ? 'Drive location' : 'Location'}
@@ -212,8 +211,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
   backButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(94,133,80,0.2)' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
   loader: { marginTop: 60 },
   scrollContent: { paddingHorizontal: 20 },
@@ -233,7 +232,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: 'rgba(255,255,255,0.55)',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
     borderRadius: RADIUS.lg,
     padding: 12,
     marginBottom: 8,

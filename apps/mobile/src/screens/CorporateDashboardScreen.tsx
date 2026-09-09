@@ -73,10 +73,10 @@ function QuickAction({
           <View style={styles.actionRow}>
             <IconBadge icon={emoji} color={color} round />
             <View style={styles.actionTextColumn}>
-              <Text style={[styles.actionTitle, { color: theme.textPrimaryOnCard }]}>{title}</Text>
-              <Text style={[styles.actionBody, { color: theme.textSecondaryOnCard }]}>{body}</Text>
+              <Text style={[styles.actionTitle, { color: COLORS.textPrimary }]}>{title}</Text>
+              <Text style={[styles.actionBody, { color: COLORS.textSecondary }]}>{body}</Text>
             </View>
-            <Text style={[styles.chevron, { color: theme.textSecondaryOnCard }]}>›</Text>
+            <Text style={[styles.chevron, { color: COLORS.textSecondary }]}>›</Text>
           </View>
         </ThemedCard>
       </TouchableOpacity>
@@ -104,17 +104,10 @@ export function CorporateDashboardScreen({ navigation, onNavigateTab }: Corporat
   const blurTargetRef = useRef<View>(null);
 
   const tileProps = {
-    variant: 'glass' as const,
+    variant: 'outline' as const,
     fill: true,
     style: styles.gridTile,
     color: theme.accentColor,
-    cardBackground: theme.cardBackground,
-    cardBackgroundAlt: theme.cardBackgroundAlt,
-    cardOverlayAlpha: theme.cardOverlayAlpha,
-    textColor: theme.textPrimaryOnCard,
-    subTextColor: theme.textSecondaryOnCard,
-    borderColor: theme.cardBorder,
-    blurTarget: blurTargetRef,
   };
 
   return (
@@ -159,35 +152,19 @@ export function CorporateDashboardScreen({ navigation, onNavigateTab }: Corporat
               icon="🤝"
               value={stats?.sponsorshipCount ?? 0}
               label="Sponsorships"
-              variant="glass"
-              dark
+              variant="outline"
               color={theme.accentColor}
-              cardBackground={theme.cardBackground}
-              cardBackgroundAlt={theme.cardBackgroundAlt}
-              cardOverlayAlpha={theme.cardOverlayAlpha}
-              textColor={theme.textSecondaryOnCard}
-              subTextColor={theme.textSecondaryOnCard}
-              borderColor={theme.cardBorder}
               delay={100}
               onPress={() => navigation.navigate('CorporateSponsorships')}
-              blurTarget={blurTargetRef}
             />
             <EcoWidget
               icon="💰"
               value={`₹${((stats?.totalSponsoredCents ?? 0) / 100).toLocaleString()}`}
               label="Sponsored"
-              variant="glass"
-              dark
+              variant="outline"
               color={theme.accentColor}
-              cardBackground={theme.cardBackground}
-              cardBackgroundAlt={theme.cardBackgroundAlt}
-              cardOverlayAlpha={theme.cardOverlayAlpha}
-              textColor={theme.textSecondaryOnCard}
-              subTextColor={theme.textSecondaryOnCard}
-              borderColor={theme.cardBorder}
               delay={200}
               onPress={() => navigation.navigate('CorporateSponsorships')}
-              blurTarget={blurTargetRef}
             />
           </View>
         </View>

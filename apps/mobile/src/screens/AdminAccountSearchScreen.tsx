@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS, GRADIENTS, ON_DARK_SURFACE } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { Sheet } from '../components/common/Sheet';
@@ -118,7 +118,7 @@ export function AdminAccountSearchScreen() {
           return (
             <FadeInRow key={account.id} delay={i * 40}>
               <TouchableOpacity activeOpacity={0.85} onPress={() => { setSelected(account); setError(null); }}>
-                <GlassCard variant="dark" style={styles.card}>
+                <BorderCard style={styles.card}>
                   <View style={styles.cardHeaderRow}>
                     <Text style={styles.cardTitle} numberOfLines={1}>{orgName || account.name}</Text>
                     {account.isBlocked ? (
@@ -133,7 +133,7 @@ export function AdminAccountSearchScreen() {
                   </View>
                   <Text style={styles.cardMeta} numberOfLines={1}>@{account.handle} · {account.email}</Text>
                   <Text style={styles.cardBody}>{account.role}</Text>
-                </GlassCard>
+                </BorderCard>
               </TouchableOpacity>
             </FadeInRow>
           );

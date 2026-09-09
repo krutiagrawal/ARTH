@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
-import { BlurCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { FormField } from '../components/common/FormField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
@@ -25,7 +25,7 @@ import { useConfirm } from '../context/ConfirmDialogContext';
 function StockRow({ item, onDelete }: { item: ApiSaplingStock; onDelete: () => void }) {
   const photoUri = resolveMediaUrl(item.photoUrl);
   return (
-    <BlurCard tint="light" noPadding style={styles.row}>
+    <BorderCard noPadding style={styles.row}>
       {photoUri ? <Image source={{ uri: photoUri }} style={styles.thumb} /> : <View style={styles.thumbPlaceholder}><Text style={{ fontSize: 18 }}>🌱</Text></View>}
       <View style={styles.rowText}>
         <Text style={styles.species}>{item.species}</Text>
@@ -36,7 +36,7 @@ function StockRow({ item, onDelete }: { item: ApiSaplingStock; onDelete: () => v
       <TouchableOpacity onPress={onDelete} accessibilityRole="button" accessibilityLabel={`Remove ${item.species}`}>
         <Text style={styles.deleteIcon}>🗑</Text>
       </TouchableOpacity>
-    </BlurCard>
+    </BorderCard>
   );
 }
 

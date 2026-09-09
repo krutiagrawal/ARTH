@@ -10,7 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
 import { useNurseryProfile, useUpdateNurseryProfile, useResubmitNurseryProfile } from '../hooks/useApiQueries';
-import { BlurCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { PickedPhoto } from '../components/common/PhotoPickerField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
@@ -132,14 +132,13 @@ export function EditNurseryProfileScreen({ navigation }: any) {
       ) : (
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
           {statusCopy && (
-            <BlurCard
-              tint="light"
+            <BorderCard
               noPadding
               style={[styles.statusBanner, profile?.status === 'suspended' && styles.statusBannerDanger]}
             >
               <Text style={styles.statusTitle}>{statusCopy.title}</Text>
               <Text style={styles.statusBody}>{statusCopy.body}</Text>
-            </BlurCard>
+            </BorderCard>
           )}
 
           <Animated.View style={cardAnim}>
@@ -157,7 +156,7 @@ export function EditNurseryProfileScreen({ navigation }: any) {
             <FormField label="City" value={city} onChangeText={setCity} placeholder="City" />
             <FormField label="Contact phone" value={contactPhone} onChangeText={setContactPhone} placeholder="Phone" keyboardType="phone-pad" />
 
-            <BlurCard tint="light" noPadding style={styles.deliveryCard}>
+            <BorderCard noPadding style={styles.deliveryCard}>
               <View style={styles.deliveryRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.deliveryLabel}>Offer delivery</Text>
@@ -174,7 +173,7 @@ export function EditNurseryProfileScreen({ navigation }: any) {
                   keyboardType="number-pad"
                 />
               )}
-            </BlurCard>
+            </BorderCard>
 
             {error && <Text style={styles.error}>{error}</Text>}
 
@@ -188,16 +187,16 @@ export function EditNurseryProfileScreen({ navigation }: any) {
             />
 
             {profile?.status === 'rejected' && (
-              <BlurCard tint="light" noPadding style={styles.rejectedCard}>
+              <BorderCard noPadding style={styles.rejectedCard}>
                 <Text style={styles.rejectedTitle}>Application rejected</Text>
                 {profile.rejectionReason && <Text style={styles.rejectedReason}>{profile.rejectionReason}</Text>}
                 <TouchableOpacity onPress={handleResubmit} disabled={resubmitMutation.isPending}>
                   <Text style={styles.resubmitText}>{resubmitMutation.isPending ? 'Resubmitting…' : 'Resubmit for review'}</Text>
                 </TouchableOpacity>
-              </BlurCard>
+              </BorderCard>
             )}
 
-            <BlurCard tint="light" noPadding style={styles.locationCard}>
+            <BorderCard noPadding style={styles.locationCard}>
               <Text style={styles.locationLabel}>{hasLocation ? '📍 Location set' : '📍 No location set'}</Text>
               <Text style={styles.locationBody}>
                 {hasLocation
@@ -209,7 +208,7 @@ export function EditNurseryProfileScreen({ navigation }: any) {
                   {locationLoading ? 'Getting location…' : hasLocation ? 'Update my location' : 'Use my current location'}
                 </Text>
               </TouchableOpacity>
-            </BlurCard>
+            </BorderCard>
           </Animated.View>
         </ScrollView>
       )}

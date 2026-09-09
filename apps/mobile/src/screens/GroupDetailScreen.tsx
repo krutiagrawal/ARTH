@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { useGroupChallenges, useJoinGroupChallenge } from '../hooks/useApiQueries';
@@ -74,7 +74,7 @@ export function GroupDetailScreen({ navigation, route }: any) {
           const pct = Math.min(100, Math.round((c.progress / c.goalTotal) * 100));
           return (
             <FadeInRow key={c.id} delay={i * 60}>
-              <GlassCard variant="warm" style={styles.card}>
+              <BorderCard style={styles.card}>
                 <Text style={styles.cardTitle}>{c.title}</Text>
                 <Text style={styles.cardMeta}>{c.description}</Text>
                 <View style={styles.progressTrack}>
@@ -87,7 +87,7 @@ export function GroupDetailScreen({ navigation, route }: any) {
                 <TouchableOpacity style={styles.joinButton} onPress={() => handleJoin(c.id)} disabled={joinMutation.isPending}>
                   <Text style={styles.joinButtonText}>{joinMutation.isPending ? 'Joining…' : 'Join challenge'}</Text>
                 </TouchableOpacity>
-              </GlassCard>
+              </BorderCard>
             </FadeInRow>
           );
         })}
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
   linkRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  linkButton: { flex: 1, backgroundColor: COLORS.white, borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
+  linkButton: { flex: 1, backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown, borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
   linkButtonText: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
   sectionLabel: { fontSize: 13, fontWeight: '700', color: COLORS.textSecondary, marginBottom: 8, textTransform: 'uppercase' },
   loader: { marginTop: 20 },

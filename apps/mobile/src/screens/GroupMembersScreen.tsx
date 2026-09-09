@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } fro
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { COLORS } from '../constants/colors';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useGroupMembers, useSetGroupMemberRole, useRemoveGroupMember } from '../hooks/useApiQueries';
 import { useSlideUp } from '../hooks/useAnimations';
@@ -52,7 +52,7 @@ export function GroupMembersScreen({ navigation }: any) {
       {members.map((m, i) => (
         <FadeInRow key={m.userId} delay={i * 60}>
           <TouchableOpacity activeOpacity={0.85} onPress={() => openActions(m)} disabled={m.role === 'owner'}>
-            <GlassCard variant="warm" style={styles.card}>
+            <BorderCard style={styles.card}>
               <View style={styles.cardRow}>
                 <Text style={styles.avatar}>{m.avatarEmoji}</Text>
                 <View style={{ flex: 1 }}>
@@ -64,7 +64,7 @@ export function GroupMembersScreen({ navigation }: any) {
                   <Text style={styles.dateText}>{m.xp} XP</Text>
                 </View>
               </View>
-            </GlassCard>
+            </BorderCard>
           </TouchableOpacity>
         </FadeInRow>
       ))}

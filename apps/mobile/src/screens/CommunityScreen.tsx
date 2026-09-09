@@ -5,10 +5,10 @@ import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
+import { COLORS } from '../constants/colors';
 import { FONTS } from '../constants/typography';
 import { RADIUS, SHADOWS, SPACING } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { Toast } from '../components/common/Toast';
 import { StoryRing, type StoryRingStatus } from '../components/common/StoryRing';
 import { useSoundSystem } from '../hooks/useSoundSystem';
@@ -107,7 +107,7 @@ function FriendCard({ friend, index, onPress, storyRing }: { friend: ApiFriend; 
   return (
     <Animated.View style={slideStyle}>
       <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-        <GlassCard variant="dark" style={styles.friendCard}>
+        <BorderCard style={styles.friendCard}>
           <View style={styles.friendAvatarWrapper}>
             <StoryRing status={storyRing} size={48} borderRadius={16}>
               <View style={[styles.friendAvatar, { backgroundColor: COLORS.mintLight }]}>
@@ -134,7 +134,7 @@ function FriendCard({ friend, index, onPress, storyRing }: { friend: ApiFriend; 
             </LinearGradient>
             <Text style={styles.friendArrowDark}>›</Text>
           </View>
-        </GlassCard>
+        </BorderCard>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -154,7 +154,7 @@ function FriendRequestRow({
   const respondMutation = useRespondFriendRequest();
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-      <GlassCard variant="dark" style={styles.friendCard}>
+      <BorderCard style={styles.friendCard}>
         <StoryRing status={storyRing} size={48} borderRadius={16}>
           <View style={[styles.friendAvatar, { backgroundColor: COLORS.mintLight }]}>
             <Text style={styles.friendAvatarEmoji}>{request.from.avatar}</Text>
@@ -182,7 +182,7 @@ function FriendRequestRow({
             <Text style={styles.requestDeclineText}>✕</Text>
           </TouchableOpacity>
         </View>
-      </GlassCard>
+      </BorderCard>
     </TouchableOpacity>
   );
 }
@@ -194,12 +194,12 @@ function AddFriendPanel({ onClose }: { onClose: () => void }) {
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
 
   return (
-    <GlassCard variant="dark" style={styles.addFriendPanel}>
+    <BorderCard style={styles.addFriendPanel}>
       <View style={styles.addFriendHeader}>
         <TextInput
           style={styles.addFriendInputDark}
           placeholder="Search by name or handle..."
-          placeholderTextColor={ON_DARK_SURFACE.muted}
+          placeholderTextColor={COLORS.textMuted}
           value={query}
           onChangeText={setQuery}
           autoCapitalize="none"
@@ -228,7 +228,7 @@ function AddFriendPanel({ onClose }: { onClose: () => void }) {
           </TouchableOpacity>
         </View>
       ))}
-    </GlassCard>
+    </BorderCard>
   );
 }
 
@@ -239,7 +239,7 @@ function ActivityFeedItem({ activity, index }: { activity: ApiActivity; index: n
 
   return (
     <Animated.View style={slideStyle}>
-      <GlassCard variant="dark" style={styles.activityCard}>
+      <BorderCard style={styles.activityCard}>
         <Text style={styles.activityIcon}>{copy.icon}</Text>
         <View style={{ flex: 1 }}>
           <Text style={styles.activityTextDark}>{copy.text(activity.user.name)}</Text>
@@ -253,7 +253,7 @@ function ActivityFeedItem({ activity, index }: { activity: ApiActivity; index: n
           <Text style={styles.activityCheerIcon}>👏</Text>
           {activity.cheerCount > 0 && <Text style={styles.activityCheerCount}>{activity.cheerCount}</Text>}
         </TouchableOpacity>
-      </GlassCard>
+      </BorderCard>
     </Animated.View>
   );
 }
@@ -273,7 +273,7 @@ function ChallengeCard({
 
   return (
     <Animated.View style={slideStyle}>
-      <GlassCard variant="dark" style={styles.challengeCard}>
+      <BorderCard style={styles.challengeCard}>
         <View style={styles.challengeHeader}>
           <Text style={styles.challengeIcon}>{challenge.icon}</Text>
           <View style={{ flex: 1 }}>
@@ -302,7 +302,7 @@ function ChallengeCard({
             <Text style={styles.xpRewardText}>+{challenge.xpReward} XP</Text>
           </View>
         </View>
-      </GlassCard>
+      </BorderCard>
     </Animated.View>
   );
 }
@@ -331,7 +331,7 @@ function LeaderboardRow({ entry, index, onPress, storyRing }: { entry: Leaderboa
   return (
     <Animated.View style={slideStyle}>
       <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-        <GlassCard variant="warm" style={[styles.leaderRow, entry.isUser && styles.leaderRowUser]}>
+        <BorderCard style={[styles.leaderRow, entry.isUser && styles.leaderRowUser]}>
           <RankBadge rank={entry.rank} />
           <StoryRing status={storyRing} size={36} borderRadius={12}>
             <View style={[styles.leaderAvatar, { backgroundColor: entry.isUser ? COLORS.mintLight : COLORS.sand }]}>
@@ -348,7 +348,7 @@ function LeaderboardRow({ entry, index, onPress, storyRing }: { entry: Leaderboa
             <Text style={styles.leaderTreeNumDark}>{entry.trees}</Text>
             <Text style={styles.leaderTreeLabelDark}>trees</Text>
           </View>
-        </GlassCard>
+        </BorderCard>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -357,7 +357,7 @@ function LeaderboardRow({ entry, index, onPress, storyRing }: { entry: Leaderboa
 function NgoLeaderboardRow({ entry, onPress, storyRing }: { entry: PublicNgoLeaderboardEntry; onPress: () => void; storyRing?: StoryRingStatus | null }) {
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-      <GlassCard variant="warm" style={styles.leaderRow}>
+      <BorderCard style={styles.leaderRow}>
         <RankBadge rank={entry.rank} />
         <StoryRing status={storyRing} size={36} borderRadius={12}>
           <View style={[styles.leaderAvatar, { backgroundColor: COLORS.mintLight }]}>
@@ -371,7 +371,7 @@ function NgoLeaderboardRow({ entry, onPress, storyRing }: { entry: PublicNgoLead
           <Text style={styles.leaderTreeNumDark}>{entry.treesPlanted}</Text>
           <Text style={styles.leaderTreeLabelDark}>trees</Text>
         </View>
-      </GlassCard>
+      </BorderCard>
     </TouchableOpacity>
   );
 }
@@ -379,7 +379,7 @@ function NgoLeaderboardRow({ entry, onPress, storyRing }: { entry: PublicNgoLead
 function NurseryLeaderboardRow({ entry, onPress, storyRing }: { entry: PublicNurseryLeaderboardEntry; onPress: () => void; storyRing?: StoryRingStatus | null }) {
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-      <GlassCard variant="warm" style={styles.leaderRow}>
+      <BorderCard style={styles.leaderRow}>
         <RankBadge rank={entry.rank} />
         <StoryRing status={storyRing} size={36} borderRadius={12}>
           <View style={[styles.leaderAvatar, { backgroundColor: COLORS.mintLight }]}>
@@ -393,7 +393,7 @@ function NurseryLeaderboardRow({ entry, onPress, storyRing }: { entry: PublicNur
           <Text style={styles.leaderTreeNumDark}>{entry.followers}</Text>
           <Text style={styles.leaderTreeLabelDark}>followers</Text>
         </View>
-      </GlassCard>
+      </BorderCard>
     </TouchableOpacity>
   );
 }
@@ -487,13 +487,13 @@ function LeaderboardTabContent({ navigation }: { navigation: any }) {
           )}
           ListHeaderComponent={
             <View style={styles.section}>
-              <GlassCard variant="dark" style={styles.yourRankCard}>
+              <BorderCard style={styles.yourRankCard}>
                 <Text style={styles.yourRankLabelDark}>YOUR RANK</Text>
                 <View style={styles.yourRankRow}>
                   <Text style={styles.yourRankNumDark}>{userBoard.data?.myRank ? `#${userBoard.data.myRank}` : '—'}</Text>
                   <Text style={styles.yourRankOfDark}>of {(userBoard.data?.totalUsers ?? 0).toLocaleString()}</Text>
                 </View>
-              </GlassCard>
+              </BorderCard>
               <Text style={styles.sectionTitleDark}>Top Planters</Text>
             </View>
           }
@@ -601,7 +601,7 @@ export function CommunityScreen({ navigation }: any) {
       </View>
 
       {/* Tab bar */}
-      <GlassCard variant="warm" noPadding borderRadius={RADIUS.xl} style={styles.tabBarDark}>
+      <BorderCard noPadding borderRadius={RADIUS.xl} style={styles.tabBarDark}>
         {(Object.keys(TAB_LABELS) as Tab[]).map(tab => (
           <TouchableOpacity
             key={tab}
@@ -616,7 +616,7 @@ export function CommunityScreen({ navigation }: any) {
             </Text>
           </TouchableOpacity>
         ))}
-      </GlassCard>
+      </BorderCard>
 
       {activeTab === 'feed' ? (
         <FollowingFeedScreen navigation={navigation} embedded />
@@ -863,8 +863,6 @@ const styles = StyleSheet.create({
   sectionTitleDark: {
     fontSize: 18,
     fontWeight: '700',
-    // Sits directly on the page's cream gradient background, NOT inside a GlassCard — must use
-    // dark text (was COLORS.white with only a faint shadow, still nearly invisible on cream).
     color: COLORS.textPrimary,
     marginBottom: 4,
     marginTop: 4,
@@ -906,15 +904,15 @@ const styles = StyleSheet.create({
   friendNameDark: {
     fontSize: 15,
     fontWeight: '700',
-    color: COLORS.white,
+    color: COLORS.textPrimary,
   },
   friendStatsDark: {
     fontSize: 12,
-    color: COLORS.white,
+    color: COLORS.textSecondary,
   },
   friendActiveDark: {
     fontSize: 11,
-    color: COLORS.white,
+    color: COLORS.textMuted,
   },
   friendRight: {
     alignItems: 'center',
@@ -932,7 +930,7 @@ const styles = StyleSheet.create({
   },
   friendArrowDark: {
     fontSize: 22,
-    color: COLORS.white,
+    color: COLORS.textMuted,
     fontWeight: '300',
   },
   challengeCard: {
@@ -951,11 +949,11 @@ const styles = StyleSheet.create({
   challengeTitleDark: {
     fontSize: 15,
     fontWeight: '700',
-    color: COLORS.white,
+    color: COLORS.textPrimary,
   },
   challengeDescDark: {
     fontSize: 12,
-    color: COLORS.white,
+    color: COLORS.textSecondary,
     marginTop: 2,
     lineHeight: 18,
   },
@@ -974,7 +972,7 @@ const styles = StyleSheet.create({
   },
   challengeStatTextDark: {
     fontSize: 12,
-    color: COLORS.white,
+    color: COLORS.textSecondary,
     fontWeight: '500',
   },
   xpReward: {
@@ -987,7 +985,7 @@ const styles = StyleSheet.create({
   xpRewardText: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLORS.white,
+    color: COLORS.xpBlueDark,
   },
   rankTabBar: {
     flexDirection: 'row',
@@ -1046,12 +1044,12 @@ const styles = StyleSheet.create({
   yourRankNumDark: {
     fontSize: 36,
     fontWeight: '900',
-    color: COLORS.white,
+    color: COLORS.textPrimary,
     letterSpacing: -1,
   },
   yourRankOfDark: {
     fontSize: 14,
-    color: COLORS.white,
+    color: COLORS.textSecondary,
   },
   yourRankTrend: {
     fontSize: 13,
@@ -1163,13 +1161,15 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
     alignItems: 'center',
     justifyContent: 'center',
   },
   requestDeclineText: {
     fontSize: 16,
-    color: COLORS.white,
+    color: COLORS.textPrimary,
     fontWeight: '600',
   },
   addFriendPanel: {
@@ -1182,16 +1182,18 @@ const styles = StyleSheet.create({
   },
   addFriendInputDark: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: COLORS.white,
+    color: COLORS.textPrimary,
   },
   addFriendCloseDark: {
     fontSize: 16,
-    color: COLORS.white,
+    color: COLORS.textSecondary,
     fontWeight: '600',
     paddingHorizontal: 4,
   },
@@ -1244,11 +1246,11 @@ const styles = StyleSheet.create({
   activityTextDark: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.white,
+    color: COLORS.textPrimary,
   },
   activityTimeDark: {
     fontSize: 11,
-    color: COLORS.white,
+    color: COLORS.textMuted,
     marginTop: 2,
   },
   activityCheerButton: {

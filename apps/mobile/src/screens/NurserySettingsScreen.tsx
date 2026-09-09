@@ -10,7 +10,7 @@ import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { useNurseryProfile, useSettings, useUpdateSettings, useSessions } from '../hooks/useApiQueries';
 import { ScreenHeader } from '../components/common/ScreenHeader';
-import { BlurCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { Toggle } from '../components/common/Toggle';
 import { SettingsRow, SettingsSectionHeader, SettingsDivider } from '../components/common/SettingsRow';
 import { useFadeIn } from '../hooks/useAnimations';
@@ -135,7 +135,7 @@ export function NurserySettingsScreen({ navigation }: any) {
 
           {/* Experience */}
           <SettingsSectionHeader title="Experience" />
-          <BlurCard tint="light" noPadding>
+          <BorderCard noPadding>
             <SettingsRow
               variant="light"
               icon="🌟"
@@ -199,11 +199,11 @@ export function NurserySettingsScreen({ navigation }: any) {
                 />
               }
             />
-          </BlurCard>
+          </BorderCard>
 
           {/* Theme */}
           <SettingsSectionHeader title="Appearance" />
-          <BlurCard tint="light" style={styles.themeSection}>
+          <BorderCard style={styles.themeSection}>
             <Text style={styles.themeSectionLabel}>App Theme</Text>
             <View style={styles.themeOptions}>
               {(['light', 'dark', 'auto'] as const).map((opt) => (
@@ -219,11 +219,11 @@ export function NurserySettingsScreen({ navigation }: any) {
                 </TouchableOpacity>
               ))}
             </View>
-          </BlurCard>
+          </BorderCard>
 
           {/* Notifications */}
           <SettingsSectionHeader title="Notifications" />
-          <BlurCard tint="light" noPadding>
+          <BorderCard noPadding>
             <SettingsRow
               variant="light"
               icon="🔔"
@@ -255,11 +255,11 @@ export function NurserySettingsScreen({ navigation }: any) {
                 />
               }
             />
-          </BlurCard>
+          </BorderCard>
 
           {/* Privacy */}
           <SettingsSectionHeader title="Privacy & Data" />
-          <BlurCard tint="light" noPadding>
+          <BorderCard noPadding>
             <SettingsRow
               variant="light"
               icon="👁️"
@@ -291,11 +291,11 @@ export function NurserySettingsScreen({ navigation }: any) {
                 />
               }
             />
-          </BlurCard>
+          </BorderCard>
 
           {/* Account */}
           <SettingsSectionHeader title="Account" />
-          <BlurCard tint="light" noPadding>
+          <BorderCard noPadding>
             <SettingsRow variant="light" icon="📧" label="Email" sublabel={user?.email ?? ''} accent={COLORS.xpBlue} />
             <SettingsDivider variant="light" />
             <SettingsRow variant="light" icon="🔒" label="Change Password" accent={COLORS.earth} onPress={() => navigation.navigate('ChangePassword')} />
@@ -308,11 +308,11 @@ export function NurserySettingsScreen({ navigation }: any) {
               accent={COLORS.sage}
               onPress={() => navigation.navigate('Sessions')}
             />
-          </BlurCard>
+          </BorderCard>
 
           {/* Safety */}
           <SettingsSectionHeader title="Safety" />
-          <BlurCard tint="light" noPadding>
+          <BorderCard noPadding>
             <SettingsRow
               variant="light"
               icon="🚫"
@@ -330,11 +330,11 @@ export function NurserySettingsScreen({ navigation }: any) {
               accent={COLORS.amber}
               onPress={() => navigation.navigate('Notifications')}
             />
-          </BlurCard>
+          </BorderCard>
 
           {/* About */}
           <SettingsSectionHeader title="About" />
-          <BlurCard tint="light" noPadding>
+          <BorderCard noPadding>
             <SettingsRow variant="light" icon="ℹ️" label="App Version" sublabel={appVersionLabel} accent={COLORS.textMuted} />
             <SettingsDivider variant="light" />
             <SettingsRow
@@ -354,15 +354,15 @@ export function NurserySettingsScreen({ navigation }: any) {
             />
             <SettingsDivider variant="light" />
             <SettingsRow variant="light" icon="💌" label="Send Feedback" accent={COLORS.sage} onPress={handleSendFeedback} />
-          </BlurCard>
+          </BorderCard>
 
           {/* Danger zone */}
           <SettingsSectionHeader title="Account Actions" />
-          <BlurCard tint="light" noPadding>
+          <BorderCard noPadding>
             <SettingsRow variant="light" icon="🚪" label="Log Out" accent={COLORS.earth} onPress={handleLogout} />
             <SettingsDivider variant="light" />
             <SettingsRow variant="light" icon="🗑️" label="Delete Account" accent={COLORS.coral} dangerous onPress={handleDeleteAccount} />
-          </BlurCard>
+          </BorderCard>
 
           <View style={styles.footer}>
             <Text style={styles.footerEmoji}>🌱</Text>

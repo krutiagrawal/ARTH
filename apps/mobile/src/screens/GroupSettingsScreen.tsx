@@ -14,7 +14,7 @@ import { PickedPhoto } from '../components/common/PhotoPickerField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { Toggle } from '../components/common/Toggle';
 import { SettingsRow, SettingsSectionHeader, SettingsDivider } from '../components/common/SettingsRow';
 import { useSlideUp } from '../hooks/useAnimations';
@@ -228,7 +228,7 @@ export function GroupSettingsScreen({ navigation }: any) {
 
           {/* Experience */}
           <SettingsSectionHeader title="Experience" />
-          <GlassCard variant="dark" noPadding>
+          <BorderCard noPadding>
             <SettingsRow
               icon="🌟"
               label="Ambient Mode"
@@ -288,11 +288,11 @@ export function GroupSettingsScreen({ navigation }: any) {
                 />
               }
             />
-          </GlassCard>
+          </BorderCard>
 
           {/* Theme */}
           <SettingsSectionHeader title="Appearance" />
-          <GlassCard variant="dark" style={styles.themeSection}>
+          <BorderCard style={styles.themeSection}>
             <Text style={styles.themeSectionLabel}>App Theme</Text>
             <View style={styles.themeOptions}>
               {(['light', 'dark', 'auto'] as const).map((opt) => (
@@ -308,11 +308,11 @@ export function GroupSettingsScreen({ navigation }: any) {
                 </TouchableOpacity>
               ))}
             </View>
-          </GlassCard>
+          </BorderCard>
 
           {/* Notifications */}
           <SettingsSectionHeader title="Notifications" />
-          <GlassCard variant="dark" noPadding>
+          <BorderCard noPadding>
             <SettingsRow
               icon="🔔"
               label="Push Notifications"
@@ -342,11 +342,11 @@ export function GroupSettingsScreen({ navigation }: any) {
                 />
               }
             />
-          </GlassCard>
+          </BorderCard>
 
           {/* Privacy */}
           <SettingsSectionHeader title="Privacy & Data" />
-          <GlassCard variant="dark" noPadding>
+          <BorderCard noPadding>
             <SettingsRow
               icon="👁️"
               label="Public Profile"
@@ -376,11 +376,11 @@ export function GroupSettingsScreen({ navigation }: any) {
                 />
               }
             />
-          </GlassCard>
+          </BorderCard>
 
           {/* Account */}
           <SettingsSectionHeader title="Account" />
-          <GlassCard variant="dark" noPadding>
+          <BorderCard noPadding>
             <SettingsRow icon="📧" label="Email" sublabel={user?.email ?? ''} accent={COLORS.xpBlue} />
             <SettingsDivider />
             <SettingsRow icon="🔒" label="Change Password" accent={COLORS.earth} onPress={() => navigation.navigate('ChangePassword')} />
@@ -392,11 +392,11 @@ export function GroupSettingsScreen({ navigation }: any) {
               accent={COLORS.sage}
               onPress={() => navigation.navigate('Sessions')}
             />
-          </GlassCard>
+          </BorderCard>
 
           {/* Safety */}
           <SettingsSectionHeader title="Safety" />
-          <GlassCard variant="dark" noPadding>
+          <BorderCard noPadding>
             <SettingsRow
               icon="🚫"
               label="Blocked Accounts"
@@ -412,11 +412,11 @@ export function GroupSettingsScreen({ navigation }: any) {
               accent={COLORS.amber}
               onPress={() => navigation.navigate('Notifications')}
             />
-          </GlassCard>
+          </BorderCard>
 
           {/* About */}
           <SettingsSectionHeader title="About" />
-          <GlassCard variant="dark" noPadding>
+          <BorderCard noPadding>
             <SettingsRow icon="ℹ️" label="App Version" sublabel={appVersionLabel} accent={COLORS.textMuted} />
             <SettingsDivider />
             <SettingsRow
@@ -434,15 +434,15 @@ export function GroupSettingsScreen({ navigation }: any) {
             />
             <SettingsDivider />
             <SettingsRow icon="💌" label="Send Feedback" accent={COLORS.sage} onPress={handleSendFeedback} />
-          </GlassCard>
+          </BorderCard>
 
           {/* Danger zone */}
           <SettingsSectionHeader title="Account Actions" />
-          <GlassCard variant="dark" noPadding>
+          <BorderCard noPadding>
             <SettingsRow icon="🚪" label="Log Out" accent={COLORS.earth} onPress={handleLogout} />
             <SettingsDivider />
             <SettingsRow icon="🗑️" label="Delete Account" accent={COLORS.coral} dangerous onPress={handleDeleteAccount} />
-          </GlassCard>
+          </BorderCard>
 
           <View style={styles.footer}>
             <Text style={styles.footerEmoji}>🌱</Text>
@@ -494,12 +494,12 @@ const styles = StyleSheet.create({
   chipTextSelected: { color: COLORS.forest, fontWeight: '700' },
   error: { fontSize: 13, color: COLORS.coral, marginTop: 12 },
   submitButton: { marginTop: 20 },
-  inviteCard: { marginTop: 24, padding: 16, borderRadius: RADIUS.md, backgroundColor: COLORS.white, alignItems: 'center' },
+  inviteCard: { marginTop: 24, padding: 16, borderRadius: RADIUS.md, backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown, alignItems: 'center' },
   inviteLabel: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '600', textTransform: 'uppercase' },
   inviteCode: { fontSize: 24, fontWeight: '800', color: COLORS.forest, letterSpacing: 4, marginTop: 6 },
   regenerateText: { fontSize: 13, color: COLORS.coral, fontWeight: '700', marginTop: 12 },
   themeSection: { gap: 12, marginTop: 8 },
-  themeSectionLabel: { fontSize: 14, fontWeight: '600', color: COLORS.white },
+  themeSectionLabel: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary },
   themeOptions: { flexDirection: 'row', gap: 8 },
   themeOption: {
     flex: 1,
@@ -507,13 +507,13 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: RADIUS.lg,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.15)',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: COLORS.warmBrown,
+    backgroundColor: 'transparent',
     gap: 4,
   },
   themeOptionSelected: { borderColor: COLORS.sage, backgroundColor: 'rgba(135,168,120,0.22)' },
   themeOptionIcon: { fontSize: 22 },
-  themeOptionLabel: { fontSize: 12, fontWeight: '600', color: COLORS.white },
+  themeOptionLabel: { fontSize: 12, fontWeight: '600', color: COLORS.textPrimary },
   themeOptionLabelSelected: { color: COLORS.sageLight },
   footer: { alignItems: 'center', gap: 6, paddingVertical: 16, marginTop: 8 },
   footerEmoji: { fontSize: 24 },

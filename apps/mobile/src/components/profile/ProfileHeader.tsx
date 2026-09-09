@@ -170,12 +170,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.55)',
-    borderBottomLeftRadius: RADIUS.xl,
-    borderBottomRightRadius: RADIUS.xl,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
-    ...SHADOWS.md,
   },
   avatarArea: { position: 'relative', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   // Separate from `avatar` so the shadow isn't clipped by the avatar's own `overflow: hidden`.

@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS, GRADIENTS, ON_DARK_SURFACE } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
@@ -112,7 +112,7 @@ export function AdminNurseryApprovalsScreen({ navigation }: any) {
               activeOpacity={0.85}
               onPress={() => navigation.navigate('AdminNurseryApprovalDetail', { nursery })}
             >
-              <GlassCard variant="dark" style={styles.card}>
+              <BorderCard style={styles.card}>
                 <View style={styles.cardHeaderRow}>
                   <Text style={styles.cardTitle} numberOfLines={1}>{nursery.nurseryName}</Text>
                   <View style={[styles.statusChip, { borderColor: statusColor(nursery.status) }]}>
@@ -125,7 +125,7 @@ export function AdminNurseryApprovalsScreen({ navigation }: any) {
                   </Text>
                 )}
                 <Text style={styles.cardBody} numberOfLines={2}>{nursery.description}</Text>
-              </GlassCard>
+              </BorderCard>
             </TouchableOpacity>
           </FadeInRow>
         ))}

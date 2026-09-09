@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { StatDisplay } from '../components/common/StatDisplay';
 import { SectionHeader } from '../components/common/SectionHeader';
 import { ScreenHeader } from '../components/common/ScreenHeader';
@@ -97,11 +97,11 @@ export function NgoReportsScreen({ navigation }: any) {
           </View>
 
           <SectionHeader title="Impact over 6 months" />
-          <GlassCard variant="warm" style={styles.chartCard}>
+          <BorderCard style={styles.chartCard}>
             <MonthlyBarRow label="Donations (6 months)" icon="💰" color={COLORS.golden} data={reports.monthly.donations} delay={0} />
             <MonthlyBarRow label="RSVPs (6 months)" icon="🤝" color={COLORS.sage} data={reports.monthly.rsvps} delay={120} />
             <MonthlyBarRow label="Adoptions (6 months)" icon="🌳" color={COLORS.forest} data={reports.monthly.adoptions} delay={240} />
-          </GlassCard>
+          </BorderCard>
         </ScrollView>
       )}
     </View>

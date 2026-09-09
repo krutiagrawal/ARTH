@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
-import { BlurCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EcoWidget } from '../components/common/EcoWidget';
 import { EmptyState } from '../components/common/EmptyState';
 import { useStockAnalytics, useStockLedger } from '../hooks/useApiQueries';
@@ -23,7 +23,7 @@ const REASON_LABEL: Record<ApiStockLedgerEntry['reason'], string> = {
 function LedgerRow({ item }: { item: ApiStockLedgerEntry }) {
   const positive = item.delta > 0;
   return (
-    <BlurCard tint="light" noPadding style={styles.ledgerRow}>
+    <BorderCard noPadding style={styles.ledgerRow}>
       <View style={styles.ledgerText}>
         <Text style={styles.ledgerSpecies}>{item.species}</Text>
         <Text style={styles.ledgerMeta}>
@@ -34,7 +34,7 @@ function LedgerRow({ item }: { item: ApiStockLedgerEntry }) {
         {positive ? '+' : ''}
         {item.delta}
       </Text>
-    </BlurCard>
+    </BorderCard>
   );
 }
 

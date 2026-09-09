@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
-import { BlurCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useNurseryReservations, useFulfillReservation, useDeclineReservation } from '../hooks/useApiQueries';
 import type { ApiNurseryReservation } from '../api/nursery';
@@ -36,7 +36,7 @@ function ReservationRow({ item, showActions }: { item: ApiNurseryReservation; sh
     item.status === 'fulfilled' ? COLORS.sage : item.status === 'declined' ? COLORS.coral : item.status === 'cancelled' ? COLORS.textMuted : COLORS.golden;
 
   return (
-    <BlurCard tint="light" noPadding style={styles.row}>
+    <BorderCard noPadding style={styles.row}>
       <View style={styles.rowHeader}>
         <Text style={styles.avatar}>{item.requester?.avatarEmoji ?? '🧑'}</Text>
         <View style={styles.rowText}>
@@ -60,7 +60,7 @@ function ReservationRow({ item, showActions }: { item: ApiNurseryReservation; sh
           </TouchableOpacity>
         </View>
       )}
-    </BlurCard>
+    </BorderCard>
   );
 }
 

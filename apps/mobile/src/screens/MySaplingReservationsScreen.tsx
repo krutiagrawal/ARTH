@@ -2,12 +2,11 @@ import React from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
-import { BlurCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useMyReservations, useCancelReservation } from '../hooks/useApiQueries';
 import { resolveMediaUrl } from '../api/client';
@@ -29,7 +28,7 @@ function ReservationCard({ item }: { item: ApiMyReservation }) {
   };
 
   return (
-    <BlurCard tint="light" noPadding style={styles.card}>
+    <BorderCard noPadding style={styles.card}>
       <View style={styles.cardRow}>
         {item.nursery?.logoUrl ? (
           <Image source={{ uri: resolveMediaUrl(item.nursery.logoUrl) }} style={styles.logo} />
@@ -51,7 +50,7 @@ function ReservationCard({ item }: { item: ApiMyReservation }) {
           <Text style={styles.cancelText}>Cancel request</Text>
         </TouchableOpacity>
       )}
-    </BlurCard>
+    </BorderCard>
   );
 }
 
@@ -66,9 +65,9 @@ export function MySaplingReservationsScreen({ navigation }: any) {
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+          <View style={styles.backBlur}>
             <Text style={styles.backIcon}>←</Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Reservations</Text>
         <View style={{ width: 40 }} />
@@ -93,8 +92,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
   backButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(94,133,80,0.2)' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
   list: { paddingHorizontal: SPACING.md, paddingTop: SPACING.sm },
   card: { borderRadius: RADIUS.md, padding: 14, marginBottom: 10, gap: 10 },

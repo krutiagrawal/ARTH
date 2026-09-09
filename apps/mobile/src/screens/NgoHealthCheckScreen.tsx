@@ -2,13 +2,12 @@ import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { usePlantedTrees, useSurvivalStats, useLogBulkHealthChecks } from '../hooks/useApiQueries';
 import type { TreeHealthStatus } from '../api/plantedTrees';
@@ -67,15 +66,15 @@ export function NgoHealthCheckScreen({ navigation }: any) {
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+          <View style={styles.backBlur}>
             <Text style={styles.backIcon}>←</Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Health Checks</Text>
         <TouchableOpacity onPress={() => navigation.navigate('NgoLogPlantedTrees')} style={styles.addButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+          <View style={styles.backBlur}>
             <Text style={styles.addIcon}>+</Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -98,7 +97,7 @@ export function NgoHealthCheckScreen({ navigation }: any) {
           return (
             <FadeInRow key={tree.id} delay={Math.min(i, 12) * 40}>
               <TouchableOpacity onPress={() => toggle(tree.id)} activeOpacity={0.85}>
-                <GlassCard variant="warm" style={[styles.card, isSelected && styles.cardSelected]}>
+                <BorderCard style={[styles.card, isSelected && styles.cardSelected]}>
                   <View style={styles.cardRow}>
                     <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
                       {isSelected && <Text style={styles.checkmark}>✓</Text>}
@@ -114,7 +113,7 @@ export function NgoHealthCheckScreen({ navigation }: any) {
                       <Text style={[styles.statusPillText, { color: meta.color }]}>{meta.emoji} {meta.label}</Text>
                     </View>
                   </View>
-                </GlassCard>
+                </BorderCard>
               </TouchableOpacity>
             </FadeInRow>
           );
@@ -142,9 +141,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
   backButton: { width: 40, height: 40 },
   addButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(94,133,80,0.2)' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
-  addIcon: { fontSize: 20, color: COLORS.white, fontWeight: '700' },
+  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
+  addIcon: { fontSize: 20, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
   statsBar: { paddingHorizontal: 20, paddingBottom: 10 },
   statsBarText: { fontSize: 11, color: COLORS.textSecondary },
@@ -160,9 +159,9 @@ const styles = StyleSheet.create({
   cardMeta: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
   statusPill: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: RADIUS.full, borderWidth: 1 },
   statusPillText: { fontSize: 11, fontWeight: '700' },
-  actionBar: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(13,35,24,0.92)', paddingTop: 12, paddingHorizontal: 20, gap: 8 },
-  actionBarLabel: { fontSize: 12, color: COLORS.white, fontWeight: '600' },
+  actionBar: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: COLORS.cream, borderTopWidth: 1.5, borderTopColor: COLORS.warmBrown, paddingTop: 12, paddingHorizontal: 20, gap: 8 },
+  actionBarLabel: { fontSize: 12, color: COLORS.textPrimary, fontWeight: '600' },
   actionButtons: { flexDirection: 'row', gap: 10 },
-  actionButton: { flex: 1, paddingVertical: 10, borderRadius: RADIUS.md, borderWidth: 1.5, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.06)' },
+  actionButton: { flex: 1, paddingVertical: 10, borderRadius: RADIUS.md, borderWidth: 1.5, alignItems: 'center', backgroundColor: 'transparent' },
   actionButtonText: { fontSize: 18 },
 });

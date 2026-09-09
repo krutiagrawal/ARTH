@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { Mascot } from '../components/common/Mascot';
 import { StreakCalendar } from '../components/common/StreakCalendar';
 import { useGroupProfile, useGroupStreakCalendar } from '../hooks/useApiQueries';
@@ -60,13 +60,13 @@ export function GroupStreakScreen({ navigation }: any) {
           </LinearGradient>
         </View>
 
-        <GlassCard variant="dark" style={styles.recordCard}>
+        <BorderCard style={styles.recordCard}>
           <Text style={styles.recordIcon}>🏆</Text>
           <View>
             <Text style={styles.recordTitle}>Group's Best Streak</Text>
             <Text style={styles.recordValue}>{streakMax} days</Text>
           </View>
-        </GlassCard>
+        </BorderCard>
 
         {weeks.length > 0 && (
           <View style={styles.calendarWrap}>

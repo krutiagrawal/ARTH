@@ -1,13 +1,12 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { BlurCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { EmptyState } from '../components/common/EmptyState';
 import { useHaptics } from '../hooks/useHaptics';
@@ -34,7 +33,7 @@ function CartRow({ item }: { item: ApiCartItem }) {
   };
 
   return (
-    <BlurCard tint="light" noPadding style={styles.row}>
+    <BorderCard noPadding style={styles.row}>
       <View style={{ flex: 1 }}>
         <Text style={styles.species}>{item.species}</Text>
         <Text style={styles.nursery}>{item.nursery.nurseryName}</Text>
@@ -49,7 +48,7 @@ function CartRow({ item }: { item: ApiCartItem }) {
           <Text style={styles.stepperButtonText}>+</Text>
         </TouchableOpacity>
       </View>
-    </BlurCard>
+    </BorderCard>
   );
 }
 
@@ -64,9 +63,9 @@ export function CartScreen({ navigation }: any) {
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+          <View style={styles.backBlur}>
             <Text style={styles.backIcon}>←</Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Your Cart</Text>
         <View style={{ width: 40 }} />
@@ -100,8 +99,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
   backButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(94,133,80,0.2)' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 20 },
   row: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md, padding: 14, marginBottom: 10 },

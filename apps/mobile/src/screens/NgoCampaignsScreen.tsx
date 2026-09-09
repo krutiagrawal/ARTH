@@ -4,7 +4,7 @@ import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../constants/colors';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { IconBadge } from '../components/common/IconBadge';
 import { useMyCampaigns, useCloseCampaign, useReopenCampaign } from '../hooks/useApiQueries';
@@ -46,7 +46,7 @@ export function NgoCampaignsScreen({ navigation }: any) {
           const progress = c.goalAmountCents ? Math.min(1, c.raisedAmountCents / c.goalAmountCents) : null;
           return (
             <FadeInRow key={c.id} delay={i * 60}>
-              <GlassCard variant="warm" style={styles.card}>
+              <BorderCard style={styles.card}>
                 <View style={styles.cardRow}>
                   <IconBadge icon="💚" color={COLORS.golden} size={40} />
                   <View style={styles.cardContent}>
@@ -82,7 +82,7 @@ export function NgoCampaignsScreen({ navigation }: any) {
                     </TouchableOpacity>
                   </View>
                 </View>
-              </GlassCard>
+              </BorderCard>
             </FadeInRow>
           );
         })}

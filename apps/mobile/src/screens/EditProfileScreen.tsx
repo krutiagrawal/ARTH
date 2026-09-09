@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
-import { BlurView } from 'expo-blur';
+import EmojiPicker from 'rn-emoji-keyboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -10,13 +10,8 @@ import { RADIUS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { useUpdateMe } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { useConfirm } from '../context/ConfirmDialogContext';
-
-const AVATAR_OPTIONS = [
-  '🧑‍🌾', '🌱', '🌳', '🌲', '🍃', '🌿', '🌸', '🌻',
-  '🦋', '🐝', '🐿️', '🦔', '🌍', '🌎', '🌏', '💚',
-];
 
 const HANDLE_REGEX = /^[a-z0-9_]+$/;
 
@@ -31,6 +26,7 @@ export function EditProfileScreen({ navigation }: any) {
   const [bio, setBio] = useState(user?.bio ?? '');
   const [avatarEmoji, setAvatarEmoji] = useState(user?.avatarEmoji ?? '🧑‍🌾');
   const [error, setError] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const handleSubmit = async () => {
     setError(null);
@@ -58,9 +54,9 @@ export function EditProfileScreen({ navigation }: any) {
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+          <View style={styles.backBlur}>
             <Text style={styles.backIcon}>←</Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Profile</Text>
         <View style={{ width: 40 }} />
@@ -70,19 +66,17 @@ export function EditProfileScreen({ navigation }: any) {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
       >
-        <GlassCard variant="warm">
+        <BorderCard>
           <Text style={styles.label}>Avatar</Text>
-          <View style={styles.avatarGrid}>
-            {AVATAR_OPTIONS.map((emoji) => (
-              <TouchableOpacity
-                key={emoji}
-                style={[styles.avatarChip, avatarEmoji === emoji && styles.avatarChipSelected]}
-                onPress={() => setAvatarEmoji(emoji)}
-              >
-                <Text style={styles.avatarChipEmoji}>{emoji}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TouchableOpacity style={styles.avatarPicker} onPress={() => setPickerOpen(true)}>
+            <Text style={styles.avatarPickerEmoji}>{avatarEmoji}</Text>
+            <Text style={styles.avatarPickerHint}>Tap to choose any emoji</Text>
+          </TouchableOpacity>
+          <EmojiPicker
+            open={pickerOpen}
+            onClose={() => setPickerOpen(false)}
+            onEmojiSelected={(item) => setAvatarEmoji(item.emoji)}
+          />
 
           <Text style={styles.label}>Name</Text>
           <TextInput
@@ -132,7 +126,7 @@ export function EditProfileScreen({ navigation }: any) {
               <Text style={styles.submitText}>Save Changes</Text>
             )}
           </TouchableOpacity>
-        </GlassCard>
+        </BorderCard>
       </ScrollView>
     </View>
   );
@@ -154,11 +148,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
   },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
@@ -187,27 +181,28 @@ const styles = StyleSheet.create({
     minHeight: 72,
     textAlignVertical: 'top',
   },
-  avatarGrid: {
+  avatarPicker: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
-  },
-  avatarChip: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: COLORS.beige,
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 12,
+    marginTop: 8,
+    padding: 10,
+    borderRadius: RADIUS.md,
     borderWidth: 1.5,
-    borderColor: 'transparent',
+    borderColor: COLORS.warmBrown,
   },
-  avatarChipSelected: {
-    borderColor: COLORS.sage,
-    backgroundColor: 'rgba(135,168,120,0.25)',
+  avatarPickerEmoji: {
+    fontSize: 32,
+    width: 52,
+    height: 52,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    borderRadius: 26,
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
+    overflow: 'hidden',
   },
-  avatarChipEmoji: { fontSize: 22 },
+  avatarPickerHint: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600' },
   input: {
     backgroundColor: COLORS.white,
     borderRadius: RADIUS.md,

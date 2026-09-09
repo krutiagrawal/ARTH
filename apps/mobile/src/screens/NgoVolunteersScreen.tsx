@@ -2,12 +2,11 @@ import React from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useNgoVolunteers } from '../hooks/useApiQueries';
 import { useSlideUp } from '../hooks/useAnimations';
@@ -28,9 +27,9 @@ export function NgoVolunteersScreen({ navigation }: any) {
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+          <View style={styles.backBlur}>
             <Text style={styles.backIcon}>←</Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Volunteers</Text>
         <View style={{ width: 40 }} />
@@ -44,7 +43,7 @@ export function NgoVolunteersScreen({ navigation }: any) {
         )}
         {volunteers.map((v, i) => (
           <FadeInRow key={v.userId} delay={i * 60}>
-            <GlassCard variant="warm" style={styles.card}>
+            <BorderCard style={styles.card}>
               <View style={styles.cardRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.cardTitle}>{v.name}</Text>
@@ -57,7 +56,7 @@ export function NgoVolunteersScreen({ navigation }: any) {
                   )}
                 </View>
               </View>
-            </GlassCard>
+            </BorderCard>
           </FadeInRow>
         ))}
       </ScrollView>
@@ -69,8 +68,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
   backButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary },
   scrollContent: { paddingHorizontal: 20 },
   hint: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 14 },

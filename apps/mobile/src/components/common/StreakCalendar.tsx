@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text } from './AppText';
 import { COLORS } from '../../constants/colors';
-import { GlassCard } from './GlassCard';
+import { BorderCard } from './BorderCard';
 import type { StreakWeek } from '../../api/streaks';
 
 /**
@@ -35,7 +35,7 @@ export function classifyStreakDay(weekIndex: number, dayIndex: number, totalWeek
 
 export function StreakCalendar({ streakCurrent, weeks }: { streakCurrent: number; weeks: StreakWeek[] }) {
   return (
-    <GlassCard variant="dark" style={styles.streakCalCard}>
+    <BorderCard style={styles.streakCalCard}>
       <View style={styles.streakCalHeader}>
         <View>
           <Text style={styles.streakCalTitleDark}>Streak Calendar</Text>
@@ -73,7 +73,7 @@ export function StreakCalendar({ streakCurrent, weeks }: { streakCurrent: number
           </View>
         </View>
       ))}
-    </GlassCard>
+    </BorderCard>
   );
 }
 
@@ -89,11 +89,11 @@ const styles = StyleSheet.create({
   streakCalTitleDark: {
     fontSize: 16,
     fontWeight: '700',
-    color: COLORS.white,
+    color: COLORS.textPrimary,
   },
   streakCalSubDark: {
     fontSize: 12,
-    color: COLORS.white,
+    color: COLORS.textSecondary,
     marginTop: 2,
   },
   streakCountBadge: {
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   streakWeekLabelDark: {
     width: 24,
     fontSize: 11,
-    color: COLORS.white,
+    color: COLORS.textSecondary,
     fontWeight: '600',
   },
   streakDays: {
@@ -141,9 +141,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.sage,
   },
   streakDayEmpty: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(160,114,74,0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: 'rgba(160,114,74,0.25)',
   },
   streakDayMissed: {
     backgroundColor: 'rgba(194,74,59,0.16)',
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   },
   streakDayLabelDark: {
     fontSize: 8,
-    color: COLORS.white,
+    color: COLORS.textSecondary,
     fontWeight: '600',
   },
   streakDayLabelToday: {

@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { StatDisplay } from '../components/common/StatDisplay';
 import { ForestHeroCanvas } from '../components/common/ForestHeroCanvas';
 import { MascotBubble } from '../components/common/Mascot';
@@ -99,7 +99,7 @@ export function AdminHomeScreen({ navigation, onNavigateTab }: any) {
           <ActivityIndicator color={COLORS.mint} style={styles.loader} />
         ) : (
           <Animated.View style={statsAnim}>
-            <GlassCard variant="dark" style={styles.card}>
+            <BorderCard style={styles.card}>
               <Text style={styles.cardTitle}>Users</Text>
               <View style={styles.statsGrid}>
                 {Object.entries(overview.usersByRole).map(([role, count]) => (
@@ -112,9 +112,9 @@ export function AdminHomeScreen({ navigation, onNavigateTab }: any) {
                   />
                 ))}
               </View>
-            </GlassCard>
+            </BorderCard>
 
-            <GlassCard variant="dark" style={styles.card}>
+            <BorderCard style={styles.card}>
               <Text style={styles.cardTitle}>NGO applications</Text>
               <View style={styles.statsGrid}>
                 {Object.entries(overview.ngosByStatus).map(([status, count]) => (
@@ -127,9 +127,9 @@ export function AdminHomeScreen({ navigation, onNavigateTab }: any) {
                   />
                 ))}
               </View>
-            </GlassCard>
+            </BorderCard>
 
-            <GlassCard variant="dark" style={styles.card}>
+            <BorderCard style={styles.card}>
               <Text style={styles.cardTitle}>Platform activity</Text>
               <View style={styles.statsGrid}>
                 <StatDisplay
@@ -151,9 +151,9 @@ export function AdminHomeScreen({ navigation, onNavigateTab }: any) {
                   labelColor={ON_DARK_SURFACE.secondary}
                 />
               </View>
-            </GlassCard>
+            </BorderCard>
 
-            <GlassCard variant="dark" style={styles.card}>
+            <BorderCard style={styles.card}>
               <Text style={styles.cardTitle}>Trust &amp; safety</Text>
               <View style={styles.statsGrid}>
                 <StatDisplay
@@ -175,46 +175,46 @@ export function AdminHomeScreen({ navigation, onNavigateTab }: any) {
                   labelColor={ON_DARK_SURFACE.secondary}
                 />
               </View>
-            </GlassCard>
+            </BorderCard>
 
             <TouchableOpacity activeOpacity={0.85} onPress={() => goTab('NGOs')}>
-              <GlassCard variant="dark" style={styles.linkCard}>
+              <BorderCard style={styles.linkCard}>
                 <Text style={styles.linkEmoji}>🏢</Text>
                 <View style={styles.linkTextWrap}>
                   <Text style={styles.linkTitle}>NGO approvals</Text>
                   <Text style={styles.linkBody}>Review, approve, reject, or suspend NGO applications.</Text>
                 </View>
-              </GlassCard>
+              </BorderCard>
             </TouchableOpacity>
 
             <TouchableOpacity activeOpacity={0.85} onPress={() => navigation?.navigate?.('AdminAccountSearch')}>
-              <GlassCard variant="dark" style={styles.linkCard}>
+              <BorderCard style={styles.linkCard}>
                 <Text style={styles.linkEmoji}>🔎</Text>
                 <View style={styles.linkTextWrap}>
                   <Text style={styles.linkTitle}>Accounts</Text>
                   <Text style={styles.linkBody}>Search and block/unblock any user, NGO, nursery, or corporate.</Text>
                 </View>
-              </GlassCard>
+              </BorderCard>
             </TouchableOpacity>
 
             <TouchableOpacity activeOpacity={0.85} onPress={() => goTab('AuditLog')}>
-              <GlassCard variant="dark" style={styles.linkCard}>
+              <BorderCard style={styles.linkCard}>
                 <Text style={styles.linkEmoji}>📜</Text>
                 <View style={styles.linkTextWrap}>
                   <Text style={styles.linkTitle}>Audit log</Text>
                   <Text style={styles.linkBody}>See every admin action taken on the platform.</Text>
                 </View>
-              </GlassCard>
+              </BorderCard>
             </TouchableOpacity>
 
             <TouchableOpacity activeOpacity={0.85} onPress={() => goTab('More')}>
-              <GlassCard variant="dark" style={styles.linkCard}>
+              <BorderCard style={styles.linkCard}>
                 <Text style={styles.linkEmoji}>⚙️</Text>
                 <View style={styles.linkTextWrap}>
                   <Text style={styles.linkTitle}>More</Text>
                   <Text style={styles.linkBody}>Nurseries, corporates, operations, tree verification, catalog.</Text>
                 </View>
-              </GlassCard>
+              </BorderCard>
             </TouchableOpacity>
           </Animated.View>
         )}

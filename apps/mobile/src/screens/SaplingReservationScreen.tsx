@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useHaptics } from '../hooks/useHaptics';
 import { useNurseryPublicProfile, useCreateReservation } from '../hooks/useApiQueries';
@@ -54,9 +53,9 @@ export function SaplingReservationScreen({ navigation, route }: any) {
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+          <View style={styles.backBlur}>
             <Text style={styles.backIcon}>←</Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>Request Saplings</Text>
         <View style={{ width: 40 }} />
@@ -66,14 +65,14 @@ export function SaplingReservationScreen({ navigation, route }: any) {
         <ActivityIndicator color={COLORS.sage} style={styles.loader} />
       ) : (
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
-          <GlassCard variant="warm" style={styles.card}>
+          <BorderCard style={styles.card}>
             <Text style={styles.title}>{stock.species}</Text>
             <Text style={styles.nurseryName}>from {profile?.nurseryName}</Text>
             <View style={styles.divider} />
             <Text style={styles.stockLine}>
               {stock.quantity} available · {stock.isFree ? 'Free' : stock.priceCents != null ? `₹${(stock.priceCents / 100).toFixed(0)} each` : 'Priced'}
             </Text>
-          </GlassCard>
+          </BorderCard>
 
           {requested ? (
             <View style={styles.successBanner}>
@@ -127,8 +126,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
   backButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(94,133,80,0.2)' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
   loader: { marginTop: 60 },
   scrollContent: { paddingHorizontal: 20 },
@@ -143,7 +142,7 @@ const styles = StyleSheet.create({
   stepperButtonText: { fontSize: 22, fontWeight: '700', color: COLORS.forest },
   stepperValue: { fontSize: 28, fontWeight: '800', color: COLORS.textPrimary, minWidth: 48, textAlign: 'center' },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     borderColor: 'rgba(94,133,80,0.2)',

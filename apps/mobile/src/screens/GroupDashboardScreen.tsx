@@ -42,9 +42,9 @@ function InviteCodeCard({ theme, code, blurTarget }: { theme: TimeTheme; code: s
   return (
     <Animated.View style={animStyle}>
       <ThemedCard theme={theme} style={styles.inviteCard} blurTarget={blurTarget}>
-        <Text style={[styles.inviteLabel, { color: theme.textSecondaryOnCard }]}>Invite code</Text>
+        <Text style={[styles.inviteLabel, { color: COLORS.textSecondary }]}>Invite code</Text>
         <Text style={[styles.inviteValue, { color: theme.accentColor }]}>{code ?? '········'}</Text>
-        <Text style={[styles.inviteHint, { color: theme.textSecondaryOnCard }]}>Share this so members can join from their own account.</Text>
+        <Text style={[styles.inviteHint, { color: COLORS.textSecondary }]}>Share this so members can join from their own account.</Text>
       </ThemedCard>
     </Animated.View>
   );
@@ -77,10 +77,10 @@ function QuickAction({
           <View style={styles.actionRow}>
             <IconBadge icon={emoji} color={color} round />
             <View style={styles.actionTextColumn}>
-              <Text style={[styles.actionTitle, { color: theme.textPrimaryOnCard }]}>{title}</Text>
-              <Text style={[styles.actionBody, { color: theme.textSecondaryOnCard }]}>{body}</Text>
+              <Text style={[styles.actionTitle, { color: COLORS.textPrimary }]}>{title}</Text>
+              <Text style={[styles.actionBody, { color: COLORS.textSecondary }]}>{body}</Text>
             </View>
-            <Text style={[styles.chevron, { color: theme.textSecondaryOnCard }]}>›</Text>
+            <Text style={[styles.chevron, { color: COLORS.textSecondary }]}>›</Text>
           </View>
         </ThemedCard>
       </TouchableOpacity>
@@ -104,17 +104,10 @@ export function GroupDashboardScreen({ navigation, onNavigateTab }: GroupDashboa
   const blurTargetRef = useRef<View>(null);
 
   const tileProps = {
-    variant: 'glass' as const,
+    variant: 'outline' as const,
     fill: true,
     style: styles.gridTile,
     color: theme.accentColor,
-    cardBackground: theme.cardBackground,
-    cardBackgroundAlt: theme.cardBackgroundAlt,
-    cardOverlayAlpha: theme.cardOverlayAlpha,
-    textColor: theme.textPrimaryOnCard,
-    subTextColor: theme.textSecondaryOnCard,
-    borderColor: theme.cardBorder,
-    blurTarget: blurTargetRef,
   };
 
   return (
@@ -158,51 +151,27 @@ export function GroupDashboardScreen({ navigation, onNavigateTab }: GroupDashboa
               icon="👥"
               value={stats?.memberCount ?? 0}
               label="Members"
-              variant="glass"
-              dark
+              variant="outline"
               color={theme.accentColor}
-              cardBackground={theme.cardBackground}
-              cardBackgroundAlt={theme.cardBackgroundAlt}
-              cardOverlayAlpha={theme.cardOverlayAlpha}
-              textColor={theme.textSecondaryOnCard}
-              subTextColor={theme.textSecondaryOnCard}
-              borderColor={theme.cardBorder}
               delay={100}
               onPress={() => onNavigateTab('Manage')}
-              blurTarget={blurTargetRef}
             />
             <EcoWidget
               icon="🌳"
               value={stats?.treesPlantedTotal ?? 0}
               label="Trees"
-              variant="glass"
-              dark
+              variant="outline"
               color={theme.accentColor}
-              cardBackground={theme.cardBackground}
-              cardBackgroundAlt={theme.cardBackgroundAlt}
-              cardOverlayAlpha={theme.cardOverlayAlpha}
-              textColor={theme.textSecondaryOnCard}
-              subTextColor={theme.textSecondaryOnCard}
-              borderColor={theme.cardBorder}
               delay={200}
-              blurTarget={blurTargetRef}
             />
             <EcoWidget
               icon="🔥"
               value={profile?.streakCurrent ?? 0}
               label="Streak"
-              variant="glass"
-              dark
+              variant="outline"
               color={theme.accentColor}
-              cardBackground={theme.cardBackground}
-              cardBackgroundAlt={theme.cardBackgroundAlt}
-              cardOverlayAlpha={theme.cardOverlayAlpha}
-              textColor={theme.textSecondaryOnCard}
-              subTextColor={theme.textSecondaryOnCard}
-              borderColor={theme.cardBorder}
               delay={300}
               onPress={() => navigation.navigate('GroupProfile')}
-              blurTarget={blurTargetRef}
             />
           </View>
         </View>
@@ -227,7 +196,7 @@ export function GroupDashboardScreen({ navigation, onNavigateTab }: GroupDashboa
               <View style={styles.xpContent}>
                 <View>
                   <Text style={[styles.xpLevel, { color: theme.accentColor }]}>Lv.{stats.level}</Text>
-                  <Text style={[styles.xpSubLabel, { color: theme.textSecondaryOnCard }]}>Group Level</Text>
+                  <Text style={[styles.xpSubLabel, { color: COLORS.textSecondary }]}>Group Level</Text>
                 </View>
                 <ProgressRing
                   size={54}
@@ -239,7 +208,7 @@ export function GroupDashboardScreen({ navigation, onNavigateTab }: GroupDashboa
                   delay={300}
                 />
               </View>
-              <Text style={[styles.xpHint, { color: theme.textSecondaryOnCard }]}>
+              <Text style={[styles.xpHint, { color: COLORS.textSecondary }]}>
                 Combined XP from everyone in the group — {getXpProgress(stats.xpTotal, stats.level).current}/{getXpProgress(stats.xpTotal, stats.level).needed} to the next level
               </Text>
             </ThemedCard>

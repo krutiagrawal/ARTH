@@ -1,13 +1,12 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { IconBadge } from '../components/common/IconBadge';
 import { useSessions, useRevokeSession } from '../hooks/useApiQueries';
 import type { ApiSession } from '../api/users';
@@ -61,9 +60,9 @@ export function SessionsScreen({ navigation }: any) {
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+          <View style={styles.backBlur}>
             <Text style={styles.backIcon}>←</Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Connected Devices</Text>
         <View style={{ width: 40 }} />
@@ -78,11 +77,11 @@ export function SessionsScreen({ navigation }: any) {
         ) : sessions.length === 0 ? (
           <Text style={styles.emptyText}>No active sessions found.</Text>
         ) : (
-          <GlassCard variant="warm" noPadding style={styles.list}>
+          <BorderCard noPadding style={styles.list}>
             {sessions.map((session) => (
               <SessionRow key={session.id} session={session} />
             ))}
-          </GlassCard>
+          </BorderCard>
         )}
       </ScrollView>
     </View>
@@ -105,11 +104,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
   },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',

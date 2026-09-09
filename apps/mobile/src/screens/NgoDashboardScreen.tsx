@@ -74,7 +74,7 @@ function StreakCard({
   const hasStreak = streakCurrent > 0;
   const isEvening = EVENING_PERIODS.has(theme.period);
   const leafColorFilled = isEvening ? COLORS.golden : COLORS.sage;
-  const leafColorEmpty = isEvening ? COLORS.white : COLORS.sage;
+  const leafColorEmpty = COLORS.sage;
   const leafOpacityEmpty = isEvening ? 0.35 : 0.25;
 
   return (
@@ -84,12 +84,12 @@ function StreakCard({
           <View style={styles.streakRowOuter}>
             <Mascot size={64} animate={false} />
             <View style={styles.streakTextColumn}>
-              <Text style={[styles.streakTitle, { color: theme.textPrimaryOnCard }]}>
+              <Text style={[styles.streakTitle, { color: COLORS.textPrimary }]}>
                 {hasStreak ? 'Keep your streak alive!' : 'Start your streak today!'}
               </Text>
-              <Text style={[styles.streakSubtitle, { color: theme.textSecondaryOnCard }]}>Plant. Track. Impact.</Text>
+              <Text style={[styles.streakSubtitle, { color: COLORS.textSecondary }]}>Plant. Track. Impact.</Text>
 
-              <Text style={[styles.streakLabel, { color: theme.textSecondaryOnCard }]}>Current streak</Text>
+              <Text style={[styles.streakLabel, { color: COLORS.textSecondary }]}>Current streak</Text>
               <View style={styles.streakRow}>
                 <Text style={[styles.streakValue, { color: theme.accentColor }]}>
                   {streakCurrent} {streakCurrent === 1 ? 'week' : 'weeks'}
@@ -139,10 +139,10 @@ function QuickAction({
           <View style={styles.actionRow}>
             <IconBadge icon={emoji} color={color} round />
             <View style={styles.actionTextColumn}>
-              <Text style={[styles.actionTitle, { color: theme.textPrimaryOnCard }]}>{title}</Text>
-              <Text style={[styles.actionBody, { color: theme.textSecondaryOnCard }]}>{body}</Text>
+              <Text style={[styles.actionTitle, { color: COLORS.textPrimary }]}>{title}</Text>
+              <Text style={[styles.actionBody, { color: COLORS.textSecondary }]}>{body}</Text>
             </View>
-            <Text style={[styles.chevron, { color: theme.textSecondaryOnCard }]}>›</Text>
+            <Text style={[styles.chevron, { color: COLORS.textSecondary }]}>›</Text>
           </View>
         </ThemedCard>
       </TouchableOpacity>
@@ -174,17 +174,10 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
 
   /** Shared props for the six "Your Impact" tiles: theme-tinted, and stretched to equal size. */
   const tileProps = {
-    variant: 'glass' as const,
+    variant: 'outline' as const,
     fill: true,
     style: styles.gridTile,
     color: theme.accentColor,
-    cardBackground: theme.cardBackground,
-    cardBackgroundAlt: theme.cardBackgroundAlt,
-    cardOverlayAlpha: theme.cardOverlayAlpha,
-    textColor: theme.textPrimaryOnCard,
-    subTextColor: theme.textSecondaryOnCard,
-    borderColor: theme.cardBorder,
-    blurTarget: blurTargetRef,
   };
 
   return (
@@ -231,35 +224,19 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
               icon="🤝"
               value={stats?.upcomingDrives ?? 0}
               label="Drives"
-              variant="glass"
-              dark
+              variant="outline"
               color={theme.accentColor}
-              cardBackground={theme.cardBackground}
-              cardBackgroundAlt={theme.cardBackgroundAlt}
-              cardOverlayAlpha={theme.cardOverlayAlpha}
-              textColor={theme.textSecondaryOnCard}
-              subTextColor={theme.textSecondaryOnCard}
-              borderColor={theme.cardBorder}
               delay={100}
               onPress={() => onNavigateTab('Manage')}
-              blurTarget={blurTargetRef}
             />
             <EcoWidget
               icon="🔥"
               value={streakCurrent}
               label="Streak"
-              variant="glass"
-              dark
+              variant="outline"
               color={theme.accentColor}
-              cardBackground={theme.cardBackground}
-              cardBackgroundAlt={theme.cardBackgroundAlt}
-              cardOverlayAlpha={theme.cardOverlayAlpha}
-              textColor={theme.textSecondaryOnCard}
-              subTextColor={theme.textSecondaryOnCard}
-              borderColor={theme.cardBorder}
               delay={200}
               onPress={() => navigation.navigate('NgoProfile')}
-              blurTarget={blurTargetRef}
             />
           </View>
         </View>

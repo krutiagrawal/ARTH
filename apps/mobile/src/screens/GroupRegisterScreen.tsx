@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
 import { TYPOGRAPHY } from '../constants/typography';
 import { RADIUS, SPACING } from '../constants/theme';
-import { BlurCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { PasswordInput } from '../components/common/PasswordInput';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useAuth } from '../context/AuthContext';
@@ -80,7 +80,7 @@ export function GroupRegisterScreen({ navigation }: any) {
         <Text style={styles.logo}>ARTH</Text>
         <Text style={styles.tagline}>for families, schools & clubs</Text>
 
-        <BlurCard tint="dark" intensity={40} style={styles.card}>
+        <BorderCard style={styles.card}>
           <Text style={styles.title}>Register your group</Text>
           <Text style={styles.subtitle}>No review wait — you're live right away with a shareable invite code.</Text>
 
@@ -157,7 +157,7 @@ export function GroupRegisterScreen({ navigation }: any) {
               Not a group? <Text style={styles.switchLink}>Choose a different account type</Text>
             </Text>
           </TouchableOpacity>
-        </BlurCard>
+        </BorderCard>
       </ScrollView>
     </KeyboardAvoidingView>
   );

@@ -3,13 +3,12 @@ import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Linking } f
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
 import Constants from 'expo-constants';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { Toggle } from '../components/common/Toggle';
 import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
 import { useReduceMotionContext } from '../context/ReduceMotionContext';
@@ -120,9 +119,9 @@ export function SettingsScreen({ navigation }: any) {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+          <View style={styles.backBlur}>
             <Text style={styles.backIconDark}>←</Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitleDark}>Settings</Text>
         <View style={{ width: 40 }} />
@@ -155,8 +154,8 @@ export function SettingsScreen({ navigation }: any) {
 
         {/* Experience */}
         <SettingsSectionHeader title="Experience" />
-        <GlassCard variant="dark" noPadding>
-          <SettingsRow
+        <BorderCard noPadding>
+          <SettingsRow variant="light"
             icon="🌟"
             label="Ambient Mode"
             sublabel="Immersive background sounds & animations"
@@ -170,8 +169,8 @@ export function SettingsScreen({ navigation }: any) {
               />
             }
           />
-          <SettingsDivider />
-          <SettingsRow
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light"
             icon="🔊"
             label="Nature Sounds"
             sublabel="Ambient forest & rain sounds"
@@ -185,8 +184,8 @@ export function SettingsScreen({ navigation }: any) {
               />
             }
           />
-          <SettingsDivider />
-          <SettingsRow
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light"
             icon="📳"
             label="Haptic Feedback"
             sublabel="Tactile responses on interactions"
@@ -200,8 +199,8 @@ export function SettingsScreen({ navigation }: any) {
               />
             }
           />
-          <SettingsDivider />
-          <SettingsRow
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light"
             icon="🧘"
             label="Reduce Motion"
             sublabel="Calmer visuals — pauses ambient animation"
@@ -215,11 +214,11 @@ export function SettingsScreen({ navigation }: any) {
               />
             }
           />
-        </GlassCard>
+        </BorderCard>
 
         {/* Theme */}
         <SettingsSectionHeader title="Appearance" />
-        <GlassCard variant="dark" style={styles.themeSection}>
+        <BorderCard style={styles.themeSection}>
           <Text style={styles.themeSectionLabelDark}>App Theme</Text>
           <View style={styles.themeOptions}>
             {(['light', 'dark', 'auto'] as const).map(opt => (
@@ -237,12 +236,12 @@ export function SettingsScreen({ navigation }: any) {
               </TouchableOpacity>
             ))}
           </View>
-        </GlassCard>
+        </BorderCard>
 
         {/* Notifications */}
         <SettingsSectionHeader title="Notifications" />
-        <GlassCard variant="dark" noPadding>
-          <SettingsRow
+        <BorderCard noPadding>
+          <SettingsRow variant="light"
             icon="🔔"
             label="Push Notifications"
             sublabel="Daily reminders and achievements"
@@ -256,8 +255,8 @@ export function SettingsScreen({ navigation }: any) {
               />
             }
           />
-          <SettingsDivider />
-          <SettingsRow
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light"
             icon="🔥"
             label="Streak Reminders"
             sublabel="Get reminded before your streak breaks"
@@ -271,12 +270,12 @@ export function SettingsScreen({ navigation }: any) {
               />
             }
           />
-        </GlassCard>
+        </BorderCard>
 
         {/* Privacy */}
         <SettingsSectionHeader title="Privacy & Data" />
-        <GlassCard variant="dark" noPadding>
-          <SettingsRow
+        <BorderCard noPadding>
+          <SettingsRow variant="light"
             icon="📍"
             label="Location Tracking"
             sublabel="Tag your planted trees with location"
@@ -290,8 +289,8 @@ export function SettingsScreen({ navigation }: any) {
               />
             }
           />
-          <SettingsDivider />
-          <SettingsRow
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light"
             icon="👁️"
             label="Public Profile"
             sublabel="Let others see your forest and stats"
@@ -305,8 +304,8 @@ export function SettingsScreen({ navigation }: any) {
               />
             }
           />
-          <SettingsDivider />
-          <SettingsRow
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light"
             icon="📊"
             label="Usage Analytics"
             sublabel="Help improve the app"
@@ -320,113 +319,113 @@ export function SettingsScreen({ navigation }: any) {
               />
             }
           />
-        </GlassCard>
+        </BorderCard>
 
         {/* Account */}
         <SettingsSectionHeader title="Account" />
-        <GlassCard variant="dark" noPadding>
-          <SettingsRow icon="📧" label="Email" sublabel={user?.email ?? ''} accent={COLORS.xpBlue} />
-          <SettingsDivider />
-          <SettingsRow icon="🔒" label="Change Password" accent={COLORS.earth} onPress={() => navigation.navigate('ChangePassword')} />
-          <SettingsDivider />
-          <SettingsRow
+        <BorderCard noPadding>
+          <SettingsRow variant="light" icon="📧" label="Email" sublabel={user?.email ?? ''} accent={COLORS.xpBlue} />
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light" icon="🔒" label="Change Password" accent={COLORS.earth} onPress={() => navigation.navigate('ChangePassword')} />
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light"
             icon="📱"
             label="Connected Devices"
             sublabel={sessions ? `${sessions.length} device${sessions.length === 1 ? '' : 's'}` : '...'}
             accent={COLORS.sage}
             onPress={() => navigation.navigate('Sessions')}
           />
-          <SettingsDivider />
-          <SettingsRow
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light"
             icon="🌱"
             label="My Sapling Reservations"
             sublabel="Requests you've sent to nurseries"
             accent={COLORS.earth}
             onPress={() => navigation.navigate('MySaplingReservations')}
           />
-          <SettingsDivider />
-          <SettingsRow
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light"
             icon="📦"
             label="My Orders"
             sublabel="Saplings you've bought and their delivery status"
             accent={COLORS.golden}
             onPress={() => navigation.navigate('MyOrders')}
           />
-          <SettingsDivider />
-          <SettingsRow
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light"
             icon="♥"
             label="Wishlist"
             sublabel="Nurseries and saplings you've saved"
             accent={COLORS.coral}
             onPress={() => navigation.navigate('Wishlist')}
           />
-          <SettingsDivider />
-          <SettingsRow
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light"
             icon="📍"
             label="Delivery Addresses"
             sublabel="Manage saved addresses"
             accent={COLORS.sage}
             onPress={() => navigation.navigate('AddressBook')}
           />
-          <SettingsDivider />
-          <SettingsRow
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light"
             icon="🌳"
             label="My Adopted Trees"
             sublabel="Trees you're caring for"
             accent={COLORS.forest}
             onPress={() => navigation.navigate('MyAdoptions')}
           />
-        </GlassCard>
+        </BorderCard>
 
         {/* Safety */}
         <SettingsSectionHeader title="Safety" />
-        <GlassCard variant="dark" noPadding>
-          <SettingsRow
+        <BorderCard noPadding>
+          <SettingsRow variant="light"
             icon="🚫"
             label="Blocked Accounts"
             sublabel="People and organisations you have hidden"
             accent={COLORS.coral}
             onPress={() => navigation.navigate('BlockedAccounts')}
           />
-          <SettingsDivider />
-          <SettingsRow
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light"
             icon="🔔"
             label="Notifications"
             sublabel="Follows, likes and updates"
             accent={COLORS.amber}
             onPress={() => navigation.navigate('Notifications')}
           />
-        </GlassCard>
+        </BorderCard>
 
         {/* About */}
         <SettingsSectionHeader title="About" />
-        <GlassCard variant="dark" noPadding>
-          <SettingsRow icon="ℹ️" label="App Version" sublabel={appVersionLabel} accent={COLORS.textMuted} />
-          <SettingsDivider />
-          <SettingsRow
+        <BorderCard noPadding>
+          <SettingsRow variant="light" icon="ℹ️" label="App Version" sublabel={appVersionLabel} accent={COLORS.textMuted} />
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light"
             icon="📜"
             label="Privacy Policy"
             accent={COLORS.textMuted}
             onPress={() => navigation.navigate('StaticContent', { title: 'Privacy Policy', body: PRIVACY_POLICY_TEXT })}
           />
-          <SettingsDivider />
-          <SettingsRow
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light"
             icon="⚖️"
             label="Terms of Service"
             accent={COLORS.textMuted}
             onPress={() => navigation.navigate('StaticContent', { title: 'Terms of Service', body: TERMS_OF_SERVICE_TEXT })}
           />
-          <SettingsDivider />
-          <SettingsRow icon="💌" label="Send Feedback" accent={COLORS.sage} onPress={handleSendFeedback} />
-        </GlassCard>
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light" icon="💌" label="Send Feedback" accent={COLORS.sage} onPress={handleSendFeedback} />
+        </BorderCard>
 
         {/* Danger zone */}
         <SettingsSectionHeader title="Account Actions" />
-        <GlassCard variant="dark" noPadding>
-          <SettingsRow icon="🚪" label="Log Out" accent={COLORS.earth} onPress={handleLogout} />
-          <SettingsDivider />
-          <SettingsRow icon="🗑️" label="Delete Account" accent={COLORS.coral} dangerous onPress={handleDeleteAccount} />
-        </GlassCard>
+        <BorderCard noPadding>
+          <SettingsRow variant="light" icon="🚪" label="Log Out" accent={COLORS.earth} onPress={handleLogout} />
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light" icon="🗑️" label="Delete Account" accent={COLORS.coral} dangerous onPress={handleDeleteAccount} />
+        </BorderCard>
 
         <View style={styles.footer}>
           <Text style={styles.footerEmoji}>🌱</Text>
@@ -458,13 +457,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
   },
   backIconDark: {
     fontSize: 18,
-    color: COLORS.white,
+    color: COLORS.textPrimary,
     fontWeight: '700',
   },
   headerTitleDark: {
@@ -524,7 +523,7 @@ const styles = StyleSheet.create({
   themeSectionLabelDark: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.white,
+    color: COLORS.textPrimary,
   },
   themeOptions: {
     flexDirection: 'row',
@@ -536,8 +535,8 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: RADIUS.lg,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.15)',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: COLORS.warmBrown,
+    backgroundColor: 'transparent',
     gap: 4,
   },
   themeOptionSelected: {
@@ -550,7 +549,7 @@ const styles = StyleSheet.create({
   themeOptionLabelDark: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLORS.white,
+    color: COLORS.textPrimary,
   },
   themeOptionLabelSelected: {
     color: COLORS.sageLight,
@@ -565,7 +564,7 @@ const styles = StyleSheet.create({
   },
   footerTextDark: {
     fontSize: 12,
-    color: COLORS.white,
+    color: COLORS.textSecondary,
     textAlign: 'center',
   },
 });

@@ -13,14 +13,13 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { StatusModal } from '../components/common/StatusModal';
 import { Mascot } from '../components/common/Mascot';
@@ -353,9 +352,9 @@ export function PlantTreeScreen({ navigation, route }: any) {
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         {stage !== 'success' && (
           <TouchableOpacity onPress={handleDone} style={styles.backButton}>
-            <BlurView intensity={30} tint="light" style={styles.backButtonBlur}>
+            <View style={styles.backButtonBlur}>
               <Text style={styles.backIcon}>←</Text>
-            </BlurView>
+            </View>
           </TouchableOpacity>
         )}
         <Text style={styles.headerTitle}>
@@ -393,12 +392,12 @@ export function PlantTreeScreen({ navigation, route }: any) {
             </LinearGradient>
           </TouchableOpacity>
 
-          <GlassCard variant="sage" style={styles.tipCard}>
+          <BorderCard style={styles.tipCard}>
             <Text style={styles.tipTitle}>📌 Planting Tips</Text>
             <Text style={styles.tipText}>
               {'• Show the whole tree in frame\n• Good lighting helps verification\n• Include your surroundings for location'}
             </Text>
-          </GlassCard>
+          </BorderCard>
         </ScrollView>
       )}
 
@@ -418,7 +417,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
           contentContainerStyle={[styles.detailsContent, { paddingBottom: 120 }]}
           showsVerticalScrollIndicator={false}
         >
-          <GlassCard variant="warm" style={styles.detailsImageCard}>
+          <BorderCard style={styles.detailsImageCard}>
             <View style={styles.detailsImage}>
               {imageUri ? (
                 <Image source={{ uri: imageUri }} style={styles.detailsImagePhoto} resizeMode="cover" />
@@ -429,7 +428,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
                 <Text style={styles.verifiedText}>📸 Photo Added</Text>
               </View>
             </View>
-          </GlassCard>
+          </BorderCard>
 
           <View style={styles.aiResult}>
             <LinearGradient
@@ -479,7 +478,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
               if (!location && !locationLoading) fetchLocation();
             }}
           >
-            <GlassCard variant="warm" style={styles.locationCard}>
+            <BorderCard style={styles.locationCard}>
               <Text style={styles.locationIcon}>{eligible === false ? '⚠️' : '📍'}</Text>
               <View style={{ flex: 1 }}>
                 <Text style={styles.locationTitle}>
@@ -501,7 +500,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
                     : location?.label ?? 'Tap to try again, or enable location in Settings'}
                 </Text>
               </View>
-            </GlassCard>
+            </BorderCard>
           </TouchableOpacity>
 
           {submitError && <Text style={styles.errorText}>{submitError}</Text>}
@@ -572,9 +571,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
   },
   backIcon: {
     fontSize: 18,

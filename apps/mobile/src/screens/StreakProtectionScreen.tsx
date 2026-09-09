@@ -13,12 +13,11 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { Mascot } from '../components/common/Mascot';
 import { FloatingParticles } from '../components/common/FloatingParticles';
@@ -283,13 +282,13 @@ export function StreakProtectionScreen({ navigation }: any) {
           <StreakCounter streakCurrent={user?.streakCurrent ?? 0} />
 
           {/* Record */}
-          <GlassCard variant="dark" style={styles.recordCard}>
+          <BorderCard style={styles.recordCard}>
             <Text style={styles.recordIcon}>🏆</Text>
             <View>
               <Text style={styles.recordTitle}>Your Personal Best</Text>
               <Text style={styles.recordValue}>{user?.streakMax ?? 0} days — you can beat it!</Text>
             </View>
-          </GlassCard>
+          </BorderCard>
 
           {/* Options (choosing stage) */}
           {stage === 'choosing' && (

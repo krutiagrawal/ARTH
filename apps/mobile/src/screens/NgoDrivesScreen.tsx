@@ -5,7 +5,7 @@ import Animated from 'react-native-reanimated';
 import { COLORS } from '../constants/colors';
 import { FONTS } from '../constants/typography';
 
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useMyDrives } from '../hooks/useApiQueries';
 import { useSlideUp } from '../hooks/useAnimations';
@@ -61,7 +61,7 @@ export function NgoDrivesScreen({ navigation }: any) {
                 activeOpacity={0.85}
                 onPress={() => navigation.navigate('DriveDetail', { driveId: drive.id })}
               >
-                <GlassCard variant="warm" style={styles.card} noPadding>
+                <BorderCard style={styles.card} noPadding>
                   <View style={styles.cardInner}>
                     {/* The API returns a host-relative `/uploads/...` path; `resolveMediaUrl`
                         turns it into something <Image> can actually fetch. Without it the
@@ -104,7 +104,7 @@ export function NgoDrivesScreen({ navigation }: any) {
                       </View>
                     </View>
                   </View>
-                </GlassCard>
+                </BorderCard>
               </TouchableOpacity>
             </FadeInRow>
           );

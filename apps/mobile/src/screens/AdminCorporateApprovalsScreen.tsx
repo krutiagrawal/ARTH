@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS, GRADIENTS, ON_DARK_SURFACE } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
@@ -112,7 +112,7 @@ export function AdminCorporateApprovalsScreen({ navigation }: any) {
               activeOpacity={0.85}
               onPress={() => navigation.navigate('AdminCorporateApprovalDetail', { corporate: corp })}
             >
-              <GlassCard variant="dark" style={styles.card}>
+              <BorderCard style={styles.card}>
                 <View style={styles.cardHeaderRow}>
                   <Text style={styles.cardTitle} numberOfLines={1}>{corp.companyName}</Text>
                   <View style={[styles.statusChip, { borderColor: statusColor(corp.status) }]}>
@@ -125,7 +125,7 @@ export function AdminCorporateApprovalsScreen({ navigation }: any) {
                   </Text>
                 )}
                 <Text style={styles.cardBody} numberOfLines={2}>{corp.description}</Text>
-              </GlassCard>
+              </BorderCard>
             </TouchableOpacity>
           </FadeInRow>
         ))}
@@ -150,11 +150,11 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 22, fontWeight: '700', color: ON_DARK_SURFACE.primary },
   filterBar: { paddingHorizontal: 20, marginBottom: 8, gap: 10 },
   chipRow: { gap: 8, paddingRight: 20 },
-  chip: { borderRadius: RADIUS.full, paddingVertical: 8, paddingHorizontal: 16, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'transparent' },
+  chip: { borderRadius: RADIUS.full, paddingVertical: 8, paddingHorizontal: 16, backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
   chipActive: { backgroundColor: 'rgba(200,230,192,0.18)', borderColor: COLORS.mint },
   chipText: { fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: '600' },
   chipTextActive: { color: COLORS.mint, fontWeight: '700' },
-  searchInput: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: RADIUS.md, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: ON_DARK_SURFACE.primary },
+  searchInput: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown, borderRadius: RADIUS.md, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: ON_DARK_SURFACE.primary },
   scrollContent: { paddingHorizontal: 20 },
   loader: { marginTop: 40 },
   card: { marginBottom: 12 },

@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
-import { BlurCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useNurseryOrders } from '../hooks/useApiQueries';
 import type { ApiNurseryOrder, NurseryOrderStatus } from '../api/nursery';
@@ -45,7 +45,7 @@ const TABS: { key: NurseryOrderStatus; label: string }[] = [
 function OrderRow({ order, navigation }: { order: ApiNurseryOrder; navigation: any }) {
   return (
     <TouchableOpacity onPress={() => navigation.navigate('NurseryOrderDetail', { orderId: order.id })} activeOpacity={0.85}>
-      <BlurCard tint="light" noPadding style={styles.row}>
+      <BorderCard noPadding style={styles.row}>
         <View style={{ flex: 1 }}>
           <Text style={styles.customer}>{order.user.name}</Text>
           <Text style={styles.items} numberOfLines={1}>
@@ -56,7 +56,7 @@ function OrderRow({ order, navigation }: { order: ApiNurseryOrder; navigation: a
           </View>
         </View>
         <Text style={styles.total}>{formatRupees(order.totalCents)}</Text>
-      </BlurCard>
+      </BorderCard>
     </TouchableOpacity>
   );
 }

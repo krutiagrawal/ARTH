@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Text } from '../components/common/AppText';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -24,9 +23,9 @@ export function StaticContentScreen({ navigation, route }: any) {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+          <View style={styles.backBlur}>
             <Text style={styles.backIcon}>←</Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{title}</Text>
         <View style={{ width: 40 }} />
@@ -58,11 +57,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(94,133,80,0.2)',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
   },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: {
     flex: 1,
     fontSize: 18,
@@ -75,10 +74,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
     color: COLORS.textPrimary,
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(94,133,80,0.2)',
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
     padding: 18,
   },
 });

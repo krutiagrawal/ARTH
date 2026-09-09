@@ -3,7 +3,6 @@ import { View, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicato
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
@@ -11,7 +10,7 @@ import { FONTS } from '../constants/typography';
 import { SHADOWS } from '../constants/theme';
 import { EcoWidget } from '../components/common/EcoWidget';
 import { MuteButton } from '../components/common/MuteButton';
-import { BlurCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { ForestHeroCanvas } from '../components/common/ForestHeroCanvas';
 import { AmbientCreatures } from '../components/common/AmbientCreatures';
 import { FloatingParticles } from '../components/common/FloatingParticles';
@@ -36,24 +35,19 @@ const STATUS_COPY: Record<string, { title: string; body: string }> = {
   suspended: { title: 'Account suspended', body: 'Contact support for details.' },
 };
 
-// A dark frosted-glass card with fixed white text — the same recipe the Nursery Settings sections
-// use — instead of the theme's light-tinted card + dark text, which stayed unreadably dark on
-// several devices' blur rendering no matter how opaque the wash was forced. A fixed dark
-// card + white text has no per-period ambiguity: it's legible on every seam colour, light or dark.
 function StatusBanner({ status }: { status: string }) {
   if (status === 'approved') return null;
   const copy = STATUS_COPY[status];
   if (!copy) return null;
   const isDanger = status === 'rejected' || status === 'suspended';
   return (
-    <BlurCard
-      tint="dark"
+    <BorderCard
       noPadding
       style={[styles.statusBanner, { borderLeftWidth: 4, borderLeftColor: isDanger ? COLORS.coral : COLORS.golden }]}
     >
       <Text style={styles.statusTitle}>{copy.title}</Text>
       <Text style={styles.statusBody}>{copy.body}</Text>
-    </BlurCard>
+    </BorderCard>
   );
 }
 
@@ -165,9 +159,9 @@ function NotificationBell({ onPress }: { onPress: () => void }) {
       accessibilityRole="button"
       accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
     >
-      <BlurView intensity={40} tint="dark" style={styles.bellBlur}>
+      <View style={styles.bellBlur}>
         <Text style={styles.bellIcon}>🔔</Text>
-      </BlurView>
+      </View>
       {unreadCount > 0 && (
         <View style={styles.bellBadge}>
           <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
@@ -198,17 +192,11 @@ export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDas
   const pageBackground = getHeroSeamColor(theme);
   const seamText = getHeroSeamTextColors(theme);
 
-  // A fixed dark-glass card + white text, not the theme's light-tinted card + dark text — the
-  // themed pairing stayed unreadably dark regardless of how opaque the wash was forced (likely
-  // inconsistent BlurView rendering on-device). Dark-glass-with-white-text is the same recipe the
-  // (unproblematic) Settings sections use, so it's applied here too rather than chasing the theme
-  // system further: no per-period ambiguity, legible on every seam colour.
   const tileProps = {
-    variant: 'glass' as const,
-    dark: true,
+    variant: 'outline' as const,
     fill: true,
     style: styles.gridTile,
-    color: COLORS.white,
+    color: theme.accentColor,
   };
 
   // Top row: the daily-use actions (inventory, incoming requests, engagement). Bottom row:
@@ -285,9 +273,8 @@ export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDas
               icon="🌱"
               value={stats?.speciesCount ?? 0}
               label="Species"
-              variant="glass"
-              dark
-              color={COLORS.white}
+              variant="outline"
+              color={theme.accentColor}
               delay={100}
               onPress={() => navigation.navigate('NurseryStock')}
             />
@@ -295,9 +282,8 @@ export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDas
               icon="📦"
               value={stats?.totalQuantity ?? 0}
               label="In stock"
-              variant="glass"
-              dark
-              color={COLORS.white}
+              variant="outline"
+              color={theme.accentColor}
               delay={200}
               onPress={() => navigation.navigate('NurseryStock')}
             />
@@ -352,8 +338,8 @@ const styles = StyleSheet.create({
   greeting: { fontSize: 13, fontWeight: '500', letterSpacing: 0.3, textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
   orgName: { fontFamily: FONTS.displayBold, fontSize: 24, lineHeight: 32, letterSpacing: -0.3, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 5 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  bellButton: { width: 44, height: 44, borderRadius: 22, ...SHADOWS.sm },
-  bellBlur: { flex: 1, borderRadius: 22, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.18)' },
+  bellButton: { width: 44, height: 44, borderRadius: 22 },
+  bellBlur: { flex: 1, borderRadius: 22, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
   bellIcon: { fontSize: 18 },
   bellBadge: { position: 'absolute', top: -3, right: -3, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: COLORS.coral, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 1.5, borderColor: COLORS.cream },
   bellBadgeText: { fontSize: 9, fontWeight: '700', color: COLORS.white },
@@ -363,8 +349,8 @@ const styles = StyleSheet.create({
   statsRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginTop: 4, marginBottom: 20 },
   loader: { marginTop: 20, marginBottom: 8 },
   statusBanner: { padding: 14, marginTop: 4, marginBottom: 8 },
-  statusTitle: { fontSize: 14, fontWeight: '700', color: COLORS.white },
-  statusBody: { fontSize: 12, marginTop: 2, color: 'rgba(255,255,255,0.75)' },
+  statusTitle: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
+  statusBody: { fontSize: 12, marginTop: 2, color: COLORS.textSecondary },
   gridRow: { flexDirection: 'row', alignItems: 'stretch', gap: 10, marginBottom: 10 },
   gridTile: { flex: 1 },
   sectionTitle: { fontFamily: FONTS.display, fontSize: 20, lineHeight: 27, marginTop: 20 },

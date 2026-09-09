@@ -1,13 +1,12 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { Text } from '../components/common/AppText';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { GlassCard, BlurCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { LocationActions } from '../components/common/LocationActions';
 import { EmptyState } from '../components/common/EmptyState';
 import { ReportSheet } from '../components/social/ReportSheet';
@@ -41,7 +40,7 @@ function followLabel(status: string | null, followersCount: number): string {
 function StockRow({ item, onPress }: { item: ApiSaplingStock; onPress: () => void }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-      <BlurCard tint="light" noPadding style={styles.stockRow}>
+      <BorderCard noPadding style={styles.stockRow}>
         <View style={{ flex: 1 }}>
           <Text style={styles.stockSpecies}>{item.species}</Text>
           <Text style={styles.stockMeta}>
@@ -49,7 +48,7 @@ function StockRow({ item, onPress }: { item: ApiSaplingStock; onPress: () => voi
           </Text>
         </View>
         <Text style={styles.stockChevron}>›</Text>
-      </BlurCard>
+      </BorderCard>
     </TouchableOpacity>
   );
 }
@@ -118,9 +117,9 @@ export function NurseryProfileScreen({ route, navigation }: any) {
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         {!isOwn ? (
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
-            <BlurView intensity={25} tint="dark" style={styles.iconBlur}>
+            <View style={styles.iconBlur}>
               <Text style={styles.iconText}>←</Text>
-            </BlurView>
+            </View>
           </TouchableOpacity>
         ) : (
           <View style={styles.iconButton} />
@@ -128,21 +127,21 @@ export function NurseryProfileScreen({ route, navigation }: any) {
         <Text style={styles.topBarTitle} numberOfLines={1}>{name}</Text>
         {isOwn ? (
           <TouchableOpacity onPress={() => navigation.navigate('EditNurseryProfile')} style={styles.iconButton}>
-            <BlurView intensity={25} tint="dark" style={styles.iconBlur}>
+            <View style={styles.iconBlur}>
               <Text style={styles.iconText}>⚙️</Text>
-            </BlurView>
+            </View>
           </TouchableOpacity>
         ) : (
           <View style={styles.headerActions}>
             <TouchableOpacity onPress={() => setReporting(true)} style={styles.iconButton} hitSlop={8}>
-              <BlurView intensity={25} tint="dark" style={styles.iconBlur}>
+              <View style={styles.iconBlur}>
                 <Text style={styles.iconText}>🚩</Text>
-              </BlurView>
+              </View>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => navigation.navigate('Cart')} style={styles.iconButton}>
-              <BlurView intensity={25} tint="dark" style={styles.iconBlur}>
+              <View style={styles.iconBlur}>
                 <Text style={styles.iconText}>🛒</Text>
-              </BlurView>
+              </View>
             </TouchableOpacity>
           </View>
         )}
@@ -223,7 +222,7 @@ export function NurseryProfileScreen({ route, navigation }: any) {
               <ProfileTabBar activeTab={tab} onChange={setTab} />
               {tab === 'contributions' && (
                 <View style={styles.tabBody}>
-                  <GlassCard variant="dark" style={styles.contributionsCard}>
+                  <BorderCard style={styles.contributionsCard}>
                     <Text style={styles.contributionsTitle}>🌍 Nursery impact</Text>
                     <View style={styles.contributionsRow}>
                       <View style={styles.contributionsStat}>
@@ -239,7 +238,7 @@ export function NurseryProfileScreen({ route, navigation }: any) {
                         <Text style={styles.contributionsLabel}>{isOwn ? 'Reviews' : 'Followers'}</Text>
                       </View>
                     </View>
-                  </GlassCard>
+                  </BorderCard>
                 </View>
               )}
               {tab === 'achievements' && (
@@ -270,11 +269,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
   },
-  iconText: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  iconText: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   topBarTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center', marginHorizontal: 8 },
   publicExtras: { paddingHorizontal: 16, gap: 8, marginBottom: 8 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, marginTop: 12, marginBottom: 4 },
@@ -284,9 +283,9 @@ const styles = StyleSheet.create({
   stockChevron: { fontSize: 22, color: COLORS.textSecondary, fontWeight: '600' },
   tabBody: { paddingHorizontal: 16, paddingTop: 16 },
   contributionsCard: { gap: 12 },
-  contributionsTitle: { fontSize: 16, fontWeight: '700', color: COLORS.white },
+  contributionsTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
   contributionsRow: { flexDirection: 'row', justifyContent: 'space-around' },
   contributionsStat: { alignItems: 'center' },
-  contributionsNum: { fontSize: 22, fontWeight: '800', color: COLORS.white },
-  contributionsLabel: { fontSize: 10, color: 'rgba(255,255,255,0.8)', marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.4 },
+  contributionsNum: { fontSize: 22, fontWeight: '800', color: COLORS.textPrimary },
+  contributionsLabel: { fontSize: 10, color: COLORS.textSecondary, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.4 },
 });

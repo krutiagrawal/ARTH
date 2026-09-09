@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -10,7 +9,7 @@ import { RADIUS } from '../constants/theme';
 import { PasswordInput } from '../components/common/PasswordInput';
 import { useChangePassword } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { useConfirm } from '../context/ConfirmDialogContext';
 
 export function ChangePasswordScreen({ navigation }: any) {
@@ -49,9 +48,9 @@ export function ChangePasswordScreen({ navigation }: any) {
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+          <View style={styles.backBlur}>
             <Text style={styles.backIcon}>←</Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Change Password</Text>
         <View style={{ width: 40 }} />
@@ -61,7 +60,7 @@ export function ChangePasswordScreen({ navigation }: any) {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
       >
-        <GlassCard variant="warm">
+        <BorderCard>
           <Text style={styles.label}>Current Password</Text>
           <PasswordInput
             inputStyle={styles.input}
@@ -102,7 +101,7 @@ export function ChangePasswordScreen({ navigation }: any) {
               <Text style={styles.submitText}>Update Password</Text>
             )}
           </TouchableOpacity>
-        </GlassCard>
+        </BorderCard>
       </ScrollView>
     </View>
   );
@@ -124,11 +123,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
   },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',

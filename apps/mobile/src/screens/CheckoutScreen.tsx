@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -9,7 +8,7 @@ import * as Location from 'expo-location';
 import { useStripe } from '@stripe/stripe-react-native';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { GlassCard, BlurCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useHaptics } from '../hooks/useHaptics';
 import { useCart, useAddresses, useCreateAddress, useCheckout } from '../hooks/useApiQueries';
@@ -23,7 +22,7 @@ function formatRupees(cents: number) {
 function AddressRow({ address, selected, onPress }: { address: ApiAddress; selected: boolean; onPress: () => void }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-      <BlurCard tint="light" noPadding style={[styles.addressRow, selected && styles.addressRowSelected]}>
+      <BorderCard noPadding style={[styles.addressRow, selected && styles.addressRowSelected]}>
         <View style={styles.radioOuter}>{selected ? <View style={styles.radioInner} /> : null}</View>
         <View style={{ flex: 1 }}>
           <Text style={styles.addressLabel}>{address.label || 'Address'}</Text>
@@ -31,7 +30,7 @@ function AddressRow({ address, selected, onPress }: { address: ApiAddress; selec
             {[address.line1, address.line2, address.landmark, `${address.city} ${address.pincode}`].filter(Boolean).join(', ')}
           </Text>
         </View>
-      </BlurCard>
+      </BorderCard>
     </TouchableOpacity>
   );
 }
@@ -127,9 +126,9 @@ export function CheckoutScreen({ navigation }: any) {
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <BlurView intensity={25} tint="dark" style={styles.backBlur}>
+          <View style={styles.backBlur}>
             <Text style={styles.backIcon}>←</Text>
-          </BlurView>
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Checkout</Text>
         <View style={{ width: 40 }} />
@@ -145,14 +144,14 @@ export function CheckoutScreen({ navigation }: any) {
           ))}
 
           {showAddForm ? (
-            <GlassCard variant="warm" style={styles.card}>
+            <BorderCard style={styles.card}>
               <TextInput style={styles.input} placeholder="Flat / street / society" placeholderTextColor={COLORS.textMuted} value={line1} onChangeText={setLine1} />
               <TextInput style={styles.input} placeholder="Pincode" placeholderTextColor={COLORS.textMuted} value={pincode} onChangeText={setPincode} keyboardType="number-pad" />
               <TouchableOpacity style={styles.locationButton} onPress={useCurrentLocation} disabled={locating}>
                 <Text style={styles.locationButtonText}>{locating ? 'Locating…' : coords ? '📍 Location captured' : '📍 Use current location'}</Text>
               </TouchableOpacity>
               <AnimatedButton label="Save address" onPress={handleAddAddress} variant="secondary" size="md" fullWidth disabled={createAddressMutation.isPending} />
-            </GlassCard>
+            </BorderCard>
           ) : (
             <TouchableOpacity onPress={() => setShowAddForm(true)} style={styles.addAddressButton}>
               <Text style={styles.addAddressText}>+ Add a new address</Text>
@@ -160,7 +159,7 @@ export function CheckoutScreen({ navigation }: any) {
           )}
 
           <Text style={styles.sectionTitle}>Order summary</Text>
-          <GlassCard variant="warm" style={styles.card}>
+          <BorderCard style={styles.card}>
             {cart?.items.map((item) => (
               <View key={item.id} style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>{item.species} × {item.quantity}</Text>
@@ -181,7 +180,7 @@ export function CheckoutScreen({ navigation }: any) {
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalValue}>{formatRupees(totalCents)}</Text>
             </View>
-          </GlassCard>
+          </BorderCard>
 
           {actionError ? <Text style={styles.errorText}>{actionError}</Text> : null}
           <AnimatedButton
@@ -203,8 +202,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
   backButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(94,133,80,0.2)' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, marginTop: 16, marginBottom: 8 },

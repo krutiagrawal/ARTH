@@ -8,6 +8,7 @@ import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { RADIUS, SHADOWS } from '../../constants/theme';
 import { GlassCard } from './GlassCard';
+import { BorderCard } from './BorderCard';
 import { useSlideUp, useBreathing } from '../../hooks/useAnimations';
 import { hexToRgba } from '../../utils/color';
 
@@ -20,7 +21,7 @@ interface EcoWidgetProps {
   gradientColors?: [string, string];
   delay?: number;
   onPress?: () => void;
-  variant?: 'card' | 'glass' | 'minimal';
+  variant?: 'card' | 'glass' | 'outline' | 'minimal';
   /** Renders on a dark/frosted-glass basis (dark background, light text) instead of the default
    * light styling — for use over dark or variable-brightness backdrops (e.g. Home's time-of-day sky). */
   dark?: boolean;
@@ -136,6 +137,25 @@ export function EcoWidget({
           <GlassCard variant={dark ? 'dark' : 'light'} style={[styles.glassWidget, fillCardStyle]}>
             {glassContent}
           </GlassCard>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  }
+
+  // Brown-border, no-fill replacement for `variant="glass"` used everywhere except Home (which
+  // keeps the real glass-over-illustrated-sky look). Ignores the theme-tinted glass props
+  // (`cardBackground`/`dark`/etc.) entirely — those existed to keep text legible against a live
+  // sky illustration, which no longer applies once the fill is gone.
+  if (variant === 'outline') {
+    return (
+      <Animated.View style={[slideStyle, style]}>
+        <TouchableOpacity activeOpacity={0.85} onPress={onPress} disabled={!onPress} style={fillStyle}>
+          <BorderCard noPadding style={[styles.glassWidget, fillCardStyle]}>
+            <Animated.Text style={[styles.glassIcon, breathStyle]}>{icon}</Animated.Text>
+            <Text style={[styles.glassValue, { color }]}>{value}</Text>
+            <Text style={styles.glassLabel}>{label}</Text>
+            {sublabel && <Text style={styles.glassSublabel}>{sublabel}</Text>}
+          </BorderCard>
         </TouchableOpacity>
       </Animated.View>
     );

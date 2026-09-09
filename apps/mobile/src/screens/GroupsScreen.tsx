@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { GlassCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
@@ -83,7 +83,7 @@ export function GroupsScreen({ navigation }: any) {
         {memberships.map((m, i) => (
           <FadeInRow key={m.group.id} delay={i * 60}>
             <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('GroupDetail', { groupId: m.group.id })}>
-              <GlassCard variant="warm" style={styles.card} noPadding>
+              <BorderCard style={styles.card} noPadding>
                 <View style={styles.cardInner}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cardTitle}>{m.group.groupName}</Text>
@@ -95,7 +95,7 @@ export function GroupsScreen({ navigation }: any) {
                     </TouchableOpacity>
                   )}
                 </View>
-              </GlassCard>
+              </BorderCard>
             </TouchableOpacity>
           </FadeInRow>
         ))}

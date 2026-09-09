@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
-import { BlurCard } from '../components/common/GlassCard';
+import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useHaptics } from '../hooks/useHaptics';
 import { useNurseryReviews, useRespondToReview } from '../hooks/useApiQueries';
@@ -20,7 +20,7 @@ function ReviewRow({ review }: { review: ApiNurseryReview }) {
   const [text, setText] = useState('');
 
   return (
-    <BlurCard tint="light" noPadding style={styles.row}>
+    <BorderCard noPadding style={styles.row}>
       <View style={styles.rowHeader}>
         <Text style={styles.avatar}>{review.user.avatarEmoji}</Text>
         <View style={{ flex: 1 }}>
@@ -56,7 +56,7 @@ function ReviewRow({ review }: { review: ApiNurseryReview }) {
           <Text style={styles.respondText}>Respond</Text>
         </TouchableOpacity>
       )}
-    </BlurCard>
+    </BorderCard>
   );
 }
 
