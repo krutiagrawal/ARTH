@@ -127,7 +127,7 @@ export function NurserySettingsScreen({ navigation }: any) {
                 <Text style={styles.profileCardName} numberOfLines={1}>{profile?.nurseryName ?? 'Your nursery'}</Text>
                 {profile?.city ? <Text style={styles.profileCardHandle}>📍 {profile.city}</Text> : null}
               </View>
-              <TouchableOpacity style={styles.editProfileButton} onPress={() => navigation.navigate('NurseryProfile')}>
+              <TouchableOpacity style={styles.editProfileButton} onPress={() => navigation.navigate('EditNurseryProfile')}>
                 <Text style={styles.editProfileText}>Edit</Text>
               </TouchableOpacity>
             </LinearGradient>

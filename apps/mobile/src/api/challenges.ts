@@ -18,3 +18,7 @@ export async function fetchChallenges(): Promise<ApiChallenge[]> {
 export async function joinChallenge(id: string) {
   return apiFetch(`/api/challenges/${id}/join`, { method: 'POST' });
 }
+
+export async function leaveChallenge(id: string) {
+  return apiFetch(`/api/challenges/${id}/join`, { method: 'DELETE' });
+}

@@ -20,6 +20,7 @@ import {
   useToggleLike,
   useToggleSave,
 } from '../hooks/useSocialQueries';
+import { useRingStatus } from '../hooks/useApiQueries';
 import type { ApiPost } from '../api/posts';
 
 interface FollowingFeedScreenProps {
@@ -56,6 +57,30 @@ export function FollowingFeedScreen({ navigation, embedded = false }: FollowingF
 
   const posts = useMemo(() => data?.pages.flatMap((p) => p.posts) ?? [], [data]);
 
+  const authorIds = useMemo(() => {
+    const userIds = new Set<string>();
+    const ngoIds = new Set<string>();
+    const nurseryIds = new Set<string>();
+    for (const p of posts) {
+      if (p.author.kind === 'user') userIds.add(p.author.id);
+      else if (p.author.kind === 'ngo') ngoIds.add(p.author.id);
+      else if (p.author.kind === 'nursery') nurseryIds.add(p.author.id);
+    }
+    return { userIds: [...userIds], ngoIds: [...ngoIds], nurseryIds: [...nurseryIds] };
+  }, [posts]);
+  const ringStatus = useRingStatus(authorIds);
+  const ringFor = useCallback(
+    (post: ApiPost) => {
+      const buckets = ringStatus.data;
+      if (!buckets) return null;
+      if (post.author.kind === 'user') return buckets.users[post.author.id];
+      if (post.author.kind === 'ngo') return buckets.ngos[post.author.id];
+      if (post.author.kind === 'nursery') return buckets.nurseries[post.author.id];
+      return null;
+    },
+    [ringStatus.data],
+  );
+
   const onEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
@@ -64,6 +89,10 @@ export function FollowingFeedScreen({ navigation, embedded = false }: FollowingF
     (post: ApiPost) => {
       if (post.author.kind === 'ngo') {
         navigation.navigate('NgoPublicProfile', { ngoId: post.author.id });
+      } else if (post.author.kind === 'nursery') {
+        navigation.navigate('NurseryPublicProfile', { nurseryId: post.author.id });
+      } else if (post.author.kind === 'user') {
+        navigation.navigate('UserPublicProfile', { userId: post.author.id });
       }
     },
     [navigation],
@@ -119,6 +148,7 @@ export function FollowingFeedScreen({ navigation, embedded = false }: FollowingF
               }
               onDelete={(p) => deletePost.mutate(p.id)}
               isTogglingLike={toggleLike.isPending && toggleLike.variables?.id === item.id}
+              storyRing={ringFor(item)}
             />
           )}
           ListFooterComponent={

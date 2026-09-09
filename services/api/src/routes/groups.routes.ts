@@ -4,6 +4,8 @@ import { BadRequestError } from '../utils/errors';
 import { joinGroupSchema } from '../schemas/group.schema';
 import { startOfUtcDay, addDays } from '../services/streak.service';
 import { getGroupActivity } from '../services/groupActivity.service';
+import { listGroupDrives } from '../services/drive.service';
+import { serializeDrive } from './drives.routes';
 
 function serializeGroupSummary(group: any) {
   return {
@@ -50,6 +52,18 @@ export default async function groupsRoutes(fastify: FastifyInstance) {
     reply.send(serializeGroupSummary(group));
   });
 
+  // Non-membership-gated: for viewing a group's public profile from outside it.
+  fastify.get<{ Params: { id: string } }>('/:id/public', async (request, reply) => {
+    reply.send(await groupService.getPublicGroupProfile(fastify.prisma, request.user!.id, request.params.id));
+  });
+
+  // Derived from members' RSVPs — a group has no RSVP of its own. Non-membership-gated.
+  fastify.get<{ Params: { id: string } }>('/:id/drives', async (request, reply) => {
+    await groupService.getPublicGroupProfile(fastify.prisma, request.user!.id, request.params.id);
+    const drives = await listGroupDrives(fastify.prisma, request.params.id);
+    reply.send(drives.map(serializeDrive));
+  });
+
   fastify.get<{ Params: { id: string } }>('/:id/challenges', async (request, reply) => {
     await groupService.getGroupForMember(fastify.prisma, request.user!.id, request.params.id);
     reply.send(await groupService.listChallenges(fastify.prisma, request.params.id));
@@ -66,8 +80,9 @@ export default async function groupsRoutes(fastify: FastifyInstance) {
     reply.send(await getGroupActivity(fastify.prisma, request.params.id, request.user!.id, { take }));
   });
 
+  // Achievements aren't sensitive — visible to any authenticated user, not just members.
   fastify.get<{ Params: { id: string } }>('/:id/achievements', async (request, reply) => {
-    await groupService.getGroupForMember(fastify.prisma, request.user!.id, request.params.id);
+    await groupService.getPublicGroupProfile(fastify.prisma, request.user!.id, request.params.id);
 
     const achievements = await fastify.prisma.groupAchievement.findMany({
       orderBy: { sortOrder: 'asc' },

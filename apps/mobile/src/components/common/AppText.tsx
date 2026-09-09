@@ -7,6 +7,7 @@ import {
   type TextInputProps,
 } from 'react-native';
 import { BODY_FACE_BY_WEIGHT, FONTS } from '../../constants/typography';
+import { ms } from '../../utils/responsive';
 
 /**
  * Drop-in replacements for React Native's `Text` and `TextInput` that default to Nunito Sans.
@@ -30,10 +31,25 @@ import { BODY_FACE_BY_WEIGHT, FONTS } from '../../constants/typography';
  *    alone.
  */
 
-function faceFor(style: unknown): string | null {
+/**
+ * Flattening happens once here and is reused for both the font-face lookup and the responsive
+ * scale pass below — every `fontSize`/`lineHeight` in the app (whether from a `TYPOGRAPHY.*`
+ * entry or a one-off screen style) is authored as a fixed dp number, so this is the single choke
+ * point that makes all of them scale with screen width without touching each call site.
+ */
+function resolve(style: unknown): { style: any; face: string | null } {
   const flat = StyleSheet.flatten(style as any) as any;
-  if (flat?.fontFamily) return null;
-  return BODY_FACE_BY_WEIGHT[String(flat?.fontWeight ?? '400')] ?? FONTS.body;
+  if (!flat) return { style, face: null };
+
+  const face = flat.fontFamily ? null : BODY_FACE_BY_WEIGHT[String(flat.fontWeight ?? '400')] ?? FONTS.body;
+
+  if (typeof flat.fontSize !== 'number' && typeof flat.lineHeight !== 'number') {
+    return { style: flat, face };
+  }
+  const scaled = { ...flat };
+  if (typeof flat.fontSize === 'number') scaled.fontSize = ms(flat.fontSize);
+  if (typeof flat.lineHeight === 'number') scaled.lineHeight = ms(flat.lineHeight);
+  return { style: scaled, face };
 }
 
 // The ref is typed loosely on purpose: `React.ComponentRef<typeof RNText>` trips over this
@@ -41,11 +57,11 @@ function faceFor(style: unknown): string | null {
 // still fully checked through TextProps/TextInputProps.
 export const Text = React.forwardRef<any, TextProps>(
   ({ style, ...rest }, ref) => {
-    const face = faceFor(style);
+    const { style: resolved, face } = resolve(style);
     return (
       <RNText
         ref={ref}
-        style={face ? [style, { fontFamily: face, fontWeight: undefined }] : style}
+        style={face ? [resolved, { fontFamily: face, fontWeight: undefined }] : resolved}
         {...rest}
       />
     );
@@ -55,11 +71,11 @@ Text.displayName = 'AppText';
 
 export const TextInput = React.forwardRef<any, TextInputProps>(
   ({ style, ...rest }, ref) => {
-    const face = faceFor(style);
+    const { style: resolved, face } = resolve(style);
     return (
       <RNTextInput
         ref={ref}
-        style={face ? [style, { fontFamily: face, fontWeight: undefined }] : style}
+        style={face ? [resolved, { fontFamily: face, fontWeight: undefined }] : resolved}
         {...rest}
       />
     );

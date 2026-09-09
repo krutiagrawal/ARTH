@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { Text } from '../common/AppText';
-import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
 import { FONTS } from '../../constants/typography';
 import { useStoryFeed } from '../../hooks/useApiQueries';
@@ -19,9 +18,9 @@ interface StoriesTrayProps {
 /**
  * Horizontal tray of friends and followed NGOs with active stories.
  *
- * A group with something unseen gets the full gradient ring; once every story in it has been
- * viewed the ring goes flat grey — the same read/unread signal every story product uses, driven
- * by the server's `hasUnseen`. The API already sorts unseen groups first.
+ * A group with something unseen gets a sage-green ring; once every story in it has been viewed
+ * the ring turns brown — driven by the server's `hasUnseen`. The API already sorts unseen groups
+ * first.
  */
 export function StoriesTray({ title = "Today's stories", tone = 'onDark' }: StoriesTrayProps) {
   const { data: feed = [] } = useStoryFeed();
@@ -49,16 +48,7 @@ export function StoriesTray({ title = "Today's stories", tone = 'onDark' }: Stor
               activeOpacity={0.8}
               onPress={() => setActiveIndex(i)}
             >
-              <LinearGradient
-                colors={
-                  group.hasUnseen
-                    ? [COLORS.golden, COLORS.sage, COLORS.forest]
-                    : ['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.22)']
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.ring}
-              >
+              <View style={[styles.ring, { borderColor: group.hasUnseen ? COLORS.sage : COLORS.earth }]}>
                 <View style={styles.avatarInner}>
                   {logoUri ? (
                     <Image source={{ uri: logoUri }} style={styles.avatarImage} />
@@ -66,13 +56,15 @@ export function StoriesTray({ title = "Today's stories", tone = 'onDark' }: Stor
                     <Text style={styles.avatarEmoji}>{group.author.avatarEmoji ?? '🌱'}</Text>
                   )}
                 </View>
-              </LinearGradient>
+              </View>
 
               <Text
                 style={[styles.name, !onDark && styles.nameOnLight]}
                 numberOfLines={1}
               >
-                {group.author.kind === 'ngo' ? group.author.name : group.author.name.split(' ')[0]}
+                {group.author.kind === 'user'
+                  ? group.author.name.split(' ')[0]
+                  : group.author.name}
               </Text>
             </TouchableOpacity>
           );
@@ -109,6 +101,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
+    borderWidth: 2.5,
     alignItems: 'center',
     justifyContent: 'center',
   },

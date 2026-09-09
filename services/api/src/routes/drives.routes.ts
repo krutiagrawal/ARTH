@@ -12,7 +12,7 @@ import { splitMultipartBody } from '../utils/multipart';
 import * as driveService from '../services/drive.service';
 import { BadRequestError } from '../utils/errors';
 
-function serializeDrive(entry: any) {
+export function serializeDrive(entry: any) {
   const d = entry.drive ?? entry;
   return {
     id: d.id,
@@ -60,6 +60,12 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
     if (!parsed.success) throw new BadRequestError('Invalid query parameters');
 
     const drives = await driveService.listOwnedDrives(fastify.prisma, request.user!.id, parsed.data);
+    reply.send(drives.map(serializeDrive));
+  });
+
+  // Drives the calling user has RSVP'd to — for their own profile's Drives tab.
+  fastify.get('/joined', async (request, reply) => {
+    const drives = await driveService.listJoinedDrives(fastify.prisma, request.user!.id);
     reply.send(drives.map(serializeDrive));
   });
 

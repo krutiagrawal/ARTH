@@ -8,6 +8,7 @@ export interface ApiUser {
   email: string;
   name: string;
   handle: string;
+  bio: string | null;
   avatarEmoji: string;
   xp: number;
   level: number;

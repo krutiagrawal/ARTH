@@ -16,10 +16,11 @@ interface RankRow {
 }
 
 export default async function leaderboardRoutes(fastify: FastifyInstance) {
-  fastify.get<{ Querystring: { scope?: 'global' | 'friends'; limit?: string } }>('/', async (request, reply) => {
+  fastify.get<{ Querystring: { scope?: 'global' | 'friends'; limit?: string; offset?: string } }>('/', async (request, reply) => {
     const userId = request.user!.id;
     const scope = request.query.scope ?? 'global';
     const limit = Math.min(Number(request.query.limit) || 50, 200);
+    const offset = Math.max(Number(request.query.offset) || 0, 0);
 
     let rows: LeaderboardRow[];
     let myRankRows: RankRow[];
@@ -37,7 +38,7 @@ export default async function leaderboardRoutes(fastify: FastifyInstance) {
         FROM users u
         WHERE u.id IN (${Prisma.join(friendIds)}) AND u.is_deleted = false
         ORDER BY u.trees_planted_count DESC
-        LIMIT ${limit};
+        LIMIT ${limit} OFFSET ${offset};
       `;
 
       myRankRows = await fastify.prisma.$queryRaw<RankRow[]>`
@@ -55,7 +56,7 @@ export default async function leaderboardRoutes(fastify: FastifyInstance) {
         LEFT JOIN user_settings s ON s.user_id = u.id
         WHERE COALESCE(s.public_profile, true) AND u.is_deleted = false
         ORDER BY u.trees_planted_count DESC
-        LIMIT ${limit};
+        LIMIT ${limit} OFFSET ${offset};
       `;
 
       myRankRows = await fastify.prisma.$queryRaw<RankRow[]>`
@@ -83,6 +84,7 @@ export default async function leaderboardRoutes(fastify: FastifyInstance) {
       })),
       totalUsers,
       myRank: myRankRows[0] ? Number(myRankRows[0].rank) : null,
+      hasMore: offset + rows.length < totalUsers,
     });
   });
 }

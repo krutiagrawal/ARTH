@@ -152,3 +152,22 @@ export async function fetchGroupChallenges(groupId: string): Promise<ApiGroupCha
 export async function joinGroupChallenge(challengeId: string): Promise<void> {
   await apiFetch(`/api/groups/challenges/${challengeId}/join`, { method: 'POST' });
 }
+
+export interface ApiGroupPublicProfile {
+  id: string;
+  groupName: string;
+  groupType: 'family' | 'school' | 'club' | 'other';
+  description: string;
+  logoUrl: string | null;
+  city: string | null;
+  handle: string | null;
+  avatarEmoji: string | null;
+  streakCurrent: number;
+  badgesCount: number;
+  memberCount: number;
+  isMember: boolean;
+}
+
+export async function fetchGroupPublicProfile(groupId: string): Promise<ApiGroupPublicProfile> {
+  return apiFetch<ApiGroupPublicProfile>(`/api/groups/${groupId}/public`);
+}

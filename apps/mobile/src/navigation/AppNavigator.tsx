@@ -4,6 +4,8 @@ import { Text } from '../components/common/AppText';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAuth } from '../context/AuthContext';
+import { COLORS } from '../constants/colors';
+import { IS_TABLET, CONTENT_MAX_WIDTH } from '../utils/responsive';
 
 import { SplashScreen } from '../screens/SplashScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
@@ -26,12 +28,12 @@ import { NurseryRegisterScreen } from '../screens/NurseryRegisterScreen';
 import { NurseryDashboardScreen } from '../screens/NurseryDashboardScreen';
 import { NurserySettingsScreen } from '../screens/NurserySettingsScreen';
 import { NurseryProfileScreen } from '../screens/NurseryProfileScreen';
+import { EditNurseryProfileScreen } from '../screens/EditNurseryProfileScreen';
 import { NurseryStockScreen } from '../screens/NurseryStockScreen';
 import { NurseryStreakBadgesScreen } from '../screens/NurseryStreakBadgesScreen';
 import { NurseryReservationsScreen } from '../screens/NurseryReservationsScreen';
 import { NurseryStockAnalyticsScreen } from '../screens/NurseryStockAnalyticsScreen';
 import { NurseryDirectoryScreen } from '../screens/NurseryDirectoryScreen';
-import { NurseryPublicProfileScreen } from '../screens/NurseryPublicProfileScreen';
 import { SaplingReservationScreen } from '../screens/SaplingReservationScreen';
 import { MySaplingReservationsScreen } from '../screens/MySaplingReservationsScreen';
 import { AddToCartScreen } from '../screens/AddToCartScreen';
@@ -53,7 +55,7 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { ForestScreen } from '../screens/ForestScreen';
 import { PlantTreeScreen } from '../screens/PlantTreeScreen';
 import { CommunityScreen } from '../screens/CommunityScreen';
-import { ProfileScreen } from '../screens/ProfileScreen';
+import { UserProfileScreen } from '../screens/UserProfileScreen';
 import { StreakProtectionScreen } from '../screens/StreakProtectionScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { ChangePasswordScreen } from '../screens/ChangePasswordScreen';
@@ -85,10 +87,11 @@ import { NgoPortfolioScreen } from '../screens/NgoPortfolioScreen';
 import { NgoPortfolioEntryScreen } from '../screens/NgoPortfolioEntryScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { PostDetailScreen } from '../screens/PostDetailScreen';
+import { ProfilePostFeedScreen } from '../screens/ProfilePostFeedScreen';
+import { PublicFollowersScreen } from '../screens/PublicFollowersScreen';
 import { PostLikesScreen } from '../screens/PostLikesScreen';
 import { BlockedAccountsScreen } from '../screens/BlockedAccountsScreen';
 import { NgoDirectoryScreen } from '../screens/NgoDirectoryScreen';
-import { NgoPublicProfileScreen } from '../screens/NgoPublicProfileScreen';
 import { FollowingFeedScreen } from '../screens/FollowingFeedScreen';
 import { AdminHomeScreen, PANEL_BG } from '../screens/AdminHomeScreen';
 import { AdminNgoApprovalsScreen } from '../screens/AdminNgoApprovalsScreen';
@@ -293,6 +296,7 @@ export type RootStackParamList = {
   GroupMain: undefined;
   GroupCreateChallenge: undefined;
   GroupProfile: undefined;
+  GroupPublicProfile: { groupId: string };
   GroupSettings: undefined;
   GroupMembers: undefined;
   EditGroupProfile: undefined;
@@ -305,6 +309,7 @@ export type RootStackParamList = {
   NurseryMain: undefined;
   NurseryStock: undefined;
   NurseryProfile: undefined;
+  EditNurseryProfile: undefined;
   NurseryStreakBadges: undefined;
   NurseryReservations: undefined;
   NurseryStockAnalytics: undefined;
@@ -334,6 +339,7 @@ export type RootStackParamList = {
   StreakProtection: undefined;
   Settings: undefined;
   Profile: undefined;
+  UserPublicProfile: { userId: string; friendRequestId?: string; friendRequestFromName?: string };
   ChangePassword: undefined;
   Sessions: undefined;
   StaticContent: { title: string; body: string };
@@ -364,6 +370,8 @@ export type RootStackParamList = {
   NgoPortfolioEntry: { entry?: any } | undefined;
   Notifications: undefined;
   PostDetail: { postId: string };
+  ProfilePostFeed: { authorKind: 'user' | 'ngo' | 'nursery' | 'group'; authorId: string; initialPostId: string };
+  PublicFollowers: { kind: 'ngo' | 'nursery'; id: string; name: string };
   PostLikes: { postId: string };
   BlockedAccounts: undefined;
   NgoDirectory: undefined;
@@ -639,27 +647,33 @@ export function AppNavigator() {
   useLogoutRedirect();
   useBlockedRedirect();
 
+  // This app's screens are all designed phone-first (fixed-width headers, edge-to-edge gradients,
+  // etc.) — stretching that across a ~800-1000dp tablet canvas would distort every layout. Rather
+  // than a bespoke tablet redesign, cap each screen's card to a comfortable phone-like width and
+  // center it; the app-shell backdrop fills the rest so it doesn't read as a bug.
   return (
-    <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator
-        initialRouteName="Splash"
-        screenOptions={{
-          headerShown: false,
-          cardStyleInterpolator: ({ current, layouts }) => ({
-            cardStyle: {
-              opacity: current.progress,
-              transform: [
-                {
-                  scale: current.progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.97, 1],
-                  }),
-                },
-              ],
-            },
-          }),
-        }}
-      >
+    <View style={IS_TABLET ? styles.tabletBackdrop : styles.fill}>
+      <NavigationContainer ref={navigationRef}>
+        <Stack.Navigator
+          initialRouteName="Splash"
+          screenOptions={{
+            headerShown: false,
+            cardStyle: IS_TABLET ? styles.tabletCard : undefined,
+            cardStyleInterpolator: ({ current, layouts }) => ({
+              cardStyle: {
+                opacity: current.progress,
+                transform: [
+                  {
+                    scale: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.97, 1],
+                    }),
+                  },
+                ],
+              },
+            }),
+          }}
+        >
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         <Stack.Screen name="AccountType" component={AccountTypeScreen} />
@@ -669,6 +683,7 @@ export function AppNavigator() {
         <Stack.Screen name="GroupMain" component={GroupMainApp} />
         <Stack.Screen name="GroupCreateChallenge" component={GroupCreateChallengeScreen} />
         <Stack.Screen name="GroupProfile" component={GroupProfileScreen} />
+        <Stack.Screen name="GroupPublicProfile" component={GroupProfileScreen} />
         <Stack.Screen name="GroupSettings" component={GroupSettingsScreen} />
         <Stack.Screen name="GroupMembers" component={GroupMembersStandaloneScreen} />
         <Stack.Screen name="EditGroupProfile" component={EditGroupProfileScreen} />
@@ -679,6 +694,7 @@ export function AppNavigator() {
         <Stack.Screen name="NurseryMain" component={NurseryMainApp} />
         <Stack.Screen name="NurseryStock" component={NurseryStockScreen} />
         <Stack.Screen name="NurseryProfile" component={NurseryProfileScreen} />
+        <Stack.Screen name="EditNurseryProfile" component={EditNurseryProfileScreen} />
         <Stack.Screen name="NurseryStreakBadges" component={NurseryStreakBadgesScreen} />
         <Stack.Screen name="NurseryReservations" component={NurseryReservationsScreen} />
         <Stack.Screen name="NurseryStockAnalytics" component={NurseryStockAnalyticsScreen} />
@@ -710,7 +726,8 @@ export function AppNavigator() {
         />
         <Stack.Screen name="StreakProtection" component={StreakProtectionScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
-        <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="Profile" component={UserProfileScreen} />
+        <Stack.Screen name="UserPublicProfile" component={UserProfileScreen} />
         <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
         <Stack.Screen name="Sessions" component={SessionsScreen} />
         <Stack.Screen name="StaticContent" component={StaticContentScreen} />
@@ -740,12 +757,14 @@ export function AppNavigator() {
         <Stack.Screen name="NgoPortfolioEntry" component={NgoPortfolioEntryScreen} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
         <Stack.Screen name="PostDetail" component={PostDetailScreen} />
+        <Stack.Screen name="ProfilePostFeed" component={ProfilePostFeedScreen} />
+        <Stack.Screen name="PublicFollowers" component={PublicFollowersScreen} />
         <Stack.Screen name="PostLikes" component={PostLikesScreen} />
         <Stack.Screen name="BlockedAccounts" component={BlockedAccountsScreen} />
         <Stack.Screen name="NgoDirectory" component={NgoDirectoryScreen} />
-        <Stack.Screen name="NgoPublicProfile" component={NgoPublicProfileScreen} />
+        <Stack.Screen name="NgoPublicProfile" component={NgoProfileScreen} />
         <Stack.Screen name="NurseryDirectory" component={NurseryDirectoryScreen} />
-        <Stack.Screen name="NurseryPublicProfile" component={NurseryPublicProfileScreen} />
+        <Stack.Screen name="NurseryPublicProfile" component={NurseryProfileScreen} />
         <Stack.Screen name="SaplingReservation" component={SaplingReservationScreen} />
         <Stack.Screen name="MySaplingReservations" component={MySaplingReservationsScreen} />
         <Stack.Screen name="AddToCart" component={AddToCartScreen} />
@@ -792,12 +811,26 @@ export function AppNavigator() {
             }),
           }}
         />
-      </Stack.Navigator>
-    </NavigationContainer>
+        </Stack.Navigator>
+      </NavigationContainer>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  fill: {
+    flex: 1,
+  },
+  tabletBackdrop: {
+    flex: 1,
+    backgroundColor: COLORS.beigeLight,
+  },
+  tabletCard: {
+    flex: 1,
+    width: '100%',
+    maxWidth: CONTENT_MAX_WIDTH,
+    alignSelf: 'center',
+  },
   mainContainer: {
     flex: 1,
   },

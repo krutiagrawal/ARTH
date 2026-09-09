@@ -4,7 +4,6 @@ import {
   Image,
   StyleSheet,
   FlatList,
-  Dimensions,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
@@ -12,9 +11,8 @@ import { Text } from '../common/AppText';
 import { COLORS } from '../../constants/colors';
 import { RADIUS } from '../../constants/theme';
 import { resolveMediaUrl } from '../../api/client';
+import { EFFECTIVE_WIDTH } from '../../utils/responsive';
 import type { ApiPostMedia } from '../../api/posts';
-
-const { width: SW } = Dimensions.get('window');
 
 interface MediaCarouselProps {
   media: ApiPostMedia[];
@@ -32,7 +30,7 @@ interface MediaCarouselProps {
  * scrolling feed, and FlatList's native paging is what keeps the horizontal swipe from fighting
  * the parent scroll on Android.
  */
-export function MediaCarousel({ media, width = SW - 32, aspect = 1, radius = RADIUS.lg }: MediaCarouselProps) {
+export function MediaCarousel({ media, width = EFFECTIVE_WIDTH - 32, aspect = 1, radius = RADIUS.lg }: MediaCarouselProps) {
   const [index, setIndex] = useState(0);
   // Kept in a ref as well so a scroll that lands on the same page doesn't re-render.
   const lastIndex = useRef(0);

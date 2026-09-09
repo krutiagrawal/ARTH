@@ -1,21 +1,24 @@
 import { COLORS } from './colors';
+import { msRound } from '../utils/responsive';
 
+// Scaled once at module load from fixed base values — every screen importing SPACING/RADIUS
+// automatically gets a layout that breathes correctly across phone widths. See utils/responsive.ts.
 export const SPACING = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
-  xxxl: 64,
+  xs: msRound(4),
+  sm: msRound(8),
+  md: msRound(16),
+  lg: msRound(24),
+  xl: msRound(32),
+  xxl: msRound(48),
+  xxxl: msRound(64),
 };
 
 export const RADIUS = {
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 40,
+  sm: msRound(8),
+  md: msRound(16),
+  lg: msRound(24),
+  xl: msRound(32),
+  xxl: msRound(40),
   full: 9999,
 };
 

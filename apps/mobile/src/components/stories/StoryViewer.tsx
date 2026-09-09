@@ -7,6 +7,9 @@ import { resolveStoryImage, type ApiStory } from '../../api/stories';
 import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
 import { RADIUS, SPACING } from '../../constants/theme';
 import { TYPOGRAPHY } from '../../constants/typography';
+import { StoryViewersSheet } from './StoryViewersSheet';
+import { LikeButton } from '../social/LikeButton';
+import { useToggleStoryLike } from '../../hooks/useApiQueries';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const STORY_DURATION = 5000;
@@ -33,8 +36,10 @@ export function StoryViewer({
 }) {
   const insets = useSafeAreaInsets();
   const [index, setIndex] = useState(initialIndex);
+  const [viewersOpen, setViewersOpen] = useState(false);
   const progress = useRef(new Animated.Value(0)).current;
   const anim = useRef<Animated.CompositeAnimation | null>(null);
+  const toggleStoryLike = useToggleStoryLike();
 
   const current = stories[index];
 
@@ -146,7 +151,34 @@ export function StoryViewer({
             <Text style={styles.caption}>{current.caption}</Text>
           </View>
         ) : null}
+
+        {/* Only ever true for your own story, per how ForestGallery wires onDelete */}
+        {onDelete && (
+          <TouchableOpacity
+            style={[styles.viewersChip, { bottom: insets.bottom + 16 }]}
+            onPress={() => setViewersOpen(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.viewersChipText}>👁 {current.viewCount ?? 0} viewed</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Liking your own story isn't a thing, mirroring how the chip above is own-story-only */}
+        {!onDelete && (
+          <View style={[styles.likeWrap, { bottom: insets.bottom + 16 }]}>
+            <LikeButton
+              liked={!!current.likedByMe}
+              count={current.likeCount}
+              isToggling={toggleStoryLike.isPending}
+              onToggle={() => toggleStoryLike.mutate({ id: current.id, liked: !!current.likedByMe })}
+            />
+          </View>
+        )}
       </View>
+
+      {onDelete && (
+        <StoryViewersSheet visible={viewersOpen} storyId={current.id} onClose={() => setViewersOpen(false)} />
+      )}
     </Modal>
   );
 }
@@ -241,6 +273,27 @@ const styles = StyleSheet.create({
     color: ON_DARK_SURFACE.primary,
     fontSize: 16,
     fontWeight: '700',
+  },
+  viewersChip: {
+    position: 'absolute',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: RADIUS.full,
+  },
+  viewersChipText: {
+    color: ON_DARK_SURFACE.primary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  likeWrap: {
+    position: 'absolute',
+    right: 20,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: RADIUS.full,
   },
   captionWrap: {
     position: 'absolute',

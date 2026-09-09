@@ -5,6 +5,14 @@ import { browseQuerySchema, paginationQuerySchema } from '../schemas/ngosPublic.
 import { BadRequestError } from '../utils/errors';
 import { listPublicPortfolio } from '../services/portfolio.service';
 
+interface NgoLeaderboardRow {
+  id: string;
+  org_name: string;
+  logo_url: string | null;
+  trees_planted: bigint;
+  rank: bigint;
+}
+
 function serializeNgoSummary(n: any) {
   return { id: n.id, orgName: n.orgName, description: n.description, logoUrl: n.logoUrl, city: n.city };
 }
@@ -20,6 +28,39 @@ export default async function ngosPublicRoutes(fastify: FastifyInstance) {
 
     const { total, ngos } = await ngoPublicService.browseNgos(fastify.prisma, parsed.data);
     reply.send({ total, ngos: ngos.map(serializeNgoSummary) });
+  });
+
+  // Public ranking by trees planted. Fastify's router always prefers this static path over
+  // the `/:id` param route below, so "leaderboard" can never be misread as an ngo id.
+  fastify.get<{ Querystring: { limit?: string; offset?: string } }>('/leaderboard', async (request, reply) => {
+    const limit = Math.min(Number(request.query.limit) || 20, 100);
+    const offset = Math.max(Number(request.query.offset) || 0, 0);
+
+    const [rows, total] = await Promise.all([
+      fastify.prisma.$queryRaw<NgoLeaderboardRow[]>`
+        SELECT n.id, n.org_name, n.logo_url, COUNT(pt.id) AS trees_planted,
+               RANK() OVER (ORDER BY COUNT(pt.id) DESC) AS rank
+        FROM ngo_profiles n
+        LEFT JOIN planted_trees pt ON pt.ngo_id = n.id
+        WHERE n.status = 'approved'
+        GROUP BY n.id
+        ORDER BY trees_planted DESC
+        LIMIT ${limit} OFFSET ${offset};
+      `,
+      fastify.prisma.ngoProfile.count({ where: { status: 'approved' } }),
+    ]);
+
+    reply.send({
+      entries: rows.map((row) => ({
+        rank: Number(row.rank),
+        id: row.id,
+        orgName: row.org_name,
+        logoUrl: row.logo_url,
+        treesPlanted: Number(row.trees_planted),
+      })),
+      total,
+      hasMore: offset + rows.length < total,
+    });
   });
 
   fastify.get<{ Params: { id: string } }>(
@@ -44,6 +85,57 @@ export default async function ngosPublicRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: { id: string } }>('/:id/portfolio', async (request, reply) => {
     reply.send(await listPublicPortfolio(fastify.prisma, request.params.id));
   });
+
+  fastify.get<{ Params: { id: string } }>('/:id/achievements', async (request, reply) => {
+    const achievements = await fastify.prisma.ngoAchievement.findMany({
+      orderBy: { sortOrder: 'asc' },
+      include: {
+        unlocks: { where: { ngoId: request.params.id } },
+      },
+    });
+
+    reply.send(
+      achievements.map((achievement) => {
+        const unlock = achievement.unlocks[0];
+        return {
+          id: achievement.id,
+          title: achievement.title,
+          description: achievement.description,
+          icon: achievement.icon,
+          rarity: achievement.rarity,
+          unlocked: unlock?.unlocked ?? false,
+          progress: unlock?.progress ?? 0,
+          total: achievement.criteriaTarget ?? undefined,
+        };
+      }),
+    );
+  });
+
+  // Read-only accepted-followers list for any visitor — the owner-only inbox with
+  // accept/decline/remove lives at /api/ngo/followers (ngoFollowers.routes.ts).
+  fastify.get<{ Params: { id: string }; Querystring: { page?: string; take?: string } }>(
+    '/:id/followers',
+    async (request, reply) => {
+      const take = Math.min(Number(request.query.take) || 30, 100);
+      const page = Math.max(Number(request.query.page) || 1, 1);
+      const where = { ngoId: request.params.id, status: 'accepted' as const };
+
+      const [rows, total] = await Promise.all([
+        fastify.prisma.follow.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          take,
+          skip: (page - 1) * take,
+          include: {
+            follower: { select: { id: true, name: true, handle: true, avatarEmoji: true, treesPlantedCount: true } },
+          },
+        }),
+        fastify.prisma.follow.count({ where }),
+      ]);
+
+      reply.send({ total, followers: rows.map((f) => f.follower) });
+    },
+  );
 
   fastify.post<{ Params: { id: string } }>(
     '/:id/follow',

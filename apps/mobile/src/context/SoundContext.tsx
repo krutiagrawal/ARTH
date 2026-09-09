@@ -10,7 +10,7 @@ import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-aud
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getWeatherScene, type WeatherScene } from '../services/weatherService';
 
-export type SoundKey = 'woof';
+export type SoundKey = 'woof' | 'friendAccepted';
 
 interface SoundContextValue {
   isMuted: boolean;
@@ -28,6 +28,7 @@ const VOL = {
   piano: 0.18,
   rain: 0.28,
   woof: 0.65,
+  friendAccepted: 0.7,
 };
 
 // Resolve at module level so Metro's static analyser always bundles these assets.
@@ -40,6 +41,13 @@ const SRC_PIANO = (() => { try { return require('../../assets/sounds/piano_ambie
 const SRC_RAIN  = (() => { try { return require('../../assets/sounds/light_rain.mp3');    } catch { return null; } })();
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const SRC_WOOF  = (() => { try { return require('../../assets/sounds/woof_bark.mp3');     } catch { return null; } })();
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const SRC_FRIEND_ACCEPTED = (() => { try { return require('../../assets/sounds/friend_accepted.wav'); } catch { return null; } })();
+
+const ONE_SHOT_SRC: Record<SoundKey, any> = {
+  woof: SRC_WOOF,
+  friendAccepted: SRC_FRIEND_ACCEPTED,
+};
 
 function makeLoop(src: any, volume: number, muted: boolean): AudioPlayer | null {
   if (!src) return null;
@@ -68,7 +76,8 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
   const birdsRef = useRef<AudioPlayer | null>(null);
   const pianoRef = useRef<AudioPlayer | null>(null);
   const rainRef  = useRef<AudioPlayer | null>(null);
-  const woofRef  = useRef<AudioPlayer | null>(null);
+  // One-shot effect players (woof, friendAccepted, ...), lazily created and reused per key.
+  const oneShotRefs = useRef<Partial<Record<SoundKey, AudioPlayer>>>({});
 
   useEffect(() => {
     let mounted = true;
@@ -123,7 +132,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
       birdsRef.current?.remove();
       pianoRef.current?.remove();
       rainRef.current?.remove();
-      woofRef.current?.remove();
+      for (const player of Object.values(oneShotRefs.current)) player?.remove();
     };
   }, []);
 
@@ -153,16 +162,19 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const playSound = useCallback(async (_key: SoundKey) => {
-    if (isMutedRef.current || !SRC_WOOF) return;
+  const playSound = useCallback(async (key: SoundKey) => {
+    const src = ONE_SHOT_SRC[key];
+    if (isMutedRef.current || !src) return;
     try {
-      if (!woofRef.current) {
-        woofRef.current = createAudioPlayer(SRC_WOOF);
-        woofRef.current.volume = VOL.woof;
+      let player = oneShotRefs.current[key];
+      if (!player) {
+        player = createAudioPlayer(src);
+        player.volume = VOL[key];
+        oneShotRefs.current[key] = player;
       }
-      woofRef.current.pause();
-      await woofRef.current.seekTo(0);
-      woofRef.current.play();
+      player.pause();
+      await player.seekTo(0);
+      player.play();
     } catch {}
   }, []);
 

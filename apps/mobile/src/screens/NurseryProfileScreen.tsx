@@ -1,119 +1,113 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useMemo, useState, useCallback } from 'react';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { Text } from '../components/common/AppText';
-import Animated from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { RADIUS, SHADOWS } from '../constants/theme';
-import { useNurseryProfile, useUpdateNurseryProfile, useResubmitNurseryProfile } from '../hooks/useApiQueries';
-import { BlurCard } from '../components/common/GlassCard';
-import { PickedPhoto } from '../components/common/PhotoPickerField';
-import { AnimatedButton } from '../components/common/AnimatedButton';
-import { FormField } from '../components/common/FormField';
-import { ScreenHeader } from '../components/common/ScreenHeader';
-import { Toggle } from '../components/common/Toggle';
-import { useSlideUp } from '../hooks/useAnimations';
-import { useHaptics } from '../hooks/useHaptics';
-import { useConfirm } from '../context/ConfirmDialogContext';
-import { ApiError, resolveMediaUrl } from '../api/client';
+import { RADIUS } from '../constants/theme';
+import { GlassCard, BlurCard } from '../components/common/GlassCard';
+import { LocationActions } from '../components/common/LocationActions';
+import { EmptyState } from '../components/common/EmptyState';
+import { ReportSheet } from '../components/social/ReportSheet';
+import { ProfileHeader } from '../components/profile/ProfileHeader';
+import { ProfileTabBar, type ProfileTabKey } from '../components/profile/ProfileTabBar';
+import { PostGrid } from '../components/profile/PostGrid';
+import { AchievementsTabContent } from '../components/profile/AchievementsTabContent';
+import { DrivesTabContent } from '../components/profile/DrivesTabContent';
+import { useNurseryPosts } from '../hooks/useSocialQueries';
+import {
+  useNurseryProfile,
+  useNurseryStats,
+  useNurseryStreakCalendar,
+  useNurseryBadges,
+  useNurseryPublicAchievements,
+  useNurseryPublicProfile,
+  useFollowNursery,
+  useUnfollowNursery,
+  useRingStatus,
+} from '../hooks/useApiQueries';
+import { resolveMediaUrl } from '../api/client';
+import type { ApiPost } from '../api/posts';
+import type { ApiSaplingStock } from '../api/nursery';
 
-const STATUS_COPY: Record<string, { title: string; body: string }> = {
-  pending: { title: 'Under review', body: "We're reviewing your nursery. Your stock will go live once approved." },
-  suspended: { title: 'Account suspended', body: 'Contact support for details.' },
-};
+function followLabel(status: string | null, followersCount: number): string {
+  if (status === 'accepted') return 'Following ✓';
+  if (status === 'pending') return 'Requested';
+  return `Follow · ${followersCount}`;
+}
 
-export function NurseryProfileScreen({ navigation }: any) {
+function StockRow({ item, onPress }: { item: ApiSaplingStock; onPress: () => void }) {
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
+      <BlurCard tint="light" noPadding style={styles.stockRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.stockSpecies}>{item.species}</Text>
+          <Text style={styles.stockMeta}>
+            {item.quantity} available · {item.isFree ? 'Free' : item.priceCents != null ? `₹${(item.priceCents / 100).toFixed(0)}` : 'Priced'}
+          </Text>
+        </View>
+        <Text style={styles.stockChevron}>›</Text>
+      </BlurCard>
+    </TouchableOpacity>
+  );
+}
+
+export function NurseryProfileScreen({ route, navigation }: any) {
+  const nurseryId: string | undefined = route?.params?.nurseryId;
+  const isOwn = !nurseryId;
   const insets = useSafeAreaInsets();
-  const { data: profile, isLoading } = useNurseryProfile();
-  const updateMutation = useUpdateNurseryProfile();
-  const resubmitMutation = useResubmitNurseryProfile();
 
-  const [nurseryName, setNurseryName] = useState('');
-  const [description, setDescription] = useState('');
-  const [city, setCity] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
-  const [offersDelivery, setOffersDelivery] = useState(true);
-  const [deliveryRadiusKm, setDeliveryRadiusKm] = useState('');
-  const [logo, setLogo] = useState<PickedPhoto | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [locationLoading, setLocationLoading] = useState(false);
-  const cardAnim = useSlideUp(0, 24);
-  const { medium } = useHaptics();
-  const confirm = useConfirm();
-  const logoUri = logo?.uri ?? resolveMediaUrl(profile?.logoUrl) ?? null;
-  const hasLocation = profile?.lat != null && profile?.lng != null;
-  const statusCopy = profile && profile.status !== 'approved' && profile.status !== 'rejected' ? STATUS_COPY[profile.status] : undefined;
+  const ownProfile = useNurseryProfile();
+  const ownStats = useNurseryStats();
+  const ownStreak = useNurseryStreakCalendar(6);
+  const ownAchievements = useNurseryBadges();
 
-  useEffect(() => {
-    if (!profile) return;
-    setNurseryName(profile.nurseryName);
-    setDescription(profile.description);
-    setCity(profile.city ?? '');
-    setContactPhone(profile.contactPhone ?? '');
-    setOffersDelivery(profile.offersDelivery);
-    setDeliveryRadiusKm(profile.deliveryRadiusKm != null ? String(profile.deliveryRadiusKm) : '');
-  }, [profile]);
+  const publicProfile = useNurseryPublicProfile(isOwn ? null : nurseryId ?? null);
+  const publicAchievements = useNurseryPublicAchievements(isOwn ? undefined : nurseryId);
+  const followMutation = useFollowNursery();
+  const unfollowMutation = useUnfollowNursery();
+  const [reporting, setReporting] = useState(false);
 
-  const pickLogo = useCallback(async () => {
-    medium();
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.85,
-    });
-    const asset = !result.canceled ? result.assets[0] : undefined;
-    if (asset) {
-      setLogo({ uri: asset.uri, name: asset.fileName ?? 'logo.jpg', type: asset.mimeType ?? 'image/jpeg' });
-    }
-  }, [medium]);
+  const effectiveNurseryId = isOwn ? ownProfile.data?.id : nurseryId;
+  const ringStatus = useRingStatus({ nurseryIds: effectiveNurseryId ? [effectiveNurseryId] : [] });
+  const {
+    data: postsData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useNurseryPosts(effectiveNurseryId);
+  const posts = useMemo(() => postsData?.pages.flatMap((p) => p.posts) ?? [], [postsData]);
+  const onEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const handleSetLocation = useCallback(async () => {
-    medium();
-    setLocationLoading(true);
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        confirm('Permission needed', 'Location permission is required to place your nursery on the map.');
-        return;
-      }
-      const position = await Location.getCurrentPositionAsync({});
-      await updateMutation.mutateAsync({ lat: position.coords.latitude, lng: position.coords.longitude });
-      confirm('Location set', 'Your nursery will now appear on the map.');
-    } catch (e) {
-      confirm('Could not get location', 'Please try again.');
-    } finally {
-      setLocationLoading(false);
-    }
-  }, [medium, updateMutation]);
+  const [tab, setTab] = useState<ProfileTabKey>('posts');
+  const openPost = useCallback(
+    (post: ApiPost) => {
+      if (!effectiveNurseryId) return;
+      navigation.navigate('ProfilePostFeed', { authorKind: 'nursery', authorId: effectiveNurseryId, initialPostId: post.id });
+    },
+    [navigation, effectiveNurseryId],
+  );
 
-  const handleSave = async () => {
-    setError(null);
-    try {
-      await updateMutation.mutateAsync({
-        nurseryName: nurseryName.trim(),
-        description: description.trim(),
-        city: city.trim() || undefined,
-        contactPhone: contactPhone.trim() || undefined,
-        offersDelivery,
-        deliveryRadiusKm: deliveryRadiusKm.trim() ? Number(deliveryRadiusKm.trim()) : undefined,
-        logo: logo ?? undefined,
-      });
-      confirm('Saved', 'Your nursery profile has been updated.');
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not save your profile. Please try again.');
-    }
-  };
+  const isLoading = isOwn ? !ownProfile.data : !publicProfile.data;
+  const achievements = isOwn ? ownAchievements.data ?? [] : publicAchievements.data ?? [];
+  const badgesCount = achievements.filter((a) => a.unlocked).length;
 
-  const handleResubmit = () => {
-    confirm('Resubmit for review?', 'Your account will go back into the review queue.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Resubmit', onPress: () => resubmitMutation.mutate() },
-    ]);
+  const name = isOwn ? ownProfile.data?.nurseryName ?? 'Your nursery' : publicProfile.data?.nurseryName ?? 'Nursery';
+  const logoUrl = resolveMediaUrl(isOwn ? ownProfile.data?.logoUrl : publicProfile.data?.logoUrl);
+  const city = isOwn ? ownProfile.data?.city : publicProfile.data?.city;
+  const bio = isOwn ? ownProfile.data?.description : publicProfile.data?.description;
+  const followStatus = isOwn ? null : publicProfile.data?.followStatus ?? null;
+  const isFollowingOrPending = followStatus === 'accepted' || followStatus === 'pending';
+  const followersCount = isOwn ? undefined : publicProfile.data?.followersCount ?? 0;
+
+  const toggleFollow = () => {
+    if (!nurseryId) return;
+    if (isFollowingOrPending) unfollowMutation.mutate(nurseryId);
+    else followMutation.mutate(nurseryId);
   };
 
   return (
@@ -121,150 +115,178 @@ export function NurseryProfileScreen({ navigation }: any) {
       <StatusBar style="dark" />
       <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
 
-      <ScreenHeader
-        title="Nursery Profile"
-        subtitle="Tell planters about your nursery"
-        onBack={navigation?.canGoBack?.() ? () => navigation.goBack() : undefined}
-      />
+      <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
+        {!isOwn ? (
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
+            <BlurView intensity={25} tint="dark" style={styles.iconBlur}>
+              <Text style={styles.iconText}>←</Text>
+            </BlurView>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.iconButton} />
+        )}
+        <Text style={styles.topBarTitle} numberOfLines={1}>{name}</Text>
+        {isOwn ? (
+          <TouchableOpacity onPress={() => navigation.navigate('EditNurseryProfile')} style={styles.iconButton}>
+            <BlurView intensity={25} tint="dark" style={styles.iconBlur}>
+              <Text style={styles.iconText}>⚙️</Text>
+            </BlurView>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={() => setReporting(true)} style={styles.iconButton} hitSlop={8}>
+              <BlurView intensity={25} tint="dark" style={styles.iconBlur}>
+                <Text style={styles.iconText}>🚩</Text>
+              </BlurView>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('Cart')} style={styles.iconButton}>
+              <BlurView intensity={25} tint="dark" style={styles.iconBlur}>
+                <Text style={styles.iconText}>🛒</Text>
+              </BlurView>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
 
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
-          {statusCopy && (
-            <BlurCard
-              tint="light"
-              noPadding
-              style={[styles.statusBanner, profile?.status === 'suspended' && styles.statusBannerDanger]}
-            >
-              <Text style={styles.statusTitle}>{statusCopy.title}</Text>
-              <Text style={styles.statusBody}>{statusCopy.body}</Text>
-            </BlurCard>
-          )}
+        <PostGrid
+          posts={tab === 'posts' ? posts : []}
+          onPressPost={openPost}
+          onEndReached={tab === 'posts' ? onEndReached : undefined}
+          isFetchingNextPage={isFetchingNextPage}
+          emptyTitle="No posts yet"
+          ListHeaderComponent={
+            <>
+              <ProfileHeader
+                avatarUrl={logoUrl}
+                avatarEmoji="🌿"
+                storyRing={effectiveNurseryId ? ringStatus.data?.nurseries[effectiveNurseryId] : null}
+                name={name}
+                meta={city ? `📍 ${city}` : null}
+                bio={bio}
+                stats={
+                  isOwn
+                    ? [
+                        { value: ownStats.data?.speciesCount ?? 0, label: 'Species' },
+                        { value: ownProfile.data?.streakCurrent ?? 0, label: 'Streak' },
+                        { value: badgesCount, label: 'Badges', onPress: () => setTab('achievements') },
+                      ]
+                    : [
+                        { value: posts.length, label: 'Posts' },
+                        {
+                          value: followersCount ?? 0,
+                          label: 'Followers',
+                          onPress: () => effectiveNurseryId && navigation.navigate('PublicFollowers', { kind: 'nursery', id: effectiveNurseryId, name }),
+                        },
+                        { value: badgesCount, label: 'Badges', onPress: () => setTab('achievements') },
+                      ]
+                }
+                primaryAction={
+                  isOwn
+                    ? { label: 'Edit profile', onPress: () => navigation.navigate('EditNurseryProfile'), variant: 'outline' }
+                    : {
+                        label: followLabel(followStatus, followersCount ?? 0),
+                        onPress: toggleFollow,
+                        busy: followMutation.isPending || unfollowMutation.isPending,
+                        variant: isFollowingOrPending ? 'outline' : 'solid',
+                      }
+                }
+              />
 
-          <Animated.View style={cardAnim}>
-            <View style={styles.logoWrap}>
-              <TouchableOpacity onPress={pickLogo} activeOpacity={0.85} style={styles.logoCircle}>
-                {logoUri ? <Image source={{ uri: logoUri }} style={styles.logoImage} /> : <Text style={styles.logoPlaceholder}>Logo</Text>}
-                <View style={styles.logoEditBadge}>
-                  <Text style={styles.logoEditIcon}>✎</Text>
+              {!isOwn && (
+                <View style={styles.publicExtras}>
+                  <LocationActions
+                    label="Location"
+                    address={city ?? undefined}
+                    phone={publicProfile.data?.contactPhone}
+                  />
+
+                  <Text style={styles.sectionTitle}>Available Saplings</Text>
+                  {(publicProfile.data?.stock?.length ?? 0) === 0 ? (
+                    <EmptyState icon="🌱" title="No stock right now" body="Check back later for available saplings." />
+                  ) : (
+                    publicProfile.data!.stock.map((item: ApiSaplingStock) => (
+                      <StockRow
+                        key={item.id}
+                        item={item}
+                        onPress={() =>
+                          navigation.navigate(item.isFree ? 'SaplingReservation' : 'AddToCart', { nurseryId, stockId: item.id })
+                        }
+                      />
+                    ))
+                  )}
                 </View>
-              </TouchableOpacity>
-            </View>
+              )}
 
-            <FormField label="Nursery Name" value={nurseryName} onChangeText={setNurseryName} placeholder="Your nursery" />
-            <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="What does your nursery grow?" />
-            <FormField label="City" value={city} onChangeText={setCity} placeholder="City" />
-            <FormField label="Contact phone" value={contactPhone} onChangeText={setContactPhone} placeholder="Phone" keyboardType="phone-pad" />
-
-            <BlurCard tint="light" noPadding style={styles.deliveryCard}>
-              <View style={styles.deliveryRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.deliveryLabel}>Offer delivery</Text>
-                  <Text style={styles.deliveryHint}>Show up when planters filter for delivery</Text>
+              <ProfileTabBar activeTab={tab} onChange={setTab} />
+              {tab === 'contributions' && (
+                <View style={styles.tabBody}>
+                  <GlassCard variant="dark" style={styles.contributionsCard}>
+                    <Text style={styles.contributionsTitle}>🌍 Nursery impact</Text>
+                    <View style={styles.contributionsRow}>
+                      <View style={styles.contributionsStat}>
+                        <Text style={styles.contributionsNum}>{isOwn ? ownStats.data?.speciesCount ?? 0 : '—'}</Text>
+                        <Text style={styles.contributionsLabel}>Species listed</Text>
+                      </View>
+                      <View style={styles.contributionsStat}>
+                        <Text style={styles.contributionsNum}>{isOwn ? ownStats.data?.totalQuantity ?? 0 : '—'}</Text>
+                        <Text style={styles.contributionsLabel}>Saplings available</Text>
+                      </View>
+                      <View style={styles.contributionsStat}>
+                        <Text style={styles.contributionsNum}>{followersCount ?? ownProfile.data?.reviewCount ?? 0}</Text>
+                        <Text style={styles.contributionsLabel}>{isOwn ? 'Reviews' : 'Followers'}</Text>
+                      </View>
+                    </View>
+                  </GlassCard>
                 </View>
-                <Toggle value={offersDelivery} onValueChange={setOffersDelivery} offColor={COLORS.sand} onColor={COLORS.forest} />
-              </View>
-              {offersDelivery && (
-                <FormField
-                  label="Delivery radius (km, optional)"
-                  value={deliveryRadiusKm}
-                  onChangeText={setDeliveryRadiusKm}
-                  placeholder="e.g. 15"
-                  keyboardType="number-pad"
+              )}
+              {tab === 'achievements' && (
+                <AchievementsTabContent
+                  achievements={achievements}
+                  streak={isOwn && ownStreak.data ? { streakCurrent: ownProfile.data?.streakCurrent ?? 0, weeks: ownStreak.data } : undefined}
                 />
               )}
-            </BlurCard>
-
-            {error && <Text style={styles.error}>{error}</Text>}
-
-            <AnimatedButton
-              label={updateMutation.isPending ? 'Saving…' : 'Save Changes'}
-              onPress={handleSave}
-              disabled={updateMutation.isPending}
-              fullWidth
-              gradientColors={[COLORS.forest, COLORS.forestDeep]}
-              style={styles.submitButton}
-            />
-
-            {profile?.status === 'rejected' && (
-              <BlurCard tint="light" noPadding style={styles.rejectedCard}>
-                <Text style={styles.rejectedTitle}>Application rejected</Text>
-                {profile.rejectionReason && <Text style={styles.rejectedReason}>{profile.rejectionReason}</Text>}
-                <TouchableOpacity onPress={handleResubmit} disabled={resubmitMutation.isPending}>
-                  <Text style={styles.resubmitText}>{resubmitMutation.isPending ? 'Resubmitting…' : 'Resubmit for review'}</Text>
-                </TouchableOpacity>
-              </BlurCard>
-            )}
-
-            <BlurCard tint="light" noPadding style={styles.locationCard}>
-              <Text style={styles.locationLabel}>{hasLocation ? '📍 Location set' : '📍 No location set'}</Text>
-              <Text style={styles.locationBody}>
-                {hasLocation
-                  ? "Your nursery appears on the map for nearby planters."
-                  : 'Set your location so planters nearby can find you on the map.'}
-              </Text>
-              <TouchableOpacity onPress={handleSetLocation} disabled={locationLoading}>
-                <Text style={styles.locationAction}>
-                  {locationLoading ? 'Getting location…' : hasLocation ? 'Update my location' : 'Use my current location'}
-                </Text>
-              </TouchableOpacity>
-            </BlurCard>
-          </Animated.View>
-        </ScrollView>
+              {tab === 'drives' && <DrivesTabContent role="nursery" drives={[]} onPressDrive={() => {}} />}
+            </>
+          }
+        />
       )}
+
+      <ReportSheet visible={reporting} onClose={() => setReporting(false)} targetType="nursery" targetId={nurseryId ?? null} targetLabel="this nursery" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 8, gap: 8 },
-  statusBanner: { borderRadius: RADIUS.md, padding: 14, marginBottom: 12, borderLeftWidth: 4, borderLeftColor: COLORS.golden },
-  statusBannerDanger: { borderLeftColor: COLORS.coral },
-  statusTitle: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
-  statusBody: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
-  logoWrap: { alignItems: 'center', marginTop: 8, marginBottom: 4 },
-  logoCircle: {
-    width: 104,
-    height: 104,
-    borderRadius: 52,
-    backgroundColor: COLORS.beige,
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
+  headerActions: { flexDirection: 'row', gap: 10 },
+  iconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  iconBlur: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: COLORS.sand,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'visible',
+    borderColor: 'rgba(255,255,255,0.3)',
   },
-  logoImage: { width: 104, height: 104, borderRadius: 52 },
-  logoPlaceholder: { fontSize: 14, color: COLORS.textMuted, fontWeight: '600' },
-  logoEditBadge: {
-    position: 'absolute',
-    right: 0,
-    bottom: 4,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: COLORS.forest,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.cream,
-    ...SHADOWS.sm,
-  },
-  logoEditIcon: { fontSize: 13, color: COLORS.white, fontWeight: '700' },
-  deliveryCard: { padding: 14, borderRadius: RADIUS.md, marginTop: 4, marginBottom: 8, gap: 8 },
-  deliveryRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  deliveryLabel: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
-  deliveryHint: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
-  error: { fontSize: 13, color: COLORS.coral, marginTop: 12 },
-  submitButton: { marginTop: 20 },
-  rejectedCard: { marginTop: 20, padding: 16, borderRadius: RADIUS.md, borderLeftWidth: 4, borderLeftColor: COLORS.coral },
-  rejectedTitle: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 4 },
-  rejectedReason: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 8 },
-  resubmitText: { fontSize: 13, color: COLORS.forest, fontWeight: '700', textAlign: 'center' },
-  locationCard: { marginTop: 24, padding: 16, borderRadius: RADIUS.md, alignItems: 'center' },
-  locationLabel: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
-  locationBody: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4, textAlign: 'center' },
-  locationAction: { fontSize: 13, color: COLORS.forest, fontWeight: '700', marginTop: 12 },
+  iconText: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  topBarTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center', marginHorizontal: 8 },
+  publicExtras: { paddingHorizontal: 16, gap: 8, marginBottom: 8 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, marginTop: 12, marginBottom: 4 },
+  stockRow: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md, padding: 14, marginBottom: 10 },
+  stockSpecies: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
+  stockMeta: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+  stockChevron: { fontSize: 22, color: COLORS.textSecondary, fontWeight: '600' },
+  tabBody: { paddingHorizontal: 16, paddingTop: 16 },
+  contributionsCard: { gap: 12 },
+  contributionsTitle: { fontSize: 16, fontWeight: '700', color: COLORS.white },
+  contributionsRow: { flexDirection: 'row', justifyContent: 'space-around' },
+  contributionsStat: { alignItems: 'center' },
+  contributionsNum: { fontSize: 22, fontWeight: '800', color: COLORS.white },
+  contributionsLabel: { fontSize: 10, color: 'rgba(255,255,255,0.8)', marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.4 },
 });

@@ -48,4 +48,17 @@ export default async function challengesRoutes(fastify: FastifyInstance) {
 
     reply.status(201).send(participant);
   });
+
+  fastify.delete<{ Params: { id: string } }>('/:id/join', async (request, reply) => {
+    const existing = await fastify.prisma.challengeParticipant.findUnique({
+      where: { challengeId_userId: { challengeId: request.params.id, userId: request.user!.id } },
+    });
+    if (!existing) throw new NotFoundError('You have not joined this challenge');
+
+    await fastify.prisma.challengeParticipant.delete({
+      where: { challengeId_userId: { challengeId: request.params.id, userId: request.user!.id } },
+    });
+
+    reply.status(204).send();
+  });
 }

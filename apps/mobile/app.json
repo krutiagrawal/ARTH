@@ -42,7 +42,6 @@
           "locationWhenInUsePermission": "PLANT needs your location to record where you plant trees."
         }
       ],
-      "@react-native-community/datetimepicker",
       "expo-secure-store",
       [
         "@stripe/stripe-react-native",

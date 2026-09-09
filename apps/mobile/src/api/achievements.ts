@@ -14,3 +14,7 @@ export interface ApiAchievement {
 export async function fetchAchievements(): Promise<ApiAchievement[]> {
   return apiFetch<ApiAchievement[]>('/api/achievements');
 }
+
+export async function fetchUserAchievements(userId: string): Promise<ApiAchievement[]> {
+  return apiFetch<ApiAchievement[]>(`/api/users/${userId}/achievements`);
+}

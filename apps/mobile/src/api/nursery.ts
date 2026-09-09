@@ -145,6 +145,10 @@ export async function fetchNurseryBadges(): Promise<ApiNurseryBadge[]> {
   return apiFetch<ApiNurseryBadge[]>('/api/nursery/badges');
 }
 
+export async function fetchNurseryPublicAchievements(nurseryId: string): Promise<ApiNurseryBadge[]> {
+  return apiFetch<ApiNurseryBadge[]>(`/api/nurseries/${nurseryId}/achievements`);
+}
+
 export type ReservationStatus = 'pending' | 'fulfilled' | 'declined' | 'cancelled';
 
 export interface ApiNurseryReservation {

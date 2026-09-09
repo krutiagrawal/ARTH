@@ -9,6 +9,7 @@ export const updateMeSchema = z.object({
     .regex(/^[a-z0-9_]+$/)
     .optional(),
   avatarEmoji: z.string().min(1).max(8).optional(),
+  bio: z.string().max(160).nullable().optional(),
 });
 
 export const updateSettingsSchema = z.object({

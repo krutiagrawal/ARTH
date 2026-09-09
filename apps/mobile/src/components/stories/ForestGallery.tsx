@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
+import { View, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Text } from '../common/AppText';
 import { COLORS } from '../../constants/colors';
 import { RADIUS } from '../../constants/theme';
@@ -7,11 +7,11 @@ import { useMyStories, useDeleteStory } from '../../hooks/useApiQueries';
 import { resolveStoryImage } from '../../api/stories';
 import { StoryViewer } from './StoryViewer';
 import { useConfirm } from '../../context/ConfirmDialogContext';
+import { EFFECTIVE_WIDTH } from '../../utils/responsive';
 
-const { width: SW } = Dimensions.get('window');
 const GAP = 8;
 const H_PADDING = 16 * 2; // ProfileScreen body horizontal padding (both sides)
-const THUMB = (SW - H_PADDING - GAP * 2) / 3;
+const THUMB = (EFFECTIVE_WIDTH - H_PADDING - GAP * 2) / 3;
 
 function isActive(expiresAt: string): boolean {
   return new Date(expiresAt).getTime() > Date.now();
@@ -64,6 +64,11 @@ export function ForestGallery() {
           >
             <Image source={{ uri: resolveStoryImage(story.imageUrl) }} style={styles.thumb} />
             {isActive(story.expiresAt) && <View style={styles.liveDot} />}
+            {!!story.viewCount && (
+              <View style={styles.viewBadge}>
+                <Text style={styles.viewBadgeText}>👁 {story.viewCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         ))}
       </View>
@@ -137,5 +142,19 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.golden,
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
+  },
+  viewBadge: {
+    position: 'absolute',
+    bottom: 4,
+    left: 4,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  viewBadgeText: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: '600',
   },
 });

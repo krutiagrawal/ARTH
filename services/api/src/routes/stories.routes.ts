@@ -80,6 +80,23 @@ export default async function storiesRoutes(fastify: FastifyInstance) {
     reply.send(await storyService.getStoryFeed(fastify.prisma, request.user!.id));
   });
 
+  // Batch seen/unseen ring lookup for avatars rendered outside the tray/feed (profile headers,
+  // leaderboard rows, follower lists, ...). Comma-separated id lists, any subset may be omitted.
+  fastify.get<{ Querystring: { userIds?: string; ngoIds?: string; nurseryIds?: string; groupIds?: string } }>(
+    '/ring-status',
+    async (request, reply) => {
+      const split = (s?: string) => (s ? s.split(',').filter(Boolean) : []);
+      reply.send(
+        await storyService.getRingStatus(fastify.prisma, request.user!.id, {
+          userIds: split(request.query.userIds),
+          ngoIds: split(request.query.ngoIds),
+          nurseryIds: split(request.query.nurseryIds),
+          groupIds: split(request.query.groupIds),
+        }),
+      );
+    },
+  );
+
   fastify.post<{ Params: { id: string } }>('/:id/view', async (request, reply) => {
     await storyService.markStoryViewed(fastify.prisma, request.user!.id, request.params.id);
     reply.status(204).send();
@@ -88,5 +105,28 @@ export default async function storiesRoutes(fastify: FastifyInstance) {
   fastify.delete<{ Params: { id: string } }>('/:id', async (request, reply) => {
     await storyService.deleteStory(fastify.prisma, request.user!.id, request.params.id);
     reply.status(204).send();
+  });
+
+  // Owner-only: who has viewed (and, per storyService, liked) this story.
+  fastify.get<{ Params: { id: string } }>('/:id/viewers', async (request, reply) => {
+    const viewers = await storyService.listStoryViewers(fastify.prisma, request.user!.id, request.params.id);
+    reply.send(
+      viewers.map((v) => ({
+        userId: v.user.id,
+        name: v.user.name,
+        handle: v.user.handle,
+        avatarEmoji: v.user.avatarEmoji,
+        viewedAt: v.viewedAt,
+        liked: v.liked,
+      })),
+    );
+  });
+
+  fastify.post<{ Params: { id: string } }>('/:id/like', async (request, reply) => {
+    reply.send(await storyService.likeStory(fastify.prisma, request.user!.id, request.params.id));
+  });
+
+  fastify.delete<{ Params: { id: string } }>('/:id/like', async (request, reply) => {
+    reply.send(await storyService.unlikeStory(fastify.prisma, request.user!.id, request.params.id));
   });
 }

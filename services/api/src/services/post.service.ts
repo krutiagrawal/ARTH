@@ -410,18 +410,23 @@ export async function getSocialFeed(
 export async function listPostsByAuthor(
   prisma: PrismaClient,
   viewerId: string,
-  author: { ngoId?: string; nurseryId?: string; userId?: string },
+  author: { ngoId?: string; nurseryId?: string; userId?: string; groupId?: string },
   filter: { cursor?: string; take?: number } = {},
 ) {
   const take = Math.min(filter.take ?? 20, 50);
   const blocked = await getBlockedIds(prisma, viewerId);
 
+  const authorWhere = author.ngoId
+    ? { ngoId: author.ngoId }
+    : author.nurseryId
+      ? { nurseryId: author.nurseryId }
+      : author.groupId
+        ? { groupId: author.groupId }
+        : { userId: author.userId };
+
   const rows = await prisma.post.findMany({
     where: {
-      AND: [
-        author.ngoId ? { ngoId: author.ngoId } : author.nurseryId ? { nurseryId: author.nurseryId } : { userId: author.userId },
-        visibilityWhere(viewerId, blocked),
-      ],
+      AND: [authorWhere, visibilityWhere(viewerId, blocked)],
     },
     orderBy: { createdAt: 'desc' },
     take: take + 1,

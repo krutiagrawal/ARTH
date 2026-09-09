@@ -81,6 +81,7 @@ export function toPublicUser(user: User) {
     email: user.email,
     name: user.name,
     handle: user.handle,
+    bio: user.bio,
     avatarEmoji: user.avatarEmoji,
     xp: user.xp,
     level: user.level,

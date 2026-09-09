@@ -8,7 +8,9 @@ import { useAuth } from '../context/AuthContext';
 import {
   createPost,
   deletePost,
+  fetchGroupPosts,
   fetchNgoPosts,
+  fetchNurseryPosts,
   fetchPost,
   fetchPostLikers,
   fetchSavedPosts,
@@ -68,6 +70,8 @@ export const socialKeys = {
   likers: (id: string) => ['social', 'likers', id] as const,
   ngoPosts: (ngoId: string) => ['social', 'posts', 'ngo', ngoId] as const,
   userPosts: (userId: string) => ['social', 'posts', 'user', userId] as const,
+  nurseryPosts: (nurseryId: string) => ['social', 'posts', 'nursery', nurseryId] as const,
+  groupPosts: (groupId: string) => ['social', 'posts', 'group', groupId] as const,
   followers: (status?: FollowStatus, q?: string) => ['ngo', 'followers', status ?? 'all', q ?? ''] as const,
   nurseryFollowers: (status?: FollowStatus, q?: string) => ['nursery', 'followers', status ?? 'all', q ?? ''] as const,
   portfolio: ['ngo', 'portfolio'] as const,
@@ -127,6 +131,26 @@ export function useUserPosts(userId: string | undefined) {
     queryKey: socialKeys.userPosts(userId ?? ''),
     queryFn: ({ pageParam }) => fetchUserPosts(userId as string, pageParam),
     enabled: isAuthenticated && !!userId,
+    ...cursorPageParams<ApiPost>(),
+  });
+}
+
+export function useNurseryPosts(nurseryId: string | undefined) {
+  const { isAuthenticated } = useAuth();
+  return useInfiniteQuery({
+    queryKey: socialKeys.nurseryPosts(nurseryId ?? ''),
+    queryFn: ({ pageParam }) => fetchNurseryPosts(nurseryId as string, pageParam),
+    enabled: isAuthenticated && !!nurseryId,
+    ...cursorPageParams<ApiPost>(),
+  });
+}
+
+export function useGroupPosts(groupId: string | undefined) {
+  const { isAuthenticated } = useAuth();
+  return useInfiniteQuery({
+    queryKey: socialKeys.groupPosts(groupId ?? ''),
+    queryFn: ({ pageParam }) => fetchGroupPosts(groupId as string, pageParam),
+    enabled: isAuthenticated && !!groupId,
     ...cursorPageParams<ApiPost>(),
   });
 }

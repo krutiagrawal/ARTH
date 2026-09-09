@@ -18,6 +18,7 @@ import { resolveMediaUrl } from '../../api/client';
 import type { ApiPost } from '../../api/posts';
 import { MediaCarousel } from './MediaCarousel';
 import { LikeButton } from './LikeButton';
+import { StoryRing, type StoryRingStatus } from '../common/StoryRing';
 import { ActionSheet, type ActionSheetOption } from './ActionSheet';
 import { useHaptics } from '../../hooks/useHaptics';
 import { useConfirm } from '../../context/ConfirmDialogContext';
@@ -49,6 +50,10 @@ interface PostCardProps {
   onDelete?: (post: ApiPost) => void;
   /** True while a like toggle for this exact post is in flight — see LikeButton. */
   isTogglingLike?: boolean;
+  /** Set false to hide the Share menu option — e.g. the reduced-actions grid post detail view. */
+  enableShare?: boolean;
+  /** Sage = author has an unseen story, brown = seen, omitted = no active story. */
+  storyRing?: StoryRingStatus | null;
 }
 
 export function PostCard({
@@ -62,6 +67,8 @@ export function PostCard({
   onBlock,
   onDelete,
   isTogglingLike = false,
+  enableShare = true,
+  storyRing,
 }: PostCardProps) {
   const { selection, light } = useHaptics();
   const confirm = useConfirm();
@@ -148,18 +155,20 @@ export function PostCard({
       }
     }
 
-    options.push({
-      key: 'share',
-      icon: '📤',
-      label: 'Share',
-      onPress: () => {
-        const what = post.caption?.trim() || `A post from ${post.author.name}`;
-        Share.share({ message: `${what}\n\nShared from PLANT 🌱` }).catch(() => undefined);
-      },
-    });
+    if (enableShare) {
+      options.push({
+        key: 'share',
+        icon: '📤',
+        label: 'Share',
+        onPress: () => {
+          const what = post.caption?.trim() || `A post from ${post.author.name}`;
+          Share.share({ message: `${what}\n\nShared from PLANT 🌱` }).catch(() => undefined);
+        },
+      });
+    }
 
     return options;
-  }, [post, onDelete, onReport, onBlock]);
+  }, [post, onDelete, onReport, onBlock, enableShare]);
 
   const openMenu = useCallback(() => {
     selection();
@@ -175,13 +184,15 @@ export function PostCard({
           activeOpacity={0.7}
           onPress={() => onPressAuthor?.(post)}
         >
-          <View style={styles.avatar}>
-            {avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
-            ) : (
-              <Text style={styles.avatarEmoji}>{post.author.avatarEmoji ?? '🌱'}</Text>
-            )}
-          </View>
+          <StoryRing status={storyRing} size={42}>
+            <View style={styles.avatar}>
+              {avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarEmoji}>{post.author.avatarEmoji ?? '🌱'}</Text>
+              )}
+            </View>
+          </StoryRing>
 
           <View style={styles.authorText}>
             <View style={styles.nameRow}>

@@ -10,40 +10,65 @@ import { RADIUS } from '../../constants/theme';
 // falls back to just opening the Ola app/site rather than a broken deep link.
 const OLA_FALLBACK_URL = 'https://www.olacabs.com/';
 
-export function LocationActions({ label, address }: { label?: string; address: string | null | undefined }) {
+export function LocationActions({
+  label,
+  address,
+  phone,
+}: {
+  label?: string;
+  address: string | null | undefined;
+  /** Adds a "Call" chip as the first action, in the same row as Maps/Uber/Ola. */
+  phone?: string | null;
+}) {
   const [copied, setCopied] = useState(false);
-  if (!address) return null;
+  if (!address && !phone) return null;
 
   const copy = async () => {
+    if (!address) return;
     await Clipboard.setStringAsync(address);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const query = encodeURIComponent(address);
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
-  const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${query}`;
+  const query = address ? encodeURIComponent(address) : null;
+  const mapsUrl = query ? `https://www.google.com/maps/search/?api=1&query=${query}` : null;
+  const uberUrl = query ? `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${query}` : null;
 
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <View style={styles.addressRow}>
-        <Text style={styles.addressIcon}>📍</Text>
-        <Text style={styles.addressText}>{address}</Text>
-      </View>
+      {address && (
+        <View style={styles.addressRow}>
+          <Text style={styles.addressIcon}>📍</Text>
+          <Text style={styles.addressText}>{address}</Text>
+        </View>
+      )}
       <View style={styles.actionsRow}>
-        <TouchableOpacity style={styles.actionChip} onPress={copy}>
-          <Text style={styles.actionChipText}>{copied ? '✓ Copied' : 'Copy address'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionChip} onPress={() => Linking.openURL(mapsUrl)}>
-          <Text style={styles.actionChipText}>Maps</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionChip} onPress={() => Linking.openURL(uberUrl)}>
-          <Text style={styles.actionChipText}>Uber</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionChip} onPress={() => Linking.openURL(OLA_FALLBACK_URL)}>
-          <Text style={styles.actionChipText}>Ola</Text>
-        </TouchableOpacity>
+        {phone && (
+          <TouchableOpacity style={styles.actionChip} onPress={() => Linking.openURL(`tel:${phone}`)}>
+            <Text style={styles.actionChipText}>📞 Call</Text>
+          </TouchableOpacity>
+        )}
+        {address && (
+          <TouchableOpacity style={styles.actionChip} onPress={copy}>
+            <Text style={styles.actionChipText}>{copied ? '✓ Copied' : 'Copy address'}</Text>
+          </TouchableOpacity>
+        )}
+        {mapsUrl && (
+          <TouchableOpacity style={styles.actionChip} onPress={() => Linking.openURL(mapsUrl)}>
+            <Text style={styles.actionChipText}>Maps</Text>
+          </TouchableOpacity>
+        )}
+        {uberUrl && (
+          <TouchableOpacity style={styles.actionChip} onPress={() => Linking.openURL(uberUrl)}>
+            <Text style={styles.actionChipText}>Uber</Text>
+          </TouchableOpacity>
+        )}
+        {address && (
+          <TouchableOpacity style={styles.actionChip} onPress={() => Linking.openURL(OLA_FALLBACK_URL)}>
+            <Text style={styles.actionChipText}>Ola</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );

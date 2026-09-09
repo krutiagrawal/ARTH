@@ -15,8 +15,15 @@ export interface LeaderboardResponse {
   entries: LeaderboardEntry[];
   totalUsers: number;
   myRank: number | null;
+  hasMore: boolean;
 }
 
-export async function fetchLeaderboard(scope: 'global' | 'friends' = 'global'): Promise<LeaderboardResponse> {
-  return apiFetch<LeaderboardResponse>(`/api/leaderboard?scope=${scope}`);
+export async function fetchLeaderboard(
+  scope: 'global' | 'friends' = 'global',
+  opts: { limit?: number; offset?: number } = {},
+): Promise<LeaderboardResponse> {
+  const qs = new URLSearchParams({ scope });
+  if (opts.limit) qs.set('limit', String(opts.limit));
+  if (opts.offset) qs.set('offset', String(opts.offset));
+  return apiFetch<LeaderboardResponse>(`/api/leaderboard?${qs}`);
 }

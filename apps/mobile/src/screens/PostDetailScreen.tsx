@@ -51,9 +51,11 @@ export function PostDetailScreen({ navigation, route }: any) {
             onToggleLike={(p) => toggleLike.mutate({ id: p.id, liked: p.likedByMe })}
             onToggleSave={(p) => toggleSave.mutate({ id: p.id, saved: p.savedByMe })}
             onPressLikes={(p) => navigation.navigate('PostLikes', { postId: p.id })}
-            onPressAuthor={(p) =>
-              p.author.kind === 'ngo' && navigation.navigate('NgoPublicProfile', { ngoId: p.author.id })
-            }
+            onPressAuthor={(p) => {
+              if (p.author.kind === 'ngo') navigation.navigate('NgoPublicProfile', { ngoId: p.author.id });
+              else if (p.author.kind === 'nursery') navigation.navigate('NurseryPublicProfile', { nurseryId: p.author.id });
+              else if (p.author.kind === 'user') navigation.navigate('UserPublicProfile', { userId: p.author.id });
+            }}
             onPressDrive={(p) => p.driveId && navigation.navigate('DriveDetail', { driveId: p.driveId })}
             onReport={() => setReporting(true)}
             onBlock={(p) =>

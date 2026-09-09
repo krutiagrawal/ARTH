@@ -5,6 +5,7 @@ export interface ApiPublicProfile {
   id: string;
   name: string;
   handle: string;
+  bio: string | null;
   avatarEmoji: string;
   level: number;
   treesPlantedCount: number;
@@ -12,6 +13,7 @@ export interface ApiPublicProfile {
   badgesCount: number;
   isOnline: boolean;
   lastActiveAt: string | null;
+  friendStatus: 'none' | 'pending' | 'accepted';
 }
 
 export interface ApiSession {
@@ -25,7 +27,7 @@ export async function fetchPublicProfile(userId: string): Promise<ApiPublicProfi
   return apiFetch<ApiPublicProfile>(`/api/users/${userId}`);
 }
 
-export async function updateMe(input: { name?: string; handle?: string; avatarEmoji?: string }): Promise<ApiUser> {
+export async function updateMe(input: { name?: string; handle?: string; avatarEmoji?: string; bio?: string | null }): Promise<ApiUser> {
   return apiFetch<ApiUser>('/api/users/me', { method: 'PATCH', body: input });
 }
 

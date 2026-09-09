@@ -200,6 +200,31 @@ export async function getGroupForMember(prisma: PrismaClient, userId: string, gr
   return group;
 }
 
+/** No membership check — for viewing any active group's profile from outside it. */
+export async function getPublicGroupProfile(prisma: PrismaClient, viewerId: string, groupId: string) {
+  const [group, memberCount, membership] = await Promise.all([
+    prisma.groupProfile.findFirst({ where: { id: groupId, status: 'active' } }),
+    prisma.groupMember.count({ where: { groupId } }),
+    prisma.groupMember.findUnique({ where: { groupId_userId: { groupId, userId: viewerId } } }),
+  ]);
+  if (!group) throw new NotFoundError('Group not found');
+
+  return {
+    id: group.id,
+    groupName: group.groupName,
+    groupType: group.groupType,
+    description: group.description,
+    logoUrl: group.logoUrl,
+    city: group.city,
+    handle: group.handle,
+    avatarEmoji: group.avatarEmoji,
+    streakCurrent: group.streakCurrent,
+    badgesCount: group.badgesCount,
+    memberCount,
+    isMember: !!membership,
+  };
+}
+
 // ---------- Challenges ----------
 
 export async function createChallenge(prisma: PrismaClient, userId: string, input: CreateChallengeInput) {

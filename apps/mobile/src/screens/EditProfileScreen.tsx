@@ -28,6 +28,7 @@ export function EditProfileScreen({ navigation }: any) {
 
   const [name, setName] = useState(user?.name ?? '');
   const [handle, setHandle] = useState(user?.handle ?? '');
+  const [bio, setBio] = useState(user?.bio ?? '');
   const [avatarEmoji, setAvatarEmoji] = useState(user?.avatarEmoji ?? '🧑‍🌾');
   const [error, setError] = useState<string | null>(null);
 
@@ -42,7 +43,7 @@ export function EditProfileScreen({ navigation }: any) {
       return;
     }
     try {
-      await updateMeMutation.mutateAsync({ name: name.trim(), handle, avatarEmoji });
+      await updateMeMutation.mutateAsync({ name: name.trim(), handle, avatarEmoji, bio: bio.trim() || null });
       confirm('Profile updated', 'Your changes have been saved.');
       navigation?.goBack?.();
     } catch (e) {
@@ -104,6 +105,20 @@ export function EditProfileScreen({ navigation }: any) {
             maxLength={30}
           />
 
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Bio</Text>
+            <Text style={styles.charCount}>{bio.length}/160</Text>
+          </View>
+          <TextInput
+            style={[styles.input, styles.bioInput]}
+            value={bio}
+            onChangeText={(text) => setBio(text.slice(0, 160))}
+            placeholder="Tell people a bit about yourself"
+            placeholderTextColor={COLORS.textMuted}
+            multiline
+            maxLength={160}
+          />
+
           {error && <Text style={styles.error}>{error}</Text>}
 
           <TouchableOpacity
@@ -157,6 +172,20 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  charCount: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 12,
+  },
+  bioInput: {
+    minHeight: 72,
+    textAlignVertical: 'top',
   },
   avatarGrid: {
     flexDirection: 'row',

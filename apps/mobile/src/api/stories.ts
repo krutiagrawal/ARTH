@@ -16,10 +16,13 @@ export interface ApiStory {
   seen?: boolean;
   /** Only present on your own stories. */
   viewCount?: number;
+  likeCount: number;
+  /** Only present on the feed, where like state is resolved for the caller. */
+  likedByMe?: boolean;
 }
 
 export interface ApiStoryAuthor {
-  kind: 'user' | 'ngo' | 'nursery';
+  kind: 'user' | 'ngo' | 'nursery' | 'group';
   id: string;
   name: string;
   handle: string | null;
@@ -99,7 +102,61 @@ export async function deleteStory(id: string): Promise<void> {
   await apiFetch(`/api/stories/${id}`, { method: 'DELETE' });
 }
 
+export interface ApiStoryViewer {
+  userId: string;
+  name: string;
+  handle: string;
+  avatarEmoji: string;
+  viewedAt: string;
+  liked: boolean;
+}
+
+/** Owner-only: who has viewed (and liked) this story, newest first. */
+export async function fetchStoryViewers(storyId: string): Promise<ApiStoryViewer[]> {
+  return apiFetch<ApiStoryViewer[]>(`/api/stories/${storyId}/viewers`);
+}
+
+export interface StoryLikeResult {
+  liked: boolean;
+  likeCount: number;
+}
+
+export async function likeStory(id: string): Promise<StoryLikeResult> {
+  return apiFetch<StoryLikeResult>(`/api/stories/${id}/like`, { method: 'POST' });
+}
+
+export async function unlikeStory(id: string): Promise<StoryLikeResult> {
+  return apiFetch<StoryLikeResult>(`/api/stories/${id}/like`, { method: 'DELETE' });
+}
+
 /** Resolves a stored `/uploads/...` path to an absolute URL the app can render. */
 export function resolveStoryImage(imageUrl: string): string | undefined {
   return resolveMediaUrl(imageUrl);
+}
+
+export interface RingStatus {
+  hasStory: boolean;
+  seen: boolean;
+}
+
+export interface RingStatusMap {
+  users: Record<string, RingStatus>;
+  ngos: Record<string, RingStatus>;
+  nurseries: Record<string, RingStatus>;
+  groups: Record<string, RingStatus>;
+}
+
+/** Batch seen/unseen ring lookup for avatars rendered outside the story tray/feed. */
+export async function fetchRingStatus(ids: {
+  userIds?: string[];
+  ngoIds?: string[];
+  nurseryIds?: string[];
+  groupIds?: string[];
+}): Promise<RingStatusMap> {
+  const qs = new URLSearchParams();
+  if (ids.userIds?.length) qs.set('userIds', ids.userIds.join(','));
+  if (ids.ngoIds?.length) qs.set('ngoIds', ids.ngoIds.join(','));
+  if (ids.nurseryIds?.length) qs.set('nurseryIds', ids.nurseryIds.join(','));
+  if (ids.groupIds?.length) qs.set('groupIds', ids.groupIds.join(','));
+  return apiFetch<RingStatusMap>(`/api/stories/ring-status?${qs}`);
 }

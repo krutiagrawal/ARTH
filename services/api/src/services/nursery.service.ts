@@ -198,8 +198,12 @@ export async function getStreakCalendar(prisma: PrismaClient, userId: string, we
 
 export async function getBadges(prisma: PrismaClient, userId: string) {
   const profile = await getOwnProfile(prisma, userId);
+  return getPublicBadges(prisma, profile.id);
+}
+
+export async function getPublicBadges(prisma: PrismaClient, nurseryId: string) {
   const achievements = await prisma.nurseryAchievement.findMany({ orderBy: { sortOrder: 'asc' } });
-  const unlocks = await prisma.nurseryAchievementUnlock.findMany({ where: { nurseryId: profile.id } });
+  const unlocks = await prisma.nurseryAchievementUnlock.findMany({ where: { nurseryId } });
   const unlockById = new Map(unlocks.map((u) => [u.achievementId, u]));
 
   return achievements.map((a) => {

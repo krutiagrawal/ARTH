@@ -37,6 +37,7 @@ import { getForestLevelLabel, getXpProgress } from '../constants/forestLevels';
 import { hexToRgba } from '../utils/color';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { getHeroSeamColor } from '../utils/heroSeam';
+import { StoriesTray } from '../components/stories/StoriesTray';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 /** How tall the illustrated hero section is — sky/hills/lake (or the real illustration image)
@@ -540,6 +541,11 @@ export function HomeScreen({ navigation, onNavigateTab }: any) {
           <HomeGrowCTA theme={theme} onPress={() => setGrowSheetVisible(true)} />
         </View>
 
+        {/* Stories from accounts the user follows */}
+        <View style={styles.trayWrap}>
+          <StoriesTray tone="onLight" />
+        </View>
+
         {/* Mascot greeting */}
         <View style={styles.mascotSection}>
           <MascotBubble
@@ -808,6 +814,9 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   growCtaSection: {
+    marginBottom: 18,
+  },
+  trayWrap: {
     marginBottom: 18,
   },
   growCta: {

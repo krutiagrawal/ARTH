@@ -62,6 +62,18 @@ export async function sponsorPlant(driveId: string, plantId: string): Promise<{ 
   return apiFetch(`/api/drives/${driveId}/plants/${plantId}/sponsor`, { method: 'POST' });
 }
 
+export async function fetchJoinedDrives(): Promise<ApiDrive[]> {
+  return apiFetch<ApiDrive[]>('/api/drives/joined');
+}
+
+export async function fetchUserJoinedDrives(userId: string): Promise<ApiDrive[]> {
+  return apiFetch<ApiDrive[]>(`/api/users/${userId}/drives/joined`);
+}
+
+export async function fetchGroupDrives(groupId: string): Promise<ApiDrive[]> {
+  return apiFetch<ApiDrive[]>(`/api/groups/${groupId}/drives`);
+}
+
 // ---------- NGO-facing ----------
 
 export async function fetchMyDrives(): Promise<ApiDrive[]> {

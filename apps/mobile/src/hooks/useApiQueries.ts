@@ -1,14 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { fetchTrees, plantTree, verifyPlantingPhoto, type PlantTreeInput } from '../api/trees';
+import { fetchNgoPublicFollowers, fetchNurseryPublicFollowers } from '../api/publicFollowers';
 import { fetchApprovedLocations, checkPlantingEligibility } from '../api/plantingLocations';
 import { fetchSpecies } from '../api/species';
 import { fetchTodayMissions, completeMission } from '../api/missions';
 import { fetchEcoFacts } from '../api/ecoFacts';
-import { fetchAchievements } from '../api/achievements';
+import { fetchAchievements, fetchUserAchievements } from '../api/achievements';
 import { fetchStreakCalendar } from '../api/streaks';
 import { fetchThemes, selectTheme } from '../api/themes';
 import { fetchLeaderboard } from '../api/leaderboard';
+import { fetchPublicNgoLeaderboard, fetchPublicNurseryLeaderboard } from '../api/publicLeaderboard';
 import {
   fetchFriends,
   fetchFriendRequests,
@@ -17,7 +19,7 @@ import {
   respondFriendRequest,
   removeFriend,
 } from '../api/friends';
-import { fetchChallenges, joinChallenge } from '../api/challenges';
+import { fetchChallenges, joinChallenge, leaveChallenge } from '../api/challenges';
 import { fetchGlobalCounter } from '../api/community';
 import { fetchSettings, updateSettings, type ApiUserSettings } from '../api/settings';
 import { protectStreak } from '../api/streaks';
@@ -42,8 +44,12 @@ import {
   fetchMyStories,
   fetchStoryFeed,
   fetchUserStories,
+  fetchStoryViewers,
+  fetchRingStatus,
   postStory,
   deleteStory,
+  likeStory,
+  unlikeStory,
 } from '../api/stories';
 import {
   fetchDrives,
@@ -52,6 +58,9 @@ import {
   leaveDrive,
   sponsorPlant,
   fetchMyDrives,
+  fetchJoinedDrives,
+  fetchUserJoinedDrives,
+  fetchGroupDrives,
   createDrive,
   CreateDriveInput,
 } from '../api/drives';
@@ -102,6 +111,7 @@ import {
   leaveGroup,
   fetchGroupChallenges,
   joinGroupChallenge,
+  fetchGroupPublicProfile,
   UpdateGroupProfileInput,
   CreateGroupChallengeInput,
 } from '../api/group';
@@ -117,7 +127,7 @@ import {
   TreeHealthStatus,
 } from '../api/plantedTrees';
 import { fetchMyUpdates, createUpdate, deleteUpdate, CreateUpdateInput } from '../api/ngoUpdates';
-import { fetchNgoAchievements } from '../api/ngoAchievements';
+import { fetchNgoAchievements, fetchNgoPublicAchievements } from '../api/ngoAchievements';
 import { fetchNgoStreakCalendar } from '../api/ngoStreaks';
 import { fetchGroupStreakCalendar, fetchGroupStreakCalendarForMember } from '../api/groupStreaks';
 import { fetchGroupAchievements, fetchGroupAchievementsForMember } from '../api/groupAchievements';
@@ -132,6 +142,7 @@ import {
   updateSaplingStock,
   deleteSaplingStock,
   fetchNurseryBadges,
+  fetchNurseryPublicAchievements,
   fetchNurseryReservations,
   fulfillReservation as fulfillReservationApi,
   declineReservation as declineReservationApi,
@@ -300,6 +311,37 @@ export function useLeaderboard(scope: 'global' | 'friends' = 'global') {
   });
 }
 
+export const LEADERBOARD_PAGE_SIZE = 20;
+
+/** Page-number (not infinite-scroll) pagination for the Ranks tab's user list. `page` is 1-indexed. */
+export function useUserLeaderboardPage(scope: 'global' | 'friends', page: number) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['leaderboard', scope, 'page', page],
+    queryFn: () => fetchLeaderboard(scope, { limit: LEADERBOARD_PAGE_SIZE, offset: (page - 1) * LEADERBOARD_PAGE_SIZE }),
+    enabled: isAuthenticated,
+  });
+}
+
+/** Public NGO ranking tab — visible to any logged-in user. `page` is 1-indexed. */
+export function usePublicNgoLeaderboardPage(page: number) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['leaderboard', 'ngos', 'page', page],
+    queryFn: () => fetchPublicNgoLeaderboard(LEADERBOARD_PAGE_SIZE, (page - 1) * LEADERBOARD_PAGE_SIZE),
+    enabled: isAuthenticated,
+  });
+}
+
+export function usePublicNurseryLeaderboardPage(page: number) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['leaderboard', 'nurseries', 'page', page],
+    queryFn: () => fetchPublicNurseryLeaderboard(LEADERBOARD_PAGE_SIZE, (page - 1) * LEADERBOARD_PAGE_SIZE),
+    enabled: isAuthenticated,
+  });
+}
+
 export function useFriends() {
   const { isAuthenticated } = useAuth();
   return useQuery({
@@ -379,6 +421,32 @@ export function usePublicProfile(userId: string | null) {
   });
 }
 
+export function useUserAchievements(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['users', userId, 'achievements'],
+    queryFn: () => fetchUserAchievements(userId as string),
+    enabled: !!userId,
+  });
+}
+
+export function useNgoPublicFollowers(ngoId: string | undefined) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'public', ngoId, 'followers'],
+    queryFn: () => fetchNgoPublicFollowers(ngoId as string),
+    enabled: isAuthenticated && !!ngoId,
+  });
+}
+
+export function useNurseryPublicFollowers(nurseryId: string | undefined) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nursery', 'public', nurseryId, 'followers'],
+    queryFn: () => fetchNurseryPublicFollowers(nurseryId as string),
+    enabled: isAuthenticated && !!nurseryId,
+  });
+}
+
 export function useChallenges() {
   return useQuery({ queryKey: ['challenges'], queryFn: fetchChallenges });
 }
@@ -387,6 +455,14 @@ export function useJoinChallenge() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => joinChallenge(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['challenges'] }),
+  });
+}
+
+export function useLeaveChallenge() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => leaveChallenge(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['challenges'] }),
   });
 }
@@ -442,7 +518,7 @@ export function useProtectStreak() {
 export function useUpdateMe() {
   const { setUser } = useAuth();
   return useMutation({
-    mutationFn: (input: { name?: string; handle?: string; avatarEmoji?: string }) => updateMe(input),
+    mutationFn: (input: { name?: string; handle?: string; avatarEmoji?: string; bio?: string | null }) => updateMe(input),
     onSuccess: (updated) => setUser(updated),
   });
 }
@@ -545,6 +621,36 @@ export function useUserStories(userId: string | null) {
   });
 }
 
+/**
+ * Batch seen/unseen story-ring lookup for a screen's visible avatars — call once per list with
+ * every id on it (profile header, a page of leaderboard rows, a followers list, ...) rather than
+ * one request per avatar. Pass stable arrays (e.g. `useMemo`'d) to avoid refetching every render.
+ */
+export function useRingStatus(ids: { userIds?: string[]; ngoIds?: string[]; nurseryIds?: string[]; groupIds?: string[] }) {
+  const { isAuthenticated } = useAuth();
+  const userIds = ids.userIds ?? [];
+  const ngoIds = ids.ngoIds ?? [];
+  const nurseryIds = ids.nurseryIds ?? [];
+  const groupIds = ids.groupIds ?? [];
+  const hasAny = userIds.length + ngoIds.length + nurseryIds.length + groupIds.length > 0;
+
+  return useQuery({
+    queryKey: ['stories', 'ring-status', [...userIds].sort(), [...ngoIds].sort(), [...nurseryIds].sort(), [...groupIds].sort()],
+    queryFn: () => fetchRingStatus({ userIds, ngoIds, nurseryIds, groupIds }),
+    enabled: isAuthenticated && hasAny,
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useStoryViewers(storyId: string | undefined) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['stories', storyId, 'viewers'],
+    queryFn: () => fetchStoryViewers(storyId as string),
+    enabled: isAuthenticated && !!storyId,
+  });
+}
+
 export function usePostStory() {
   const queryClient = useQueryClient();
   const { refreshUser } = useAuth();
@@ -565,6 +671,17 @@ export function useDeleteStory() {
   return useMutation({
     mutationFn: (id: string) => deleteStory(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['stories'] }),
+  });
+}
+
+export function useToggleStoryLike() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, liked }: { id: string; liked: boolean }) => (liked ? unlikeStory(id) : likeStory(id)),
+    onSuccess: (_result, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['stories', 'feed'] });
+      queryClient.invalidateQueries({ queryKey: ['stories', id, 'viewers'] });
+    },
   });
 }
 
@@ -661,6 +778,32 @@ export function useReleaseMyAdoption() {
 export function useSponsorPlant() {
   return useMutation({
     mutationFn: ({ driveId, plantId }: { driveId: string; plantId: string }) => sponsorPlant(driveId, plantId),
+  });
+}
+
+export function useJoinedDrives() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['drives', 'joined'],
+    queryFn: fetchJoinedDrives,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useUserJoinedDrives(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['users', userId, 'drives', 'joined'],
+    queryFn: () => fetchUserJoinedDrives(userId as string),
+    enabled: !!userId,
+  });
+}
+
+export function useGroupDrives(groupId: string | undefined) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['groups', groupId, 'drives'],
+    queryFn: () => fetchGroupDrives(groupId as string),
+    enabled: isAuthenticated && Boolean(groupId),
   });
 }
 
@@ -949,6 +1092,14 @@ export function useNgoAchievements() {
     queryKey: ['ngo', 'achievements'],
     queryFn: fetchNgoAchievements,
     enabled: isAuthenticated,
+  });
+}
+
+export function useNgoPublicAchievements(ngoId: string | undefined) {
+  return useQuery({
+    queryKey: ['ngos', ngoId, 'achievements'],
+    queryFn: () => fetchNgoPublicAchievements(ngoId as string),
+    enabled: !!ngoId,
   });
 }
 
@@ -1435,6 +1586,15 @@ export function useLeaveGroup() {
   });
 }
 
+export function useGroupPublicProfile(groupId: string | undefined) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['groups', groupId, 'public'],
+    queryFn: () => fetchGroupPublicProfile(groupId as string),
+    enabled: isAuthenticated && Boolean(groupId),
+  });
+}
+
 export function useGroupChallenges(groupId: string | undefined) {
   const { isAuthenticated } = useAuth();
   return useQuery({
@@ -1572,6 +1732,14 @@ export function useNurseryBadges() {
     queryKey: ['nursery', 'badges'],
     queryFn: fetchNurseryBadges,
     enabled: isAuthenticated,
+  });
+}
+
+export function useNurseryPublicAchievements(nurseryId: string | undefined) {
+  return useQuery({
+    queryKey: ['nurseries', nurseryId, 'achievements'],
+    queryFn: () => fetchNurseryPublicAchievements(nurseryId as string),
+    enabled: !!nurseryId,
   });
 }
 

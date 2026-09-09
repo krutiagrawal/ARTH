@@ -234,7 +234,8 @@ export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDas
     { key: 'followers', emoji: '👥', color: COLORS.xpBlue, title: 'Followers', onPress: () => navigation.navigate('NurseryFollowers') },
     { key: 'streak', emoji: '🔥', color: COLORS.sage, title: 'Streak & Badges', onPress: () => navigation.navigate('NurseryStreakBadges') },
     { key: 'analytics', emoji: '📊', color: COLORS.golden, title: 'Stock Analytics', onPress: () => navigation.navigate('NurseryStockAnalytics') },
-    { key: 'profile', emoji: '⚙️', color: COLORS.earth, title: 'Nursery profile', onPress: () => navigation.navigate('NurseryProfile') },
+    { key: 'editProfile', emoji: '⚙️', color: COLORS.earth, title: 'Edit nursery profile', onPress: () => navigation.navigate('EditNurseryProfile') },
+    { key: 'viewProfile', emoji: '🌿', color: COLORS.forest, title: 'View public profile', onPress: () => navigation.navigate('NurseryProfile') },
     { key: 'map', emoji: '🗺️', color: COLORS.coral, title: 'View on Map', onPress: () => navigation.navigate('NurseryMap') },
   ];
 

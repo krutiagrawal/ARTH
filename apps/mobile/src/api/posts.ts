@@ -152,3 +152,13 @@ export async function fetchUserPosts(userId: string, cursor?: string): Promise<C
   const qs = cursor ? `?cursor=${cursor}` : '';
   return apiFetch(`/api/users/${userId}/posts${qs}`);
 }
+
+export async function fetchNurseryPosts(nurseryId: string, cursor?: string): Promise<CursorPage<ApiPost>> {
+  const qs = cursor ? `?cursor=${cursor}` : '';
+  return apiFetch(`/api/nurseries/${nurseryId}/posts${qs}`);
+}
+
+export async function fetchGroupPosts(groupId: string, cursor?: string): Promise<CursorPage<ApiPost>> {
+  const qs = cursor ? `?cursor=${cursor}` : '';
+  return apiFetch(`/api/groups/${groupId}/posts${qs}`);
+}
