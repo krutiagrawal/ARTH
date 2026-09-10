@@ -37,6 +37,14 @@ function describe(n: ApiNotification): string {
       return 'fulfilled your sapling request';
     case 'reservation_declined':
       return 'declined your sapling request';
+    case 'streak_at_risk':
+      return 'Your streak needs you today 🔥';
+    case 'streak_broken':
+      return 'Your streak broke — start a new one 💔';
+    case 'reengagement_nudge':
+      return "We've missed you 🌳";
+    case 'cart_abandoned':
+      return 'You left something in your cart 🛒';
     default:
       return 'sent you an update';
   }
@@ -61,6 +69,14 @@ function iconFor(n: ApiNotification): string {
       return '🎁';
     case 'reservation_declined':
       return '❌';
+    case 'streak_at_risk':
+      return '🔥';
+    case 'streak_broken':
+      return '💔';
+    case 'reengagement_nudge':
+      return '🌳';
+    case 'cart_abandoned':
+      return '🛒';
     default:
       return '🛡️';
   }
@@ -87,8 +103,14 @@ function NotificationRow({
 }) {
   const actorImage = resolveMediaUrl(notification.actor?.imageUrl);
   const thumb = resolveMediaUrl(notification.postThumbnailUrl);
-  // Types with no actor read as a full sentence on their own.
-  const standalone = notification.type === 'report_resolved' || notification.type === 'moderation_action';
+  // Types with no actor (system-generated, not from another user) read as a full sentence on their own.
+  const standalone =
+    notification.type === 'report_resolved' ||
+    notification.type === 'moderation_action' ||
+    notification.type === 'streak_at_risk' ||
+    notification.type === 'streak_broken' ||
+    notification.type === 'reengagement_nudge' ||
+    notification.type === 'cart_abandoned';
 
   return (
     <TouchableOpacity
@@ -180,6 +202,10 @@ export function NotificationsScreen({ navigation }: any) {
       }
       if (n.type === 'follow_request') {
         navigation.navigate('NgoMain');
+        return;
+      }
+      if (n.type === 'cart_abandoned') {
+        navigation.navigate('Cart');
         return;
       }
       if (n.actor?.kind === 'ngo') {

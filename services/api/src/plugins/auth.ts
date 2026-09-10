@@ -29,6 +29,16 @@ export default fp(async function authPlugin(fastify: FastifyInstance) {
     if (!user || user.isDeleted) throw new UnauthorizedError('Invalid or expired token');
     if (user.isBlocked) throw new AccountBlockedError();
 
+    // `lastActiveAt` otherwise only moves on login (auth.service.ts), so a user who stays
+    // logged in for weeks would look permanently "inactive" to re-engagement jobs. Refreshed
+    // here on every authenticated request, but throttled to once per 10 minutes per user so
+    // it doesn't add a write to every request — fire-and-forget, never blocks the response.
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    void fastify.prisma.user.updateMany({
+      where: { id: payload.sub, OR: [{ lastActiveAt: null }, { lastActiveAt: { lt: tenMinutesAgo } }] },
+      data: { lastActiveAt: new Date() },
+    }).catch(() => {});
+
     request.user = { id: payload.sub, email: payload.email, role: payload.role as UserRole };
   });
 

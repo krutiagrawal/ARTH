@@ -282,7 +282,10 @@ export async function listNurseryOrders(prisma: PrismaClient, nurseryId: string,
 }
 
 async function findNurseryOrderOrThrow(prisma: PrismaClient, nurseryId: string, orderId: string) {
-  const order = await prisma.order.findFirst({ where: { id: orderId, nurseryId } });
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, nurseryId },
+    include: { nursery: { select: { nurseryName: true } } },
+  });
   if (!order) throw new NotFoundError('Order not found');
   return order;
 }
@@ -301,7 +304,12 @@ export async function markOrderPacked(prisma: PrismaClient, nurseryId: string, o
   if (order.status !== 'confirmed') throw new BadRequestError('Only a confirmed order can be marked as packed');
 
   const updated = await prisma.order.update({ where: { id: orderId }, data: { status: 'packed', packedAt: new Date() } });
-  await notify(prisma, { userId: order.userId, type: 'order_confirmed', data: { orderId, stage: 'packed' } });
+  await notify(prisma, {
+    userId: order.userId,
+    type: 'order_confirmed',
+    data: { orderId, stage: 'packed' },
+    push: { title: 'Order packed 📦', body: `${order.nursery.nurseryName} just packed your saplings — on their way soon.` },
+  });
   return updated;
 }
 
@@ -338,7 +346,12 @@ export async function markOrderDelivered(prisma: PrismaClient, nurseryId: string
   if (order.deliveryOtp && otp !== order.deliveryOtp) throw new BadRequestError('Incorrect delivery OTP');
 
   const updated = await prisma.order.update({ where: { id: orderId }, data: { status: 'delivered', deliveredAt: new Date() } });
-  await notify(prisma, { userId: order.userId, type: 'order_delivered', data: { orderId } });
+  await notify(prisma, {
+    userId: order.userId,
+    type: 'order_delivered',
+    data: { orderId },
+    push: { title: '🎉 Delivered!', body: 'Your saplings have arrived. Time to get your hands dirty.' },
+  });
   return updated;
 }
 

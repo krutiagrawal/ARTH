@@ -68,7 +68,11 @@ export type NotificationType =
   | 'moderation_action'
   | 'reservation_requested'
   | 'reservation_fulfilled'
-  | 'reservation_declined';
+  | 'reservation_declined'
+  | 'streak_at_risk'
+  | 'streak_broken'
+  | 'reengagement_nudge'
+  | 'cart_abandoned';
 
 export interface ApiNotification {
   id: string;

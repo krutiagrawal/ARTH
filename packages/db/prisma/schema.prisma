@@ -281,6 +281,10 @@ enum NotificationType {
   order_delivered
   order_cancelled
   wishlist_back_in_stock
+  streak_at_risk
+  streak_broken
+  reengagement_nudge
+  cart_abandoned
 }
 
 // ---------- Core ----------
