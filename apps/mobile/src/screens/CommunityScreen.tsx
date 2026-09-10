@@ -154,7 +154,7 @@ function ActivityFeedItem({ activity, index }: { activity: ApiActivity; index: n
 
   return (
     <Animated.View style={slideStyle}>
-      <BorderCard style={styles.activityCard}>
+      <View style={styles.activityCard}>
         <Text style={styles.activityIcon}>{copy.icon}</Text>
         <View style={{ flex: 1 }}>
           <Text style={styles.activityTextDark}>{copy.text(activity.user.name)}</Text>
@@ -168,7 +168,7 @@ function ActivityFeedItem({ activity, index }: { activity: ApiActivity; index: n
           <Text style={styles.activityCheerIcon}>👏</Text>
           {activity.cheerCount > 0 && <Text style={styles.activityCheerCount}>{activity.cheerCount}</Text>}
         </TouchableOpacity>
-      </BorderCard>
+      </View>
     </Animated.View>
   );
 }
