@@ -6,7 +6,7 @@
 
 export const metadata = {
   title: 'Leaderboards',
-  description: 'See who is leading the movement — individuals, communities, NGOs and cities.',
+  description: 'See who is leading the movement – individuals, communities, NGOs and cities.',
 }
 
 export default function Page() {

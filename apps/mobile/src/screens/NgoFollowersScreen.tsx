@@ -102,7 +102,7 @@ export function NgoFollowersScreen() {
             body={
               query
                 ? 'Try a different name or handle.'
-                : 'Share drive photos and updates — people who follow you see them in their feed.'
+                : 'Share drive photos and updates – people who follow you see them in their feed.'
             }
           />
         }

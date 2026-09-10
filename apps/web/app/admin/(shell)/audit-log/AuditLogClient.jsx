@@ -63,7 +63,7 @@ export default function AuditLogClient() {
       {
         accessorKey: 'reason',
         header: 'Reason',
-        cell: ({ row }) => <span className="text-sm text-muted-foreground max-w-xs truncate block">{row.original.reason || '—'}</span>,
+        cell: ({ row }) => <span className="text-sm text-muted-foreground max-w-xs truncate block">{row.original.reason || '–'}</span>,
       },
       {
         accessorKey: 'createdAt',

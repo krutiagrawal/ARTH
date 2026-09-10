@@ -22,7 +22,7 @@ function ConfirmationView({ orgName }) {
       </span>
       <h2 className="font-serif text-2xl md:text-3xl mt-6">Thank you, {orgName}. 🌱</h2>
       <p className="mt-3 text-muted-foreground max-w-md mx-auto">
-        Your application has been submitted, and it&rsquo;s now in front of our team. We read every one closely —
+        Your application has been submitted, and it&rsquo;s now in front of our team. We read every one closely –
         expect to hear from us soon, and we&rsquo;ll email you the moment there&rsquo;s a decision. We&rsquo;re
         grateful you want to grow this with us.
       </p>

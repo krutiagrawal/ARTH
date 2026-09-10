@@ -103,7 +103,7 @@ export default function StaffClient() {
         <div>
           <p className="eyebrow text-primary">Staff</p>
           <h1 className="font-serif text-3xl md:text-4xl mt-2">Your team</h1>
-          <p className="mt-2 text-sm text-muted-foreground">A roster of staff and coordinators — for your own records, not separate logins.</p>
+          <p className="mt-2 text-sm text-muted-foreground">A roster of staff and coordinators – for your own records, not separate logins.</p>
         </div>
         <Button onClick={openCreate} className="rounded-full shrink-0">
           <Plus className="h-4 w-4" /> Add staff

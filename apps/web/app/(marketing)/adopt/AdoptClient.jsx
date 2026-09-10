@@ -65,7 +65,7 @@ export default function AdoptClient() {
               Give a tree a name. Follow its <em className="not-italic text-primary">story</em> as it grows.
             </h1>
             <p className="mt-5 text-muted-foreground leading-relaxed">
-              Somewhere out there, a tree is already in the ground — watered, measured, watched over. Put your name on it,
+              Somewhere out there, a tree is already in the ground – watered, measured, watched over. Put your name on it,
               and its whole life becomes a story you get to follow.
             </p>
 
@@ -85,7 +85,7 @@ export default function AdoptClient() {
                 <span className="font-serif text-lg text-primary">{trees.length}</span>
                 <span className="text-sm text-muted-foreground">
                   trees waiting for a name
-                  {adoptedCount > 0 && <> — <span className="text-foreground font-medium">{adoptedCount}</span> already adopted</>}
+                  {adoptedCount > 0 && <> – <span className="text-foreground font-medium">{adoptedCount}</span> already adopted</>}
                 </span>
               </p>
             )}
@@ -98,7 +98,7 @@ export default function AdoptClient() {
               <Skeleton className="h-[480px] w-full rounded-[2rem]" />
             ) : !featured ? (
               <div className="rounded-[2rem] border border-dashed border-border/70 p-12 text-center">
-                <p className="text-sm text-muted-foreground">No trees available for adoption right now — check back soon.</p>
+                <p className="text-sm text-muted-foreground">No trees available for adoption right now – check back soon.</p>
               </div>
             ) : (
               <motion.div

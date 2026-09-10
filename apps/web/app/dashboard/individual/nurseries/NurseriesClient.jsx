@@ -65,7 +65,7 @@ export default function NurseriesClient() {
       ) : nurseries.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-border/70 p-12 text-center">
           <GreenhouseIllustration />
-          <p className="mt-4 text-sm text-muted-foreground">No nurseries listed yet — check back soon.</p>
+          <p className="mt-4 text-sm text-muted-foreground">No nurseries listed yet – check back soon.</p>
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

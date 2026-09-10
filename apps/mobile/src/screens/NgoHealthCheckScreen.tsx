@@ -103,7 +103,7 @@ export function NgoHealthCheckScreen({ navigation }: any) {
                       {isSelected && <Text style={styles.checkmark}>✓</Text>}
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.cardTitle}>{tree.speciesName}{tree.label ? ` — ${tree.label}` : ''}</Text>
+                      <Text style={styles.cardTitle}>{tree.speciesName}{tree.label ? ` – ${tree.label}` : ''}</Text>
                       <Text style={styles.cardMeta}>
                         {tree.driveTitle ? `${tree.driveTitle} · ` : ''}
                         {new Date(tree.plantedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -122,7 +122,7 @@ export function NgoHealthCheckScreen({ navigation }: any) {
 
       {selected.size > 0 && (
         <View style={[styles.actionBar, { paddingBottom: insets.bottom + 12 }]}>
-          <Text style={styles.actionBarLabel}>{selected.size} selected — mark as:</Text>
+          <Text style={styles.actionBarLabel}>{selected.size} selected – mark as:</Text>
           <View style={styles.actionButtons}>
             {(Object.keys(STATUS_META) as TreeHealthStatus[]).map((status) => (
               <TouchableOpacity key={status} style={[styles.actionButton, { borderColor: STATUS_META[status].color }]} onPress={() => applyStatus(status)}>

@@ -209,7 +209,7 @@ export function GroupDashboardScreen({ navigation, onNavigateTab }: GroupDashboa
                 />
               </View>
               <Text style={[styles.xpHint, { color: COLORS.textSecondary }]}>
-                Combined XP from everyone in the group — {getXpProgress(stats.xpTotal, stats.level).current}/{getXpProgress(stats.xpTotal, stats.level).needed} to the next level
+                Combined XP from everyone in the group – {getXpProgress(stats.xpTotal, stats.level).current}/{getXpProgress(stats.xpTotal, stats.level).needed} to the next level
               </Text>
             </ThemedCard>
           </View>
@@ -240,7 +240,7 @@ export function GroupDashboardScreen({ navigation, onNavigateTab }: GroupDashboa
           emoji="🏅"
           color={COLORS.golden}
           title="Group profile"
-          body="Your public page — badges, rank, and forest gallery."
+          body="Your public page – badges, rank, and forest gallery."
           onPress={() => navigation.navigate('GroupProfile')}
           blurTarget={blurTargetRef}
         />

@@ -66,7 +66,7 @@ export function CampaignDetailScreen({ navigation, route }: any) {
     } catch (e) {
       errorHaptic();
       if (e instanceof ApiError && e.code === 'SERVICE_UNAVAILABLE') {
-        setDonationError('Donations aren’t live yet — please check back soon.');
+        setDonationError('Donations aren’t live yet – please check back soon.');
       } else {
         setDonationError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
       }

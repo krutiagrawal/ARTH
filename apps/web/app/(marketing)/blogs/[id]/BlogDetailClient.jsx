@@ -24,10 +24,10 @@ export default function BlogDetailClient({ blog: b, others }) {
       <div className="container max-w-3xl py-16 md:py-24 space-y-6 text-lg leading-relaxed text-foreground/90">
         <p className="font-serif italic text-2xl leading-snug text-muted-foreground">{b.excerpt}</p>
         <p>In the first light, when the mist still hangs low over the fields, the world seems briefly convinced that no one is watching. The birds move as if remembered from a longer century. The trees, patient as they always are, wait for their part.</p>
-        <p>Restoration is not built from headlines. It is built from mornings like this — the small, unphotographed hours when someone chooses to dig one more hole, to carry one more bucket of water, to sit beside a sapling for an afternoon and mean it.</p>
+        <p>Restoration is not built from headlines. It is built from mornings like this – the small, unphotographed hours when someone chooses to dig one more hole, to carry one more bucket of water, to sit beside a sapling for an afternoon and mean it.</p>
         <p>The species that returns first is often the species that was quietest before. We watched a Malabar whistling thrush arrive nine months after we planted the first hundred jamun. It did not sing for anyone in particular. It sang because the branch was there.</p>
         <blockquote className="border-l-2 border-primary/60 pl-6 font-serif italic text-2xl text-pretty">A forest is a place that remembers being planted.</blockquote>
-        <p>We often think of this work as a race against loss. But the trees do not run. They rehearse a slower argument — the argument that time, kept faithfully, is enough.</p>
+        <p>We often think of this work as a race against loss. But the trees do not run. They rehearse a slower argument – the argument that time, kept faithfully, is enough.</p>
         <p>Come back in ten years. Sit under this canopy. Tell us if you think we were wrong.</p>
       </div>
 

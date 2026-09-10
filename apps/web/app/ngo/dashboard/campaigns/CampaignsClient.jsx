@@ -123,7 +123,7 @@ export default function CampaignsClient() {
         header: 'Started',
         cell: ({ row }) => (
           <span className="text-xs text-muted-foreground">
-            {row.original.createdAt ? new Date(row.original.createdAt).toLocaleDateString() : '—'}
+            {row.original.createdAt ? new Date(row.original.createdAt).toLocaleDateString() : '–'}
           </span>
         ),
       },
@@ -188,7 +188,7 @@ export default function CampaignsClient() {
           <EmptyState
             icon={Heart}
             title="No donation campaigns yet"
-            body="Start a campaign to collect donations toward a goal — you'll see every donor here as they give."
+            body="Start a campaign to collect donations toward a goal – you'll see every donor here as they give."
             actionLabel={isApproved ? 'New campaign' : undefined}
             onAction={isApproved ? openCreate : undefined}
           />

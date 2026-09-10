@@ -41,7 +41,7 @@ export default function VolunteersClient() {
         header: 'Last active',
         cell: ({ row }) => (
           <span className="text-sm text-muted-foreground">
-            {row.original.lastActiveAt ? new Date(row.original.lastActiveAt).toLocaleDateString() : '—'}
+            {row.original.lastActiveAt ? new Date(row.original.lastActiveAt).toLocaleDateString() : '–'}
           </span>
         ),
       },

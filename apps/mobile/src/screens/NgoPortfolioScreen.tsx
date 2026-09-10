@@ -154,7 +154,7 @@ export function NgoPortfolioScreen({ navigation }: any) {
             <EmptyState
               icon="📚"
               title="No past work added yet"
-              body="Add the drives and projects you ran before joining — photos, dates and the impact you had."
+              body="Add the drives and projects you ran before joining – photos, dates and the impact you had."
             />
           }
         />

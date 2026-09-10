@@ -78,7 +78,7 @@ export default function DonateClient() {
       })
       setClientSecret(data.clientSecret)
     } catch (err) {
-      setError(err.status === 503 ? 'Donations aren’t live on this deployment yet — please check back soon.' : err.message || 'Something went wrong.')
+      setError(err.status === 503 ? 'Donations aren’t live on this deployment yet – please check back soon.' : err.message || 'Something went wrong.')
     } finally {
       setSubmitting(false)
     }
@@ -94,20 +94,20 @@ export default function DonateClient() {
       <div className="max-w-xl">
         <p className="eyebrow text-primary">Donate to an NGO</p>
         <h1 className="font-serif text-4xl md:text-5xl leading-[1.05] mt-3 text-balance">Support the hands that <em className="not-italic text-primary">plant</em>.</h1>
-        <p className="mt-5 text-muted-foreground leading-relaxed">Pick an active campaign from one of our approved NGOs — you'll pay securely, and 100% goes to their work.</p>
+        <p className="mt-5 text-muted-foreground leading-relaxed">Pick an active campaign from one of our approved NGOs – you'll pay securely, and 100% goes to their work.</p>
 
         {done ? (
           <div className="mt-10 rounded-3xl border border-primary/30 bg-primary/5 p-6 flex items-start gap-4">
             <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground"><Check className="h-4 w-4" /></span>
             <div>
-              <p className="font-serif text-xl">Thank you — your donation is on its way.</p>
+              <p className="font-serif text-xl">Thank you – your donation is on its way.</p>
               <p className="mt-1 text-sm text-muted-foreground">{selected ? `To ${selected.ngoName}.` : ''}</p>
             </div>
           </div>
         ) : campaigns === null ? (
           <p className="mt-10 text-sm text-muted-foreground">Loading campaigns…</p>
         ) : campaigns.length === 0 ? (
-          <p className="mt-10 text-sm text-muted-foreground">No active campaigns right now — check back soon.</p>
+          <p className="mt-10 text-sm text-muted-foreground">No active campaigns right now – check back soon.</p>
         ) : clientSecret && stripePromise ? (
           <Elements stripe={stripePromise} options={{ clientSecret }}>
             <PaymentForm onSuccess={() => setDone(true)} onCancel={() => setClientSecret(null)} />
@@ -117,7 +117,7 @@ export default function DonateClient() {
             <label className="block">
               <span className="eyebrow">Campaign</span>
               <select value={campaignId} onChange={e => setCampaignId(e.target.value)} className="mt-2.5 w-full h-12 rounded-2xl border border-border bg-transparent px-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30">
-                {campaigns.map(c => <option key={c.id} value={c.id}>{c.title} — {c.ngoName}</option>)}
+                {campaigns.map(c => <option key={c.id} value={c.id}>{c.title} – {c.ngoName}</option>)}
               </select>
             </label>
             <div>

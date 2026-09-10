@@ -3,10 +3,10 @@ export const PRIVACY_POLICY_TEXT = `Last updated: 2026
 ARTH is built to help you track real trees you plant and see your environmental impact grow over time. This policy explains what we collect and why.
 
 WHAT WE COLLECT
-• Account info — your email, name, and handle, so you can sign in and be found by friends.
-• Location — only when you plant a tree or ask for local weather, so we can tag where your trees are and show conditions near you. You can turn this off any time in Settings.
-• Photos — the picture you take of each tree you plant, stored so your forest has a visual record.
-• Usage data — basic activity like streaks, XP, and achievements, used to power the app's core features. You can opt out of broader analytics in Settings.
+• Account info – your email, name, and handle, so you can sign in and be found by friends.
+• Location – only when you plant a tree or ask for local weather, so we can tag where your trees are and show conditions near you. You can turn this off any time in Settings.
+• Photos – the picture you take of each tree you plant, stored so your forest has a visual record.
+• Usage data – basic activity like streaks, XP, and achievements, used to power the app's core features. You can opt out of broader analytics in Settings.
 
 HOW WE USE IT
 Your data is used to run the app: showing your forest, calculating your streak and CO₂ impact, connecting you with friends you add, and powering the leaderboard and challenges. We do not sell your personal data.

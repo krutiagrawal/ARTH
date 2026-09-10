@@ -164,7 +164,7 @@ export default function DriveDetailClient({ driveId }) {
                   className="rounded-full"
                   size="lg"
                 >
-                  {rsvping ? 'Please wait…' : drive.isRsvped ? 'Cancel my RSVP' : isFull ? 'Drive is full' : "I'm in — RSVP"}
+                  {rsvping ? 'Please wait…' : drive.isRsvped ? 'Cancel my RSVP' : isFull ? 'Drive is full' : "I'm in – RSVP"}
                 </Button>
               )}
             </div>

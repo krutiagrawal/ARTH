@@ -154,7 +154,7 @@ export default function DrivesClient() {
           setLocating(false)
         },
         () => {
-          toast.error('Couldn’t get your location — check your browser permissions.')
+          toast.error('Couldn’t get your location – check your browser permissions.')
           setLocating(false)
         },
       )
@@ -213,7 +213,7 @@ export default function DrivesClient() {
               Plant with <em className="not-italic text-primary">people</em> who show up.
             </h1>
             <p className="mt-5 text-muted-foreground leading-relaxed">
-              Verified drives run by partner NGOs — a morning, a patch of earth, and a few dozen hands. Reserve your place.
+              Verified drives run by partner NGOs – a morning, a patch of earth, and a few dozen hands. Reserve your place.
             </p>
           </div>
 
@@ -280,7 +280,7 @@ export default function DrivesClient() {
               </span>
               <p className="mt-4 font-serif text-xl">Nothing here just yet</p>
               <p className="mt-1.5 text-sm text-muted-foreground">
-                {filter === 'mine' ? "You haven't reserved a place on any drive yet." : 'No drives match this filter right now — check back soon.'}
+                {filter === 'mine' ? "You haven't reserved a place on any drive yet." : 'No drives match this filter right now – check back soon.'}
               </p>
               {filter !== 'all' && (
                 <button

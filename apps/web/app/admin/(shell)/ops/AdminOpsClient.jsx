@@ -140,7 +140,7 @@ export default function AdminOpsClient() {
       <div>
         <p className="eyebrow text-primary">Operations</p>
         <h1 className="font-serif text-3xl md:text-4xl mt-2">Drives, donations &amp; orders</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Step in on disputes — cancel a drive or refund a transaction.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Step in on disputes – cancel a drive or refund a transaction.</p>
       </div>
 
       <div className="flex gap-2 border-b border-border/70">

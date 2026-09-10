@@ -256,7 +256,7 @@ export function UserProfileScreen({ route, navigation }: any) {
                   { value: treesPlanted, label: 'Trees' },
                   { value: streakCurrent, label: 'Streak' },
                   { value: badgesCount, label: 'Badges', onPress: () => setTab('achievements') },
-                  ...(isOwn ? [{ value: myRank ? `#${myRank}` : '—', label: 'Rank' }] : []),
+                  ...(isOwn ? [{ value: myRank ? `#${myRank}` : '–', label: 'Rank' }] : []),
                 ]}
                 primaryAction={
                   isOwn
@@ -278,7 +278,7 @@ export function UserProfileScreen({ route, navigation }: any) {
                     <View style={styles.contributionsRow}>
                       <View style={styles.contributionsStat}>
                         <Text style={styles.contributionsNum}>
-                          {isOwn ? Number(user?.totalCo2Absorbed ?? 0).toFixed(1) : '—'}kg
+                          {isOwn ? Number(user?.totalCo2Absorbed ?? 0).toFixed(1) : '–'}kg
                         </Text>
                         <Text style={styles.contributionsLabel}>CO₂ absorbed</Text>
                       </View>

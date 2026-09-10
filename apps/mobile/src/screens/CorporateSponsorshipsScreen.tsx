@@ -85,7 +85,7 @@ export function CorporateSponsorshipsScreen({ navigation }: any) {
 
       {!isApproved && (
         <View style={styles.warning}>
-          <Text style={styles.warningText}>Your account is not yet approved — sponsorships can't be added until then.</Text>
+          <Text style={styles.warningText}>Your account is not yet approved – sponsorships can't be added until then.</Text>
         </View>
       )}
 

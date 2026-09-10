@@ -108,7 +108,7 @@ export function CheckoutScreen({ navigation }: any) {
     } catch (e) {
       errorHaptic();
       if (e instanceof ApiError && e.code === 'SERVICE_UNAVAILABLE') {
-        setActionError('Payments aren’t live yet — please check back soon.');
+        setActionError('Payments aren’t live yet – please check back soon.');
       } else {
         setActionError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
       }

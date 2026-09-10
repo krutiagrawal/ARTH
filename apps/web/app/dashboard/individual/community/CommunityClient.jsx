@@ -306,7 +306,7 @@ function FriendsPanel() {
         ) : friends.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-border/70 p-12 text-center">
             <EmptyStateIllustration variant="friends" />
-            <p className="mt-4 text-sm text-muted-foreground">No friends yet — search above to add someone.</p>
+            <p className="mt-4 text-sm text-muted-foreground">No friends yet – search above to add someone.</p>
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">

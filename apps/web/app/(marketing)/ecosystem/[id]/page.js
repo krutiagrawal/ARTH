@@ -36,7 +36,7 @@ export default async function App({ params }) {
         <div className="grid gap-10 md:grid-cols-12 items-start">
           <div className="md:col-span-7 space-y-5 text-lg leading-relaxed text-muted-foreground">
             <p>{e.long}</p>
-            <p>The doorway is deliberately kind: no long forms, no forced verification for those who are just curious. As you plant, your presence on ARTH grows — species you tended, drives you attended, letters you wrote in the journal.</p>
+            <p>The doorway is deliberately kind: no long forms, no forced verification for those who are just curious. As you plant, your presence on ARTH grows – species you tended, drives you attended, letters you wrote in the journal.</p>
             <p>When you are ready to take on more, more will find you. It is a slow architecture, patterned after the way forests themselves grow.</p>
           </div>
           <div className="md:col-span-5 relative aspect-[4/5] overflow-hidden rounded-3xl soft-shadow">

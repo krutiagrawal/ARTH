@@ -160,7 +160,7 @@ export function FollowingFeedScreen({ navigation, embedded = false }: FollowingF
             <EmptyState
               icon="🌿"
               title="Your feed is quiet"
-              body="Follow a few NGOs and add some friends — their drives, photos and milestones land here."
+              body="Follow a few NGOs and add some friends – their drives, photos and milestones land here."
               actionLabel="Browse NGOs"
               onAction={() => navigation.navigate('NgoDirectory')}
             />

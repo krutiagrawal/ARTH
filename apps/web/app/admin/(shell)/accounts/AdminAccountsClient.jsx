@@ -73,7 +73,7 @@ function RowActions({ account, onAction, onViewProfile }) {
         title={confirm === 'block' ? 'Block this account?' : 'Unblock this account?'}
         description={
           confirm === 'block'
-            ? 'They immediately lose access on web and mobile — every signed-in request will be rejected until unblocked.'
+            ? 'They immediately lose access on web and mobile – every signed-in request will be rejected until unblocked.'
             : 'They regain full access on web and mobile immediately.'
         }
         confirmLabel={confirm === 'block' ? 'Block' : 'Unblock'}
@@ -165,7 +165,7 @@ export default function AdminAccountsClient() {
         header: 'Approval',
         cell: ({ row }) => {
           const status = approvalStatusFor(row.original)
-          if (!status) return <span className="text-xs text-muted-foreground">—</span>
+          if (!status) return <span className="text-xs text-muted-foreground">–</span>
           return <Badge variant={APPROVAL_VARIANT[status]} className="capitalize">{status}</Badge>
         },
       },

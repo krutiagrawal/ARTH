@@ -73,7 +73,7 @@ export default function TreeDetailSheet({ tree, onOpenChange, onEdit }) {
               </div>
             ) : (
               <p className="text-[13px] text-muted-foreground">
-                {tree.status === 'removed' ? 'This tree has been removed and is no longer listed.' : 'Not adopted yet — still available.'}
+                {tree.status === 'removed' ? 'This tree has been removed and is no longer listed.' : 'Not adopted yet – still available.'}
               </p>
             )}
           </DetailSection>

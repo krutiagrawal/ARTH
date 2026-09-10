@@ -117,7 +117,7 @@ export default function AdminGroupsClient() {
       <div>
         <p className="eyebrow text-primary">Groups</p>
         <h1 className="font-serif text-3xl md:text-4xl mt-2">Groups</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Groups are self-serve — no approval queue. Suspend one if it needs moderating.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Groups are self-serve – no approval queue. Suspend one if it needs moderating.</p>
       </div>
 
       <DataTable

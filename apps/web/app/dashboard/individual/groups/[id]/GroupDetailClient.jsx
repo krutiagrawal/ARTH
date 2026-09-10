@@ -98,7 +98,7 @@ export default function GroupDetailClient({ groupId }) {
           ) : challenges.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-border/70 p-12 text-center">
               <EmptyChallengesIllustration />
-              <p className="mt-4 text-sm text-muted-foreground">No challenges yet — check back soon.</p>
+              <p className="mt-4 text-sm text-muted-foreground">No challenges yet – check back soon.</p>
             </div>
           ) : (
             challenges.map((c) => (

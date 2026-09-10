@@ -53,11 +53,11 @@ const STATS = [
 
 const FORESTS = [
   { id: 'aravali-grove', name: 'Aravali Grove', location: 'Rajasthan, India', state: 'Rajasthan', trees: 42180, volunteers: 812, species: 74, established: '2019', img: 0, story: 'A restoration effort in the arid Aravali range, transforming rocky soil into a thriving native forest of dhok, ronjh and neem.' },
-  { id: 'whispering-ghats', name: 'Whispering Ghats', location: 'Kerala, India', state: 'Kerala', trees: 68240, volunteers: 1420, species: 212, established: '2017', img: 1, story: 'A canopy of endemic species in the Western Ghats — one of the world\'s eight hottest biodiversity hotspots.' },
-  { id: 'himalayan-cradle', name: 'Himalayan Cradle', location: 'Uttarakhand, India', state: 'Uttarakhand', trees: 29870, volunteers: 640, species: 88, established: '2020', img: 2, story: 'Oak and rhododendron forests at 2,200m — home to musk deer, monal pheasants and a hundred quiet streams.' },
+  { id: 'whispering-ghats', name: 'Whispering Ghats', location: 'Kerala, India', state: 'Kerala', trees: 68240, volunteers: 1420, species: 212, established: '2017', img: 1, story: 'A canopy of endemic species in the Western Ghats – one of the world\'s eight hottest biodiversity hotspots.' },
+  { id: 'himalayan-cradle', name: 'Himalayan Cradle', location: 'Uttarakhand, India', state: 'Uttarakhand', trees: 29870, volunteers: 640, species: 88, established: '2020', img: 2, story: 'Oak and rhododendron forests at 2,200m – home to musk deer, monal pheasants and a hundred quiet streams.' },
   { id: 'mangrove-mile', name: 'Mangrove Mile', location: 'Sundarbans, India', state: 'West Bengal', trees: 51200, volunteers: 980, species: 46, established: '2018', img: 3, story: 'A coastal buffer of Sundari trees restoring the tidal edge and sheltering nesting spoonbills.' },
   { id: 'red-earth-woods', name: 'Red Earth Woods', location: 'Bandhavgarh, India', state: 'Madhya Pradesh', trees: 33940, volunteers: 512, species: 92, established: '2021', img: 4, story: 'Sal and mahua woodland regeneration adjoining a tiger reserve buffer zone.' },
-  { id: 'monsoon-canopy', name: 'Monsoon Canopy', location: 'Meghalaya, India', state: 'Meghalaya', trees: 47510, volunteers: 720, species: 168, established: '2016', img: 5, story: 'One of the wettest places on earth — a living cathedral of ferns, moss and living root bridges.' },
+  { id: 'monsoon-canopy', name: 'Monsoon Canopy', location: 'Meghalaya, India', state: 'Meghalaya', trees: 47510, volunteers: 720, species: 168, established: '2016', img: 5, story: 'One of the wettest places on earth – a living cathedral of ferns, moss and living root bridges.' },
 
   // Smaller, newer plantation drives — grown to bring every state and union
   // territory onto the map, not just the six flagship forests above.
@@ -141,7 +141,7 @@ const FORESTS = [
 ]
 
 const LEGACY_TREES = [
-  { id: 'grandfather-banyan', name: 'The Grandfather Banyan', species: 'Ficus benghalensis', owner: 'Ananya R.', years: 41, location: 'Karnataka, India', img: 0, quote: 'My father planted this tree the year I was born. It has outgrown all of us — kindly, patiently.' },
+  { id: 'grandfather-banyan', name: 'The Grandfather Banyan', species: 'Ficus benghalensis', owner: 'Ananya R.', years: 41, location: 'Karnataka, India', img: 0, quote: 'My father planted this tree the year I was born. It has outgrown all of us – kindly, patiently.' },
   { id: 'the-first-sapling', name: 'The First Sapling', species: 'Quercus leucotrichophora', owner: 'Ibrahim K.', years: 12, location: 'Uttarakhand, India', img: 1, quote: 'A promise to my daughter. On her tenth birthday she watered it herself.' },
   { id: 'monsoon-mother', name: 'Monsoon Mother', species: 'Mangifera indica', owner: 'Sundari P.', years: 27, location: 'Kerala, India', img: 2, quote: 'The mangoes she gives are shared across three villages. Some years we lose count.' },
   { id: 'the-quiet-one', name: 'The Quiet One', species: 'Terminalia arjuna', owner: 'Rohan S.', years: 19, location: 'Madhya Pradesh, India', img: 3, quote: 'It never asked for anything. It only kept giving shade.' },
@@ -151,7 +151,7 @@ const COMPETITIONS = [
   { id: 'best-looking-tree', title: 'Best Looking Tree', tagline: 'The most beautiful tree, chosen by the world.', deadline: '2025-08-14', entriesCount: 12480, img: 1 },
   { id: 'best-legacy-quote', title: 'Best Legacy Quote', tagline: 'One sentence that outlives us.', deadline: '2025-07-30', entriesCount: 8721, img: 2 },
   { id: 'greenest-school', title: 'Greenest School', tagline: 'Where the next generation grows a forest.', deadline: '2025-09-05', entriesCount: 342, img: 3 },
-  { id: 'greenest-company', title: 'Greenest Company', tagline: 'Beyond CSR — measurable impact.', deadline: '2025-09-20', entriesCount: 268, img: 4 },
+  { id: 'greenest-company', title: 'Greenest Company', tagline: 'Beyond CSR – measurable impact.', deadline: '2025-09-20', entriesCount: 268, img: 4 },
   { id: 'greenest-city', title: 'Greenest City', tagline: 'Cities that breathe again.', deadline: '2025-10-01', entriesCount: 96, img: 5 },
   { id: 'most-active-ngo', title: 'Most Active NGO', tagline: 'The tireless hands behind the movement.', deadline: '2025-08-28', entriesCount: 214, img: 0 },
   { id: 'most-active-community', title: 'Most Active Community', tagline: 'Neighbourhoods that plant together.', deadline: '2025-08-25', entriesCount: 1128, img: 1 },
@@ -215,7 +215,7 @@ const LEADERBOARDS = {
 
 const BLOGS = [
   { id: 'why-native-species-matter', title: 'Why Native Species Matter More Than Ever', category: 'Wildlife', author: 'Meera Iyer', date: 'June 14, 2025', minutes: 7, img: 0, excerpt: 'A forest of the right trees, not just any trees. A field guide to planting with the land.' },
-  { id: 'the-quiet-return-of-the-hornbill', title: 'The Quiet Return of the Hornbill', category: 'Wildlife', author: 'Tenzin Dolma', date: 'June 08, 2025', minutes: 5, img: 1, excerpt: 'How thirty families in Nagaland brought back a bird — and a whole forest with it.' },
+  { id: 'the-quiet-return-of-the-hornbill', title: 'The Quiet Return of the Hornbill', category: 'Wildlife', author: 'Tenzin Dolma', date: 'June 08, 2025', minutes: 5, img: 1, excerpt: 'How thirty families in Nagaland brought back a bird – and a whole forest with it.' },
   { id: 'a-monsoon-planting-guide', title: 'A Monsoon Planting Guide', category: 'Plantation Guides', author: 'Ibrahim Khan', date: 'May 30, 2025', minutes: 9, img: 2, excerpt: 'Nine species. Nine soils. Nine gentle instructions before the first rain.' },
   { id: 'reading-the-arjuna-tree', title: 'Reading the Arjuna Tree', category: 'Native Species', author: 'Sundari Pillai', date: 'May 22, 2025', minutes: 6, img: 3, excerpt: 'A river bank companion, a medicine, a shade, a story.' },
   { id: 'city-birds-are-listening', title: 'City Birds Are Listening', category: 'Environmental News', author: 'Farah Ali', date: 'May 12, 2025', minutes: 4, img: 0, excerpt: 'Urban plantings are changing the songs of common birds. Here is what we found.' },
@@ -232,10 +232,10 @@ const PARTNERS = [
 
 const ECOSYSTEM = [
   { id: 'individuals', title: 'Individuals', description: 'Plant a tree in your name. Watch it grow across the years.', long: 'Every individual on ARTH begins with a single sapling. You choose a native species, a nursery near you, and a spot that means something. From that moment we help you track its growth, share its story, and connect it into the wider forest of the movement.' },
-  { id: 'communities', title: 'Communities', description: 'Neighbourhoods, villages and citizen groups that plant together.', long: 'Community groves become landmarks. ARTH gives your community a shared page, a live tree count, a plantation calendar, and a story wall — so children who plant today can return in fifteen years to walk beneath what they made.' },
+  { id: 'communities', title: 'Communities', description: 'Neighbourhoods, villages and citizen groups that plant together.', long: 'Community groves become landmarks. ARTH gives your community a shared page, a live tree count, a plantation calendar, and a story wall – so children who plant today can return in fifteen years to walk beneath what they made.' },
   { id: 'ngos', title: 'NGOs', description: 'Field organisations doing the tireless work of restoration.', long: 'Verified NGOs run large plantation drives on ARTH. We offer volunteer coordination, species inventory, geo-tagged planting logs, and transparent public dashboards that partners and donors can trust.' },
-  { id: 'nurseries', title: 'Nurseries', description: 'The quiet heroes who grow the saplings the world will plant.', long: 'Nurseries list native saplings by region and season. Individuals, communities and NGOs source directly from them, keeping the movement rooted in local biodiversity — never imported monocultures.' },
-  { id: 'organisations', title: 'Organisations', description: 'CSR & corporate partners planting forests, not press releases.', long: 'CSR partners adopt forests, sponsor community drives, and receive measurable, verifiable impact reports. No greenwashing — every tree is geo-tagged, species-tagged and public.' },
+  { id: 'nurseries', title: 'Nurseries', description: 'The quiet heroes who grow the saplings the world will plant.', long: 'Nurseries list native saplings by region and season. Individuals, communities and NGOs source directly from them, keeping the movement rooted in local biodiversity – never imported monocultures.' },
+  { id: 'organisations', title: 'Organisations', description: 'CSR & corporate partners planting forests, not press releases.', long: 'CSR partners adopt forests, sponsor community drives, and receive measurable, verifiable impact reports. No greenwashing – every tree is geo-tagged, species-tagged and public.' },
 ]
 
 const MAP_POINTS = [
@@ -256,9 +256,9 @@ const MAP_POINTS = [
 const TIMELINE = [
   { year: '2016', title: 'A single sapling', text: 'Two friends plant one banyan on a dry Aravali hill. They agree to come back every year.' },
   { year: '2018', title: 'A hundred hands', text: 'Neighbours join. The hill wears its first green shawl.' },
-  { year: '2020', title: 'A movement finds its name', text: 'ARTH — the earth, patient and giving — becomes a network of nurseries and NGOs.' },
+  { year: '2020', title: 'A movement finds its name', text: 'ARTH – the earth, patient and giving – becomes a network of nurseries and NGOs.' },
   { year: '2022', title: 'A million trees', text: 'From Sundarbans to the Himalayas, a million saplings enter the ground.' },
-  { year: '2025', title: 'A living archive', text: 'Every tree, every story, every hand — kept in a public, open, forever record.' },
+  { year: '2025', title: 'A living archive', text: 'Every tree, every story, every hand – kept in a public, open, forever record.' },
 ]
 
 async function main() {

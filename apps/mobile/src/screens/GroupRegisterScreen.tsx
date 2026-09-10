@@ -82,7 +82,7 @@ export function GroupRegisterScreen({ navigation }: any) {
 
         <BorderCard style={styles.card}>
           <Text style={styles.title}>Register your group</Text>
-          <Text style={styles.subtitle}>No review wait — you're live right away with a shareable invite code.</Text>
+          <Text style={styles.subtitle}>No review wait – you're live right away with a shareable invite code.</Text>
 
           <Text style={styles.sectionLabel}>Group</Text>
           <TextInput

@@ -127,7 +127,7 @@ export function NgoSettingsScreen({ navigation }: any) {
               <View style={styles.statusBanner}>
                 <Text style={styles.statusBannerText}>
                   Status: {profile?.status}
-                  {profile?.status === 'rejected' && profile?.rejectionReason ? ` — ${profile.rejectionReason}` : ''}
+                  {profile?.status === 'rejected' && profile?.rejectionReason ? ` – ${profile.rejectionReason}` : ''}
                 </Text>
               </View>
             )}

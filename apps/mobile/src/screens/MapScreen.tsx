@@ -722,7 +722,7 @@ export function MapScreen({ navigation, mode = 'user' }: any) {
           onClose={() => setInfoLocation(null)}
           icon="🏞️"
           title={infoLocation.name}
-          message={`ARTH approved planting zone — ${infoLocation.radiusMeters}m radius.`}
+          message={`ARTH approved planting zone – ${infoLocation.radiusMeters}m radius.`}
         />
       )}
     </View>

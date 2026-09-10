@@ -38,7 +38,7 @@ function EmptyState() {
         <path d="M43 90c0-10 7.5-18 17-18s17 8 17 18" stroke="hsl(38 48% 52%)" strokeWidth="3" strokeLinecap="round" fill="none" />
         <path d="M45 80l-4.5 10M75 80l4.5 10" stroke="hsl(38 48% 52%)" strokeWidth="2.5" strokeLinecap="round" />
       </svg>
-      <p className="mt-4 text-sm text-muted-foreground">No trees available for adoption right now — check back soon.</p>
+      <p className="mt-4 text-sm text-muted-foreground">No trees available for adoption right now – check back soon.</p>
     </div>
   )
 }

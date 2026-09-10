@@ -42,7 +42,7 @@ export function GroupStreakScreen({ navigation }: any) {
 
         <Text style={styles.title}>Your Group's Streak</Text>
         <Text style={styles.subtitle}>
-          Stays alive as long as at least one member plants a tree each day — everyone's effort keeps it going.
+          Stays alive as long as at least one member plants a tree each day – everyone's effort keeps it going.
         </Text>
 
         <View style={styles.streakCountContainer}>

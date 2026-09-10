@@ -700,7 +700,7 @@ export function ForestScreen({ navigation }: any) {
 
           <View style={[styles.drawBanner, { top: insets.top + 12 }]} pointerEvents="none">
             <BlurView intensity={55} tint="dark" style={styles.drawBannerBlur}>
-              <Text style={styles.drawBannerText}>✏️ Drag to draw — lift your finger to finish</Text>
+              <Text style={styles.drawBannerText}>✏️ Drag to draw – lift your finger to finish</Text>
             </BlurView>
           </View>
 

@@ -8,7 +8,7 @@ export const metadata = {
 const SECTIONS = [
   {
     h: 'Using ARTH',
-    p: 'ARTH is a platform for planting, tracking and supporting real trees. You must be at least 13 years old to create an account. You are responsible for the accuracy of what you log — planted trees, adoptions, RSVPs and pledges should reflect real activity.',
+    p: 'ARTH is a platform for planting, tracking and supporting real trees. You must be at least 13 years old to create an account. You are responsible for the accuracy of what you log – planted trees, adoptions, RSVPs and pledges should reflect real activity.',
   },
   {
     h: 'NGO accounts',
@@ -20,7 +20,7 @@ const SECTIONS = [
   },
   {
     h: 'Content you share',
-    p: 'You retain ownership of anything you post — journal comments, photos, competition entries. By posting, you grant ARTH a license to display it on the platform in connection with your account and activity.',
+    p: 'You retain ownership of anything you post – journal comments, photos, competition entries. By posting, you grant ARTH a license to display it on the platform in connection with your account and activity.',
   },
   {
     h: 'Changes',

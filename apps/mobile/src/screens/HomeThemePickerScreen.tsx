@@ -67,8 +67,8 @@ export function HomeThemePickerScreen({ navigation, route }: any) {
         </View>
         <Text style={styles.caption}>
           {selected
-            ? `This look stays as "${getThemeForHour(PERIOD_HOUR[selected]).label}" all day if you pick it — your greeting above still changes throughout the day either way.`
-            : 'The homepage keeps changing its look with real time of day — the default.'}
+            ? `This look stays as "${getThemeForHour(PERIOD_HOUR[selected]).label}" all day if you pick it – your greeting above still changes throughout the day either way.`
+            : 'The homepage keeps changing its look with real time of day – the default.'}
         </Text>
 
         <Text style={styles.sectionTitle}>Choose a look</Text>

@@ -72,7 +72,7 @@ export function AddToCartScreen({ navigation, route }: any) {
             <Text style={styles.nurseryName}>from {profile?.nurseryName}</Text>
             <View style={styles.divider} />
             <Text style={styles.stockLine}>
-              {stock.quantity} available · ₹{stock.priceCents != null ? (stock.priceCents / 100).toFixed(0) : '—'} each
+              {stock.quantity} available · ₹{stock.priceCents != null ? (stock.priceCents / 100).toFixed(0) : '–'} each
             </Text>
           </BorderCard>
 

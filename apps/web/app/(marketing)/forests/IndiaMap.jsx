@@ -128,8 +128,8 @@ export default function IndiaMap({ forestsByState }) {
         {hovered && (
           <div className="pointer-events-none absolute top-2 left-2 rounded-xl bg-foreground text-background px-3 py-1.5 text-xs font-bold shadow-lg max-w-[220px]">
             {hovered.count > 0
-              ? `${hovered.name} — ${hovered.count} ${hovered.count === 1 ? 'forest' : 'forests'}`
-              : `${hovered.name} — still waiting for its first forest`}
+              ? `${hovered.name} – ${hovered.count} ${hovered.count === 1 ? 'forest' : 'forests'}`
+              : `${hovered.name} – still waiting for its first forest`}
           </div>
         )}
 
@@ -172,7 +172,7 @@ export default function IndiaMap({ forestsByState }) {
       <Dialog open={showAllOpen} onOpenChange={setShowAllOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-serif text-2xl font-normal">{selected?.name} — {stateForests.length} forests</DialogTitle>
+            <DialogTitle className="font-serif text-2xl font-normal">{selected?.name} – {stateForests.length} forests</DialogTitle>
           </DialogHeader>
           <div className="mt-2 space-y-3">
             {stateForests.map((f) => (

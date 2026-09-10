@@ -12,11 +12,11 @@ const SECTIONS = [
   },
   {
     h: 'How we use it',
-    p: 'Your information is used to run your account, show your activity back to you, and — only with your consent — send occasional updates if you subscribe to our newsletter. We do not sell your data to third parties.',
+    p: 'Your information is used to run your account, show your activity back to you, and – only with your consent – send occasional updates if you subscribe to our newsletter. We do not sell your data to third parties.',
   },
   {
     h: 'Payments',
-    p: 'Donations are processed by Stripe. ARTH never sees or stores your card details — Stripe handles that directly and shares only the outcome (succeeded or failed) with us.',
+    p: 'Donations are processed by Stripe. ARTH never sees or stores your card details – Stripe handles that directly and shares only the outcome (succeeded or failed) with us.',
   },
   {
     h: 'Cookies',

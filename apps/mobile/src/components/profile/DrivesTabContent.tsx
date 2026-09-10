@@ -61,7 +61,7 @@ export function DrivesTabContent({
       <EmptyState
         icon="🌱"
         title="No drives here"
-        body="Nurseries don't run tree-planting drives — check Reservations for nursery activity instead."
+        body="Nurseries don't run tree-planting drives – check Reservations for nursery activity instead."
       />
     );
   }

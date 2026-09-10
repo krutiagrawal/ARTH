@@ -21,7 +21,7 @@ export default async function App() {
 
   return (
     <div className="pt-32">
-      <SectionWrapper eyebrow="Partners" title="The kind institutions holding us up." align="center" lede="CSR companies, NGOs, nurseries, schools and universities — without whom no forest in this movement would exist." />
+      <SectionWrapper eyebrow="Partners" title="The kind institutions holding us up." align="center" lede="CSR companies, NGOs, nurseries, schools and universities – without whom no forest in this movement would exist." />
       <div className="container pb-32">
         <div className="divide-y divide-foreground/10">
           {groups.map((g) => (

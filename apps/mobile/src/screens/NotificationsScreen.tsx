@@ -40,7 +40,7 @@ function describe(n: ApiNotification): string {
     case 'streak_at_risk':
       return 'Your streak needs you today 🔥';
     case 'streak_broken':
-      return 'Your streak broke — start a new one 💔';
+      return 'Your streak broke – start a new one 💔';
     case 'reengagement_nudge':
       return "We've missed you 🌳";
     case 'cart_abandoned':

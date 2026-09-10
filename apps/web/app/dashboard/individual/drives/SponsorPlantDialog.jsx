@@ -66,7 +66,7 @@ export default function SponsorPlantDialog({ driveId, plant, onOpenChange, onSpo
     proxy(`/drives/${driveId}/plants/${plant.id}/sponsor`, { method: 'POST' })
       .then((data) => setClientSecret(data.clientSecret))
       .catch((err) => {
-        setError(err.status === 503 ? 'Sponsorship payments aren’t live yet — please check back soon.' : err.message || 'Something went wrong.')
+        setError(err.status === 503 ? 'Sponsorship payments aren’t live yet – please check back soon.' : err.message || 'Something went wrong.')
       })
       .finally(() => setLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -87,7 +87,7 @@ export default function SponsorPlantDialog({ driveId, plant, onOpenChange, onSpo
         ) : error ? (
           <p className="text-sm text-destructive">{error}</p>
         ) : !stripePromise ? (
-          <p className="text-sm text-muted-foreground">Sponsorship payments aren’t live yet — please check back soon.</p>
+          <p className="text-sm text-muted-foreground">Sponsorship payments aren’t live yet – please check back soon.</p>
         ) : clientSecret ? (
           <Elements stripe={stripePromise} options={{ clientSecret }}>
             <PaymentForm onSuccess={() => onSponsored()} onCancel={() => onOpenChange(false)} />

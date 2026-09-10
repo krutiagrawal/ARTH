@@ -262,7 +262,7 @@ export function StreakProtectionScreen({ navigation }: any) {
               </Text>
               <Text style={styles.messageBody}>
                 You've been building something beautiful for {user?.streakCurrent ?? 0} days.
-                A few moments today keeps your forest alive — and your momentum going.
+                A few moments today keeps your forest alive – and your momentum going.
               </Text>
             </View>
           )}
@@ -286,7 +286,7 @@ export function StreakProtectionScreen({ navigation }: any) {
             <Text style={styles.recordIcon}>🏆</Text>
             <View>
               <Text style={styles.recordTitle}>Your Personal Best</Text>
-              <Text style={styles.recordValue}>{user?.streakMax ?? 0} days — you can beat it!</Text>
+              <Text style={styles.recordValue}>{user?.streakMax ?? 0} days – you can beat it!</Text>
             </View>
           </BorderCard>
 
@@ -321,7 +321,7 @@ export function StreakProtectionScreen({ navigation }: any) {
                       <Text style={[styles.optionTitle, selectedOption === option.id && styles.optionTitleSelected]}>
                         {option.title}
                       </Text>
-                      <Text style={styles.optionSubtitle}>{option.subtitle}{option.disabled ? ' — unavailable' : ''}</Text>
+                      <Text style={styles.optionSubtitle}>{option.subtitle}{option.disabled ? ' – unavailable' : ''}</Text>
                     </View>
                     <View style={[styles.optionCheck, selectedOption === option.id && styles.optionCheckSelected]}>
                       {selectedOption === option.id && <Text style={styles.optionCheckIcon}>✓</Text>}

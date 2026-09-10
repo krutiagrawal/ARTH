@@ -63,7 +63,7 @@ export default function TreesClient() {
     if (!releasing) return
     try {
       await runAction(releasing.id, 'release', releaseReason ? { reason: releaseReason } : undefined)
-      toast.success('Adoption released — this tree is available again.')
+      toast.success('Adoption released – this tree is available again.')
     } catch (err) {
       toast.error(err.message || 'Something went wrong.')
     } finally {
@@ -108,7 +108,7 @@ export default function TreesClient() {
               )}
             </div>
           ) : (
-            <span className="text-xs text-muted-foreground">—</span>
+            <span className="text-xs text-muted-foreground">–</span>
           ),
       },
       {
@@ -125,7 +125,7 @@ export default function TreesClient() {
         header: 'Listed',
         cell: ({ row }) => (
           <span className="text-xs text-muted-foreground">
-            {row.original.createdAt ? new Date(row.original.createdAt).toLocaleDateString() : '—'}
+            {row.original.createdAt ? new Date(row.original.createdAt).toLocaleDateString() : '–'}
           </span>
         ),
       },
@@ -191,7 +191,7 @@ export default function TreesClient() {
           <EmptyState
             icon={TreePine}
             title="No adoptable trees yet"
-            body="List a tree for the community to adopt — they'll be able to leave a message when they do."
+            body="List a tree for the community to adopt – they'll be able to leave a message when they do."
             actionLabel={isApproved ? 'New tree' : undefined}
             onAction={isApproved ? openCreate : undefined}
           />

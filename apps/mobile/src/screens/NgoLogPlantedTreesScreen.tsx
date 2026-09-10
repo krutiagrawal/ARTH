@@ -105,7 +105,7 @@ export function NgoLogPlantedTreesScreen({ navigation }: any) {
             onChange={setPhoto}
             mode="gallery"
             label="Add Photo"
-            hint="Optional — show what you planted"
+            hint="Optional – show what you planted"
           />
 
           {error && <Text style={styles.error}>{error}</Text>}

@@ -210,7 +210,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
                         { value: ownStats.data?.totalDrives ?? 0, label: 'Drives' },
                         { value: streakCurrent, label: 'Streak' },
                         { value: badgesCount, label: 'Badges', onPress: () => setTab('achievements') },
-                        { value: myRank ? `#${myRank}` : '—', label: 'Rank' },
+                        { value: myRank ? `#${myRank}` : '–', label: 'Rank' },
                       ]
                     : [
                         { value: posts.length, label: 'Posts' },

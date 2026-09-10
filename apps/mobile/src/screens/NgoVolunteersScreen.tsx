@@ -36,7 +36,7 @@ export function NgoVolunteersScreen({ navigation }: any) {
       </View>
 
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
-        <Text style={styles.hint}>People who've RSVP'd to your drives — attendance count and last activity.</Text>
+        <Text style={styles.hint}>People who've RSVP'd to your drives – attendance count and last activity.</Text>
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && volunteers.length === 0 && (
           <EmptyState icon="👥" title="No volunteers yet" body="Once people RSVP to your drives, they'll show up here." />

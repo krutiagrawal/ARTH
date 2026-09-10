@@ -148,7 +148,7 @@ export function GroupProfileScreen({ route, navigation }: any) {
                 stats={
                   isOwn
                     ? [
-                        { value: myRank ? `#${myRank}` : '—', label: 'Rank' },
+                        { value: myRank ? `#${myRank}` : '–', label: 'Rank' },
                         { value: memberCount, label: 'Members' },
                         { value: streakCurrent, label: 'Streak' },
                         { value: badgesCount, label: 'Badges', onPress: () => setTab('achievements') },
@@ -175,11 +175,11 @@ export function GroupProfileScreen({ route, navigation }: any) {
                     <Text style={styles.contributionsTitle}>🌍 Group impact</Text>
                     <View style={styles.contributionsRow}>
                       <View style={styles.contributionsStat}>
-                        <Text style={styles.contributionsNum}>{isOwn ? ownStats.data?.co2AbsorbedTotal ?? 0 : '—'}</Text>
+                        <Text style={styles.contributionsNum}>{isOwn ? ownStats.data?.co2AbsorbedTotal ?? 0 : '–'}</Text>
                         <Text style={styles.contributionsLabel}>kg CO₂ absorbed</Text>
                       </View>
                       <View style={styles.contributionsStat}>
-                        <Text style={styles.contributionsNum}>{isOwn ? ownStats.data?.treesPlantedTotal ?? 0 : '—'}</Text>
+                        <Text style={styles.contributionsNum}>{isOwn ? ownStats.data?.treesPlantedTotal ?? 0 : '–'}</Text>
                         <Text style={styles.contributionsLabel}>Trees planted</Text>
                       </View>
                       <View style={styles.contributionsStat}>

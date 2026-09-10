@@ -20,7 +20,7 @@ export function useResourceCrud(basePath, listPath = `${basePath}/mine`) {
     try {
       setItems(await proxy(listPath))
     } catch (err) {
-      toast.error(err.message || 'Could not load — please try again.')
+      toast.error(err.message || 'Could not load – please try again.')
     } finally {
       setLoading(false)
     }

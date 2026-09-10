@@ -41,7 +41,7 @@ function MissionsCard() {
     try {
       await proxy(`/missions/${id}/complete`, { method: 'POST' })
       setMissions((prev) => prev.map((m) => (m.id === id ? { ...m, completed: true } : m)))
-      toast.success('Mission complete — XP added.')
+      toast.success('Mission complete – XP added.')
     } catch (err) {
       toast.error(err.message || 'Could not complete mission.')
     } finally {
@@ -68,7 +68,7 @@ function MissionsCard() {
             <Skeleton className="h-12 w-full rounded-2xl" />
           </>
         ) : missions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No missions today — check back tomorrow.</p>
+          <p className="text-sm text-muted-foreground">No missions today – check back tomorrow.</p>
         ) : (
           missions.map((m) => (
             <button
@@ -147,7 +147,7 @@ export default function OverviewClient({ forests }) {
               {user?.avatarEmoji ? `${user.avatarEmoji} ` : ''}Welcome back, {firstName}.
             </h1>
             <p className="mt-3 text-muted-foreground flex items-center gap-2">
-              <MapPin className="h-4 w-4" /> {user?.handle ? `@${user.handle}` : '—'}
+              <MapPin className="h-4 w-4" /> {user?.handle ? `@${user.handle}` : '–'}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

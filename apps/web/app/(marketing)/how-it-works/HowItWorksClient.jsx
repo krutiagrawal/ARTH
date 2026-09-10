@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 const STEPS = [
   { icon: Binoculars, title: 'Discover', text: 'Explore forests, nurseries and drives happening near you. Choose a species that belongs to your soil.' },
   { icon: Sprout, title: 'Plant', text: 'Show up with your hands. Or send a sapling. Every planting is geo-tagged and photographed.' },
-  { icon: MapPin, title: 'Track', text: 'Watch your tree grow across years. Height, girth, canopy, health — all logged in one gentle log.' },
+  { icon: MapPin, title: 'Track', text: 'Watch your tree grow across years. Height, girth, canopy, health – all logged in one gentle log.' },
   { icon: Users, title: 'Inspire', text: 'Share the story. Earn recognition. Invite your school or company to plant with you.' },
   { icon: TreePine, title: 'Leave a Legacy', text: 'Visit the old. Write your message. Because someone plants today for someone tomorrow.' },
 ]

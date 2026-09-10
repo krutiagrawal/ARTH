@@ -20,7 +20,7 @@ interface AccountTypeOption {
 
 const ACCOUNT_TYPES: AccountTypeOption[] = [
   { route: 'Register', emoji: '🌱', accent: COLORS.sage, title: 'Individual', body: 'Plant trees, build streaks, and grow your own forest.' },
-  { route: 'GroupRegister', emoji: '👥', accent: COLORS.golden, title: 'Group', body: 'Family, school, or club — plant together and track shared progress.' },
+  { route: 'GroupRegister', emoji: '👥', accent: COLORS.golden, title: 'Group', body: 'Family, school, or club – plant together and track shared progress.' },
   { route: 'NgoRegister', emoji: '🤝', accent: COLORS.forest, title: 'NGO', body: 'Host drives, run campaigns, and share your impact.' },
   { route: 'NurseryRegister', emoji: '🌿', accent: COLORS.earth, title: 'Nursery', body: 'List sapling stock and connect with planters near you.' },
   { route: 'CorporateRegister', emoji: '🏢', accent: COLORS.sageDark, title: 'Corporate', body: 'Sponsor drives and track your company’s CSR impact.' },
@@ -77,7 +77,7 @@ export function AccountTypeScreen({ navigation }: any) {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.title}>What best describes you?</Text>
-        <Text style={styles.subtitle}>Pick an account type to get started — you can always reach out to switch later.</Text>
+        <Text style={styles.subtitle}>Pick an account type to get started – you can always reach out to switch later.</Text>
 
         <View style={styles.cardList}>
           {ACCOUNT_TYPES.map((option, i) => (

@@ -128,7 +128,7 @@ export default function TreeDetailClient({ id }) {
             </div>
             <div className="rounded-2xl border border-border/70 p-4 text-center">
               <p className="text-xs text-muted-foreground">Planted</p>
-              <p className="font-serif text-sm mt-1.5">{tree.plantedAt ? new Date(tree.plantedAt).toLocaleDateString() : '—'}</p>
+              <p className="font-serif text-sm mt-1.5">{tree.plantedAt ? new Date(tree.plantedAt).toLocaleDateString() : '–'}</p>
             </div>
           </div>
 

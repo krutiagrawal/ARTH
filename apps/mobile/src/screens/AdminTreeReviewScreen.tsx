@@ -27,7 +27,7 @@ export function AdminTreeReviewScreen() {
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.headerTitle}>Tree Verification</Text>
-        <Text style={styles.headerSubtitle}>Submissions the AI flagged or couldn&rsquo;t verify — rejected trees earn no XP until approved here.</Text>
+        <Text style={styles.headerSubtitle}>Submissions the AI flagged or couldn&rsquo;t verify – rejected trees earn no XP until approved here.</Text>
       </View>
 
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]} showsVerticalScrollIndicator={false}>

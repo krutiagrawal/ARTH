@@ -85,7 +85,7 @@ function NgoShell({ children }) {
           </span>
           <p className="font-serif text-xl">Can&rsquo;t reach the server.</p>
           <p className="max-w-sm text-sm text-muted-foreground">
-            {error} Your session is fine — this isn&rsquo;t a login problem, the API just isn&rsquo;t responding right now.
+            {error} Your session is fine – this isn&rsquo;t a login problem, the API just isn&rsquo;t responding right now.
           </p>
           <Button onClick={refresh} className="mt-2 rounded-full">
             Try again

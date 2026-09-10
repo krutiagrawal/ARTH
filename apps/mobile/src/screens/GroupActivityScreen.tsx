@@ -121,7 +121,7 @@ export function GroupActivityScreen({ navigation, route }: GroupActivityScreenPr
             <EmptyState
               icon="🌿"
               title="No activity yet"
-              body="Plant a tree or post an update — it'll show up here for the whole group to see."
+              body="Plant a tree or post an update – it'll show up here for the whole group to see."
             />
           }
         />

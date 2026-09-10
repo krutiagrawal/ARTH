@@ -160,7 +160,7 @@ export default function AdminCatalogClient() {
         <div>
           <p className="eyebrow text-primary">Admin</p>
           <h1 className="font-serif text-3xl md:text-4xl mt-2">Catalog</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Species, achievements, challenges, missions, themes, and decorations — previously seed-only.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Species, achievements, challenges, missions, themes, and decorations – previously seed-only.</p>
         </div>
         <Button onClick={startCreate} className="rounded-full shrink-0">
           <Plus className="h-4 w-4" /> New {config.label.replace(/s$/, '')}

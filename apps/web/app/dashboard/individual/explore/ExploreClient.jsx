@@ -12,7 +12,7 @@ export default function ExploreClient({ forests, blogs }) {
         <p className="eyebrow text-primary">Explore</p>
         <h1 className="font-serif text-3xl md:text-4xl mt-2">Places you&rsquo;ve touched, and stories worth reading.</h1>
         <p className="mt-2 text-sm text-muted-foreground max-w-lg">
-          Curated forests from across the ARTH network, and the journal — updated as the movement grows.
+          Curated forests from across the ARTH network, and the journal – updated as the movement grows.
         </p>
       </div>
 

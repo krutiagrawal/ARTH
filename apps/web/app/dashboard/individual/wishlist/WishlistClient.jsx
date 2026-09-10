@@ -49,7 +49,7 @@ export default function WishlistClient() {
       ) : items.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-border/70 p-10 text-center">
           <p className="text-sm text-muted-foreground">
-            Nothing saved yet — browse{' '}
+            Nothing saved yet – browse{' '}
             <Link href="/dashboard/individual/nurseries" className="text-primary underline-offset-4 hover:underline">
               nurseries
             </Link>{' '}

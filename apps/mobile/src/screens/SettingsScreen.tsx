@@ -194,7 +194,7 @@ export function SettingsScreen({ navigation }: any) {
           <SettingsRow variant="light"
             icon="🧘"
             label="Reduce Motion"
-            sublabel="Calmer visuals — pauses ambient animation"
+            sublabel="Calmer visuals – pauses ambient animation"
             accent={COLORS.textMuted}
             rightElement={
               <Toggle
@@ -215,8 +215,8 @@ export function SettingsScreen({ navigation }: any) {
             label="Homepage Theme"
             sublabel={
               settings.pinnedTimeTheme
-                ? `${getThemeForHour(PERIOD_HOUR[settings.pinnedTimeTheme as TimePeriod]).label} — always`
-                : 'Auto — changes with time of day'
+                ? `${getThemeForHour(PERIOD_HOUR[settings.pinnedTimeTheme as TimePeriod]).label} – always`
+                : 'Auto – changes with time of day'
             }
             accent={COLORS.golden}
             onPress={() => navigation.navigate('HomeThemePicker', { current: settings.pinnedTimeTheme ?? null })}
@@ -414,7 +414,7 @@ export function SettingsScreen({ navigation }: any) {
 
         <View style={styles.footer}>
           <Text style={styles.footerEmoji}>🌱</Text>
-          <Text style={styles.footerTextDark}>{appVersionLabel} — Made with love for the planet</Text>
+          <Text style={styles.footerTextDark}>{appVersionLabel} – Made with love for the planet</Text>
         </View>
       </ScrollView>
     </View>

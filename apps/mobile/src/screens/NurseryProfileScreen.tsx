@@ -220,11 +220,11 @@ export function NurseryProfileScreen({ route, navigation }: any) {
                     <Text style={styles.contributionsTitle}>🌍 Nursery impact</Text>
                     <View style={styles.contributionsRow}>
                       <View style={styles.contributionsStat}>
-                        <Text style={styles.contributionsNum}>{isOwn ? ownStats.data?.speciesCount ?? 0 : '—'}</Text>
+                        <Text style={styles.contributionsNum}>{isOwn ? ownStats.data?.speciesCount ?? 0 : '–'}</Text>
                         <Text style={styles.contributionsLabel}>Species listed</Text>
                       </View>
                       <View style={styles.contributionsStat}>
-                        <Text style={styles.contributionsNum}>{isOwn ? ownStats.data?.totalQuantity ?? 0 : '—'}</Text>
+                        <Text style={styles.contributionsNum}>{isOwn ? ownStats.data?.totalQuantity ?? 0 : '–'}</Text>
                         <Text style={styles.contributionsLabel}>Saplings available</Text>
                       </View>
                       <View style={styles.contributionsStat}>

@@ -76,7 +76,7 @@ export function DriveDetailScreen({ navigation, route }: any) {
     } catch (e) {
       errorHaptic();
       if (e instanceof ApiError && e.code === 'SERVICE_UNAVAILABLE') {
-        setActionError('Sponsorship payments aren’t live yet — please check back soon.');
+        setActionError('Sponsorship payments aren’t live yet – please check back soon.');
       } else {
         setActionError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
       }
@@ -191,7 +191,7 @@ export function DriveDetailScreen({ navigation, route }: any) {
                     ? 'Cancel my RSVP'
                     : isFull
                       ? 'Drive is full'
-                      : "I'm in — RSVP"
+                      : "I'm in – RSVP"
               }
               onPress={handleRsvp}
               disabled={joinMutation.isPending || leaveMutation.isPending || (isFull && !drive.isRsvped)}

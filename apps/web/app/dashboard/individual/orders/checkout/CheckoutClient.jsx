@@ -98,7 +98,7 @@ export default function CheckoutClient() {
       const result = await proxy('/orders/checkout', { method: 'POST', body: { addressId: selectedAddressId } })
       setClientSecret(result.clientSecret)
     } catch (err) {
-      toast.error(err.status === 503 ? 'Payments aren’t live yet — please check back soon.' : err.message || 'Something went wrong.')
+      toast.error(err.status === 503 ? 'Payments aren’t live yet – please check back soon.' : err.message || 'Something went wrong.')
     } finally {
       setPreparing(false)
     }

@@ -23,7 +23,7 @@ export default function BlogsClient({ featured, blogs }) {
             <Reveal><h1 className="display text-[14vw] md:text-[9vw] mt-6">Slow reading.<br/><em className="text-primary">Long walks</em>.</h1></Reveal>
           </div>
           <Reveal className="col-span-12 md:col-span-3" delay={0.1}>
-            <p className="text-muted-foreground max-w-xs">Field notes, plantation guides, wildlife dispatches — written by the people doing the work.</p>
+            <p className="text-muted-foreground max-w-xs">Field notes, plantation guides, wildlife dispatches – written by the people doing the work.</p>
           </Reveal>
         </div>
       </section>

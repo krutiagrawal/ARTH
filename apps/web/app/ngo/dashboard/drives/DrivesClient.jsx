@@ -103,7 +103,7 @@ export default function DrivesClient() {
         header: 'Transport',
         cell: ({ row }) => (
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Navigation className="h-3.5 w-3.5" /> {TRANSPORT_LABEL[row.original.transportMode] || '—'}
+            <Navigation className="h-3.5 w-3.5" /> {TRANSPORT_LABEL[row.original.transportMode] || '–'}
           </span>
         ),
       },
@@ -112,7 +112,7 @@ export default function DrivesClient() {
         header: 'Plants',
         cell: ({ row }) => {
           const plants = row.original.plants ?? []
-          if (plants.length === 0) return <span className="text-xs text-muted-foreground">—</span>
+          if (plants.length === 0) return <span className="text-xs text-muted-foreground">–</span>
           const sponsored = plants.reduce((sum, p) => sum + p.sponsoredCount, 0)
           return (
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -146,7 +146,7 @@ export default function DrivesClient() {
         header: 'Published',
         cell: ({ row }) => (
           <span className="text-xs text-muted-foreground">
-            {row.original.createdAt ? new Date(row.original.createdAt).toLocaleDateString() : '—'}
+            {row.original.createdAt ? new Date(row.original.createdAt).toLocaleDateString() : '–'}
           </span>
         ),
       },
@@ -236,7 +236,7 @@ export default function DrivesClient() {
         description={
           confirm?.type === 'cancel'
             ? 'Volunteers who RSVP\'d will no longer see this drive as upcoming. This cannot be undone.'
-            : 'This moves the drive out of "upcoming" — do this once the drive has actually happened.'
+            : 'This moves the drive out of "upcoming" – do this once the drive has actually happened.'
         }
         confirmLabel={confirm?.type === 'cancel' ? 'Cancel drive' : 'Mark completed'}
         destructive={confirm?.type === 'cancel'}

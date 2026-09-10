@@ -35,7 +35,7 @@ export function DrivesListScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && drives.length === 0 && (
-          <EmptyState icon="🤝" title="No drives nearby yet" body="Check back soon — NGOs add new planting drives regularly." />
+          <EmptyState icon="🤝" title="No drives nearby yet" body="Check back soon – NGOs add new planting drives regularly." />
         )}
         {drives.map((drive) => (
           <TouchableOpacity

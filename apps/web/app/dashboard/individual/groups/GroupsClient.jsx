@@ -121,7 +121,7 @@ export default function GroupsClient() {
         ) : memberships.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-border/70 p-12 text-center">
             <EmptyGroupsIllustration />
-            <p className="mt-4 text-sm text-muted-foreground">You haven&rsquo;t joined a group yet — ask for an invite code and join above.</p>
+            <p className="mt-4 text-sm text-muted-foreground">You haven&rsquo;t joined a group yet – ask for an invite code and join above.</p>
           </div>
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">

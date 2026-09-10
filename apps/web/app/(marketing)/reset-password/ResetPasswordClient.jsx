@@ -60,7 +60,7 @@ function ResetForm() {
         <h1 className="font-serif text-4xl md:text-5xl mt-4 leading-tight">Choose a new <em className="italic text-primary">password</em>.</h1>
 
         {done ? (
-          <p className="mt-10 text-sm">Password updated — taking you to sign in…</p>
+          <p className="mt-10 text-sm">Password updated – taking you to sign in…</p>
         ) : (
           <form onSubmit={submit} className="mt-10 space-y-3">
             <label className="block">

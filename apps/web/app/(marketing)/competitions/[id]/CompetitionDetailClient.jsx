@@ -84,7 +84,7 @@ export default function CompetitionDetailClient({ comp, initialEntries }) {
 
       <SectionWrapper eyebrow="Entries" title="Cast a vote. Grow the movement.">
         {entries.length === 0 && !showForm && (
-          <p className="text-muted-foreground mb-8">No entries yet — be the first to submit one.</p>
+          <p className="text-muted-foreground mb-8">No entries yet – be the first to submit one.</p>
         )}
         {entries.length > 0 && (
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">

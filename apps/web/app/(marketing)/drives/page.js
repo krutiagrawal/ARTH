@@ -2,7 +2,7 @@ import DrivesClient from './DrivesClient'
 
 export const metadata = {
   title: 'Drives',
-  description: 'Join a plantation drive near you — RSVP and show up with your hands.',
+  description: 'Join a plantation drive near you – RSVP and show up with your hands.',
 }
 
 export default function Page() {

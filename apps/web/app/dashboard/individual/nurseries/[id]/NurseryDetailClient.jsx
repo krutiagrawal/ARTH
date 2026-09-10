@@ -118,7 +118,7 @@ export default function NurseryDetailClient({ nurseryId }) {
         {profile.stock.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-border/70 p-10 text-center">
             <EmptyStockIllustration />
-            <p className="mt-3 text-sm text-muted-foreground">No stock right now — check back later.</p>
+            <p className="mt-3 text-sm text-muted-foreground">No stock right now – check back later.</p>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -134,7 +134,7 @@ export default function NurseryDetailClient({ nurseryId }) {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium truncate">{item.species}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {item.quantity} available · {item.isFree ? 'Free — request in the mobile app' : formatRupees(item.priceCents)}
+                    {item.quantity} available · {item.isFree ? 'Free – request in the mobile app' : formatRupees(item.priceCents)}
                   </p>
                   {!item.isFree && (
                     <Button

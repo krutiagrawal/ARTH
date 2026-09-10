@@ -64,7 +64,7 @@ function ReportRow({ report, onAction }) {
           )}
           <p className="text-xs text-muted-foreground mt-1">
             Reported by {report.reporter?.name || 'someone'} for <span className="capitalize">{report.reason}</span>
-            {report.details ? ` — "${report.details}"` : ''}
+            {report.details ? ` – "${report.details}"` : ''}
           </p>
         </div>
         <Badge variant={report.status === 'open' ? 'outline' : report.status === 'dismissed' ? 'secondary' : 'default'} className="capitalize">

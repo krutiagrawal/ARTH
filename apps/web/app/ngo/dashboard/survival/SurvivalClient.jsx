@@ -48,7 +48,7 @@ export default function SurvivalClient() {
       setTrees(treesRes.trees)
       setStats(statsRes)
     } catch (err) {
-      toast.error(err.message || 'Could not load — please try again.')
+      toast.error(err.message || 'Could not load – please try again.')
     } finally {
       setLoading(false)
     }
@@ -124,12 +124,12 @@ export default function SurvivalClient() {
       {
         id: 'drive',
         header: 'Drive',
-        cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.driveTitle || '—'}</span>,
+        cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.driveTitle || '–'}</span>,
       },
       {
         id: 'location',
         header: 'Location',
-        cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.locationLabel || '—'}</span>,
+        cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.locationLabel || '–'}</span>,
       },
       {
         accessorKey: 'plantedAt',
@@ -176,7 +176,7 @@ export default function SurvivalClient() {
           </span>
           <div>
             <p className="font-serif text-xl leading-none">{stats.survivalRate}%</p>
-            <p className="text-xs text-muted-foreground mt-1">Survival rate — healthy or struggling trees out of everything logged.</p>
+            <p className="text-xs text-muted-foreground mt-1">Survival rate – healthy or struggling trees out of everything logged.</p>
           </div>
         </div>
       )}
@@ -218,7 +218,7 @@ export default function SurvivalClient() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         title="Log planted trees"
-        description="Record trees planted after a drive — you can check in on their health later."
+        description="Record trees planted after a drive – you can check in on their health later."
         icon={TreePine}
         fields={fields}
         item={null}

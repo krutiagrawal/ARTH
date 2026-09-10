@@ -2,7 +2,7 @@ import './globals.css'
 import { Providers } from './providers'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-const DEFAULT_TITLE = 'ARTH — Leave More Than Footprints.'
+const DEFAULT_TITLE = 'ARTH – Leave More Than Footprints.'
 const DEFAULT_DESCRIPTION = 'A global environmental movement. Plant, track and leave a living legacy for the earth.'
 
 export const metadata = {

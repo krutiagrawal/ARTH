@@ -40,7 +40,7 @@ export default function LeaderboardsClient({ leaderboards }) {
       {/* Editorial split: number 01 hero + list */}
       <section className="px-5 md:px-10 py-16 md:py-24">
         {rows.length === 0 ? (
-          <p className="text-muted-foreground">No {tab.toLowerCase()} on the board yet — be the first to show up here.</p>
+          <p className="text-muted-foreground">No {tab.toLowerCase()} on the board yet – be the first to show up here.</p>
         ) : (
           <div className="grid grid-cols-12 gap-6 md:gap-14">
             <div className="col-span-12 md:col-span-4">

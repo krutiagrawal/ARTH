@@ -30,7 +30,7 @@ const CONFIRM_COPY = {
   block: {
     title: 'Block this account?',
     confirmLabel: 'Block',
-    body: 'They immediately lose access on web and mobile — every signed-in request will be rejected until unblocked.',
+    body: 'They immediately lose access on web and mobile – every signed-in request will be rejected until unblocked.',
     destructive: true,
   },
   unblock: { title: 'Unblock this account?', confirmLabel: 'Unblock', body: 'They regain full access on web and mobile immediately.' },
@@ -285,7 +285,7 @@ export default function AdminAccountProfileClient({ userId }) {
                   <div key={s.id} className="flex items-center justify-between text-sm border-b border-border/50 pb-2 last:border-0">
                     <span>{s.species}</span>
                     <span className="text-muted-foreground">
-                      {s.quantity} in stock · {s.isFree ? 'Free' : s.priceCents != null ? money(s.priceCents) : '—'}
+                      {s.quantity} in stock · {s.isFree ? 'Free' : s.priceCents != null ? money(s.priceCents) : '–'}
                     </span>
                   </div>
                 ))}
@@ -310,7 +310,7 @@ export default function AdminAccountProfileClient({ userId }) {
               <div className="p-6 pt-3 space-y-2">
                 {content.sponsorships.map((s) => (
                   <div key={s.id} className="flex items-center justify-between text-sm border-b border-border/50 pb-2 last:border-0">
-                    <span>{s.drive?.title ?? 'General sponsorship'}{s.note ? ` — ${s.note}` : ''}</span>
+                    <span>{s.drive?.title ?? 'General sponsorship'}{s.note ? ` – ${s.note}` : ''}</span>
                     <span className="text-muted-foreground">
                       {money(s.amountCents)} · {new Date(s.createdAt).toLocaleDateString()}
                     </span>

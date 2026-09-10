@@ -40,7 +40,7 @@ function EmptyState() {
         <circle cx="70" cy="72" r="2.5" fill="hsl(106 22% 55%)" />
         <circle cx="63" cy="76" r="2" fill="hsl(38 48% 55%)" />
       </svg>
-      <p className="mt-4 text-sm text-muted-foreground">No upcoming drives right now — check back soon.</p>
+      <p className="mt-4 text-sm text-muted-foreground">No upcoming drives right now – check back soon.</p>
     </div>
   )
 }

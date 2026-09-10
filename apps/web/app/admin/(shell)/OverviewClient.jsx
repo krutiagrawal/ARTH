@@ -61,13 +61,13 @@ export default function OverviewClient() {
         <p className="eyebrow text-primary">Admin</p>
         <h1 className="font-serif text-3xl md:text-4xl mt-2">Overview</h1>
         <p className="mt-2 text-sm text-muted-foreground max-w-2xl">
-          One admin account covers everything below — NGO approvals and platform stats, plus the ARTH site&rsquo;s
+          One admin account covers everything below – NGO approvals and platform stats, plus the ARTH site&rsquo;s
           own content (blog, competitions, newsletter).
         </p>
       </div>
 
       <section>
-        <h2 className="eyebrow mb-4">Platform — NGOs, drives, donations</h2>
+        <h2 className="eyebrow mb-4">Platform – NGOs, drives, donations</h2>
         {platform.loading ? (
           <div className="grid grid-cols-2 lg:grid-cols-6 gap-5">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -150,7 +150,7 @@ export default function OverviewClient() {
       </section>
 
       <section>
-        <h2 className="eyebrow mb-4">Content — ARTH site</h2>
+        <h2 className="eyebrow mb-4">Content – ARTH site</h2>
         {content.loading ? (
           <div className="grid grid-cols-2 gap-5">
             {Array.from({ length: 2 }).map((_, i) => (

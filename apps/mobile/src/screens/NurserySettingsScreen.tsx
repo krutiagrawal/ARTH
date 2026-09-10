@@ -181,7 +181,7 @@ export function NurserySettingsScreen({ navigation }: any) {
               variant="light"
               icon="🧘"
               label="Reduce Motion"
-              sublabel="Calmer visuals — pauses ambient animation"
+              sublabel="Calmer visuals – pauses ambient animation"
               accent={COLORS.textMuted}
               rightElement={
                 <Toggle
@@ -339,7 +339,7 @@ export function NurserySettingsScreen({ navigation }: any) {
 
           <View style={styles.footer}>
             <Text style={styles.footerEmoji}>🌱</Text>
-            <Text style={styles.footerText}>{appVersionLabel} — Made with love for the planet</Text>
+            <Text style={styles.footerText}>{appVersionLabel} – Made with love for the planet</Text>
           </View>
         </ScrollView>
       )}

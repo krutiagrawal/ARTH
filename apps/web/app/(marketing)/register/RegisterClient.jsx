@@ -105,8 +105,8 @@ function App() {
               <p className="font-serif text-lg leading-tight">{ACCOUNTS.find(a => a.id === accountType).label} accounts get their own doorway.</p>
               <p className="mt-2 text-sm text-muted-foreground">
                 {needsNgoDoorway
-                  ? 'Running drives, listing adoptable trees, and receiving donations requires an approved organisation account — a separate, reviewed sign-up from the one here.'
-                  : 'Groups get a shared invite code, a combined forest, and group challenges — a separate sign-up from the one here. No review wait, you can start right away.'}
+                  ? 'Running drives, listing adoptable trees, and receiving donations requires an approved organisation account – a separate, reviewed sign-up from the one here.'
+                  : 'Groups get a shared invite code, a combined forest, and group challenges – a separate sign-up from the one here. No review wait, you can start right away.'}
               </p>
               <Link href={needsNgoDoorway ? '/ngo/register' : '/group/register'} className="mt-4 inline-flex items-center gap-2 rounded-full bg-foreground text-background px-5 h-11 text-sm hover:opacity-90 transition">
                 Register your {ACCOUNTS.find(a => a.id === accountType).label}

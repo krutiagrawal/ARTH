@@ -35,7 +35,7 @@ export default function Footer() {
           </div>
           <div className="col-span-12 md:col-span-4 md:pb-6">
             {status === 'done' ? (
-              <p className="text-sm">You're on the list — thank you.</p>
+              <p className="text-sm">You're on the list – thank you.</p>
             ) : (
               <form onSubmit={subscribe} className="flex items-center gap-2 rounded-full border border-foreground/25 pl-4 pr-1 py-1">
                 <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="Your email for gentle letters" className="h-10 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
@@ -44,7 +44,7 @@ export default function Footer() {
                 </button>
               </form>
             )}
-            {status === 'error' && <p className="text-xs mt-2 text-destructive">Something went wrong — try again.</p>}
+            {status === 'error' && <p className="text-xs mt-2 text-destructive">Something went wrong – try again.</p>}
             <p className="eyebrow text-muted-foreground mt-4">One quiet letter, once a season.</p>
           </div>
         </div>

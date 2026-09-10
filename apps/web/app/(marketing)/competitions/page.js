@@ -6,7 +6,7 @@
 
 export const metadata = {
   title: 'Competitions',
-  description: 'Join ARTH competitions and challenges — plant, document and compete for the movement.',
+  description: 'Join ARTH competitions and challenges – plant, document and compete for the movement.',
 }
 
 export default function Page() {

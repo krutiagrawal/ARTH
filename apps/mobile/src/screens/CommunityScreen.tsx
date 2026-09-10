@@ -388,7 +388,7 @@ function LeaderboardTabContent({ navigation }: { navigation: any }) {
             <BorderCard style={[styles.yourRankCard, styles.noBorder]}>
               <Text style={styles.yourRankLabelDark}>YOUR RANK</Text>
               <View style={styles.yourRankRow}>
-                <Text style={styles.yourRankNumDark}>{userBoard.data?.myRank ? `#${userBoard.data.myRank}` : '—'}</Text>
+                <Text style={styles.yourRankNumDark}>{userBoard.data?.myRank ? `#${userBoard.data.myRank}` : '–'}</Text>
                 <Text style={styles.yourRankOfDark}>of {(userBoard.data?.totalUsers ?? 0).toLocaleString()}</Text>
               </View>
             </BorderCard>

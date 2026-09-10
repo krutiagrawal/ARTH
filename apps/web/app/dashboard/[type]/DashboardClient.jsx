@@ -47,7 +47,7 @@ export default function DashboardClient({ type, forests, blogs }) {
         <div className="mt-4 flex flex-wrap items-end justify-between gap-6">
           <div>
             <h1 className="font-serif text-5xl md:text-7xl leading-[1] text-balance">Welcome back, {firstName}.</h1>
-            <p className="mt-3 text-muted-foreground flex items-center gap-2"><MapPin className="h-4 w-4" /> {user?.handle ? `@${user.handle}` : '—'}</p>
+            <p className="mt-3 text-muted-foreground flex items-center gap-2"><MapPin className="h-4 w-4" /> {user?.handle ? `@${user.handle}` : '–'}</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Button asChild variant="outline" className="rounded-full"><Link href="/explore">Explore</Link></Button>

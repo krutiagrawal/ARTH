@@ -273,7 +273,7 @@ export function AdminReportsScreen() {
       >
         <Text style={[styles.sheetBody, isNightMode && styles.sheetBodyNight]}>
           {pending?.action === 'block_account'
-            ? 'They immediately lose access on web and mobile — every signed-in request will be rejected until unblocked.'
+            ? 'They immediately lose access on web and mobile – every signed-in request will be rejected until unblocked.'
             : pending?.action === 'delete'
               ? 'This removes the content permanently for everyone. It cannot be undone.'
               : pending?.action === 'dismiss'
@@ -285,7 +285,7 @@ export function AdminReportsScreen() {
 
         <TextInput
           style={[styles.reasonInput, isNightMode && styles.reasonInputNight]}
-          placeholder="Reason (optional — saved to the audit log)"
+          placeholder="Reason (optional – saved to the audit log)"
           placeholderTextColor={isNightMode ? ON_DARK_SURFACE.muted : COLORS.textMuted}
           value={reason}
           onChangeText={setReason}

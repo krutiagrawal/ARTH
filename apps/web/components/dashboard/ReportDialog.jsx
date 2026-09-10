@@ -30,7 +30,7 @@ export default function ReportDialog({ open, onOpenChange, targetType, targetId,
     setSubmitting(true)
     try {
       await proxy('/reports', { method: 'POST', body: { targetType, targetId, reason, details: details || undefined } })
-      toast.success('Thanks — our team will review this.')
+      toast.success('Thanks – our team will review this.')
       setDetails('')
       setReason('spam')
       onOpenChange(false)
@@ -48,7 +48,7 @@ export default function ReportDialog({ open, onOpenChange, targetType, targetId,
           <DialogTitle className="flex items-center gap-2 font-serif">
             <Flag className="h-4 w-4 text-destructive" /> Report{targetLabel ? ` ${targetLabel}` : ''}
           </DialogTitle>
-          <DialogDescription>Let us know what&rsquo;s wrong — our team reviews every report.</DialogDescription>
+          <DialogDescription>Let us know what&rsquo;s wrong – our team reviews every report.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">

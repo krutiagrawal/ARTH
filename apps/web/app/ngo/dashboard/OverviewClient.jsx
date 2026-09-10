@@ -35,7 +35,7 @@ function StatusBanner({ profile, onResubmitted }) {
       <div className="rounded-3xl border border-border/70 bg-card p-6 soft-shadow">
         <p className="font-serif text-xl">Your application is with our team.</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Thank you for your patience, {profile.orgName} — we&rsquo;re reviewing your details carefully. We&rsquo;ll
+          Thank you for your patience, {profile.orgName} – we&rsquo;re reviewing your details carefully. We&rsquo;ll
           email you the moment there&rsquo;s a decision. You can still see everything below, you just can&rsquo;t
           publish new drives, trees, or campaigns until you&rsquo;re approved.
         </p>
@@ -94,7 +94,7 @@ function RejectedPanel({ profile, onResubmitted }) {
 
   return (
     <div className="rounded-3xl border border-border/70 bg-card p-6 soft-shadow">
-      <p className="font-serif text-xl">This one didn&rsquo;t go through — but it&rsquo;s not the end.</p>
+      <p className="font-serif text-xl">This one didn&rsquo;t go through – but it&rsquo;s not the end.</p>
       <p className="mt-2 text-sm text-muted-foreground">
         {profile.rejectionReason
           ? `Our team noted: "${profile.rejectionReason}"`

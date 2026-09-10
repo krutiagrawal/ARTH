@@ -309,8 +309,8 @@ function LifeAccents({ innerRef }) {
    reads like light catching an edge — short of the heavy, milky "frosted shower
    door" look of a large blur radius plus a dense tint. */
 
-const INK = '#2b1f14' // dark ink — for text sitting on bright footage
-const CREAM = '#f5ecd9' // warm cream — for text sitting on dark footage
+const INK = '#2b1f14' // dark ink – for text sitting on bright footage
+const CREAM = '#f5ecd9' // warm cream – for text sitting on dark footage
 
 const GLASS_LIGHT = 'bg-white/22 backdrop-blur-[11px] border border-white/55 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.65),0_8px_30px_-8px_rgba(0,0,0,0.35)]'
 // bg-black opacity bumped up from an earlier /34: over saturated green canopy
@@ -443,7 +443,7 @@ function ExampleCard({ name, quote, glass = 'light' }) {
     <div className={`rounded-2xl px-4 py-3 ${t.glassCls}`}>
       <p className={`text-[10px] uppercase tracking-widest ${t.subCls}`}>Example</p>
       <p className="mt-1 font-serif italic text-sm leading-snug" style={{ color: t.text }}>&ldquo;{quote}&rdquo;</p>
-      <p className={`mt-1 text-xs ${t.subCls}`}>— {name}</p>
+      <p className={`mt-1 text-xs ${t.subCls}`}>– {name}</p>
     </div>
   )
 }

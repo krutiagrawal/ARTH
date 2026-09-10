@@ -69,9 +69,9 @@ export default async function App({ params }) {
 
             <div className="mt-10 text-lg leading-relaxed text-muted-foreground space-y-6 max-w-xl [&>p:first-of-type]:first-letter:font-serif [&>p:first-of-type]:first-letter:text-6xl [&>p:first-of-type]:first-letter:font-bold [&>p:first-of-type]:first-letter:text-foreground [&>p:first-of-type]:first-letter:float-left [&>p:first-of-type]:first-letter:leading-[0.8] [&>p:first-of-type]:first-letter:mr-2 [&>p:first-of-type]:first-letter:mt-1">
               <p>{forest.name} was born the year a handful of people decided to stop describing the problem and start planting the answer. What began as a single planting weekend near {forest.location.replace(', India', '')} has, since {forest.established}, grown into a living inventory: {forest.species} native species, {forest.trees.toLocaleString()} intentional trees, and {forest.volunteers.toLocaleString()} pairs of hands that keep coming back.</p>
-              <p>The forest is coordinated by a local NGO working alongside the villages, farms and forest departments that border it. Monthly plantation drives are open to volunteers; CSR partners have adopted specific patches and fund seedlings, watering and community caretakers through the seasons that matter most — the first two dry ones.</p>
-              <p>Every planting here is photographed and geo-tagged, not for a press release, but so the next visitor — volunteer, funder, or just curious — can see exactly which tree they're standing under, and how long it has been growing.</p>
-              <p>There is no fence around most of it. The forest is meant to be walked through, not just funded — and on any given weekend, someone usually is.</p>
+              <p>The forest is coordinated by a local NGO working alongside the villages, farms and forest departments that border it. Monthly plantation drives are open to volunteers; CSR partners have adopted specific patches and fund seedlings, watering and community caretakers through the seasons that matter most – the first two dry ones.</p>
+              <p>Every planting here is photographed and geo-tagged, not for a press release, but so the next visitor – volunteer, funder, or just curious – can see exactly which tree they're standing under, and how long it has been growing.</p>
+              <p>There is no fence around most of it. The forest is meant to be walked through, not just funded – and on any given weekend, someone usually is.</p>
             </div>
 
             <div className="mt-10 flex flex-wrap gap-3">

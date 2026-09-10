@@ -20,7 +20,7 @@ function TreeRow({ tree, onReview }) {
     setWorking(true)
     try {
       await onReview(tree.id, decision)
-      toast.success(decision === 'approve' ? 'Tree approved — XP awarded.' : 'Submission marked rejected.')
+      toast.success(decision === 'approve' ? 'Tree approved – XP awarded.' : 'Submission marked rejected.')
     } catch (err) {
       toast.error(err.message || 'Something went wrong.')
     } finally {

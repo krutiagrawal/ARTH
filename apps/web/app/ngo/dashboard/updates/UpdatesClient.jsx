@@ -45,7 +45,7 @@ export default function UpdatesClient() {
     setSubmitting(true)
     try {
       await create(payload, photoFile)
-      toast.success('Update posted — your followers will see it.')
+      toast.success('Update posted – your followers will see it.')
       setDialogOpen(false)
     } catch (err) {
       toast.error(err.message || 'Something went wrong.')
@@ -72,7 +72,7 @@ export default function UpdatesClient() {
         <div>
           <p className="eyebrow text-primary">Updates</p>
           <h1 className="font-serif text-3xl md:text-4xl mt-2">Share an update</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Post photos and progress notes — your followers see these in their feed.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Post photos and progress notes – your followers see these in their feed.</p>
         </div>
         <Button onClick={() => setDialogOpen(true)} className="rounded-full shrink-0">
           <Plus className="h-4 w-4" /> New update

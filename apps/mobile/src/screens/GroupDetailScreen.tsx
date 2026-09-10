@@ -68,7 +68,7 @@ export function GroupDetailScreen({ navigation, route }: any) {
         <Text style={styles.sectionLabel}>Challenges</Text>
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && challenges.length === 0 && (
-          <EmptyState icon="🏆" title="No challenges yet" body="Check back soon — the group owner can start one from their dashboard." />
+          <EmptyState icon="🏆" title="No challenges yet" body="Check back soon – the group owner can start one from their dashboard." />
         )}
         {challenges.map((c, i) => {
           const pct = Math.min(100, Math.round((c.progress / c.goalTotal) * 100));

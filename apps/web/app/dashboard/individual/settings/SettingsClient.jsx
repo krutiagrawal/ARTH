@@ -251,7 +251,7 @@ function SecuritySection() {
       <div className="border-t border-border/60 pt-6">
         <p className="text-sm text-destructive">Danger zone</p>
         <p className="text-xs text-muted-foreground mt-1 max-w-md">
-          Deleting your account is permanent — your trees, adoptions and history stay recorded for the forest, but you lose access.
+          Deleting your account is permanent – your trees, adoptions and history stay recorded for the forest, but you lose access.
         </p>
         <Dialog>
           <DialogTrigger asChild>

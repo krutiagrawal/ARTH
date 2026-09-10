@@ -74,7 +74,7 @@ export default function PlantClient() {
               Planting happens with a <em className="not-italic text-primary">live camera</em>, on your phone.
             </h1>
             <p className="mt-5 text-muted-foreground leading-relaxed">
-              To keep every tree in ARTH real, we don't accept planting from the website — it needs a real-time photo and
+              To keep every tree in ARTH real, we don't accept planting from the website – it needs a real-time photo and
               location, captured in the mobile app at the moment you plant.
             </p>
 

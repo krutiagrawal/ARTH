@@ -53,7 +53,7 @@ export function BlockedAccountsScreen({ navigation }: any) {
           ListHeaderComponent={
             blocks.length > 0 ? (
               <Text style={styles.intro}>
-                Blocking works both ways — neither of you sees the other's posts or stories.
+                Blocking works both ways – neither of you sees the other's posts or stories.
               </Text>
             ) : null
           }

@@ -27,28 +27,28 @@ const heroClipStyle = { clipPath: 'url(#hero-blob-clip)' }
 const ovalClipStyle = { clipPath: 'url(#oval-blob-clip)' }
 
 const PRINCIPLES = [
-  { n: '01', h: 'With the land', p: 'Only native species. Only local nurseries. No imported monocultures — the plants that belong here already know how to survive here.' },
-  { n: '02', h: 'With the people', p: 'Communities lead. NGOs coordinate. CSR supports. Nothing is done to a place — only with it.' },
+  { n: '01', h: 'With the land', p: 'Only native species. Only local nurseries. No imported monocultures – the plants that belong here already know how to survive here.' },
+  { n: '02', h: 'With the people', p: 'Communities lead. NGOs coordinate. CSR supports. Nothing is done to a place – only with it.' },
   { n: '03', h: 'With the truth', p: 'Every drive is photographed and geo-tagged. Every count is public. No greenwashing, ever.' },
 ]
 
 const VALUES = [
   { n: '01', h: 'Native first', p: 'We plant with the land, not against it. Every sapling is a species that belongs where it stands.', icon: Leaf },
   { n: '02', h: 'Verified impact', p: 'Every tree geo-tagged. Every drive photographed. Every count public and forever open.', icon: ShieldCheck },
-  { n: '03', h: 'Kind competition', p: 'We celebrate what grows slowly — not what shouts loudly.', icon: Star },
+  { n: '03', h: 'Kind competition', p: 'We celebrate what grows slowly – not what shouts loudly.', icon: Star },
   { n: '04', h: 'Forever open', p: 'A public archive of trees, hands and hopeful mornings. Free to see, free to join.', icon: Unlock },
 ]
 
 const MVB = [
-  { n: 'M', h: 'Mission', p: 'To make it easy for anyone — individual, community, company or nation — to plant, verify and cherish native trees for generations.' },
+  { n: 'M', h: 'Mission', p: 'To make it easy for anyone – individual, community, company or nation – to plant, verify and cherish native trees for generations.' },
   { n: 'V', h: 'Vision', p: 'A public, forever archive of every intentional tree, every person who planted it, every place it grows.' },
   { n: 'B', h: 'Belief', p: 'Nature does not need saving. She needs to be given room, and left alone with kindness.' },
 ]
 
 const JOURNEY = [
-  { year: '2026', h: 'A single sapling', p: 'ARTH begins with one banyan, planted on a dry hillside — the first entry in what would become a public archive.' },
+  { year: '2026', h: 'A single sapling', p: 'ARTH begins with one banyan, planted on a dry hillside – the first entry in what would become a public archive.' },
   { year: '2026', h: 'The first hands join', p: 'A handful of local nurseries and NGOs come aboard. The idea of a shared, open forest record starts to take shape.' },
-  { year: '2026', h: 'A living archive opens', p: 'ARTH goes public — every planter, every tree, every drive, tracked and open for anyone to see.' },
+  { year: '2026', h: 'A living archive opens', p: 'ARTH goes public – every planter, every tree, every drive, tracked and open for anyone to see.' },
 ]
 
 const FALLBACK_AVATARS = ['🌱', '🌳', '🍃']

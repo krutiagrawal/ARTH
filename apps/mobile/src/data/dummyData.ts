@@ -327,7 +327,7 @@ export const ONBOARDING_PAGES = [
   {
     id: 1,
     title: 'Build Your\nLiving Forest',
-    subtitle: 'Every tree you plant becomes part of your own evolving digital ecosystem — watch it grow with you.',
+    subtitle: 'Every tree you plant becomes part of your own evolving digital ecosystem – watch it grow with you.',
     cta: 'Begin Growing',
     accent: '#87A878',
     emoji: '🌱',
@@ -343,7 +343,7 @@ export const ONBOARDING_PAGES = [
   {
     id: 3,
     title: 'Real Impact,\nReal Planet',
-    subtitle: 'Every photo you upload is verified. Your actions create measurable change — not just pixels.',
+    subtitle: 'Every photo you upload is verified. Your actions create measurable change – not just pixels.',
     cta: 'Make a Difference',
     accent: '#4A90D9',
     emoji: '🌍',

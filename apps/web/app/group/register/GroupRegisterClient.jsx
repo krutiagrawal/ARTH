@@ -28,7 +28,7 @@ function ConfirmationView({ groupName }) {
       </span>
       <h2 className="font-serif text-2xl md:text-3xl mt-6">Welcome, {groupName}. 🌱</h2>
       <p className="mt-3 text-muted-foreground max-w-md mx-auto">
-        Your group is live — no review wait. Share your invite code from the dashboard so members can join and
+        Your group is live – no review wait. Share your invite code from the dashboard so members can join and
         start planting together.
       </p>
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -82,7 +82,7 @@ function GroupRegisterForm() {
           Bring your group to <em className="italic text-primary">ARTH</em>.
         </h1>
         <p className="mt-4 text-muted-foreground max-w-md">
-          Get a shared invite code, a combined forest, and group challenges. No review wait — you're live right away.
+          Get a shared invite code, a combined forest, and group challenges. No review wait – you're live right away.
         </p>
 
         {submittedGroupName ? (

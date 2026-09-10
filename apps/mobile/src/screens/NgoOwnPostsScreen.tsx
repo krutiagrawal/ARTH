@@ -92,7 +92,7 @@ export function NgoOwnPostsScreen({ navigation }: any) {
         <EmptyState
           icon="📸"
           title="Nothing posted yet"
-          body="Share a photo from a drive — your followers see it in their feed, and posting each week keeps your streak alive."
+          body="Share a photo from a drive – your followers see it in their feed, and posting each week keeps your streak alive."
           actionLabel="Create a post"
           onAction={() => navigation?.navigate('NgoPostUpdate')}
         />

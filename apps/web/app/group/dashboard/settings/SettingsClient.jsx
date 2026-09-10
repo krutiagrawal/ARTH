@@ -127,7 +127,7 @@ export default function SettingsClient() {
         <div>
           <p className="font-medium">Invite code</p>
           <p className="text-sm text-muted-foreground mt-1">
-            Regenerating invalidates <span className="font-mono">{profile.inviteCode}</span> — anyone with the old code won't be able to join.
+            Regenerating invalidates <span className="font-mono">{profile.inviteCode}</span> – anyone with the old code won't be able to join.
           </p>
         </div>
         <Button variant="outline" className="rounded-full gap-2" onClick={() => setConfirmRegenerate(true)}>

@@ -77,7 +77,7 @@ export default function OrdersClient() {
       ) : orders.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-border/70 p-12 text-center">
           <BoxIllustration />
-          <p className="mt-4 text-sm text-muted-foreground">No orders yet — saplings you buy will show up here.</p>
+          <p className="mt-4 text-sm text-muted-foreground">No orders yet – saplings you buy will show up here.</p>
           <Link href="/dashboard/individual/nurseries" className="mt-3 inline-block text-sm text-primary hover:underline">
             Browse nurseries
           </Link>

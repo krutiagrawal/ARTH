@@ -191,7 +191,7 @@ export function PostComposerScreen({ navigation, route }: any) {
             hint={
               mode === 'story'
                 ? 'One photo, gone in 24 hours.'
-                : 'Up to 6 — the first one is the cover, and people swipe through the rest.'
+                : 'Up to 6 – the first one is the cover, and people swipe through the rest.'
             }
           />
 

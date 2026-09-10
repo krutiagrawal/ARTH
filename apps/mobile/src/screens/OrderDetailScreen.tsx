@@ -162,7 +162,7 @@ export function OrderDetailScreen({ route, navigation }: any) {
 
           {order.status === 'out_for_delivery' && order.deliveryOtp && (
             <BorderCard style={styles.card}>
-              <Text style={styles.otpLabel}>Delivery OTP — share this with the rider</Text>
+              <Text style={styles.otpLabel}>Delivery OTP – share this with the rider</Text>
               <Text style={styles.otpValue}>{order.deliveryOtp}</Text>
             </BorderCard>
           )}

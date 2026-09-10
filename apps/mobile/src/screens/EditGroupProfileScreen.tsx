@@ -31,7 +31,7 @@ export function EditGroupProfileScreen({ navigation }: any) {
       return;
     }
     if (handle.length > 0 && (handle.length < 3 || !HANDLE_REGEX.test(handle))) {
-      setError('Handle must be at least 3 characters — lowercase letters, numbers, and underscores only.');
+      setError('Handle must be at least 3 characters – lowercase letters, numbers, and underscores only.');
       return;
     }
     try {

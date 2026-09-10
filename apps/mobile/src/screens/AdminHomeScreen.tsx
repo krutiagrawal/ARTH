@@ -58,7 +58,7 @@ export function AdminHomeScreen({ navigation, onNavigateTab }: any) {
   const mascotMessage =
     pendingCount > 0
       ? `🔍 ${pendingCount} NGO application${pendingCount === 1 ? '' : 's'} awaiting review`
-      : "All caught up — no NGOs waiting on you 🎉";
+      : "All caught up – no NGOs waiting on you 🎉";
 
   return (
     <View style={styles.container}>
