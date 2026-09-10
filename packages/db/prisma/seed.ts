@@ -11,11 +11,13 @@ async function seedSpecies() {
     { key: 'sandalwood', commonName: 'Sandalwood', emoji: '🪵', co2KgPerYear: 2.0, sortOrder: 5 },
     { key: 'pine', commonName: 'Pine', emoji: '🌲', co2KgPerYear: 1.8, sortOrder: 6 },
     { key: 'blue_gum', commonName: 'Blue Gum', emoji: '🌿', co2KgPerYear: 1.0, sortOrder: 7 },
-    { key: 'oak', commonName: 'Oak', emoji: '🌳', co2KgPerYear: 5.5, sortOrder: 8 },
-    { key: 'cherry_blossom', commonName: 'Cherry Blossom', emoji: '🌸', co2KgPerYear: 2.5, sortOrder: 9 },
-    { key: 'maple', commonName: 'Maple', emoji: '🍁', co2KgPerYear: 3.5, sortOrder: 10 },
+    // Not typically found in Indian nurseries — kept (deactivated) rather than deleted so any
+    // tree already planted under one of these species keeps a valid reference.
+    { key: 'oak', commonName: 'Oak', emoji: '🌳', co2KgPerYear: 5.5, sortOrder: 8, isActive: false },
+    { key: 'cherry_blossom', commonName: 'Cherry Blossom', emoji: '🌸', co2KgPerYear: 2.5, sortOrder: 9, isActive: false },
+    { key: 'maple', commonName: 'Maple', emoji: '🍁', co2KgPerYear: 3.5, sortOrder: 10, isActive: false },
     { key: 'palm', commonName: 'Palm', emoji: '🌴', co2KgPerYear: 1.5, sortOrder: 11 },
-    { key: 'willow', commonName: 'Willow', emoji: '🌿', co2KgPerYear: 2.2, sortOrder: 12 },
+    { key: 'willow', commonName: 'Willow', emoji: '🌿', co2KgPerYear: 2.2, sortOrder: 12, isActive: false },
     { key: 'orange_tree', commonName: 'Orange Tree', emoji: '🍊', co2KgPerYear: 2.8, sortOrder: 13 },
     // Common in Indian nurseries and drive plantings.
     { key: 'neem', commonName: 'Neem', emoji: '🌳', co2KgPerYear: 4.5, sortOrder: 14 },

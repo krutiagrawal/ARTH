@@ -34,8 +34,16 @@ import { SPECIES_EMOJI_OPTIONS } from '../api/species';
 import type { VerifyPlantingPhotoResult } from '../api/trees';
 import { NOT_APPROVED_MESSAGE } from '../constants/plantingLocation';
 import { getCurrentPositionWithTimeout } from '../utils/location';
+import { EFFECTIVE_WIDTH } from '../utils/responsive';
 
 const { width: SW, height: SH } = Dimensions.get('window');
+
+// Species pills: fixed 3-per-row grid, matched to detailsContent's own horizontal padding/gap so
+// each column comes out equal-width instead of shrink-wrapping to its label.
+const SPECIES_GRID_PADDING = 20;
+const SPECIES_GRID_GAP = 8;
+const SPECIES_CHIP_WIDTH = (EFFECTIVE_WIDTH - SPECIES_GRID_PADDING * 2 - SPECIES_GRID_GAP * 2) / 3;
+const INITIAL_SPECIES_COUNT = 9;
 
 type Stage = 'upload' | 'scanning' | 'details' | 'success';
 
@@ -192,6 +200,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
   const [selectedSpeciesId, setSelectedSpeciesId] = useState<string | null>(null);
   const [nickname, setNickname] = useState('');
   const [showAddSpecies, setShowAddSpecies] = useState(false);
+  const [showAllSpecies, setShowAllSpecies] = useState(false);
   const [newSpeciesName, setNewSpeciesName] = useState('');
   const [newSpeciesEmoji, setNewSpeciesEmoji] = useState<string | null>(null);
   const [addSpeciesError, setAddSpeciesError] = useState<string | null>(null);
@@ -219,6 +228,8 @@ export function PlantTreeScreen({ navigation, route }: any) {
   // ScanAnimation instead of starting only once that animation finishes.
   const verifyPromiseRef = useRef<Promise<VerifyPlantingPhotoResult> | null>(null);
   const selectedSpecies = speciesList.find(s => s.id === selectedSpeciesId) ?? null;
+  const visibleSpecies = showAllSpecies ? speciesList : speciesList.slice(0, INITIAL_SPECIES_COUNT);
+  const hasMoreSpecies = speciesList.length > INITIAL_SPECIES_COUNT;
 
   const fetchLocation = useCallback(async () => {
     if (isPreVerified) return;
@@ -487,7 +498,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
 
           <Text style={styles.detailsLabel}>Choose Species</Text>
           <View style={styles.speciesGrid}>
-            {speciesList.map(species => (
+            {visibleSpecies.map(species => (
               <TouchableOpacity
                 key={species.id}
                 style={[
@@ -500,11 +511,25 @@ export function PlantTreeScreen({ navigation, route }: any) {
                 }}
               >
                 <Text style={styles.speciesEmoji}>{species.emoji}</Text>
-                <Text style={[styles.speciesName, selectedSpeciesId === species.id && styles.speciesNameSelected]}>
+                <Text
+                  style={[styles.speciesName, selectedSpeciesId === species.id && styles.speciesNameSelected]}
+                  numberOfLines={1}
+                >
                   {species.commonName}
                 </Text>
               </TouchableOpacity>
             ))}
+            {hasMoreSpecies && (
+              <TouchableOpacity
+                style={[styles.speciesChip, styles.speciesChipAdd]}
+                onPress={() => setShowAllSpecies((prev) => !prev)}
+              >
+                <Text style={styles.speciesEmoji}>{showAllSpecies ? '▲' : '▼'}</Text>
+                <Text style={styles.speciesName} numberOfLines={1}>
+                  {showAllSpecies ? 'Show less' : `See more (${speciesList.length - INITIAL_SPECIES_COUNT})`}
+                </Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.speciesChip, styles.speciesChipAdd]}
               onPress={() => {
@@ -513,7 +538,9 @@ export function PlantTreeScreen({ navigation, route }: any) {
               }}
             >
               <Text style={styles.speciesEmoji}>{showAddSpecies ? '✕' : '➕'}</Text>
-              <Text style={styles.speciesName}>{showAddSpecies ? 'Cancel' : "Can't find it?"}</Text>
+              <Text style={styles.speciesName} numberOfLines={1}>
+                {showAddSpecies ? 'Cancel' : "Can't find it?"}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -880,11 +907,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   speciesChip: {
+    width: SPECIES_CHIP_WIDTH,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     borderRadius: RADIUS.full,
     backgroundColor: 'rgba(255,255,255,0.7)',
     borderWidth: 1.5,
@@ -898,9 +927,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   speciesName: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: COLORS.textPrimary,
+    flexShrink: 1,
   },
   speciesNameSelected: {
     color: COLORS.white,
