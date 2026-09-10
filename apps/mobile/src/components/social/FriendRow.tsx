@@ -4,7 +4,8 @@ import { Text } from '../common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
-import { StoryRing, type StoryRingStatus } from '../common/StoryRing';
+import { type StoryRingStatus } from '../common/StoryRing';
+import { StoryAvatar } from '../common/StoryAvatar';
 import { useSlideUp } from '../../hooks/useAnimations';
 import { useRespondFriendRequest } from '../../hooks/useApiQueries';
 import type { ApiFriend, ApiFriendRequest } from '../../api/friends';
@@ -26,16 +27,25 @@ export function FriendCard({ friend, index, onPress, storyRing }: { friend: ApiF
   const slideStyle = useSlideUp(index * 80, 20);
   return (
     <Animated.View style={slideStyle}>
-      <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-        <View style={styles.friendCard}>
-          <View style={styles.friendAvatarWrapper}>
-            <StoryRing status={storyRing} size={48} borderRadius={16}>
-              <View style={[styles.friendAvatar, { backgroundColor: COLORS.mintLight }]}>
-                <Text style={styles.friendAvatarEmoji}>{friend.avatar}</Text>
-              </View>
-            </StoryRing>
-            {friend.isOnline && <View style={styles.onlineDot} />}
-          </View>
+      <View style={styles.friendCard}>
+        <View style={styles.friendAvatarWrapper}>
+          <StoryAvatar
+            authorKind="user"
+            authorId={friend.id}
+            authorName={friend.name}
+            authorAvatarEmoji={friend.avatar}
+            status={storyRing}
+            size={48}
+            borderRadius={16}
+            onPress={onPress}
+          >
+            <View style={[styles.friendAvatar, { backgroundColor: COLORS.mintLight }]}>
+              <Text style={styles.friendAvatarEmoji}>{friend.avatar}</Text>
+            </View>
+          </StoryAvatar>
+          {friend.isOnline && <View style={styles.onlineDot} />}
+        </View>
+        <TouchableOpacity style={styles.friendCardRest} activeOpacity={0.85} onPress={onPress}>
           <View style={styles.friendInfo}>
             <Text style={styles.friendNameDark}>{friend.name}</Text>
             <Text style={styles.friendStatsDark}>
@@ -54,8 +64,8 @@ export function FriendCard({ friend, index, onPress, storyRing }: { friend: ApiF
             </LinearGradient>
             <Text style={styles.friendArrowDark}>›</Text>
           </View>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </View>
     </Animated.View>
   );
 }
@@ -74,37 +84,44 @@ export function FriendRequestRow({
 }) {
   const respondMutation = useRespondFriendRequest();
   return (
-    <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-      <View style={styles.friendCard}>
-        <StoryRing status={storyRing} size={48} borderRadius={16}>
-          <View style={[styles.friendAvatar, { backgroundColor: COLORS.mintLight }]}>
-            <Text style={styles.friendAvatarEmoji}>{request.from.avatar}</Text>
-          </View>
-        </StoryRing>
-        <View style={styles.friendInfo}>
-          <Text style={styles.friendNameDark}>{request.from.name}</Text>
-          <Text style={styles.friendStatsDark}>wants to be your friend</Text>
+    <View style={styles.friendCard}>
+      <StoryAvatar
+        authorKind="user"
+        authorId={request.from.id}
+        authorName={request.from.name}
+        authorAvatarEmoji={request.from.avatar}
+        status={storyRing}
+        size={48}
+        borderRadius={16}
+        onPress={onPress}
+      >
+        <View style={[styles.friendAvatar, { backgroundColor: COLORS.mintLight }]}>
+          <Text style={styles.friendAvatarEmoji}>{request.from.avatar}</Text>
         </View>
-        <View style={styles.requestActions}>
-          <TouchableOpacity
-            style={styles.requestAccept}
-            onPress={() => respondMutation.mutate({ id: request.id, action: 'accept' }, { onSuccess: () => onAccepted(request.from.name) })}
-            accessibilityRole="button"
-            accessibilityLabel={`Accept friend request from ${request.from.name}`}
-          >
-            <Text style={styles.requestAcceptText}>✓</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.requestDecline}
-            onPress={() => respondMutation.mutate({ id: request.id, action: 'decline' })}
-            accessibilityRole="button"
-            accessibilityLabel={`Decline friend request from ${request.from.name}`}
-          >
-            <Text style={styles.requestDeclineText}>✕</Text>
-          </TouchableOpacity>
-        </View>
+      </StoryAvatar>
+      <TouchableOpacity style={styles.friendInfo} activeOpacity={0.85} onPress={onPress}>
+        <Text style={styles.friendNameDark}>{request.from.name}</Text>
+        <Text style={styles.friendStatsDark}>wants to be your friend</Text>
+      </TouchableOpacity>
+      <View style={styles.requestActions}>
+        <TouchableOpacity
+          style={styles.requestAccept}
+          onPress={() => respondMutation.mutate({ id: request.id, action: 'accept' }, { onSuccess: () => onAccepted(request.from.name) })}
+          accessibilityRole="button"
+          accessibilityLabel={`Accept friend request from ${request.from.name}`}
+        >
+          <Text style={styles.requestAcceptText}>✓</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.requestDecline}
+          onPress={() => respondMutation.mutate({ id: request.id, action: 'decline' })}
+          accessibilityRole="button"
+          accessibilityLabel={`Decline friend request from ${request.from.name}`}
+        >
+          <Text style={styles.requestDeclineText}>✕</Text>
+        </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -117,6 +134,13 @@ const styles = StyleSheet.create({
   },
   friendAvatarWrapper: {
     position: 'relative',
+  },
+  friendCardRest: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
   },
   friendAvatar: {
     width: 48,

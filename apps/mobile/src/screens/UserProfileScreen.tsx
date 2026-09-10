@@ -73,6 +73,8 @@ export function UserProfileScreen({ route, navigation }: any) {
   const { data: themes = [] } = useThemes();
   const selectThemeMutation = useSelectTheme();
 
+  // Story ring is skipped on your own profile: it'd double up with the XP progress ring already
+  // wrapping your own avatar there, which is sized/positioned assuming no story ring inflates it.
   const ringStatus = useRingStatus({ userIds: !isOwn && userId ? [userId] : [] });
   const publicProfile = usePublicProfile(isOwn ? null : userId ?? null);
   const publicAchievements = useUserAchievements(isOwn ? undefined : userId);
@@ -249,6 +251,7 @@ export function UserProfileScreen({ route, navigation }: any) {
                 avatarEmoji={avatarEmoji ?? '🧑‍🌾'}
                 xpProgress={isOwn ? { progress: getXpProgress(xp, level).progress, level } : null}
                 storyRing={!isOwn && userId ? ringStatus.data?.users[userId] : null}
+                storyAuthor={profileUserId ? { kind: 'user', id: profileUserId, name, avatarEmoji: avatarEmoji ?? undefined } : null}
                 name={name}
                 handle={handle}
                 bio={bio}

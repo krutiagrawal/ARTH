@@ -46,6 +46,11 @@ const SPECIES_GRID_GAP = 8;
 const SPECIES_CHIP_WIDTH = (EFFECTIVE_WIDTH - SPECIES_GRID_PADDING * 2 - SPECIES_GRID_GAP * 2) / 3;
 const INITIAL_SPECIES_COUNT = 9;
 
+// TEMP: "ARTH approved planting spot" gating disabled for indoor testing — flip back to true to
+// restore it. Also gate it server-side (tree.service.ts's assertEligiblePlantingLocation call)
+// since the real enforcement lives there; this flag only controls the frontend's pre-check/warning.
+const ARTH_APPROVED_LOCATION_CHECK_ENABLED = false;
+
 type Stage = 'upload' | 'scanning' | 'details' | 'success';
 
 interface LocationInfo {
@@ -197,6 +202,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [selectedSpeciesId, setSelectedSpeciesId] = useState<string | null>(null);
   const [nickname, setNickname] = useState('');
+  const [caption, setCaption] = useState('');
   const [showAddSpecies, setShowAddSpecies] = useState(false);
   const [showAllSpecies, setShowAllSpecies] = useState(false);
   const [newSpeciesName, setNewSpeciesName] = useState('');
@@ -260,7 +266,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
   // locations before letting the user submit — this makes the coordinate check apply no matter
   // how the user got here, not just via the map's button.
   useEffect(() => {
-    if (isPreVerified || !location) return;
+    if (isPreVerified || !location || !ARTH_APPROVED_LOCATION_CHECK_ENABLED) return;
     let cancelled = false;
     checkEligibility.mutateAsync({ lat: location.lat, lng: location.lng }).then((result) => {
       if (!cancelled) setEligible(result.eligible);
@@ -357,6 +363,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
         accuracy: freshPosition.coords.accuracy ?? undefined,
         mocked: freshPosition.mocked ?? false,
         locationLabel: location?.label,
+        caption: caption.trim() || undefined,
         photo: { uri: imageUri, name: filename, type: mimeType },
       });
 
@@ -370,7 +377,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
         setSubmitError(e instanceof Error ? e.message : 'Could not save your tree. Please try again.');
       }
     }
-  }, [selectedSpecies, imageUri, nickname, location, plantTreeMutation, success]);
+  }, [selectedSpecies, imageUri, nickname, caption, location, plantTreeMutation, success]);
 
   const handleAddSpecies = useCallback(async () => {
     const commonName = newSpeciesName.trim();
@@ -591,6 +598,17 @@ export function PlantTreeScreen({ navigation, route }: any) {
             onChangeText={setNickname}
             placeholder="e.g. Buddy, Luna, Whisper..."
             placeholderTextColor={COLORS.textMuted}
+          />
+
+          <Text style={styles.detailsLabel}>Leave a message</Text>
+          <TextInput
+            style={[styles.nicknameInput, styles.captionInput]}
+            value={caption}
+            onChangeText={setCaption}
+            placeholder="Say a few words about this planting — this shows up as the caption on your post"
+            placeholderTextColor={COLORS.textMuted}
+            multiline
+            maxLength={2200}
           />
 
           <TouchableOpacity
@@ -972,6 +990,10 @@ const styles = StyleSheet.create({
     padding: 14,
     fontSize: 15,
     color: COLORS.textPrimary,
+  },
+  captionInput: {
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
   locationCard: {
     flexDirection: 'row',

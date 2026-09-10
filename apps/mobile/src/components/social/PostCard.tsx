@@ -18,7 +18,8 @@ import { resolveMediaUrl } from '../../api/client';
 import type { ApiPost } from '../../api/posts';
 import { MediaCarousel } from './MediaCarousel';
 import { LikeButton } from './LikeButton';
-import { StoryRing, type StoryRingStatus } from '../common/StoryRing';
+import { type StoryRingStatus } from '../common/StoryRing';
+import { StoryAvatar } from '../common/StoryAvatar';
 import { ActionSheet, type ActionSheetOption } from './ActionSheet';
 import { useHaptics } from '../../hooks/useHaptics';
 import { useConfirm } from '../../context/ConfirmDialogContext';
@@ -179,12 +180,16 @@ export function PostCard({
     <View style={styles.card}>
       {/* Author row */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.authorRow}
-          activeOpacity={0.7}
-          onPress={() => onPressAuthor?.(post)}
-        >
-          <StoryRing status={storyRing} size={42}>
+        <View style={styles.authorRow}>
+          <StoryAvatar
+            authorKind={post.author.kind}
+            authorId={post.author.id}
+            authorName={post.author.name}
+            authorAvatarEmoji={post.author.avatarEmoji ?? '🌱'}
+            status={storyRing}
+            size={42}
+            onPress={() => onPressAuthor?.(post)}
+          >
             <View style={styles.avatar}>
               {avatarUri ? (
                 <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
@@ -192,9 +197,13 @@ export function PostCard({
                 <Text style={styles.avatarEmoji}>{post.author.avatarEmoji ?? '🌱'}</Text>
               )}
             </View>
-          </StoryRing>
+          </StoryAvatar>
 
-          <View style={styles.authorText}>
+          <TouchableOpacity
+            style={styles.authorText}
+            activeOpacity={0.7}
+            onPress={() => onPressAuthor?.(post)}
+          >
             <View style={styles.nameRow}>
               <Text style={styles.authorName} numberOfLines={1}>
                 {post.author.name}
@@ -209,8 +218,8 @@ export function PostCard({
               {post.author.handle ? `@${post.author.handle} · ` : ''}
               {relativeTime(post.createdAt)}
             </Text>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity style={styles.menuBtn} onPress={openMenu} hitSlop={10}>
           <Text style={styles.menuDots}>⋯</Text>

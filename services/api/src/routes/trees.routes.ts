@@ -132,6 +132,7 @@ export default async function treesRoutes(fastify: FastifyInstance) {
       lat: parsed.data.lat,
       lng: parsed.data.lng,
       locationLabel: parsed.data.locationLabel,
+      caption: parsed.data.caption,
       photoUrl,
       aiVerificationStatus,
     });

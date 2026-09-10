@@ -7,6 +7,7 @@ import { FONTS } from '../../constants/typography';
 import { ProgressRing } from '../common/ProgressRing';
 import { StatDisplay } from '../common/StatDisplay';
 import { StoryRing, type StoryRingStatus } from '../common/StoryRing';
+import { StoryAvatar } from '../common/StoryAvatar';
 
 export interface ProfileHeaderStat {
   value: string | number;
@@ -32,6 +33,14 @@ interface ProfileHeaderProps {
   /** Sage = has an unseen story, brown = seen, omitted = no active story. Mutually exclusive
    * with `xpProgress` in practice — pass this for other people's profiles, not your own. */
   storyRing?: StoryRingStatus | null;
+  /** When set, tapping the avatar opens this author's active story (if `storyRing.hasStory`) —
+   * omit to keep the avatar a plain, non-interactive image. */
+  storyAuthor?: {
+    kind: 'user' | 'ngo' | 'nursery' | 'group';
+    id: string;
+    name: string;
+    avatarEmoji?: string;
+  } | null;
   name: string;
   handle?: string | null;
   bio?: string | null;
@@ -48,6 +57,7 @@ export function ProfileHeader({
   avatarEmoji,
   xpProgress,
   storyRing,
+  storyAuthor,
   name,
   handle,
   bio,
@@ -71,9 +81,23 @@ export function ProfileHeader({
   return (
     <View style={styles.wrap}>
       <View style={styles.avatarArea}>
-        <StoryRing status={storyRing} size={92} borderRadius={24}>
-          {avatarBox}
-        </StoryRing>
+        {storyAuthor ? (
+          <StoryAvatar
+            authorKind={storyAuthor.kind}
+            authorId={storyAuthor.id}
+            authorName={storyAuthor.name}
+            authorAvatarEmoji={storyAuthor.avatarEmoji}
+            status={storyRing}
+            size={92}
+            borderRadius={24}
+          >
+            {avatarBox}
+          </StoryAvatar>
+        ) : (
+          <StoryRing status={storyRing} size={92} borderRadius={24}>
+            {avatarBox}
+          </StoryRing>
+        )}
         {xpProgress ? (
           <>
             <View style={styles.levelRing}>

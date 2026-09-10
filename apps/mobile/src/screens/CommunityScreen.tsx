@@ -11,6 +11,7 @@ import { RADIUS, SHADOWS, SPACING } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { Toast } from '../components/common/Toast';
 import { StoryRing, type StoryRingStatus } from '../components/common/StoryRing';
+import { StoryAvatar } from '../components/common/StoryAvatar';
 import { useSoundSystem } from '../hooks/useSoundSystem';
 import { ProgressRing } from '../components/common/ProgressRing';
 import { EmptyState } from '../components/common/EmptyState';
@@ -245,14 +246,23 @@ function LeaderboardRow({ entry, index, onPress, storyRing }: { entry: Leaderboa
 
   return (
     <Animated.View style={slideStyle}>
-      <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-        <View style={[styles.leaderRow, entry.isUser && styles.leaderRowUser]}>
-          <RankBadge rank={entry.rank} />
-          <StoryRing status={storyRing} size={36} borderRadius={12}>
-            <View style={[styles.leaderAvatar, { backgroundColor: entry.isUser ? COLORS.mintLight : COLORS.sand }]}>
-              <Text style={styles.leaderAvatarEmoji}>{entry.avatar}</Text>
-            </View>
-          </StoryRing>
+      <View style={[styles.leaderRow, entry.isUser && styles.leaderRowUser]}>
+        <RankBadge rank={entry.rank} />
+        <StoryAvatar
+          authorKind="user"
+          authorId={entry.id}
+          authorName={entry.name}
+          authorAvatarEmoji={entry.avatar}
+          status={storyRing}
+          size={36}
+          borderRadius={12}
+          onPress={onPress}
+        >
+          <View style={[styles.leaderAvatar, { backgroundColor: entry.isUser ? COLORS.mintLight : COLORS.sand }]}>
+            <Text style={styles.leaderAvatarEmoji}>{entry.avatar}</Text>
+          </View>
+        </StoryAvatar>
+        <TouchableOpacity style={styles.leaderRowRest} activeOpacity={0.85} onPress={onPress}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.leaderNameDark, entry.isUser && styles.leaderNameUser]}>
               {entry.name}
@@ -263,8 +273,8 @@ function LeaderboardRow({ entry, index, onPress, storyRing }: { entry: Leaderboa
             <Text style={styles.leaderTreeNumDark}>{entry.trees}</Text>
             <Text style={styles.leaderTreeLabelDark}>trees</Text>
           </View>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </View>
     </Animated.View>
   );
 }
@@ -998,6 +1008,12 @@ const styles = StyleSheet.create({
   },
   leaderRowUser: {
     backgroundColor: 'rgba(168,196,153,0.25)',
+  },
+  leaderRowRest: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   groupedList: {
     marginBottom: 4,

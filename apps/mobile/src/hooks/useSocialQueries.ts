@@ -516,6 +516,9 @@ export function useMarkStoryViewed() {
     mutationFn: (id: string) => markStoryViewed(id).catch(() => undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stories', 'feed'] });
+      // Prefix match — covers every screen's ring-status query, not just the one the tap
+      // happened on, so a ring dims everywhere that author's avatar appears, not just here.
+      queryClient.invalidateQueries({ queryKey: ['stories', 'ring-status'] });
     },
   });
 }

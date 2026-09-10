@@ -18,6 +18,7 @@ interface PlantTreeInput {
   lat: number;
   lng: number;
   locationLabel?: string;
+  caption?: string;
   photoUrl?: string;
   aiVerificationStatus?: 'unverified' | 'verified' | 'rejected';
 }
@@ -55,6 +56,22 @@ export async function plantTree(prisma: PrismaClient, input: PlantTreeInput) {
     // meantime. reviewTree() awards this same set (XP + counters) on approval.
     if (input.aiVerificationStatus === 'rejected') {
       return tree;
+    }
+
+    // A planting is also a post — it's how "Planted a tree" shows up on the planter's own
+    // profile feed (with its photo, nickname tag, and caption) instead of only living in the
+    // trees list. Skipped only in the impossible case of neither a photo nor a caption, since an
+    // empty post has nothing to show.
+    if (input.photoUrl || input.caption?.trim()) {
+      await tx.post.create({
+        data: {
+          authorType: 'user',
+          userId: input.userId,
+          caption: input.caption,
+          treeId: tree.id,
+          media: input.photoUrl ? { create: [{ url: input.photoUrl, order: 0 }] } : undefined,
+        },
+      });
     }
 
     await tx.user.update({
