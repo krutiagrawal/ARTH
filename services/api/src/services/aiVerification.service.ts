@@ -10,7 +10,7 @@ const MODEL = 'gemini-3.5-flash-lite';
 // prompt below. Kept the field name to avoid touching every layer that already parses it.
 const PROMPT = `You are a photo verifier for a tree-planting app. A user submitted this photo as proof they are about to plant a tree.
 
-Approve (isPlanting: true) ONLY if the photo clearly shows a human hand or person actively holding an UNPLANTED sapling/seedling — bare-root, potted, or with a wrapped/exposed root ball — in a pre-planting pose: e.g. held over an open hole or loose soil, or simply held up/out, roots or root ball visible and clearly not yet in the ground.
+Approve (isPlanting: true) ONLY if the photo clearly shows a human hand or person actively holding an UNPLANTED sapling/seedling – bare-root, potted, or with a wrapped/exposed root ball – in a pre-planting pose: e.g. held over an open hole or loose soil, or simply held up/out, roots or root ball visible and clearly not yet in the ground.
 
 Reject (isPlanting: false) everything else, including:
 - A tree or sapling that is already planted/rooted in the ground, even if a hand is touching it, resting on it, or appears to be "holding" it.
@@ -19,12 +19,12 @@ Reject (isPlanting: false) everything else, including:
 - A selfie or portrait where a tree is only in the background.
 - Any photo unrelated to tree planting.
 - A photo that is too unclear, blurry, or cropped to tell.
-- A photo that is itself a photograph OF A SCREEN OR DISPLAY rather than a live scene — someone photographing their phone, monitor, or a printed picture instead of the real moment. Look for: a visible device bezel/frame or screen edge in the shot; moiré/interference banding or a fine repeating pixel/screen-door grid; a sharp glare hotspot or reflection typical of a glass/glossy screen; on-screen UI chrome such as a status bar, browser address bar, app icons, a cursor, or photo-app overlay; unnaturally flat, uniformly "backlit" lighting inconsistent with natural/ambient light; visible rounded screen corners. If you see ANY of these, reject even if the underlying image content would otherwise look plausible.
+- A photo that is itself a photograph OF A SCREEN OR DISPLAY rather than a live scene – someone photographing their phone, monitor, or a printed picture instead of the real moment. Look for: a visible device bezel/frame or screen edge in the shot; moiré/interference banding or a fine repeating pixel/screen-door grid; a sharp glare hotspot or reflection typical of a glass/glossy screen; on-screen UI chrome such as a status bar, browser address bar, app icons, a cursor, or photo-app overlay; unnaturally flat, uniformly "backlit" lighting inconsistent with natural/ambient light; visible rounded screen corners. If you see ANY of these, reject even if the underlying image content would otherwise look plausible.
 
 Respond with strict JSON only, matching this shape:
 { "isPlanting": boolean, "reason": string }
 
-"reason" must be a short (under 140 characters), user-facing sentence explaining the decision — friendly if approved, specific about what's missing if rejected (e.g. "Looks like this tree is already planted — please show the sapling before it goes in the ground." or "This looks like a photo of a screen, not a live photo — please take a new photo of the real sapling.").`;
+"reason" must be a short (under 140 characters), user-facing sentence explaining the decision – friendly if approved, specific about what's missing if rejected (e.g. "Looks like this tree is already planted – please show the sapling before it goes in the ground." or "This looks like a photo of a screen, not a live photo – please take a new photo of the real sapling."). Use an en dash (–), never an em dash (—), anywhere in "reason".`;
 
 export interface PlantingVerification {
   status: 'verified' | 'rejected' | 'unverified';
