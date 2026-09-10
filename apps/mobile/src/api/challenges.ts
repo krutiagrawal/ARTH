@@ -22,3 +22,17 @@ export async function joinChallenge(id: string) {
 export async function leaveChallenge(id: string) {
   return apiFetch(`/api/challenges/${id}/join`, { method: 'DELETE' });
 }
+
+export interface ApiChallengeFriend {
+  id: string;
+  name: string;
+  handle: string;
+  avatarEmoji: string;
+}
+
+export type ChallengeFriendsJoinedMap = Record<string, { count: number; friends: ApiChallengeFriend[] }>;
+
+export async function fetchChallengeFriendsJoined(ids: string[]): Promise<ChallengeFriendsJoinedMap> {
+  if (ids.length === 0) return {};
+  return apiFetch<ChallengeFriendsJoinedMap>(`/api/challenges/friends-joined?ids=${ids.join(',')}`);
+}

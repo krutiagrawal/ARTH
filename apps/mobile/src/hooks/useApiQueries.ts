@@ -19,7 +19,7 @@ import {
   respondFriendRequest,
   removeFriend,
 } from '../api/friends';
-import { fetchChallenges, joinChallenge, leaveChallenge } from '../api/challenges';
+import { fetchChallenges, joinChallenge, leaveChallenge, fetchChallengeFriendsJoined } from '../api/challenges';
 import { fetchGlobalCounter } from '../api/community';
 import { fetchSettings, updateSettings, type ApiUserSettings } from '../api/settings';
 import { protectStreak } from '../api/streaks';
@@ -478,6 +478,18 @@ export function useLeaveChallenge() {
   return useMutation({
     mutationFn: (id: string) => leaveChallenge(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['challenges'] }),
+  });
+}
+
+/** Batch "which of my friends joined this challenge" lookup for a screen's visible challenge
+ * cards — same one-request-for-everything shape as useRingStatus, not one request per card. */
+export function useChallengeFriendsJoined(challengeIds: string[]) {
+  const { isAuthenticated } = useAuth();
+  const sortedIds = [...challengeIds].sort();
+  return useQuery({
+    queryKey: ['challenges', 'friends-joined', sortedIds],
+    queryFn: () => fetchChallengeFriendsJoined(sortedIds),
+    enabled: isAuthenticated && sortedIds.length > 0,
   });
 }
 

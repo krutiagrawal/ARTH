@@ -5,10 +5,11 @@ import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { COLORS } from '../constants/colors';
+import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
 import { FONTS } from '../constants/typography';
 import { RADIUS, SHADOWS, SPACING } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
+import { Sheet } from '../components/common/Sheet';
 import { Toast } from '../components/common/Toast';
 import { StoryRing, type StoryRingStatus } from '../components/common/StoryRing';
 import { StoryAvatar } from '../components/common/StoryAvatar';
@@ -17,6 +18,7 @@ import { ProgressRing } from '../components/common/ProgressRing';
 import { EmptyState } from '../components/common/EmptyState';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useSlideUp, useFadeIn } from '../hooks/useAnimations';
+import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
 import {
   useFriends,
   useFriendRequests,
@@ -25,6 +27,7 @@ import {
   useChallenges,
   useJoinChallenge,
   useLeaveChallenge,
+  useChallengeFriendsJoined,
   useGlobalCounter,
   useUserLeaderboardPage,
   usePublicNgoLeaderboardPage,
@@ -37,7 +40,7 @@ import {
 import { FollowingFeedScreen } from './FollowingFeedScreen';
 import { NotificationBell } from '../components/social/NotificationBell';
 import { FriendCard, FriendRequestRow, formatRelativeTime } from '../components/social/FriendRow';
-import type { ApiChallenge } from '../api/challenges';
+import type { ApiChallenge, ApiChallengeFriend } from '../api/challenges';
 import type { LeaderboardEntry } from '../api/leaderboard';
 import type { PublicNgoLeaderboardEntry, PublicNurseryLeaderboardEntry } from '../api/publicLeaderboard';
 import type { ApiActivity, ActivityType } from '../api/feed';
@@ -174,18 +177,25 @@ function ActivityFeedItem({ activity, index }: { activity: ApiActivity; index: n
   );
 }
 
+const FRIENDS_JOINED_PREVIEW_COUNT = 3;
+
 function ChallengeCard({
   challenge,
   index,
   joined,
   onJoin,
+  friendsJoined,
+  onSeeAllFriends,
 }: {
   challenge: ApiChallenge;
   index: number;
   joined: boolean;
   onJoin: () => void;
+  friendsJoined?: { count: number; friends: ApiChallengeFriend[] };
+  onSeeAllFriends: () => void;
 }) {
   const slideStyle = useSlideUp(index * 80, 20);
+  const preview = friendsJoined?.friends.slice(0, FRIENDS_JOINED_PREVIEW_COUNT) ?? [];
 
   return (
     <Animated.View style={slideStyle}>
@@ -205,6 +215,31 @@ function ChallengeCard({
             </Text>
           </TouchableOpacity>
         </View>
+
+        {friendsJoined && friendsJoined.count > 0 && (
+          <TouchableOpacity
+            style={styles.friendsJoinedRow}
+            activeOpacity={0.7}
+            onPress={onSeeAllFriends}
+          >
+            <View style={styles.friendsJoinedAvatars}>
+              {preview.map((friend, i) => (
+                <View key={friend.id} style={[styles.friendsJoinedAvatar, i > 0 && { marginLeft: -8 }]}>
+                  <Text style={styles.friendsJoinedAvatarEmoji}>{friend.avatarEmoji}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={styles.friendsJoinedText} numberOfLines={1}>
+              {preview.map((f) => f.name.split(' ')[0]).join(', ')}
+              {friendsJoined.count > preview.length ? ` +${friendsJoined.count - preview.length} more` : ''}
+              {' joined'}
+            </Text>
+            {friendsJoined.count > FRIENDS_JOINED_PREVIEW_COUNT && (
+              <Text style={styles.friendsJoinedSeeAll}>See all</Text>
+            )}
+          </TouchableOpacity>
+        )}
+
         <View style={styles.challengeFooter}>
           <View style={styles.challengeStat}>
             <Text style={styles.challengeStatIcon}>👥</Text>
@@ -503,6 +538,10 @@ export function CommunityScreen({ navigation }: any) {
   const [joinedIds, setJoinedIds] = useState<Set<string>>(new Set());
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const { playSound } = useSoundSystem();
+  // The "Friends who joined" sheet uses the default (auto) Sheet surface, which flips to dark
+  // chrome at night — its own text colors need to follow, same as ReportSheet does.
+  const { period } = useTimeTheme();
+  const isNightMode = isNightlikePeriod(period);
   const insets = useSafeAreaInsets();
   const bottomNavClearance = useBottomNavClearance();
 
@@ -519,6 +558,8 @@ export function CommunityScreen({ navigation }: any) {
   const { data: challenges = [] } = useChallenges();
   const joinChallengeMutation = useJoinChallenge();
   const leaveChallengeMutation = useLeaveChallenge();
+  const challengeFriendsJoined = useChallengeFriendsJoined(challenges.map((c) => c.id));
+  const [friendsSheetChallengeId, setFriendsSheetChallengeId] = useState<string | null>(null);
   const { data: feed = [] } = useFeed('friends');
 
   return (
@@ -700,6 +741,8 @@ export function CommunityScreen({ navigation }: any) {
                       setJoinedIds(prev => new Set(prev).add(challenge.id));
                     }
                   }}
+                  friendsJoined={challengeFriendsJoined.data?.[challenge.id]}
+                  onSeeAllFriends={() => setFriendsSheetChallengeId(challenge.id)}
                 />
               ))
             )}
@@ -710,6 +753,33 @@ export function CommunityScreen({ navigation }: any) {
       )}
 
       <Toast visible={!!toastMessage} message={toastMessage ?? ''} icon="🌱" onHide={() => setToastMessage(null)} />
+
+      <Sheet
+        visible={friendsSheetChallengeId !== null}
+        onClose={() => setFriendsSheetChallengeId(null)}
+        title="Friends who joined"
+        scrollable
+      >
+        {(challengeFriendsJoined.data?.[friendsSheetChallengeId ?? '']?.friends ?? []).map((friend) => (
+          <TouchableOpacity
+            key={friend.id}
+            style={styles.friendsSheetRow}
+            activeOpacity={0.7}
+            onPress={() => {
+              setFriendsSheetChallengeId(null);
+              navigation.navigate('UserPublicProfile', { userId: friend.id });
+            }}
+          >
+            <View style={styles.friendsSheetAvatar}>
+              <Text style={styles.friendsSheetAvatarEmoji}>{friend.avatarEmoji}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.friendsSheetName, isNightMode && styles.friendsSheetNameNight]}>{friend.name}</Text>
+              <Text style={[styles.friendsSheetHandle, isNightMode && styles.friendsSheetHandleNight]}>@{friend.handle}</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </Sheet>
     </View>
   );
 }
@@ -900,6 +970,66 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 2,
     lineHeight: 18,
+  },
+  friendsSheetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+  },
+  friendsSheetAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: COLORS.mintLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  friendsSheetAvatarEmoji: {
+    fontSize: 22,
+  },
+  friendsSheetName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  friendsSheetHandle: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 1,
+  },
+  friendsSheetNameNight: { color: ON_DARK_SURFACE.primary },
+  friendsSheetHandleNight: { color: ON_DARK_SURFACE.secondary },
+  friendsJoinedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  friendsJoinedAvatars: {
+    flexDirection: 'row',
+  },
+  friendsJoinedAvatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: COLORS.mintLight,
+    borderWidth: 1.5,
+    borderColor: COLORS.cream,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  friendsJoinedAvatarEmoji: {
+    fontSize: 11,
+  },
+  friendsJoinedText: {
+    flex: 1,
+    fontSize: 12,
+    color: COLORS.textSecondary,
+  },
+  friendsJoinedSeeAll: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.sageLight,
   },
   challengeFooter: {
     flexDirection: 'row',
