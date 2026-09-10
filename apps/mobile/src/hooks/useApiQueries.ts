@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { fetchTrees, plantTree, verifyPlantingPhoto, type PlantTreeInput } from '../api/trees';
 import { fetchNgoPublicFollowers, fetchNurseryPublicFollowers } from '../api/publicFollowers';
 import { fetchApprovedLocations, checkPlantingEligibility } from '../api/plantingLocations';
-import { fetchSpecies } from '../api/species';
+import { fetchSpecies, createSpecies } from '../api/species';
 import { fetchTodayMissions, completeMission } from '../api/missions';
 import { fetchEcoFacts } from '../api/ecoFacts';
 import { fetchAchievements, fetchUserAchievements } from '../api/achievements';
@@ -234,6 +234,20 @@ export function useTrees(limit?: number, enabled: boolean = true) {
 
 export function useSpecies() {
   return useQuery({ queryKey: ['species'], queryFn: fetchSpecies });
+}
+
+/** Adds a species missing from the list — shared immediately, so it's there for everyone
+ * (including the planter who added it) next time they pick a species. */
+export function useCreateSpecies() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createSpecies,
+    onSuccess: (species) => {
+      queryClient.setQueryData<typeof species[]>(['species'], (prev) =>
+        prev?.some((s) => s.id === species.id) ? prev : [...(prev ?? []), species],
+      );
+    },
+  });
 }
 
 export function useTodayMissions() {

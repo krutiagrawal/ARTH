@@ -9,7 +9,7 @@ import staticPlugin from './plugins/static';
 
 import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
-import speciesRoutes from './routes/species.routes';
+import speciesRoutes, { speciesAuthRoutes } from './routes/species.routes';
 import ecoFactsRoutes from './routes/ecoFacts.routes';
 import communityRoutes from './routes/community.routes';
 import challengesPublicRoutes from './routes/challenges.public.routes';
@@ -101,6 +101,7 @@ export async function buildApp() {
   await app.register(async (instance) => {
     instance.addHook('onRequest', instance.authenticate);
 
+    await instance.register(speciesAuthRoutes, { prefix: '/api/species' });
     await instance.register(usersRoutes, { prefix: '/api/users' });
     await instance.register(settingsRoutes, { prefix: '/api/users/me/settings' });
     await instance.register(treesRoutes, { prefix: '/api/trees' });

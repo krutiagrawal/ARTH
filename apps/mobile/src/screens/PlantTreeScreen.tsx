@@ -25,11 +25,12 @@ import { StatusModal } from '../components/common/StatusModal';
 import { Mascot } from '../components/common/Mascot';
 import { FloatingParticles } from '../components/common/FloatingParticles';
 import { useHaptics } from '../hooks/useHaptics';
-import { useSpecies } from '../hooks/useApiQueries';
+import { useSpecies, useCreateSpecies } from '../hooks/useApiQueries';
 import { usePlantTree } from '../hooks/useApiQueries';
 import { useCheckPlantingEligibility } from '../hooks/useApiQueries';
 import { useVerifyPlantingPhoto } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
+import { SPECIES_EMOJI_OPTIONS } from '../api/species';
 import type { VerifyPlantingPhotoResult } from '../api/trees';
 import { NOT_APPROVED_MESSAGE } from '../constants/plantingLocation';
 import { getCurrentPositionWithTimeout } from '../utils/location';
@@ -190,6 +191,10 @@ export function PlantTreeScreen({ navigation, route }: any) {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [selectedSpeciesId, setSelectedSpeciesId] = useState<string | null>(null);
   const [nickname, setNickname] = useState('');
+  const [showAddSpecies, setShowAddSpecies] = useState(false);
+  const [newSpeciesName, setNewSpeciesName] = useState('');
+  const [newSpeciesEmoji, setNewSpeciesEmoji] = useState<string | null>(null);
+  const [addSpeciesError, setAddSpeciesError] = useState<string | null>(null);
   const [location, setLocation] = useState<LocationInfo | null>(
     isPreVerified ? { lat: verifiedLat!, lng: verifiedLng!, label: 'Verified planting spot' } : null
   );
@@ -206,6 +211,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
 
   const { data: speciesList = [] } = useSpecies();
+  const createSpeciesMutation = useCreateSpecies();
   const plantTreeMutation = usePlantTree();
   const checkEligibility = useCheckPlantingEligibility();
   const verifyPhoto = useVerifyPlantingPhoto();
@@ -356,6 +362,22 @@ export function PlantTreeScreen({ navigation, route }: any) {
     }
   }, [selectedSpecies, imageUri, nickname, location, plantTreeMutation, success]);
 
+  const handleAddSpecies = useCallback(async () => {
+    const commonName = newSpeciesName.trim();
+    if (!commonName || !newSpeciesEmoji) return;
+    setAddSpeciesError(null);
+    try {
+      const species = await createSpeciesMutation.mutateAsync({ commonName, emoji: newSpeciesEmoji });
+      setSelectedSpeciesId(species.id);
+      setNewSpeciesName('');
+      setNewSpeciesEmoji(null);
+      setShowAddSpecies(false);
+      medium();
+    } catch (e) {
+      setAddSpeciesError(e instanceof Error ? e.message : "Couldn't add that species. Please try again.");
+    }
+  }, [newSpeciesName, newSpeciesEmoji, createSpeciesMutation, medium]);
+
   const handleDone = useCallback(() => {
     if (navigation.canGoBack()) {
       navigation.goBack();
@@ -483,7 +505,58 @@ export function PlantTreeScreen({ navigation, route }: any) {
                 </Text>
               </TouchableOpacity>
             ))}
+            <TouchableOpacity
+              style={[styles.speciesChip, styles.speciesChipAdd]}
+              onPress={() => {
+                setShowAddSpecies((prev) => !prev);
+                setAddSpeciesError(null);
+              }}
+            >
+              <Text style={styles.speciesEmoji}>{showAddSpecies ? '✕' : '➕'}</Text>
+              <Text style={styles.speciesName}>{showAddSpecies ? 'Cancel' : "Can't find it?"}</Text>
+            </TouchableOpacity>
           </View>
+
+          {showAddSpecies && (
+            <BorderCard style={styles.addSpeciesCard}>
+              <Text style={styles.detailsLabel}>Species name</Text>
+              <TextInput
+                style={styles.nicknameInput}
+                value={newSpeciesName}
+                onChangeText={setNewSpeciesName}
+                placeholder="e.g. Karanj, Rain Tree..."
+                placeholderTextColor={COLORS.textMuted}
+                maxLength={40}
+              />
+
+              <Text style={[styles.detailsLabel, { marginTop: 4 }]}>Pick an emoji</Text>
+              <View style={styles.emojiGrid}>
+                {SPECIES_EMOJI_OPTIONS.map((emoji) => (
+                  <TouchableOpacity
+                    key={emoji}
+                    style={[styles.emojiChip, newSpeciesEmoji === emoji && styles.emojiChipSelected]}
+                    onPress={() => {
+                      setNewSpeciesEmoji(emoji);
+                      medium();
+                    }}
+                  >
+                    <Text style={styles.emojiChipText}>{emoji}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {addSpeciesError && <Text style={styles.errorText}>{addSpeciesError}</Text>}
+
+              <AnimatedButton
+                label={createSpeciesMutation.isPending ? 'Adding...' : 'Add species'}
+                onPress={handleAddSpecies}
+                variant="primary"
+                size="md"
+                fullWidth
+                disabled={!newSpeciesName.trim() || !newSpeciesEmoji || createSpeciesMutation.isPending}
+              />
+            </BorderCard>
+          )}
 
           <Text style={styles.detailsLabel}>Give it a nickname</Text>
           <TextInput
@@ -831,6 +904,36 @@ const styles = StyleSheet.create({
   },
   speciesNameSelected: {
     color: COLORS.white,
+  },
+  speciesChipAdd: {
+    borderStyle: 'dashed',
+    borderColor: COLORS.sage,
+    backgroundColor: 'transparent',
+  },
+  addSpeciesCard: {
+    gap: 10,
+  },
+  emojiGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  emojiChip: {
+    width: 42,
+    height: 42,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderWidth: 1.5,
+    borderColor: COLORS.sand,
+  },
+  emojiChipSelected: {
+    backgroundColor: COLORS.forest,
+    borderColor: COLORS.forest,
+  },
+  emojiChipText: {
+    fontSize: 19,
   },
   nicknameInput: {
     backgroundColor: 'rgba(255,255,255,0.8)',

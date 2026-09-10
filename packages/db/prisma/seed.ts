@@ -17,6 +17,28 @@ async function seedSpecies() {
     { key: 'palm', commonName: 'Palm', emoji: '🌴', co2KgPerYear: 1.5, sortOrder: 11 },
     { key: 'willow', commonName: 'Willow', emoji: '🌿', co2KgPerYear: 2.2, sortOrder: 12 },
     { key: 'orange_tree', commonName: 'Orange Tree', emoji: '🍊', co2KgPerYear: 2.8, sortOrder: 13 },
+    // Common in Indian nurseries and drive plantings.
+    { key: 'neem', commonName: 'Neem', emoji: '🌳', co2KgPerYear: 4.5, sortOrder: 14 },
+    { key: 'banyan', commonName: 'Banyan', emoji: '🌳', co2KgPerYear: 7.5, sortOrder: 15 },
+    { key: 'peepal', commonName: 'Peepal', emoji: '🌳', co2KgPerYear: 5.0, sortOrder: 16 },
+    { key: 'gulmohar', commonName: 'Gulmohar', emoji: '🌺', co2KgPerYear: 3.0, sortOrder: 17 },
+    { key: 'amla', commonName: 'Amla', emoji: '🌿', co2KgPerYear: 2.0, sortOrder: 18 },
+    { key: 'ashoka', commonName: 'Ashoka Tree', emoji: '🌲', co2KgPerYear: 2.5, sortOrder: 19 },
+    { key: 'jamun', commonName: 'Jamun', emoji: '🫐', co2KgPerYear: 3.0, sortOrder: 20 },
+    { key: 'mango', commonName: 'Mango Tree', emoji: '🥭', co2KgPerYear: 4.2, sortOrder: 21 },
+    { key: 'guava', commonName: 'Guava', emoji: '🌳', co2KgPerYear: 2.0, sortOrder: 22 },
+    { key: 'moringa', commonName: 'Moringa (Drumstick)', emoji: '🌿', co2KgPerYear: 2.2, sortOrder: 23 },
+    { key: 'karanj', commonName: 'Karanj (Pongamia)', emoji: '🌳', co2KgPerYear: 3.5, sortOrder: 24 },
+    { key: 'arjuna', commonName: 'Arjuna', emoji: '🌳', co2KgPerYear: 4.2, sortOrder: 25 },
+    { key: 'jacaranda', commonName: 'Jacaranda', emoji: '🌸', co2KgPerYear: 3.0, sortOrder: 26 },
+    { key: 'champa', commonName: 'Champa (Plumeria)', emoji: '🌺', co2KgPerYear: 1.8, sortOrder: 27 },
+    { key: 'curry_leaf', commonName: 'Curry Leaf', emoji: '🌿', co2KgPerYear: 0.8, sortOrder: 28 },
+    { key: 'coconut', commonName: 'Coconut Palm', emoji: '🥥', co2KgPerYear: 3.0, sortOrder: 29 },
+    { key: 'bougainvillea', commonName: 'Bougainvillea', emoji: '🌺', co2KgPerYear: 1.2, sortOrder: 30 },
+    { key: 'silver_oak', commonName: 'Silver Oak', emoji: '🌲', co2KgPerYear: 3.8, sortOrder: 31 },
+    { key: 'rain_tree', commonName: 'Rain Tree', emoji: '🌳', co2KgPerYear: 6.5, sortOrder: 32 },
+    { key: 'kadamba', commonName: 'Kadamba', emoji: '🌳', co2KgPerYear: 3.2, sortOrder: 33 },
+    { key: 'subabul', commonName: 'Subabul', emoji: '🌿', co2KgPerYear: 2.0, sortOrder: 34 },
   ];
 
   for (const s of species) {
