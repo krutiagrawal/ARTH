@@ -597,12 +597,23 @@ export function CommunityScreen({ navigation }: any) {
                 )}
               </>
             )}
-            <Text style={styles.sectionTitleDark}>Your Squad</Text>
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.sectionTitleDark}>Your Squad</Text>
+              <TouchableOpacity
+                style={styles.squadSearchButton}
+                onPress={() => setShowAddFriend((prev) => !prev)}
+                accessibilityRole="button"
+                accessibilityLabel="Search for friends"
+              >
+                <Text style={styles.squadSearchIcon}>🔍</Text>
+                <Text style={styles.squadSearchText}>Search</Text>
+              </TouchableOpacity>
+            </View>
             {friends.length === 0 ? (
               <EmptyState
                 icon="🌲"
                 title="Your forest is better with friends"
-                body="Search above to find people and grow together."
+                body="Tap Search above to find people and grow together."
                 tint="light"
               />
             ) : (
@@ -822,6 +833,30 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     marginBottom: 4,
     marginTop: 4,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  squadSearchButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.sage,
+    backgroundColor: 'rgba(45,90,39,0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  squadSearchIcon: {
+    fontSize: 13,
+  },
+  squadSearchText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.forest,
   },
   friendNameDark: {
     fontSize: 15,
