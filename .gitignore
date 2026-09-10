@@ -38,6 +38,11 @@ Thumbs.db
 *.pem
 .metro-health-check*
 
+# Firebase credentials (google-services.json ships inside the APK anyway, so keeping
+# it out of git buys no real secrecy and EAS's archive upload skips untracked files
+# matching this field -- it needs to be tracked. The admin SDK key is the actual secret.)
+*firebase-adminsdk*.json
+
 # Playwright
 apps/web/test-results/
 apps/web/playwright-report/

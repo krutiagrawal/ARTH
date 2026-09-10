@@ -24,6 +24,7 @@
         "backgroundColor": "#2D5A27"
       },
       "package": "com.plant.ecoapp",
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -51,7 +52,14 @@
         }
       ],
       "expo-audio",
-      "@maplibre/maplibre-react-native"
+      "@maplibre/maplibre-react-native",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#2D5A27"
+        }
+      ]
     ],
     "extra": {
       "eas": {

@@ -20,6 +20,41 @@ export function usePushRegistration() {
   const { isAuthenticated } = useAuth();
   // Guards against re-registering on every auth-state re-render.
   const registered = useRef(false);
+  // Guards the handler/channel setup below, which is independent of auth.
+  const configured = useRef(false);
+
+  // By default expo-notifications shows nothing at all while the app is in the foreground — a
+  // push received mid-session only ever reaches the in-app notification centre. This opts back
+  // into the OS heads-up banner so a foreground push looks the same as a backgrounded one.
+  useEffect(() => {
+    if (configured.current || Constants.appOwnership === 'expo') return;
+    configured.current = true;
+
+    (async () => {
+      const Notifications = await import('expo-notifications').catch(() => null);
+      if (!Notifications) return;
+
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowBanner: true,
+          shouldShowList: true,
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+        }),
+      });
+
+      // Android only shows a heads-up banner for a HIGH/MAX-importance channel — the default
+      // channel expo-notifications creates otherwise is DEFAULT importance, which just drops the
+      // notification into the tray silently.
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'default',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+        });
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated || registered.current) return;
