@@ -90,7 +90,7 @@ function GlobalCounter() {
   );
 }
 
-function AddFriendPanel({ onClose }: { onClose: () => void }) {
+function AddFriendPanel({ onClose, navigation }: { onClose: () => void; navigation: any }) {
   const [query, setQuery] = useState('');
   const { data: results = [], isFetching } = useSearchUsers(query);
   const sendRequestMutation = useSendFriendRequest();
@@ -112,8 +112,19 @@ function AddFriendPanel({ onClose }: { onClose: () => void }) {
         </TouchableOpacity>
       </View>
       {isFetching && <ActivityIndicator size="small" color={COLORS.sage} style={{ marginTop: 8 }} />}
+      {query.trim().length > 0 && !isFetching && results.length === 0 && (
+        <Text style={styles.searchEmptyDark}>No one matches "{query.trim()}"</Text>
+      )}
       {results.map(user => (
-        <View key={user.id} style={styles.searchResultRow}>
+        <TouchableOpacity
+          key={user.id}
+          style={styles.searchResultRow}
+          activeOpacity={0.7}
+          onPress={() => {
+            onClose();
+            navigation.navigate('UserPublicProfile', { userId: user.id });
+          }}
+        >
           <Text style={styles.searchResultAvatar}>{user.avatarEmoji}</Text>
           <View style={{ flex: 1 }}>
             <Text style={styles.friendNameDark}>{user.name}</Text>
@@ -122,14 +133,15 @@ function AddFriendPanel({ onClose }: { onClose: () => void }) {
           <TouchableOpacity
             style={styles.searchResultButton}
             disabled={sentIds.has(user.id)}
-            onPress={() => {
+            onPress={(e) => {
+              e.stopPropagation();
               sendRequestMutation.mutate(user.id);
               setSentIds(prev => new Set(prev).add(user.id));
             }}
           >
             <Text style={styles.searchResultButtonText}>{sentIds.has(user.id) ? 'Sent ✓' : 'Add'}</Text>
           </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
       ))}
     </BorderCard>
   );
@@ -552,7 +564,7 @@ export function CommunityScreen({ navigation }: any) {
       >
         <GlobalCounter />
 
-        {showAddFriend && <AddFriendPanel onClose={() => setShowAddFriend(false)} />}
+        {showAddFriend && <AddFriendPanel onClose={() => setShowAddFriend(false)} navigation={navigation} />}
 
         {activeTab === 'friends' && (
           <View style={styles.section}>
@@ -1058,6 +1070,12 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontWeight: '600',
     paddingHorizontal: 4,
+  },
+  searchEmptyDark: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 8,
+    marginBottom: 4,
   },
   searchResultRow: {
     flexDirection: 'row',

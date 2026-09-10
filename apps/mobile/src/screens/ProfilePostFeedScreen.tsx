@@ -18,6 +18,11 @@ import {
 import { useRingStatus } from '../hooks/useApiQueries';
 import type { ApiPost } from '../api/posts';
 
+// Rough average PostCard height, used only to seed getItemLayout before a row has actually been
+// measured — real heights (captions/media vary a lot) are recorded via onLayout as rows render,
+// so this estimate only matters for rows the list hasn't reached yet.
+const ESTIMATED_ITEM_HEIGHT = 480;
+
 export type ProfilePostFeedAuthorKind = 'user' | 'ngo' | 'nursery' | 'group';
 
 /**
@@ -69,6 +74,9 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
 
   const listRef = useRef<FlatList<ApiPost>>(null);
   const hasAppliedInitialScroll = useRef(false);
+  // Real per-post heights, filled in as rows lay out — keyed by post id so pagination growing
+  // `posts` doesn't invalidate anything already measured.
+  const itemHeights = useRef<Map<string, number>>(new Map());
 
   const initialIndex = useMemo(() => {
     if (!initialPostId) return 0;
@@ -76,9 +84,23 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
     return i >= 0 ? i : 0;
   }, [posts, initialPostId]);
 
-  // FlatList only honours `initialScrollIndex` on mount, before content is measured, so once the
-  // very first non-empty posts list lands we nudge it into place ourselves too — covers the case
-  // where the tapped post's page was still in flight when this screen first rendered.
+  // Without this, FlatList has no way to compute the scroll offset for a not-yet-rendered index —
+  // on mount, zero rows have measured heights, so it silently resolves the jump to ~0 and the
+  // list opens on the first post instead of the tapped one. With it, every index (measured or
+  // not) has a length/offset estimate, so `initialScrollIndex` and `scrollToIndex` both work.
+  const getItemLayout = useCallback((data: ArrayLike<ApiPost> | null | undefined, index: number) => {
+    let offset = 0;
+    for (let i = 0; i < index; i++) {
+      const id = data?.[i]?.id;
+      offset += (id && itemHeights.current.get(id)) || ESTIMATED_ITEM_HEIGHT;
+    }
+    const id = data?.[index]?.id;
+    const length = (id && itemHeights.current.get(id)) || ESTIMATED_ITEM_HEIGHT;
+    return { length, offset, index };
+  }, []);
+
+  // Once real heights above the target row are known (they measure in as the list renders), the
+  // estimate-based jump above may be slightly off — nudge it into place for real.
   useEffect(() => {
     if (hasAppliedInitialScroll.current || posts.length === 0 || initialIndex === 0) return;
     hasAppliedInitialScroll.current = true;
@@ -98,15 +120,17 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
 
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<ApiPost>) => (
-      <PostCard
-        post={item}
-        onToggleLike={(p) => toggleLike.mutate({ id: p.id, liked: p.likedByMe })}
-        isTogglingLike={toggleLike.isPending && toggleLike.variables?.id === item.id}
-        onDelete={item.isMine ? (p) => deletePost.mutate(p.id) : undefined}
-        onReport={!item.isMine ? () => setReportTarget(item) : undefined}
-        enableShare={false}
-        storyRing={authorRing}
-      />
+      <View onLayout={(e) => itemHeights.current.set(item.id, e.nativeEvent.layout.height)}>
+        <PostCard
+          post={item}
+          onToggleLike={(p) => toggleLike.mutate({ id: p.id, liked: p.likedByMe })}
+          isTogglingLike={toggleLike.isPending && toggleLike.variables?.id === item.id}
+          onDelete={item.isMine ? (p) => deletePost.mutate(p.id) : undefined}
+          onReport={!item.isMine ? () => setReportTarget(item) : undefined}
+          enableShare={false}
+          storyRing={authorRing}
+        />
+      </View>
     ),
     [toggleLike, deletePost, authorRing],
   );
@@ -128,6 +152,8 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
           data={posts}
           keyExtractor={(p) => p.id}
           initialScrollIndex={initialIndex > 0 ? initialIndex : undefined}
+          initialNumToRender={Math.max(10, initialIndex + 4)}
+          getItemLayout={getItemLayout}
           onScrollToIndexFailed={onScrollToIndexFailed}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
