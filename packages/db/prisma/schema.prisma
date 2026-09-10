@@ -410,6 +410,11 @@ model UserSettings {
   locationTracking Boolean  @default(true) @map("location_tracking")
   publicProfile    Boolean  @default(true) @map("public_profile")
   analyticsEnabled Boolean  @default(true) @map("analytics_enabled")
+  // Which homepage time-of-day theme to always show, instead of following real time of day.
+  // Null = auto (default, current behavior). Stores a TimePeriod key (e.g. "goldenHour") —
+  // validated against the enum at the Zod layer (services/api/src/schemas/users.schema.ts),
+  // not DB-constrained, matching NgoProfile.awards' convention for app-owned string enums.
+  pinnedTimeTheme  String?  @map("pinned_time_theme")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
-import EmojiPicker from 'rn-emoji-keyboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -24,7 +23,6 @@ export function EditGroupProfileScreen({ navigation }: any) {
   const [handle, setHandle] = useState(profile?.handle ?? '');
   const [avatarEmoji, setAvatarEmoji] = useState(profile?.avatarEmoji ?? '🌳');
   const [error, setError] = useState<string | null>(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
 
   const handleSubmit = async () => {
     setError(null);
@@ -70,15 +68,13 @@ export function EditGroupProfileScreen({ navigation }: any) {
       >
         <BorderCard>
           <Text style={styles.label}>Avatar</Text>
-          <TouchableOpacity style={styles.avatarPicker} onPress={() => setPickerOpen(true)}>
+          <TouchableOpacity
+            style={styles.avatarPicker}
+            onPress={() => navigation.navigate('EmojiPicker', { selected: avatarEmoji, onSelect: setAvatarEmoji })}
+          >
             <Text style={styles.avatarPickerEmoji}>{avatarEmoji}</Text>
-            <Text style={styles.avatarPickerHint}>Tap to choose any emoji</Text>
+            <Text style={styles.avatarPickerHint}>Tap to choose an emoji</Text>
           </TouchableOpacity>
-          <EmojiPicker
-            open={pickerOpen}
-            onClose={() => setPickerOpen(false)}
-            onEmojiSelected={(item) => setAvatarEmoji(item.emoji)}
-          />
 
           <Text style={styles.label}>Group Name</Text>
           <TextInput
@@ -137,8 +133,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: COLORS.warmBrown,
   },
   backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: {

@@ -23,8 +23,9 @@ interface StoryRingProps {
 
 /**
  * Wraps an avatar with a colored ring when its author has an active story — sage green for an
- * unseen one, brown once every active story from them has been viewed. Renders children
- * unchanged (no extra sizing) when there's no active story, so most avatars are unaffected.
+ * unseen one, a faded brown once every active story from them has been viewed (kept translucent
+ * so it stays clearly distinct from the solid unseen ring). Renders children unchanged (no extra
+ * sizing) when there's no active story, so most avatars are unaffected.
  */
 export function StoryRing({ status, size, borderRadius, ringWidth = 2.5, gap = 2, style, children }: StoryRingProps) {
   if (!status?.hasStory) return <>{children}</>;
@@ -41,7 +42,7 @@ export function StoryRing({ status, size, borderRadius, ringWidth = 2.5, gap = 2
           height: outerSize,
           borderRadius: outerRadius,
           borderWidth: ringWidth,
-          borderColor: status.seen ? COLORS.earth : COLORS.sage,
+          borderColor: status.seen ? 'rgba(139,107,71,0.35)' : COLORS.sage,
           alignItems: 'center',
           justifyContent: 'center',
         },

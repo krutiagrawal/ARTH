@@ -20,14 +20,14 @@ import {
   useSlideUp,
   useSpringPress,
 } from '../hooks/useAnimations';
-import { useTimeTheme, isNightlikePeriod, type TimeTheme } from '../hooks/useTimeTheme';
+import { useTimeTheme, isNightlikePeriod, type TimeTheme, type TimePeriod } from '../hooks/useTimeTheme';
 import { MuteButton } from '../components/common/MuteButton';
 import { AmbientCreatures } from '../components/common/AmbientCreatures';
 import { TreeCard } from '../components/common/TreeCard';
 import { Sheet } from '../components/common/Sheet';
 import { useHaptics } from '../hooks/useHaptics';
 import { useAuth } from '../context/AuthContext';
-import { useTrees, useTodayMissions, useEcoFacts, useCompleteMission } from '../hooks/useApiQueries';
+import { useTrees, useTodayMissions, useEcoFacts, useCompleteMission, useSettings } from '../hooks/useApiQueries';
 import { useDeviceWeather } from '../hooks/useDeviceWeather';
 import type { ApiUser } from '../api/auth';
 import type { ApiTree } from '../api/trees';
@@ -251,9 +251,10 @@ function HeroSection({
   );
 }
 
-function MissionCard({ missions, navigation, blurTarget }: { missions: ApiDailyMission[]; navigation: any; blurTarget: RefObject<View | null> }) {
+function MissionCard({ missions, navigation, blurTarget, previewPeriod }: { missions: ApiDailyMission[]; navigation: any; blurTarget: RefObject<View | null>; previewPeriod?: TimePeriod | null }) {
   const slideStyle = useSlideUp(100, 24);
-  const theme = useTimeTheme();
+  const { data: homeSettings } = useSettings();
+  const theme = useTimeTheme((previewPeriod !== undefined ? previewPeriod : (homeSettings?.pinnedTimeTheme ?? null)) as TimePeriod | null);
   const completedCount = missions.filter(m => m.completed).length;
   const progress = missions.length > 0 ? completedCount / missions.length : 0;
   const completeMissionMutation = useCompleteMission();
@@ -335,9 +336,10 @@ function MissionCard({ missions, navigation, blurTarget }: { missions: ApiDailyM
   );
 }
 
-function RecentTrees({ trees, onNavigateTab, blurTarget }: { trees: ApiTree[]; onNavigateTab: (tab: string) => void; blurTarget: RefObject<View | null> }) {
+function RecentTrees({ trees, onNavigateTab, blurTarget, previewPeriod }: { trees: ApiTree[]; onNavigateTab: (tab: string) => void; blurTarget: RefObject<View | null>; previewPeriod?: TimePeriod | null }) {
   const slideStyle = useSlideUp(200, 24);
-  const theme = useTimeTheme();
+  const { data: homeSettings } = useSettings();
+  const theme = useTimeTheme((previewPeriod !== undefined ? previewPeriod : (homeSettings?.pinnedTimeTheme ?? null)) as TimePeriod | null);
   const recentTrees = trees.slice(0, 4);
 
   return (
@@ -365,9 +367,10 @@ function RecentTrees({ trees, onNavigateTab, blurTarget }: { trees: ApiTree[]; o
   );
 }
 
-function EcoFactCard({ fact, blurTarget }: { fact: string; blurTarget: RefObject<View | null> }) {
+function EcoFactCard({ fact, blurTarget, previewPeriod }: { fact: string; blurTarget: RefObject<View | null>; previewPeriod?: TimePeriod | null }) {
   const slideStyle = useSlideUp(300, 24);
-  const theme = useTimeTheme();
+  const { data: homeSettings } = useSettings();
+  const theme = useTimeTheme((previewPeriod !== undefined ? previewPeriod : (homeSettings?.pinnedTimeTheme ?? null)) as TimePeriod | null);
   return (
     <Animated.View style={slideStyle}>
       <BlurView
@@ -504,8 +507,10 @@ function GrowActionSheet({
   );
 }
 
-export function HomeScreen({ navigation, onNavigateTab }: any) {
-  const theme = useTimeTheme();
+export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePreview }: any) {
+  const { data: homeSettings } = useSettings();
+  const theme = useTimeTheme((previewPeriod !== undefined ? previewPeriod : (homeSettings?.pinnedTimeTheme ?? null)) as TimePeriod | null);
+  const insets = useSafeAreaInsets();
   const bottomNavClearance = useBottomNavClearance();
   const { user } = useAuth();
   const { weather } = useDeviceWeather();
@@ -597,10 +602,22 @@ export function HomeScreen({ navigation, onNavigateTab }: any) {
           </BlurView>
         </View>
 
-        <MissionCard missions={missions} navigation={navigation} blurTarget={blurTargetRef} />
-        <RecentTrees trees={trees} onNavigateTab={onNavigateTab} blurTarget={blurTargetRef} />
-        {todayFact ? <EcoFactCard fact={todayFact} blurTarget={blurTargetRef} /> : null}
+        <MissionCard missions={missions} navigation={navigation} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />
+        <RecentTrees trees={trees} onNavigateTab={onNavigateTab} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />
+        {todayFact ? <EcoFactCard fact={todayFact} blurTarget={blurTargetRef} previewPeriod={previewPeriod} /> : null}
       </ScrollView>
+
+      {onClosePreview && (
+        <TouchableOpacity
+          style={[styles.closePreviewButton, { top: insets.top + 12 }]}
+          activeOpacity={0.85}
+          onPress={onClosePreview}
+          accessibilityRole="button"
+          accessibilityLabel="Close preview"
+        >
+          <Text style={styles.closePreviewText}>✕ Close preview</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Ambient scenery — rendered last so it drifts on top of everything, a constant animation.
           Reacts to real detected weather: rain when rainy, a windy breeze when cold, leaves otherwise. */}
@@ -637,6 +654,21 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
+  },
+  closePreviewButton: {
+    position: 'absolute',
+    alignSelf: 'center',
+    backgroundColor: COLORS.textPrimary,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    zIndex: 50,
+    ...SHADOWS.sage,
+  },
+  closePreviewText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: '700',
   },
   raindrop: {
     position: 'absolute',

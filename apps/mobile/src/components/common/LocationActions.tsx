@@ -14,11 +14,16 @@ export function LocationActions({
   label,
   address,
   phone,
+  hideAddressLine,
 }: {
   label?: string;
   address: string | null | undefined;
   /** Adds a "Call" chip as the first action, in the same row as Maps/Uber/Ola. */
   phone?: string | null;
+  /** Skip the label + "📍 address" line — for pages that already show the address elsewhere
+   * (e.g. right under the name), so it isn't repeated. The address is still used to build the
+   * Maps/Uber/Ola links either way. */
+  hideAddressLine?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   if (!address && !phone) return null;
@@ -36,8 +41,8 @@ export function LocationActions({
 
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
-      {address && (
+      {!hideAddressLine && label && <Text style={styles.label}>{label}</Text>}
+      {!hideAddressLine && address && (
         <View style={styles.addressRow}>
           <Text style={styles.addressIcon}>📍</Text>
           <Text style={styles.addressText}>{address}</Text>

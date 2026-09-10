@@ -1,20 +1,18 @@
-import React, { useMemo, useState, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import React, { useMemo, useRef, useState, useCallback } from 'react';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Image, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { LocationActions } from '../components/common/LocationActions';
-import { EmptyState } from '../components/common/EmptyState';
 import { ReportSheet } from '../components/social/ReportSheet';
 import { ProfileHeader } from '../components/profile/ProfileHeader';
 import { ProfileTabBar, type ProfileTabKey } from '../components/profile/ProfileTabBar';
 import { PostGrid } from '../components/profile/PostGrid';
 import { AchievementsTabContent } from '../components/profile/AchievementsTabContent';
-import { DrivesTabContent } from '../components/profile/DrivesTabContent';
+import { NurserySaplingsTabContent } from '../components/profile/NurserySaplingsTabContent';
 import { useNurseryPosts } from '../hooks/useSocialQueries';
 import {
   useNurseryProfile,
@@ -26,10 +24,10 @@ import {
   useFollowNursery,
   useUnfollowNursery,
   useRingStatus,
+  useSaplingStock,
 } from '../hooks/useApiQueries';
 import { resolveMediaUrl } from '../api/client';
 import type { ApiPost } from '../api/posts';
-import type { ApiSaplingStock } from '../api/nursery';
 
 function followLabel(status: string | null, followersCount: number): string {
   if (status === 'accepted') return 'Following ✓';
@@ -37,26 +35,11 @@ function followLabel(status: string | null, followersCount: number): string {
   return `Follow · ${followersCount}`;
 }
 
-function StockRow({ item, onPress }: { item: ApiSaplingStock; onPress: () => void }) {
-  return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-      <BorderCard noPadding style={styles.stockRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.stockSpecies}>{item.species}</Text>
-          <Text style={styles.stockMeta}>
-            {item.quantity} available · {item.isFree ? 'Free' : item.priceCents != null ? `₹${(item.priceCents / 100).toFixed(0)}` : 'Priced'}
-          </Text>
-        </View>
-        <Text style={styles.stockChevron}>›</Text>
-      </BorderCard>
-    </TouchableOpacity>
-  );
-}
-
 export function NurseryProfileScreen({ route, navigation }: any) {
   const nurseryId: string | undefined = route?.params?.nurseryId;
   const isOwn = !nurseryId;
   const insets = useSafeAreaInsets();
+  const saplingsScrollRef = useRef<ScrollView>(null);
 
   const ownProfile = useNurseryProfile();
   const ownStats = useNurseryStats();
@@ -65,6 +48,7 @@ export function NurseryProfileScreen({ route, navigation }: any) {
 
   const publicProfile = useNurseryPublicProfile(isOwn ? null : nurseryId ?? null);
   const publicAchievements = useNurseryPublicAchievements(isOwn ? undefined : nurseryId);
+  const ownStock = useSaplingStock();
   const followMutation = useFollowNursery();
   const unfollowMutation = useUnfollowNursery();
   const [reporting, setReporting] = useState(false);
@@ -109,6 +93,58 @@ export function NurseryProfileScreen({ route, navigation }: any) {
     else followMutation.mutate(nurseryId);
   };
 
+  const headerBlock = (
+    <>
+      <ProfileHeader
+        avatarUrl={logoUrl}
+        avatarEmoji="🌿"
+        storyRing={effectiveNurseryId ? ringStatus.data?.nurseries[effectiveNurseryId] : null}
+        name={name}
+        meta={city ? `📍 ${city}` : null}
+        bio={bio}
+        stats={
+          isOwn
+            ? [
+                { value: ownStats.data?.speciesCount ?? 0, label: 'Species' },
+                { value: ownProfile.data?.streakCurrent ?? 0, label: 'Streak' },
+                { value: badgesCount, label: 'Badges', onPress: () => setTab('achievements') },
+              ]
+            : [
+                { value: posts.length, label: 'Posts' },
+                {
+                  value: followersCount ?? 0,
+                  label: 'Followers',
+                  onPress: () => effectiveNurseryId && navigation.navigate('PublicFollowers', { kind: 'nursery', id: effectiveNurseryId, name }),
+                },
+                { value: badgesCount, label: 'Badges', onPress: () => setTab('achievements') },
+              ]
+        }
+        primaryAction={
+          isOwn
+            ? { label: 'Edit profile', onPress: () => navigation.navigate('EditNurseryProfile'), variant: 'outline' }
+            : {
+                label: followLabel(followStatus, followersCount ?? 0),
+                onPress: toggleFollow,
+                busy: followMutation.isPending || unfollowMutation.isPending,
+                variant: isFollowingOrPending ? 'outline' : 'solid',
+              }
+        }
+      />
+
+      {!isOwn && (city || publicProfile.data?.contactPhone) && (
+        <View style={styles.publicExtras}>
+          <LocationActions
+            address={city ?? undefined}
+            phone={publicProfile.data?.contactPhone}
+            hideAddressLine
+          />
+        </View>
+      )}
+
+      <ProfileTabBar activeTab={tab} onChange={setTab} role="nursery" />
+    </>
+  );
+
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
@@ -149,6 +185,24 @@ export function NurseryProfileScreen({ route, navigation }: any) {
 
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
+      ) : tab === 'drives' ? (
+        // Saplings tab gets its own plain ScrollView instead of living inside PostGrid's
+        // FlatList — a search input buried in a FlatList's ListHeaderComponent fights with the
+        // list's own layout tracking when the keyboard opens (glitchy push-then-dismiss). A
+        // ScrollView doesn't have that problem and is the same keyboard-avoidance pattern
+        // already used elsewhere in the app (e.g. NgoPortfolioEntryScreen).
+        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <ScrollView ref={saplingsScrollRef} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            {headerBlock}
+            <NurserySaplingsTabContent
+              isOwn={isOwn}
+              stock={isOwn ? ownStock.data ?? [] : publicProfile.data?.stock ?? []}
+              isLoading={isOwn ? ownStock.isLoading : false}
+              onManageInventory={() => navigation.navigate('NurseryStock')}
+              onSearchFocusScroll={(y) => saplingsScrollRef.current?.scrollTo({ y: Math.max(0, y - 20), animated: true })}
+            />
+          </ScrollView>
+        </KeyboardAvoidingView>
       ) : (
         <PostGrid
           posts={tab === 'posts' ? posts : []}
@@ -156,70 +210,10 @@ export function NurseryProfileScreen({ route, navigation }: any) {
           onEndReached={tab === 'posts' ? onEndReached : undefined}
           isFetchingNextPage={isFetchingNextPage}
           emptyTitle="No posts yet"
+          showEmptyState={tab === 'posts'}
           ListHeaderComponent={
             <>
-              <ProfileHeader
-                avatarUrl={logoUrl}
-                avatarEmoji="🌿"
-                storyRing={effectiveNurseryId ? ringStatus.data?.nurseries[effectiveNurseryId] : null}
-                name={name}
-                meta={city ? `📍 ${city}` : null}
-                bio={bio}
-                stats={
-                  isOwn
-                    ? [
-                        { value: ownStats.data?.speciesCount ?? 0, label: 'Species' },
-                        { value: ownProfile.data?.streakCurrent ?? 0, label: 'Streak' },
-                        { value: badgesCount, label: 'Badges', onPress: () => setTab('achievements') },
-                      ]
-                    : [
-                        { value: posts.length, label: 'Posts' },
-                        {
-                          value: followersCount ?? 0,
-                          label: 'Followers',
-                          onPress: () => effectiveNurseryId && navigation.navigate('PublicFollowers', { kind: 'nursery', id: effectiveNurseryId, name }),
-                        },
-                        { value: badgesCount, label: 'Badges', onPress: () => setTab('achievements') },
-                      ]
-                }
-                primaryAction={
-                  isOwn
-                    ? { label: 'Edit profile', onPress: () => navigation.navigate('EditNurseryProfile'), variant: 'outline' }
-                    : {
-                        label: followLabel(followStatus, followersCount ?? 0),
-                        onPress: toggleFollow,
-                        busy: followMutation.isPending || unfollowMutation.isPending,
-                        variant: isFollowingOrPending ? 'outline' : 'solid',
-                      }
-                }
-              />
-
-              {!isOwn && (
-                <View style={styles.publicExtras}>
-                  <LocationActions
-                    label="Location"
-                    address={city ?? undefined}
-                    phone={publicProfile.data?.contactPhone}
-                  />
-
-                  <Text style={styles.sectionTitle}>Available Saplings</Text>
-                  {(publicProfile.data?.stock?.length ?? 0) === 0 ? (
-                    <EmptyState icon="🌱" title="No stock right now" body="Check back later for available saplings." />
-                  ) : (
-                    publicProfile.data!.stock.map((item: ApiSaplingStock) => (
-                      <StockRow
-                        key={item.id}
-                        item={item}
-                        onPress={() =>
-                          navigation.navigate(item.isFree ? 'SaplingReservation' : 'AddToCart', { nurseryId, stockId: item.id })
-                        }
-                      />
-                    ))
-                  )}
-                </View>
-              )}
-
-              <ProfileTabBar activeTab={tab} onChange={setTab} />
+              {headerBlock}
               {tab === 'contributions' && (
                 <View style={styles.tabBody}>
                   <BorderCard style={styles.contributionsCard}>
@@ -247,7 +241,6 @@ export function NurseryProfileScreen({ route, navigation }: any) {
                   streak={isOwn && ownStreak.data ? { streakCurrent: ownProfile.data?.streakCurrent ?? 0, weeks: ownStreak.data } : undefined}
                 />
               )}
-              {tab === 'drives' && <DrivesTabContent role="nursery" drives={[]} onPressDrive={() => {}} />}
             </>
           }
         />
@@ -260,6 +253,8 @@ export function NurseryProfileScreen({ route, navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  flex: { flex: 1 },
+  scrollContent: { paddingBottom: 32 },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
   headerActions: { flexDirection: 'row', gap: 10 },
   iconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
@@ -270,17 +265,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: COLORS.warmBrown,
   },
   iconText: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   topBarTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center', marginHorizontal: 8 },
   publicExtras: { paddingHorizontal: 16, gap: 8, marginBottom: 8 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, marginTop: 12, marginBottom: 4 },
-  stockRow: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md, padding: 14, marginBottom: 10 },
-  stockSpecies: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
-  stockMeta: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
-  stockChevron: { fontSize: 22, color: COLORS.textSecondary, fontWeight: '600' },
   tabBody: { paddingHorizontal: 16, paddingTop: 16 },
   contributionsCard: { gap: 12 },
   contributionsTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },

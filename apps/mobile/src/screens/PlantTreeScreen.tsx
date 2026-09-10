@@ -44,9 +44,9 @@ interface LocationInfo {
   label: string;
 }
 
-// Fallback center (India) used only if the user planted without location access, so the tree
-// doesn't land at (0,0) — off the coast of Africa — on the map.
-const FALLBACK_COORDS = { lat: 20.5937, lng: 78.9629 };
+// Highest, not BestForNavigation — that's meant for continuous watchPosition tracking; a single
+// getCurrentPositionAsync read only needs Highest's one-shot best-effort accuracy.
+const PLANTING_LOCATION_ACCURACY = Location.Accuracy.Highest;
 
 function ScanAnimation({ onComplete }: { onComplete: () => void }) {
   const scanY = useSharedValue(0);
@@ -223,7 +223,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
         setLocation(null);
         return;
       }
-      const position = await getCurrentPositionWithTimeout({});
+      const position = await getCurrentPositionWithTimeout({ accuracy: PLANTING_LOCATION_ACCURACY });
       const [place] = await Location.reverseGeocodeAsync({
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
@@ -308,6 +308,26 @@ export function PlantTreeScreen({ navigation, route }: any) {
   const handleSubmit = useCallback(async () => {
     if (!selectedSpecies || !imageUri) return;
     setSubmitError(null);
+
+    // Always take a fresh, high-accuracy reading right now — regardless of isPreVerified or
+    // whatever's cached in `location` state — so a coordinate fetched earlier (or before this
+    // screen even opened, via MapScreen's "Plant where you are") can never be reused stale at
+    // submit time. `location` is still used below, but only for the cosmetic locationLabel.
+    let freshPosition;
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') throw new Error('Location permission is required to plant a tree.');
+      freshPosition = await getCurrentPositionWithTimeout({ accuracy: PLANTING_LOCATION_ACCURACY });
+    } catch (locErr) {
+      setSubmitError(locErr instanceof Error ? locErr.message : "Couldn't get your current location. Please try again.");
+      return;
+    }
+
+    if (freshPosition.mocked) {
+      setSubmitError('Your device is reporting a mock/fake GPS location. Please disable mock locations and try again.');
+      return;
+    }
+
     try {
       const filename = imageUri.split('/').pop() || 'tree.jpg';
       const extension = filename.split('.').pop()?.toLowerCase();
@@ -316,8 +336,10 @@ export function PlantTreeScreen({ navigation, route }: any) {
       const tree = await plantTreeMutation.mutateAsync({
         speciesId: selectedSpecies.id,
         nickname: nickname.trim() || selectedSpecies.commonName,
-        lat: location?.lat ?? FALLBACK_COORDS.lat,
-        lng: location?.lng ?? FALLBACK_COORDS.lng,
+        lat: freshPosition.coords.latitude,
+        lng: freshPosition.coords.longitude,
+        accuracy: freshPosition.coords.accuracy ?? undefined,
+        mocked: freshPosition.mocked ?? false,
         locationLabel: location?.label,
         photo: { uri: imageUri, name: filename, type: mimeType },
       });
@@ -327,7 +349,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
       setStage('success');
     } catch (e) {
       if (e instanceof ApiError && e.status === 403) {
-        setSubmitError(NOT_APPROVED_MESSAGE);
+        setSubmitError(e.message); // show the backend's actual reason, not a hardcoded zone message
       } else {
         setSubmitError(e instanceof Error ? e.message : 'Could not save your tree. Please try again.');
       }
@@ -572,8 +594,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: COLORS.warmBrown,
   },
   backIcon: {
     fontSize: 18,

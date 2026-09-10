@@ -27,6 +27,8 @@ export interface PlantTreeInput {
   lat: number;
   lng: number;
   locationLabel?: string;
+  accuracy?: number;
+  mocked?: boolean;
   photo?: { uri: string; name: string; type: string };
 }
 
@@ -37,6 +39,8 @@ export async function plantTree(input: PlantTreeInput): Promise<ApiTree> {
   form.append('lat', String(input.lat));
   form.append('lng', String(input.lng));
   if (input.locationLabel) form.append('locationLabel', input.locationLabel);
+  if (input.accuracy !== undefined) form.append('accuracy', String(input.accuracy));
+  if (input.mocked !== undefined) form.append('mocked', input.mocked ? 'true' : 'false');
   if (input.photo) {
     form.append('photo', toFormFile(input.photo.uri), input.photo.name);
   }

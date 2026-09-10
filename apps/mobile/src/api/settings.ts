@@ -10,6 +10,9 @@ export interface ApiUserSettings {
   locationTracking: boolean;
   publicProfile: boolean;
   analyticsEnabled: boolean;
+  /** Which homepage time-of-day theme to always show, instead of following real time of day.
+   * `null` = auto (default). Stores a `TimePeriod` key from `hooks/useTimeTheme`. */
+  pinnedTimeTheme: string | null;
 }
 
 export async function fetchSettings(): Promise<ApiUserSettings> {

@@ -62,33 +62,38 @@ export function NurseryDirectoryScreen({ navigation }: any) {
         {!isLoading && nurseries.length === 0 && (
           <EmptyState icon="🌱" title="No nurseries found" body="Try a different search term." />
         )}
-        {nurseries.map((nursery) => (
-          <TouchableOpacity key={nursery.id} onPress={() => navigation.navigate('NurseryPublicProfile', { nurseryId: nursery.id })} activeOpacity={0.85}>
-            <BorderCard style={styles.card}>
-              <View style={styles.cardRow}>
-                {nursery.logoUrl ? (
-                  <Image source={{ uri: resolveMediaUrl(nursery.logoUrl) }} style={styles.logo} />
-                ) : (
-                  <View style={styles.logoPlaceholder}><Text style={{ fontSize: 20 }}>🌿</Text></View>
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.cardTitle}>{nursery.nurseryName}</Text>
-                  <View style={styles.badgeRow}>
-                    {nursery.city ? <Text style={styles.cardMeta}>📍 {nursery.city}</Text> : null}
-                    {nursery.distanceKm != null && (
-                      <Text style={styles.cardMeta}>{nursery.distanceKm.toFixed(1)} km away</Text>
+        {nurseries.length > 0 && (
+          <BorderCard noPadding style={styles.groupedCard}>
+            {nurseries.map((nursery, i) => (
+              <React.Fragment key={nursery.id}>
+                {i > 0 && <View style={styles.rowDivider} />}
+                <TouchableOpacity onPress={() => navigation.navigate('NurseryPublicProfile', { nurseryId: nursery.id })} activeOpacity={0.85} style={styles.row}>
+                  <View style={styles.cardRow}>
+                    {nursery.logoUrl ? (
+                      <Image source={{ uri: resolveMediaUrl(nursery.logoUrl) }} style={styles.logo} />
+                    ) : (
+                      <View style={styles.logoPlaceholder}><Text style={{ fontSize: 20 }}>🌿</Text></View>
                     )}
-                    {nursery.reviewCount > 0 && (
-                      <Text style={styles.cardMeta}>★ {Number(nursery.avgRating).toFixed(1)} ({nursery.reviewCount})</Text>
-                    )}
-                    {nursery.offersDelivery && <Text style={styles.cardMeta}>🚚 Delivers</Text>}
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.cardTitle}>{nursery.nurseryName}</Text>
+                      <View style={styles.badgeRow}>
+                        {nursery.city ? <Text style={styles.cardMeta}>📍 {nursery.city}</Text> : null}
+                        {nursery.distanceKm != null && (
+                          <Text style={styles.cardMeta}>{nursery.distanceKm.toFixed(1)} km away</Text>
+                        )}
+                        {nursery.reviewCount > 0 && (
+                          <Text style={styles.cardMeta}>★ {Number(nursery.avgRating).toFixed(1)} ({nursery.reviewCount})</Text>
+                        )}
+                        {nursery.offersDelivery && <Text style={styles.cardMeta}>🚚 Delivers</Text>}
+                      </View>
+                      <Text style={styles.cardBody} numberOfLines={2}>{nursery.description}</Text>
+                    </View>
                   </View>
-                  <Text style={styles.cardBody} numberOfLines={2}>{nursery.description}</Text>
-                </View>
-              </View>
-            </BorderCard>
-          </TouchableOpacity>
-        ))}
+                </TouchableOpacity>
+              </React.Fragment>
+            ))}
+          </BorderCard>
+        )}
       </ScrollView>
     </View>
   );
@@ -98,7 +103,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 8 },
   backButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
   searchWrap: { paddingHorizontal: 20, paddingBottom: 12, flexDirection: 'row', gap: 8, alignItems: 'center' },
@@ -110,7 +115,9 @@ const styles = StyleSheet.create({
   badgeRow: { flexDirection: 'row', gap: 10, marginTop: 2, flexWrap: 'wrap' },
   scrollContent: { paddingHorizontal: 20 },
   loader: { marginTop: 40 },
-  card: { marginBottom: 12 },
+  groupedCard: { marginBottom: 12 },
+  row: { padding: 14 },
+  rowDivider: { height: 1, backgroundColor: 'rgba(160,114,74,0.25)', marginHorizontal: 14 },
   cardRow: { flexDirection: 'row', gap: 12 },
   logo: { width: 48, height: 48, borderRadius: 12 },
   logoPlaceholder: { width: 48, height: 48, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.06)', alignItems: 'center', justifyContent: 'center' },

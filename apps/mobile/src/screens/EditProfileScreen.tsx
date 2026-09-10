@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
-import EmojiPicker from 'rn-emoji-keyboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -26,7 +25,6 @@ export function EditProfileScreen({ navigation }: any) {
   const [bio, setBio] = useState(user?.bio ?? '');
   const [avatarEmoji, setAvatarEmoji] = useState(user?.avatarEmoji ?? '🧑‍🌾');
   const [error, setError] = useState<string | null>(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
 
   const handleSubmit = async () => {
     setError(null);
@@ -68,15 +66,13 @@ export function EditProfileScreen({ navigation }: any) {
       >
         <BorderCard>
           <Text style={styles.label}>Avatar</Text>
-          <TouchableOpacity style={styles.avatarPicker} onPress={() => setPickerOpen(true)}>
+          <TouchableOpacity
+            style={styles.avatarPicker}
+            onPress={() => navigation.navigate('EmojiPicker', { selected: avatarEmoji, onSelect: setAvatarEmoji })}
+          >
             <Text style={styles.avatarPickerEmoji}>{avatarEmoji}</Text>
-            <Text style={styles.avatarPickerHint}>Tap to choose any emoji</Text>
+            <Text style={styles.avatarPickerHint}>Tap to choose an emoji</Text>
           </TouchableOpacity>
-          <EmojiPicker
-            open={pickerOpen}
-            onClose={() => setPickerOpen(false)}
-            onEmojiSelected={(item) => setAvatarEmoji(item.emoji)}
-          />
 
           <Text style={styles.label}>Name</Text>
           <TextInput
@@ -149,8 +145,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: COLORS.warmBrown,
   },
   backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: {
@@ -204,7 +198,9 @@ const styles = StyleSheet.create({
   },
   avatarPickerHint: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600' },
   input: {
-    backgroundColor: COLORS.white,
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
     borderRadius: RADIUS.md,
     paddingHorizontal: 14,
     paddingVertical: 12,

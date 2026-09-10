@@ -62,6 +62,9 @@ import { ChangePasswordScreen } from '../screens/ChangePasswordScreen';
 import { SessionsScreen } from '../screens/SessionsScreen';
 import { StaticContentScreen } from '../screens/StaticContentScreen';
 import { EditProfileScreen } from '../screens/EditProfileScreen';
+import { EmojiPickerScreen } from '../screens/EmojiPickerScreen';
+import { HomeThemePickerScreen } from '../screens/HomeThemePickerScreen';
+import { FriendsListScreen } from '../screens/FriendsListScreen';
 import { DrivesListScreen } from '../screens/DrivesListScreen';
 import { AdoptTreeListScreen } from '../screens/AdoptTreeListScreen';
 import { AdoptTreeDetailScreen } from '../screens/AdoptTreeDetailScreen';
@@ -344,6 +347,9 @@ export type RootStackParamList = {
   Sessions: undefined;
   StaticContent: { title: string; body: string };
   EditProfile: undefined;
+  EmojiPicker: { selected?: string; onSelect: (emoji: string) => void } | undefined;
+  HomeThemePicker: { current: string | null } | undefined;
+  FriendsList: { mode: 'requests' | 'squad' };
   Drives: undefined;
   DriveDetail: { driveId: string };
   AdoptTreeList: undefined;
@@ -732,6 +738,45 @@ export function AppNavigator() {
         <Stack.Screen name="Sessions" component={SessionsScreen} />
         <Stack.Screen name="StaticContent" component={StaticContentScreen} />
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        <Stack.Screen name="FriendsList" component={FriendsListScreen} />
+        <Stack.Screen
+          name="EmojiPicker"
+          component={EmojiPickerScreen}
+          options={{
+            presentation: 'modal',
+            cardStyleInterpolator: ({ current, layouts }) => ({
+              cardStyle: {
+                transform: [
+                  {
+                    translateY: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [layouts.screen.height, 0],
+                    }),
+                  },
+                ],
+              },
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="HomeThemePicker"
+          component={HomeThemePickerScreen}
+          options={{
+            presentation: 'modal',
+            cardStyleInterpolator: ({ current, layouts }) => ({
+              cardStyle: {
+                transform: [
+                  {
+                    translateY: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [layouts.screen.height, 0],
+                    }),
+                  },
+                ],
+              },
+            }),
+          }}
+        />
         <Stack.Screen name="Drives" component={DrivesListScreen} />
         <Stack.Screen name="DriveDetail" component={DriveDetailScreen} />
         <Stack.Screen name="AdoptTreeList" component={AdoptTreeListScreen} />

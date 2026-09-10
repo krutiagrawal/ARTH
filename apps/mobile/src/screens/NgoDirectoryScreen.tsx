@@ -51,24 +51,29 @@ export function NgoDirectoryScreen({ navigation }: any) {
         {!isLoading && ngos.length === 0 && (
           <EmptyState icon="🌍" title="No NGOs found" body="Try a different search term." />
         )}
-        {ngos.map((ngo) => (
-          <TouchableOpacity key={ngo.id} onPress={() => navigation.navigate('NgoPublicProfile', { ngoId: ngo.id })} activeOpacity={0.85}>
-            <BorderCard style={styles.card}>
-              <View style={styles.cardRow}>
-                {ngo.logoUrl ? (
-                  <Image source={{ uri: resolveMediaUrl(ngo.logoUrl) }} style={styles.logo} />
-                ) : (
-                  <View style={styles.logoPlaceholder}><Text style={{ fontSize: 20 }}>🌿</Text></View>
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.cardTitle}>{ngo.orgName}</Text>
-                  {ngo.city ? <Text style={styles.cardMeta}>📍 {ngo.city}</Text> : null}
-                  <Text style={styles.cardBody} numberOfLines={2}>{ngo.description}</Text>
-                </View>
-              </View>
-            </BorderCard>
-          </TouchableOpacity>
-        ))}
+        {ngos.length > 0 && (
+          <BorderCard noPadding style={styles.groupedCard}>
+            {ngos.map((ngo, i) => (
+              <React.Fragment key={ngo.id}>
+                {i > 0 && <View style={styles.rowDivider} />}
+                <TouchableOpacity onPress={() => navigation.navigate('NgoPublicProfile', { ngoId: ngo.id })} activeOpacity={0.85} style={styles.row}>
+                  <View style={styles.cardRow}>
+                    {ngo.logoUrl ? (
+                      <Image source={{ uri: resolveMediaUrl(ngo.logoUrl) }} style={styles.logo} />
+                    ) : (
+                      <View style={styles.logoPlaceholder}><Text style={{ fontSize: 20 }}>🌿</Text></View>
+                    )}
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.cardTitle}>{ngo.orgName}</Text>
+                      {ngo.city ? <Text style={styles.cardMeta}>📍 {ngo.city}</Text> : null}
+                      <Text style={styles.cardBody} numberOfLines={2}>{ngo.description}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              </React.Fragment>
+            ))}
+          </BorderCard>
+        )}
       </ScrollView>
     </View>
   );
@@ -79,7 +84,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 8 },
   backButton: { width: 40, height: 40 },
   feedButton: { width: 40, height: 40 },
-  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   feedIcon: { fontSize: 16 },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
@@ -87,7 +92,9 @@ const styles = StyleSheet.create({
   searchInput: { backgroundColor: 'transparent', borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.warmBrown, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: COLORS.textPrimary },
   scrollContent: { paddingHorizontal: 20 },
   loader: { marginTop: 40 },
-  card: { marginBottom: 12 },
+  groupedCard: { marginBottom: 12 },
+  row: { padding: 14 },
+  rowDivider: { height: 1, backgroundColor: 'rgba(160,114,74,0.25)', marginHorizontal: 14 },
   cardRow: { flexDirection: 'row', gap: 12 },
   logo: { width: 48, height: 48, borderRadius: 12 },
   logoPlaceholder: { width: 48, height: 48, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.06)', alignItems: 'center', justifyContent: 'center' },

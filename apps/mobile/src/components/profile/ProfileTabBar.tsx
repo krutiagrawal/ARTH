@@ -15,13 +15,17 @@ const TABS: { key: ProfileTabKey; icon: string; label: string }[] = [
 export function ProfileTabBar({
   activeTab,
   onChange,
+  role,
 }: {
   activeTab: ProfileTabKey;
   onChange: (tab: ProfileTabKey) => void;
+  /** Nurseries don't run drives — that last tab becomes "Saplings" for them instead. */
+  role?: 'user' | 'ngo' | 'nursery' | 'group';
 }) {
+  const tabs = role === 'nursery' ? TABS.map((t) => (t.key === 'drives' ? { ...t, icon: '🌱', label: 'Saplings' } : t)) : TABS;
   return (
     <View style={styles.row}>
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const active = tab.key === activeTab;
         return (
           <TouchableOpacity

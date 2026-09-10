@@ -179,18 +179,18 @@ const styles = StyleSheet.create({
   achievementCardDark: {
     width: (SW - 32 - 24) / 3,
     alignItems: 'center',
-    backgroundColor: 'rgba(13,35,24,0.45)',
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.lg,
     padding: 12,
     gap: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
     position: 'relative',
   },
   achievementCardLockedDark: {
-    backgroundColor: 'rgba(13,35,24,0.3)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: 'rgba(160,114,74,0.35)',
   },
   achievementIconBg: {
     width: 44,
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(160,114,74,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -213,12 +213,12 @@ const styles = StyleSheet.create({
   achievementTitleDark: {
     fontSize: 10,
     fontWeight: '700',
-    color: COLORS.white,
+    color: COLORS.textPrimary,
     textAlign: 'center',
     lineHeight: 13,
   },
   achievementTitleLockedDark: {
-    color: COLORS.white,
+    color: COLORS.textMuted,
   },
   achievementProgressBar: {
     width: '100%',

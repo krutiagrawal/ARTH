@@ -44,6 +44,7 @@ const DEFAULT_SETTINGS: ApiUserSettings = {
   locationTracking: true,
   publicProfile: true,
   analyticsEnabled: true,
+  pinnedTimeTheme: null,
 };
 
 /** Sourced from app.json#expo.version via expo-constants — never hand-typed, so it can't drift. */

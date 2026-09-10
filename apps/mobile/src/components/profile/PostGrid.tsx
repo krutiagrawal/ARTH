@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image, FlatList, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { Text } from '../common/AppText';
 import { COLORS } from '../../constants/colors';
 import { RADIUS } from '../../constants/theme';
@@ -52,6 +52,7 @@ export function PostGrid({
   ListHeaderComponent,
   emptyTitle = 'No posts yet',
   emptyBody,
+  showEmptyState = true,
 }: {
   posts: ApiPost[];
   onPressPost: (post: ApiPost) => void;
@@ -60,6 +61,10 @@ export function PostGrid({
   ListHeaderComponent?: React.ReactElement | null;
   emptyTitle?: string;
   emptyBody?: string;
+  /** `posts` is deliberately `[]` on every non-"posts" tab (see class comment above) — pass
+   * `false` on those tabs so the grid area doesn't show a "No posts yet" message underneath
+   * that tab's real content, which has nothing to do with posts. */
+  showEmptyState?: boolean;
 }) {
   const renderItem = useMemo(
     () =>
@@ -69,24 +74,34 @@ export function PostGrid({
   );
 
   return (
-    <FlatList
-      data={posts}
-      keyExtractor={(p) => p.id}
-      numColumns={3}
-      renderItem={renderItem}
-      columnWrapperStyle={styles.row}
-      contentContainerStyle={styles.content}
-      ListHeaderComponent={ListHeaderComponent}
-      ListEmptyComponent={<EmptyState icon="🌱" title={emptyTitle} body={emptyBody} />}
-      ListFooterComponent={isFetchingNextPage ? <ActivityIndicator style={styles.footer} color={COLORS.sage} /> : null}
-      onEndReached={onEndReached}
-      onEndReachedThreshold={0.6}
-      showsVerticalScrollIndicator={false}
-    />
+    // A tab's content (e.g. the nursery's sapling search) can sit near the bottom of this list
+    // with nothing scrollable below it, so the keyboard opening leaves no room for the OS's
+    // usual "scroll the focused input into view" to work with. Wrapping in KeyboardAvoidingView
+    // shrinks this list's own viewport by the keyboard height instead, which gives that same
+    // auto-scroll behavior the room it needs — same pattern used for the app's forms elsewhere
+    // (e.g. NgoPortfolioEntryScreen). Android resizes the window natively, so no behavior needed.
+    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <FlatList
+        data={posts}
+        keyExtractor={(p) => p.id}
+        numColumns={3}
+        renderItem={renderItem}
+        columnWrapperStyle={styles.row}
+        contentContainerStyle={styles.content}
+        ListHeaderComponent={ListHeaderComponent}
+        ListEmptyComponent={showEmptyState ? <EmptyState icon="🌱" title={emptyTitle} body={emptyBody} /> : null}
+        ListFooterComponent={isFetchingNextPage ? <ActivityIndicator style={styles.footer} color={COLORS.sage} /> : null}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.6}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      />
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   content: { paddingBottom: 32 },
   row: { gap: GAP },
   tile: { width: TILE, height: TILE, marginBottom: GAP, overflow: 'hidden', backgroundColor: COLORS.mintLight },

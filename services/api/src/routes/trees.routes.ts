@@ -4,6 +4,7 @@ import { plantTreeSchema, updateTreeSchema } from '../schemas/trees.schema';
 import { saveTreePhoto } from '../services/upload.service';
 import { plantTree } from '../services/tree.service';
 import { verifyPlantingPhoto } from '../services/aiVerification.service';
+import { assertGpsNotMocked, assertGpsAccuracy } from '../services/plantingLocation.service';
 import { BadRequestError, NotFoundError } from '../utils/errors';
 
 async function extractPhoto(body: Record<string, MultipartFile | { value: string }>) {
@@ -100,6 +101,9 @@ export default async function treesRoutes(fastify: FastifyInstance) {
 
     const parsed = plantTreeSchema.safeParse(fields);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    assertGpsNotMocked(parsed.data.mocked);
+    assertGpsAccuracy(parsed.data.accuracy);
 
     let photoUrl: string | undefined;
     let aiVerificationStatus: 'unverified' | 'verified' | 'rejected' = 'unverified';

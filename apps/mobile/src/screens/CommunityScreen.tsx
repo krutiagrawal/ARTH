@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, FlatList, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,7 +21,6 @@ import {
   useFriendRequests,
   useSearchUsers,
   useSendFriendRequest,
-  useRespondFriendRequest,
   useChallenges,
   useJoinChallenge,
   useLeaveChallenge,
@@ -36,7 +35,7 @@ import {
 } from '../hooks/useApiQueries';
 import { FollowingFeedScreen } from './FollowingFeedScreen';
 import { NotificationBell } from '../components/social/NotificationBell';
-import type { ApiFriend, ApiFriendRequest } from '../api/friends';
+import { FriendCard, FriendRequestRow, formatRelativeTime } from '../components/social/FriendRow';
 import type { ApiChallenge } from '../api/challenges';
 import type { LeaderboardEntry } from '../api/leaderboard';
 import type { PublicNgoLeaderboardEntry, PublicNurseryLeaderboardEntry } from '../api/publicLeaderboard';
@@ -65,17 +64,6 @@ const ACTIVITY_COPY: Record<ActivityType, { icon: string; text: (name: string) =
   challenge_completed: { icon: '🎉', text: (name) => `${name} completed a challenge` },
 };
 
-function formatRelativeTime(iso: string | null): string {
-  if (!iso) return 'a while ago';
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return 'now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
-
 function GlobalCounter() {
   const fadeStyle = useFadeIn(0);
   const { data } = useGlobalCounter();
@@ -99,91 +87,6 @@ function GlobalCounter() {
         <Text style={styles.globalCounterGoal}>Daily goal: {(data?.dailyGoal ?? 0).toLocaleString()} 🌱</Text>
       </LinearGradient>
     </Animated.View>
-  );
-}
-
-function FriendCard({ friend, index, onPress, storyRing }: { friend: ApiFriend; index: number; onPress: () => void; storyRing?: StoryRingStatus | null }) {
-  const slideStyle = useSlideUp(index * 80, 20);
-  return (
-    <Animated.View style={slideStyle}>
-      <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-        <BorderCard style={styles.friendCard}>
-          <View style={styles.friendAvatarWrapper}>
-            <StoryRing status={storyRing} size={48} borderRadius={16}>
-              <View style={[styles.friendAvatar, { backgroundColor: COLORS.mintLight }]}>
-                <Text style={styles.friendAvatarEmoji}>{friend.avatar}</Text>
-              </View>
-            </StoryRing>
-            {friend.isOnline && <View style={styles.onlineDot} />}
-          </View>
-          <View style={styles.friendInfo}>
-            <Text style={styles.friendNameDark}>{friend.name}</Text>
-            <Text style={styles.friendStatsDark}>
-              🌳 {friend.treesPlanted} trees · 🔥 {friend.streak} streak
-            </Text>
-            <Text style={styles.friendActiveDark}>
-              {friend.isOnline ? '🟢 Online now' : `⏱ ${formatRelativeTime(friend.lastActive)}`}
-            </Text>
-          </View>
-          <View style={styles.friendRight}>
-            <LinearGradient
-              colors={[COLORS.sageLight, COLORS.sage]}
-              style={styles.friendLevelBadge}
-            >
-              <Text style={styles.friendLevelText}>Lv.{friend.forestLevel}</Text>
-            </LinearGradient>
-            <Text style={styles.friendArrowDark}>›</Text>
-          </View>
-        </BorderCard>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
-
-function FriendRequestRow({
-  request,
-  onPress,
-  onAccepted,
-  storyRing,
-}: {
-  request: ApiFriendRequest;
-  onPress: () => void;
-  onAccepted: (name: string) => void;
-  storyRing?: StoryRingStatus | null;
-}) {
-  const respondMutation = useRespondFriendRequest();
-  return (
-    <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-      <BorderCard style={styles.friendCard}>
-        <StoryRing status={storyRing} size={48} borderRadius={16}>
-          <View style={[styles.friendAvatar, { backgroundColor: COLORS.mintLight }]}>
-            <Text style={styles.friendAvatarEmoji}>{request.from.avatar}</Text>
-          </View>
-        </StoryRing>
-        <View style={styles.friendInfo}>
-          <Text style={styles.friendNameDark}>{request.from.name}</Text>
-          <Text style={styles.friendStatsDark}>wants to be your friend</Text>
-        </View>
-        <View style={styles.requestActions}>
-          <TouchableOpacity
-            style={styles.requestAccept}
-            onPress={() => respondMutation.mutate({ id: request.id, action: 'accept' }, { onSuccess: () => onAccepted(request.from.name) })}
-            accessibilityRole="button"
-            accessibilityLabel={`Accept friend request from ${request.from.name}`}
-          >
-            <Text style={styles.requestAcceptText}>✓</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.requestDecline}
-            onPress={() => respondMutation.mutate({ id: request.id, action: 'decline' })}
-            accessibilityRole="button"
-            accessibilityLabel={`Decline friend request from ${request.from.name}`}
-          >
-            <Text style={styles.requestDeclineText}>✕</Text>
-          </TouchableOpacity>
-        </View>
-      </BorderCard>
-    </TouchableOpacity>
   );
 }
 
@@ -331,7 +234,7 @@ function LeaderboardRow({ entry, index, onPress, storyRing }: { entry: Leaderboa
   return (
     <Animated.View style={slideStyle}>
       <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-        <BorderCard style={[styles.leaderRow, entry.isUser && styles.leaderRowUser]}>
+        <View style={[styles.leaderRow, entry.isUser && styles.leaderRowUser]}>
           <RankBadge rank={entry.rank} />
           <StoryRing status={storyRing} size={36} borderRadius={12}>
             <View style={[styles.leaderAvatar, { backgroundColor: entry.isUser ? COLORS.mintLight : COLORS.sand }]}>
@@ -348,7 +251,7 @@ function LeaderboardRow({ entry, index, onPress, storyRing }: { entry: Leaderboa
             <Text style={styles.leaderTreeNumDark}>{entry.trees}</Text>
             <Text style={styles.leaderTreeLabelDark}>trees</Text>
           </View>
-        </BorderCard>
+        </View>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -357,7 +260,7 @@ function LeaderboardRow({ entry, index, onPress, storyRing }: { entry: Leaderboa
 function NgoLeaderboardRow({ entry, onPress, storyRing }: { entry: PublicNgoLeaderboardEntry; onPress: () => void; storyRing?: StoryRingStatus | null }) {
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-      <BorderCard style={styles.leaderRow}>
+      <View style={styles.leaderRow}>
         <RankBadge rank={entry.rank} />
         <StoryRing status={storyRing} size={36} borderRadius={12}>
           <View style={[styles.leaderAvatar, { backgroundColor: COLORS.mintLight }]}>
@@ -371,7 +274,7 @@ function NgoLeaderboardRow({ entry, onPress, storyRing }: { entry: PublicNgoLead
           <Text style={styles.leaderTreeNumDark}>{entry.treesPlanted}</Text>
           <Text style={styles.leaderTreeLabelDark}>trees</Text>
         </View>
-      </BorderCard>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -379,7 +282,7 @@ function NgoLeaderboardRow({ entry, onPress, storyRing }: { entry: PublicNgoLead
 function NurseryLeaderboardRow({ entry, onPress, storyRing }: { entry: PublicNurseryLeaderboardEntry; onPress: () => void; storyRing?: StoryRingStatus | null }) {
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-      <BorderCard style={styles.leaderRow}>
+      <View style={styles.leaderRow}>
         <RankBadge rank={entry.rank} />
         <StoryRing status={storyRing} size={36} borderRadius={12}>
           <View style={[styles.leaderAvatar, { backgroundColor: COLORS.mintLight }]}>
@@ -393,7 +296,7 @@ function NurseryLeaderboardRow({ entry, onPress, storyRing }: { entry: PublicNur
           <Text style={styles.leaderTreeNumDark}>{entry.followers}</Text>
           <Text style={styles.leaderTreeLabelDark}>followers</Text>
         </View>
-      </BorderCard>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -477,75 +380,96 @@ function LeaderboardTabContent({ navigation }: { navigation: any }) {
       </View>
 
       {rankTab === 'users' && (
-        <FlatList
-          data={userBoard.data?.entries ?? []}
-          keyExtractor={(entry) => entry.id}
+        <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavClearance }]}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item, index }) => (
-            <LeaderboardRow entry={item} index={index} onPress={() => openUser(item)} storyRing={userRingStatus.data?.users[item.id]} />
+        >
+          <View style={styles.section}>
+            <BorderCard style={[styles.yourRankCard, styles.noBorder]}>
+              <Text style={styles.yourRankLabelDark}>YOUR RANK</Text>
+              <View style={styles.yourRankRow}>
+                <Text style={styles.yourRankNumDark}>{userBoard.data?.myRank ? `#${userBoard.data.myRank}` : '—'}</Text>
+                <Text style={styles.yourRankOfDark}>of {(userBoard.data?.totalUsers ?? 0).toLocaleString()}</Text>
+              </View>
+            </BorderCard>
+            <Text style={styles.sectionTitleDark}>Top Planters</Text>
+          </View>
+
+          {userBoard.isLoading ? null : (userBoard.data?.entries ?? []).length === 0 ? (
+            <EmptyState icon="🏆" title="The leaderboard is still filling in" body="Plant a tree to claim your spot." tint="light" />
+          ) : (
+            <BorderCard noPadding style={styles.groupedList}>
+              {(userBoard.data?.entries ?? []).map((entry, index) => (
+                <React.Fragment key={entry.id}>
+                  {index > 0 && <View style={styles.rowDivider} />}
+                  <LeaderboardRow entry={entry} index={index} onPress={() => openUser(entry)} storyRing={userRingStatus.data?.users[entry.id]} />
+                </React.Fragment>
+              ))}
+            </BorderCard>
           )}
-          ListHeaderComponent={
-            <View style={styles.section}>
-              <BorderCard style={styles.yourRankCard}>
-                <Text style={styles.yourRankLabelDark}>YOUR RANK</Text>
-                <View style={styles.yourRankRow}>
-                  <Text style={styles.yourRankNumDark}>{userBoard.data?.myRank ? `#${userBoard.data.myRank}` : '—'}</Text>
-                  <Text style={styles.yourRankOfDark}>of {(userBoard.data?.totalUsers ?? 0).toLocaleString()}</Text>
-                </View>
-              </BorderCard>
-              <Text style={styles.sectionTitleDark}>Top Planters</Text>
-            </View>
-          }
-          ListEmptyComponent={
-            userBoard.isLoading ? null : (
-              <EmptyState icon="🏆" title="The leaderboard is still filling in" body="Plant a tree to claim your spot." tint="light" />
-            )
-          }
-          ListFooterComponent={<Pager page={userPage} totalPages={userTotalPages} onChange={setUserPage} />}
-        />
+
+          <Pager page={userPage} totalPages={userTotalPages} onChange={setUserPage} />
+        </ScrollView>
       )}
 
       {rankTab === 'ngos' && (
-        <FlatList
-          data={ngoBoard.data?.entries ?? []}
-          keyExtractor={(entry) => entry.id}
+        <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavClearance }]}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <NgoLeaderboardRow
-              entry={item}
-              onPress={() => navigation.navigate('NgoPublicProfile', { ngoId: item.id })}
-              storyRing={ngoRingStatus.data?.ngos[item.id]}
-            />
+        >
+          <View style={styles.section}>
+            <Text style={styles.sectionTitleDark}>🏢 NGO Rankings</Text>
+          </View>
+
+          {ngoBoard.isLoading ? null : (ngoBoard.data?.entries ?? []).length === 0 ? (
+            <EmptyState icon="🏢" title="No NGOs ranked yet" body="Check back once drives start logging trees." tint="light" />
+          ) : (
+            <BorderCard noPadding style={styles.groupedList}>
+              {(ngoBoard.data?.entries ?? []).map((entry, index) => (
+                <React.Fragment key={entry.id}>
+                  {index > 0 && <View style={styles.rowDivider} />}
+                  <NgoLeaderboardRow
+                    entry={entry}
+                    onPress={() => navigation.navigate('NgoPublicProfile', { ngoId: entry.id })}
+                    storyRing={ngoRingStatus.data?.ngos[entry.id]}
+                  />
+                </React.Fragment>
+              ))}
+            </BorderCard>
           )}
-          ListHeaderComponent={<View style={styles.section}><Text style={styles.sectionTitleDark}>🏢 NGO Rankings</Text></View>}
-          ListEmptyComponent={
-            ngoBoard.isLoading ? null : <EmptyState icon="🏢" title="No NGOs ranked yet" body="Check back once drives start logging trees." tint="light" />
-          }
-          ListFooterComponent={<Pager page={ngoPage} totalPages={ngoTotalPages} onChange={setNgoPage} />}
-        />
+
+          <Pager page={ngoPage} totalPages={ngoTotalPages} onChange={setNgoPage} />
+        </ScrollView>
       )}
 
       {rankTab === 'nurseries' && (
-        <FlatList
-          data={nurseryBoard.data?.entries ?? []}
-          keyExtractor={(entry) => entry.id}
+        <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavClearance }]}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <NurseryLeaderboardRow
-              entry={item}
-              onPress={() => navigation.navigate('NurseryPublicProfile', { nurseryId: item.id })}
-              storyRing={nurseryRingStatus.data?.nurseries[item.id]}
-            />
+        >
+          <View style={styles.section}>
+            <Text style={styles.sectionTitleDark}>🌱 Nursery Rankings</Text>
+          </View>
+
+          {nurseryBoard.isLoading ? null : (nurseryBoard.data?.entries ?? []).length === 0 ? (
+            <EmptyState icon="🌱" title="No nurseries ranked yet" body="Follow a nursery to help it climb the ranks." tint="light" />
+          ) : (
+            <BorderCard noPadding style={styles.groupedList}>
+              {(nurseryBoard.data?.entries ?? []).map((entry, index) => (
+                <React.Fragment key={entry.id}>
+                  {index > 0 && <View style={styles.rowDivider} />}
+                  <NurseryLeaderboardRow
+                    entry={entry}
+                    onPress={() => navigation.navigate('NurseryPublicProfile', { nurseryId: entry.id })}
+                    storyRing={nurseryRingStatus.data?.nurseries[entry.id]}
+                  />
+                </React.Fragment>
+              ))}
+            </BorderCard>
           )}
-          ListHeaderComponent={<View style={styles.section}><Text style={styles.sectionTitleDark}>🌱 Nursery Rankings</Text></View>}
-          ListEmptyComponent={
-            nurseryBoard.isLoading ? null : <EmptyState icon="🌱" title="No nurseries ranked yet" body="Follow a nursery to help it climb the ranks." tint="light" />
-          }
-          ListFooterComponent={<Pager page={nurseryPage} totalPages={nurseryTotalPages} onChange={setNurseryPage} />}
-        />
+
+          <Pager page={nurseryPage} totalPages={nurseryTotalPages} onChange={setNurseryPage} />
+        </ScrollView>
       )}
     </View>
   );
@@ -555,7 +479,6 @@ export function CommunityScreen({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<Tab>('feed');
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [joinedIds, setJoinedIds] = useState<Set<string>>(new Set());
-  const [showAllRequests, setShowAllRequests] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const { playSound } = useSoundSystem();
   const insets = useSafeAreaInsets();
@@ -601,7 +524,7 @@ export function CommunityScreen({ navigation }: any) {
       </View>
 
       {/* Tab bar */}
-      <BorderCard noPadding borderRadius={RADIUS.xl} style={styles.tabBarDark}>
+      <BorderCard noPadding borderRadius={RADIUS.xl} style={[styles.tabBarDark, styles.noBorder]}>
         {(Object.keys(TAB_LABELS) as Tab[]).map(tab => (
           <TouchableOpacity
             key={tab}
@@ -636,26 +559,28 @@ export function CommunityScreen({ navigation }: any) {
             {friendRequests.length > 0 && (
               <>
                 <Text style={styles.sectionTitleDark}>Friend Requests</Text>
-                {(showAllRequests ? friendRequests : friendRequests.slice(0, 3)).map(request => (
-                  <FriendRequestRow
-                    key={request.id}
-                    request={request}
-                    onPress={() =>
-                      navigation.navigate('UserPublicProfile', {
-                        userId: request.from.id,
-                        friendRequestId: request.id,
-                        friendRequestFromName: request.from.name,
-                      })
-                    }
-                    onAccepted={celebrateFriendAccepted}
-                    storyRing={friendsRingStatus.data?.users[request.from.id]}
-                  />
-                ))}
+                <BorderCard noPadding style={styles.groupedList}>
+                  {friendRequests.slice(0, 3).map((request, i) => (
+                    <React.Fragment key={request.id}>
+                      {i > 0 && <View style={styles.rowDivider} />}
+                      <FriendRequestRow
+                        request={request}
+                        onPress={() =>
+                          navigation.navigate('UserPublicProfile', {
+                            userId: request.from.id,
+                            friendRequestId: request.id,
+                            friendRequestFromName: request.from.name,
+                          })
+                        }
+                        onAccepted={celebrateFriendAccepted}
+                        storyRing={friendsRingStatus.data?.users[request.from.id]}
+                      />
+                    </React.Fragment>
+                  ))}
+                </BorderCard>
                 {friendRequests.length > 3 && (
-                  <TouchableOpacity style={styles.seeAllButton} onPress={() => setShowAllRequests(v => !v)}>
-                    <Text style={styles.seeAllText}>
-                      {showAllRequests ? 'Show less' : `See all (${friendRequests.length})`}
-                    </Text>
+                  <TouchableOpacity style={styles.seeAllButton} onPress={() => navigation.navigate('FriendsList', { mode: 'requests' })}>
+                    <Text style={styles.seeAllText}>See all ({friendRequests.length})</Text>
                   </TouchableOpacity>
                 )}
               </>
@@ -669,15 +594,26 @@ export function CommunityScreen({ navigation }: any) {
                 tint="light"
               />
             ) : (
-              friends.map((friend, i) => (
-                <FriendCard
-                  key={friend.id}
-                  friend={friend}
-                  index={i}
-                  onPress={() => navigation.navigate('UserPublicProfile', { userId: friend.id })}
-                  storyRing={friendsRingStatus.data?.users[friend.id]}
-                />
-              ))
+              <>
+                <BorderCard noPadding style={styles.groupedList}>
+                  {friends.slice(0, 3).map((friend, i) => (
+                    <React.Fragment key={friend.id}>
+                      {i > 0 && <View style={styles.rowDivider} />}
+                      <FriendCard
+                        friend={friend}
+                        index={i}
+                        onPress={() => navigation.navigate('UserPublicProfile', { userId: friend.id })}
+                        storyRing={friendsRingStatus.data?.users[friend.id]}
+                      />
+                    </React.Fragment>
+                  ))}
+                </BorderCard>
+                {friends.length > 3 && (
+                  <TouchableOpacity style={styles.seeAllButton} onPress={() => navigation.navigate('FriendsList', { mode: 'squad' })}>
+                    <Text style={styles.seeAllText}>See all ({friends.length})</Text>
+                  </TouchableOpacity>
+                )}
+              </>
             )}
           </View>
         )}
@@ -693,9 +629,14 @@ export function CommunityScreen({ navigation }: any) {
                 tint="light"
               />
             ) : (
-              feed.map((activity, i) => (
-                <ActivityFeedItem key={activity.id} activity={activity} index={i} />
-              ))
+              <BorderCard noPadding style={styles.groupedList}>
+                {feed.map((activity, i) => (
+                  <React.Fragment key={activity.id}>
+                    {i > 0 && <View style={styles.rowDivider} />}
+                    <ActivityFeedItem activity={activity} index={i} />
+                  </React.Fragment>
+                ))}
+              </BorderCard>
             )}
           </View>
         )}
@@ -743,6 +684,9 @@ export function CommunityScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  noBorder: {
+    borderWidth: 0,
   },
   header: {
     flexDirection: 'row',
@@ -867,71 +811,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     marginTop: 4,
   },
-  friendCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
-  },
-  friendAvatarWrapper: {
-    position: 'relative',
-  },
-  friendAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  friendAvatarEmoji: {
-    fontSize: 26,
-  },
-  onlineDot: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#4CAF50',
-    borderWidth: 2,
-    borderColor: COLORS.white,
-  },
-  friendInfo: {
-    flex: 1,
-    gap: 2,
-  },
   friendNameDark: {
     fontSize: 15,
     fontWeight: '700',
     color: COLORS.textPrimary,
   },
-  friendStatsDark: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-  },
   friendActiveDark: {
     fontSize: 11,
     color: COLORS.textMuted,
-  },
-  friendRight: {
-    alignItems: 'center',
-    gap: 6,
-  },
-  friendLevelBadge: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  friendLevelText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.white,
-  },
-  friendArrowDark: {
-    fontSize: 22,
-    color: COLORS.textMuted,
-    fontWeight: '300',
   },
   challengeCard: {
     gap: 12,
@@ -1064,7 +951,14 @@ const styles = StyleSheet.create({
   },
   leaderRowUser: {
     backgroundColor: 'rgba(168,196,153,0.25)',
-    borderColor: COLORS.sage,
+  },
+  groupedList: {
+    marginBottom: 4,
+  },
+  rowDivider: {
+    height: 1,
+    backgroundColor: 'rgba(160,114,74,0.25)',
+    marginHorizontal: 14,
   },
   rankBadge: {
     width: 32,
@@ -1128,10 +1022,6 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     fontWeight: '500',
   },
-  requestActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
   seeAllButton: {
     alignSelf: 'center',
     paddingVertical: 8,
@@ -1143,34 +1033,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: COLORS.sageLight,
-  },
-  requestAccept: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  requestAcceptText: {
-    fontSize: 18,
-    color: COLORS.white,
-    fontWeight: '700',
-  },
-  requestDecline: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: COLORS.warmBrown,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  requestDeclineText: {
-    fontSize: 16,
-    color: COLORS.textPrimary,
-    fontWeight: '600',
   },
   addFriendPanel: {
     gap: 8,

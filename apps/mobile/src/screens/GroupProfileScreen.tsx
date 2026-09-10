@@ -135,6 +135,7 @@ export function GroupProfileScreen({ route, navigation }: any) {
           onEndReached={tab === 'posts' ? onEndReached : undefined}
           isFetchingNextPage={isFetchingNextPage}
           emptyTitle="No posts yet"
+          showEmptyState={tab === 'posts'}
           ListHeaderComponent={
             <>
               <ProfileHeader
@@ -229,8 +230,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: COLORS.warmBrown,
   },
   iconText: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   topBarTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center', marginHorizontal: 8 },

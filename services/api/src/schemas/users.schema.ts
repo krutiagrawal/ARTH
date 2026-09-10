@@ -22,6 +22,10 @@ export const updateSettingsSchema = z.object({
   locationTracking: z.boolean().optional(),
   publicProfile: z.boolean().optional(),
   analyticsEnabled: z.boolean().optional(),
+  pinnedTimeTheme: z
+    .enum(['dawn', 'morning', 'afternoon', 'goldenHour', 'sunset', 'blueHour', 'night', 'lateNight'])
+    .nullable()
+    .optional(),
 });
 
 export const changePasswordSchema = z.object({

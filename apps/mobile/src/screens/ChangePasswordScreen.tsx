@@ -124,8 +124,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: COLORS.warmBrown,
   },
   backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: {

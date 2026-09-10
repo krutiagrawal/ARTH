@@ -6,6 +6,10 @@ export const plantTreeSchema = z.object({
   lat: z.coerce.number().min(-90).max(90),
   lng: z.coerce.number().min(-180).max(180),
   locationLabel: z.string().max(200).optional(),
+  accuracy: z.coerce.number().nonnegative().optional(),
+  // Not z.coerce.boolean() — that treats any non-empty string, including "false", as truthy.
+  // This also conveniently defaults a missing field to plain `false` via the transform.
+  mocked: z.enum(['true', 'false']).optional().transform((v) => v === 'true'),
 });
 
 export const updateTreeSchema = z.object({

@@ -471,14 +471,41 @@ function computeHour(): number {
   return now.getHours() + now.getMinutes() / 60;
 }
 
-export function useTimeTheme(): TimeTheme {
-  const [theme, setTheme] = useState<TimeTheme>(() => getThemeForHour(computeHour()));
+/** A representative midpoint hour for each period, so a *pinned* theme can be looked up by
+ * period name rather than by hour. Mirrors the ranges in `getThemeForHour` above (same values
+ * noted in the `DEV_OVERRIDE_HOUR` comment). */
+export const PERIOD_HOUR: Record<TimePeriod, number> = {
+  dawn: 6.25,
+  morning: 8.5,
+  afternoon: 12.5,
+  goldenHour: 16.25,
+  sunset: 18.25,
+  blueHour: 19.5,
+  night: 21.5,
+  lateNight: 2,
+};
+
+function computeTheme(pinnedPeriod?: TimePeriod | null): TimeTheme {
+  const liveTheme = getThemeForHour(computeHour());
+  if (!pinnedPeriod) return liveTheme;
+  // Visuals come from the pinned period; the greeting/emoji always reflect the real clock, even
+  // when the rest of the look is pinned — so "Good morning" never shows over a Night sky.
+  return { ...getThemeForHour(PERIOD_HOUR[pinnedPeriod]), greeting: liveTheme.greeting, emoji: liveTheme.emoji };
+}
+
+/** @param pinnedPeriod When set, the visual theme (sky/hills/hero image/mascot/card colors) stays
+ * fixed to that period instead of following the real clock — used for the homepage's "keep a
+ * consistent look" setting. Omit (or pass `null`) for the normal, fully time-of-day-driven
+ * behavior — every existing call site with no argument is unaffected. */
+export function useTimeTheme(pinnedPeriod?: TimePeriod | null): TimeTheme {
+  const [theme, setTheme] = useState<TimeTheme>(() => computeTheme(pinnedPeriod));
 
   useEffect(() => {
-    const update = () => setTheme(getThemeForHour(computeHour()));
+    const update = () => setTheme(computeTheme(pinnedPeriod));
+    update();
     const interval = setInterval(update, 60_000);
     return () => clearInterval(interval);
-  }, []);
+  }, [pinnedPeriod]);
 
   return theme;
 }

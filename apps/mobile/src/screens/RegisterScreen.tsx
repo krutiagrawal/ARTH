@@ -65,7 +65,7 @@ export function RegisterScreen({ navigation }: any) {
       />
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <Text style={styles.logo}>ARTH</Text>
-        <Text style={styles.tagline}>grow your world</Text>
+        <Text style={styles.tagline}>Leave More Than Footprints</Text>
 
         <BorderCard style={styles.card}>
           <Text style={styles.title}>Create your forest</Text>
@@ -150,6 +150,7 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
+    borderWidth: 0,
   },
   title: {
     ...TYPOGRAPHY.h1,

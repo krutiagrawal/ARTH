@@ -19,6 +19,7 @@ import { deleteAccount } from '../api/auth';
 import type { ApiUserSettings } from '../api/settings';
 import { PRIVACY_POLICY_TEXT, TERMS_OF_SERVICE_TEXT } from '../constants/legalContent';
 import { SettingsRow, SettingsSectionHeader, SettingsDivider } from '../components/common/SettingsRow';
+import { getThemeForHour, PERIOD_HOUR, type TimePeriod } from '../hooks/useTimeTheme';
 
 const DEFAULT_SETTINGS: ApiUserSettings = {
   haptics: true,
@@ -30,6 +31,7 @@ const DEFAULT_SETTINGS: ApiUserSettings = {
   locationTracking: true,
   publicProfile: true,
   analyticsEnabled: true,
+  pinnedTimeTheme: null,
 };
 
 const { width: SW } = Dimensions.get('window');
@@ -236,6 +238,19 @@ export function SettingsScreen({ navigation }: any) {
               </TouchableOpacity>
             ))}
           </View>
+        </BorderCard>
+        <BorderCard noPadding>
+          <SettingsRow variant="light"
+            icon="🎨"
+            label="Homepage Theme"
+            sublabel={
+              settings.pinnedTimeTheme
+                ? `${getThemeForHour(PERIOD_HOUR[settings.pinnedTimeTheme as TimePeriod]).label} — always`
+                : 'Auto — changes with time of day'
+            }
+            accent={COLORS.golden}
+            onPress={() => navigation.navigate('HomeThemePicker', { current: settings.pinnedTimeTheme ?? null })}
+          />
         </BorderCard>
 
         {/* Notifications */}
@@ -458,8 +473,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: COLORS.warmBrown,
   },
   backIconDark: {
     fontSize: 18,
