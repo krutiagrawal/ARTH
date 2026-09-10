@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Linking } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
@@ -80,19 +80,8 @@ export function SettingsScreen({ navigation }: any) {
     );
   };
 
-  // "auto" has no backend equivalent (only a `darkMode` boolean, and no screen currently re-skins for it) —
-  // both light/auto persist as darkMode:false, this selector is cosmetic-only until dark mode is implemented.
-  const [selectedTheme, setSelectedTheme] = useState<'light' | 'dark' | 'auto'>(
-    settings.darkMode ? 'dark' : 'light'
-  );
-
   const toggle = (key: keyof ApiUserSettings) => {
     updateSettingsMutation.mutate({ [key]: !settings[key] });
-  };
-
-  const handleThemeSelect = (opt: 'light' | 'dark' | 'auto') => {
-    setSelectedTheme(opt);
-    updateSettingsMutation.mutate({ darkMode: opt === 'dark' });
   };
 
   const fadeStyle = useFadeIn(0);
@@ -220,25 +209,6 @@ export function SettingsScreen({ navigation }: any) {
 
         {/* Theme */}
         <SettingsSectionHeader title="Appearance" />
-        <BorderCard style={styles.themeSection}>
-          <Text style={styles.themeSectionLabelDark}>App Theme</Text>
-          <View style={styles.themeOptions}>
-            {(['light', 'dark', 'auto'] as const).map(opt => (
-              <TouchableOpacity
-                key={opt}
-                style={[styles.themeOptionDark, selectedTheme === opt && styles.themeOptionSelected]}
-                onPress={() => handleThemeSelect(opt)}
-              >
-                <Text style={styles.themeOptionIcon}>
-                  {opt === 'light' ? '☀️' : opt === 'dark' ? '🌙' : '🔄'}
-                </Text>
-                <Text style={[styles.themeOptionLabelDark, selectedTheme === opt && styles.themeOptionLabelSelected]}>
-                  {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </BorderCard>
         <BorderCard noPadding>
           <SettingsRow variant="light"
             icon="🎨"
@@ -529,43 +499,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: COLORS.white,
-  },
-  themeSection: {
-    gap: 12,
-  },
-  themeSectionLabelDark: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-  },
-  themeOptions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  themeOptionDark: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1.5,
-    borderColor: COLORS.warmBrown,
-    backgroundColor: 'transparent',
-    gap: 4,
-  },
-  themeOptionSelected: {
-    borderColor: COLORS.sage,
-    backgroundColor: 'rgba(135,168,120,0.22)',
-  },
-  themeOptionIcon: {
-    fontSize: 22,
-  },
-  themeOptionLabelDark: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-  },
-  themeOptionLabelSelected: {
-    color: COLORS.sageLight,
   },
   footer: {
     alignItems: 'center',

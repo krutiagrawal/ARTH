@@ -56,6 +56,11 @@ export function NgoSettingsScreen({ navigation }: any) {
     setApprovalRequired(profile.followPolicy === 'approval');
   }, [profile]);
 
+  const handleToggleApprovalRequired = useCallback((value: boolean) => {
+    setApprovalRequired(value);
+    updateMutation.mutate({ followPolicy: value ? 'approval' : 'open' });
+  }, [updateMutation]);
+
   /** The reference shows the logo as a round avatar well rather than the shared
    * rectangular drop zone, so this screen drives the picker itself. */
   const pickLogo = useCallback(async () => {
@@ -149,7 +154,7 @@ export function NgoSettingsScreen({ navigation }: any) {
                     : 'Anyone can follow you straight away and start seeing your updates.'}
                 </Text>
               </View>
-              <Toggle value={approvalRequired} onValueChange={setApprovalRequired} />
+              <Toggle value={approvalRequired} onValueChange={handleToggleApprovalRequired} />
             </View>
 
             <FormField label="Organization Name" value={orgName} onChangeText={setOrgName} placeholder="Your organization" />

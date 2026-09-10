@@ -38,6 +38,7 @@ export function EditNurseryProfileScreen({ navigation }: any) {
   const [contactPhone, setContactPhone] = useState('');
   const [offersDelivery, setOffersDelivery] = useState(true);
   const [deliveryRadiusKm, setDeliveryRadiusKm] = useState('');
+  const [approvalRequired, setApprovalRequired] = useState(false);
   const [logo, setLogo] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
@@ -56,7 +57,18 @@ export function EditNurseryProfileScreen({ navigation }: any) {
     setContactPhone(profile.contactPhone ?? '');
     setOffersDelivery(profile.offersDelivery);
     setDeliveryRadiusKm(profile.deliveryRadiusKm != null ? String(profile.deliveryRadiusKm) : '');
+    setApprovalRequired(profile.followPolicy === 'approval');
   }, [profile]);
+
+  const handleToggleDelivery = useCallback((value: boolean) => {
+    setOffersDelivery(value);
+    updateMutation.mutate({ offersDelivery: value });
+  }, [updateMutation]);
+
+  const handleToggleApprovalRequired = useCallback((value: boolean) => {
+    setApprovalRequired(value);
+    updateMutation.mutate({ followPolicy: value ? 'approval' : 'open' });
+  }, [updateMutation]);
 
   const pickLogo = useCallback(async () => {
     medium();
@@ -162,7 +174,7 @@ export function EditNurseryProfileScreen({ navigation }: any) {
                   <Text style={styles.deliveryLabel}>Offer delivery</Text>
                   <Text style={styles.deliveryHint}>Show up when planters filter for delivery</Text>
                 </View>
-                <Toggle value={offersDelivery} onValueChange={setOffersDelivery} offColor={COLORS.sand} onColor={COLORS.forest} />
+                <Toggle value={offersDelivery} onValueChange={handleToggleDelivery} offColor={COLORS.sand} onColor={COLORS.forest} />
               </View>
               {offersDelivery && (
                 <FormField
@@ -173,6 +185,20 @@ export function EditNurseryProfileScreen({ navigation }: any) {
                   keyboardType="number-pad"
                 />
               )}
+            </BorderCard>
+
+            <BorderCard noPadding style={styles.deliveryCard}>
+              <View style={styles.deliveryRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.deliveryLabel}>Approve each follower</Text>
+                  <Text style={styles.deliveryHint}>
+                    {approvalRequired
+                      ? 'Planters have to ask before they can follow you. Requests appear in Community → Requests.'
+                      : 'Anyone can follow you straight away and start seeing your updates.'}
+                  </Text>
+                </View>
+                <Toggle value={approvalRequired} onValueChange={handleToggleApprovalRequired} offColor={COLORS.sand} onColor={COLORS.forest} />
+              </View>
             </BorderCard>
 
             {error && <Text style={styles.error}>{error}</Text>}

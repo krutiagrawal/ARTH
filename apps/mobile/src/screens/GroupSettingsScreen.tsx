@@ -72,20 +72,12 @@ export function GroupSettingsScreen({ navigation }: any) {
   const [city, setCity] = useState('');
   const [logo, setLogo] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedTheme, setSelectedTheme] = useState<'light' | 'dark' | 'auto'>(
-    settings.darkMode ? 'dark' : 'light'
-  );
   const cardAnim = useSlideUp(0, 24);
   const { medium } = useHaptics();
   const logoUri = logo?.uri ?? resolveMediaUrl(profile?.logoUrl) ?? null;
 
   const toggle = (key: keyof ApiUserSettings) => {
     updateSettingsMutation.mutate({ [key]: !settings[key] });
-  };
-
-  const handleThemeSelect = (opt: 'light' | 'dark' | 'auto') => {
-    setSelectedTheme(opt);
-    updateSettingsMutation.mutate({ darkMode: opt === 'dark' });
   };
 
   const handleLogout = async () => {
@@ -291,26 +283,6 @@ export function GroupSettingsScreen({ navigation }: any) {
             />
           </BorderCard>
 
-          {/* Theme */}
-          <SettingsSectionHeader title="Appearance" />
-          <BorderCard style={styles.themeSection}>
-            <Text style={styles.themeSectionLabel}>App Theme</Text>
-            <View style={styles.themeOptions}>
-              {(['light', 'dark', 'auto'] as const).map((opt) => (
-                <TouchableOpacity
-                  key={opt}
-                  style={[styles.themeOption, selectedTheme === opt && styles.themeOptionSelected]}
-                  onPress={() => handleThemeSelect(opt)}
-                >
-                  <Text style={styles.themeOptionIcon}>{opt === 'light' ? '☀️' : opt === 'dark' ? '🌙' : '🔄'}</Text>
-                  <Text style={[styles.themeOptionLabel, selectedTheme === opt && styles.themeOptionLabelSelected]}>
-                    {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </BorderCard>
-
           {/* Notifications */}
           <SettingsSectionHeader title="Notifications" />
           <BorderCard noPadding>
@@ -499,23 +471,6 @@ const styles = StyleSheet.create({
   inviteLabel: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '600', textTransform: 'uppercase' },
   inviteCode: { fontSize: 24, fontWeight: '800', color: COLORS.forest, letterSpacing: 4, marginTop: 6 },
   regenerateText: { fontSize: 13, color: COLORS.coral, fontWeight: '700', marginTop: 12 },
-  themeSection: { gap: 12, marginTop: 8 },
-  themeSectionLabel: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary },
-  themeOptions: { flexDirection: 'row', gap: 8 },
-  themeOption: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1.5,
-    borderColor: COLORS.warmBrown,
-    backgroundColor: 'transparent',
-    gap: 4,
-  },
-  themeOptionSelected: { borderColor: COLORS.sage, backgroundColor: 'rgba(135,168,120,0.22)' },
-  themeOptionIcon: { fontSize: 22 },
-  themeOptionLabel: { fontSize: 12, fontWeight: '600', color: COLORS.textPrimary },
-  themeOptionLabelSelected: { color: COLORS.sageLight },
   footer: { alignItems: 'center', gap: 6, paddingVertical: 16, marginTop: 8 },
   footerEmoji: { fontSize: 24 },
   footerText: { fontSize: 12, color: COLORS.textSecondary, textAlign: 'center' },

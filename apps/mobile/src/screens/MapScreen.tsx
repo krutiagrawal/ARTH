@@ -27,6 +27,7 @@ import {
   useBrowseNurseries,
   useApprovedPlantingLocations,
   useCheckPlantingEligibility,
+  useSettings,
 } from '../hooks/useApiQueries';
 import { EmptyState } from '../components/common/EmptyState';
 import { StatDisplay } from '../components/common/StatDisplay';
@@ -368,6 +369,8 @@ export function MapScreen({ navigation, mode = 'user' }: any) {
   const [checkingEligibility, setCheckingEligibility] = useState(false);
   const [statusModal, setStatusModal] = useState<'locationUnavailable' | 'notApproved' | 'checkFailed' | null>(null);
   const [infoLocation, setInfoLocation] = useState<ApiApprovedLocation | null>(null);
+  const { data: settings } = useSettings();
+  const locationTrackingEnabled = settings?.locationTracking ?? true;
 
   const isNight = theme.mascotOutfit === 'night';
   const statesCount = new Set(
@@ -375,6 +378,9 @@ export function MapScreen({ navigation, mode = 'user' }: any) {
   ).size;
 
   useEffect(() => {
+    // Centering the map on the user's own position is ambient/automatic — it respects the
+    // Location Tracking preference, unlike explicit actions like planting a tree.
+    if (!locationTrackingEnabled) { setLocationPending(false); return; }
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') { setLocationPending(false); return; }
@@ -386,7 +392,7 @@ export function MapScreen({ navigation, mode = 'user' }: any) {
       } catch {}
       setLocationPending(false);
     })();
-  }, []);
+  }, [locationTrackingEnabled]);
 
   const ngoPoints = isNgo
     ? ([...drives, ...adoptableTrees] as Array<{ lat: number | null; lng: number | null }>)
