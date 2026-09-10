@@ -97,8 +97,8 @@ function AddFriendPanel({ onClose, navigation }: { onClose: () => void; navigati
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
 
   return (
-    <BorderCard style={styles.addFriendPanel}>
-      <View style={styles.addFriendHeader}>
+    <View style={styles.addFriendPanel}>
+      <View style={styles.addFriendSearchBox}>
         <TextInput
           style={styles.addFriendInputDark}
           placeholder="Search by name or handle..."
@@ -107,7 +107,7 @@ function AddFriendPanel({ onClose, navigation }: { onClose: () => void; navigati
           onChangeText={setQuery}
           autoCapitalize="none"
         />
-        <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel="Close search">
+        <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel="Close search" hitSlop={8}>
           <Text style={styles.addFriendCloseDark}>✕</Text>
         </TouchableOpacity>
       </View>
@@ -143,7 +143,7 @@ function AddFriendPanel({ onClose, navigation }: { onClose: () => void; navigati
           </TouchableOpacity>
         </TouchableOpacity>
       ))}
-    </BorderCard>
+    </View>
   );
 }
 
@@ -1084,18 +1084,21 @@ const styles = StyleSheet.create({
   addFriendPanel: {
     gap: 8,
   },
-  addFriendHeader: {
+  addFriendSearchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
+    width: '100%',
+    borderRadius: RADIUS.full,
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
+    paddingLeft: 16,
+    paddingRight: 12,
+    paddingVertical: 4,
   },
   addFriendInputDark: {
     flex: 1,
     backgroundColor: 'transparent',
-    borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-    borderColor: COLORS.warmBrown,
-    paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
     color: COLORS.textPrimary,
