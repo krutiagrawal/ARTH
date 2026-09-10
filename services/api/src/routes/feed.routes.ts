@@ -14,7 +14,6 @@ export default async function feedRoutes(fastify: FastifyInstance) {
         where: { status: 'accepted', OR: [{ requesterId: userId }, { addresseeId: userId }] },
       });
       userIds = friendships.map((f) => (f.requesterId === userId ? f.addresseeId : f.requesterId));
-      userIds.push(userId);
     }
 
     const items = await fastify.prisma.activityFeed.findMany({
