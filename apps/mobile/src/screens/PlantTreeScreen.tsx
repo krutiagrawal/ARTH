@@ -22,7 +22,7 @@ import { RADIUS, SHADOWS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { StatusModal } from '../components/common/StatusModal';
-import { Mascot } from '../components/common/Mascot';
+import { MascotBubble } from '../components/common/Mascot';
 import { FloatingParticles } from '../components/common/FloatingParticles';
 import { useHaptics } from '../hooks/useHaptics';
 import { useSpecies, useCreateSpecies } from '../hooks/useApiQueries';
@@ -35,6 +35,7 @@ import type { VerifyPlantingPhotoResult } from '../api/trees';
 import { NOT_APPROVED_MESSAGE } from '../constants/plantingLocation';
 import { getCurrentPositionWithTimeout } from '../utils/location';
 import { EFFECTIVE_WIDTH } from '../utils/responsive';
+import { useBottomNavClearance } from '../components/navigation/BottomNav';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -159,32 +160,29 @@ function SuccessAnimation({ treeName, xpEarned }: { treeName: string; xpEarned: 
 
   return (
     <View style={styles.successContainer}>
-      <FloatingParticles count={16} type="petal" />
+      <FloatingParticles count={22} type="petal" />
 
-      <Animated.View style={[styles.successCheck, checkStyle]}>
-        <LinearGradient
-          colors={[COLORS.sageLight, COLORS.forest]}
-          style={styles.successCheckGradient}
-        >
-          <Text style={styles.successCheckIcon}>🌱</Text>
-        </LinearGradient>
-      </Animated.View>
+      <View style={styles.successCard}>
+        <Animated.View style={[styles.successCheck, checkStyle]}>
+          <LinearGradient
+            colors={[COLORS.sageLight, COLORS.forest]}
+            style={styles.successCheckGradient}
+          >
+            <Text style={styles.successCheckIcon}>🌱</Text>
+          </LinearGradient>
+        </Animated.View>
 
-      <Animated.View style={[styles.successText, textStyle]}>
-        <Text style={styles.successTitle}>Tree Added! 🎉</Text>
-        <Text style={styles.successSubtitle}>
-          "{treeName}" has joined your forest
-        </Text>
-        <View style={styles.successXp}>
-          <Text style={styles.successXpText}>+{xpEarned} XP earned</Text>
-        </View>
-      </Animated.View>
+        <Animated.View style={[styles.successText, textStyle]}>
+          <Text style={styles.successTitle}>Tree Added! 🎉</Text>
+          <Text style={styles.successSubtitle}>
+            "{treeName}" has joined your forest
+          </Text>
+          <View style={styles.successXp}>
+            <Text style={styles.successXpText}>+{xpEarned} XP earned</Text>
+          </View>
+        </Animated.View>
 
-      <View style={styles.successMascot}>
-        <Mascot size={100} mood="proud" animate />
-        <View style={styles.successBubble}>
-          <Text style={styles.successBubbleText}>Amazing! Your forest grows stronger 🌿</Text>
-        </View>
+        <MascotBubble message="Amazing! Your forest grows stronger 🌿" size={90} mood="proud" />
       </View>
     </View>
   );
@@ -218,6 +216,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
   const [rejectionReason, setRejectionReason] = useState('');
   const { success, medium } = useHaptics();
   const insets = useSafeAreaInsets();
+  const bottomNavClearance = useBottomNavClearance(8);
 
   const { data: speciesList = [] } = useSpecies();
   const createSpeciesMutation = useCreateSpecies();
@@ -641,7 +640,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
       {stage === 'success' && (
         <>
           <SuccessAnimation treeName={nickname || selectedSpecies?.commonName || 'your tree'} xpEarned={xpEarned} />
-          <View style={[styles.successDoneButton, { paddingBottom: insets.bottom + 24 }]}>
+          <View style={[styles.successDoneButton, { paddingBottom: bottomNavClearance }]}>
             <AnimatedButton
               label="View My Forest 🌳"
               onPress={handleDone}
@@ -1002,7 +1001,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 28,
-    gap: 24,
+  },
+  successCard: {
+    width: '100%',
+    alignItems: 'center',
+    gap: 22,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    borderRadius: RADIUS.xl,
+    borderWidth: 1.5,
+    borderColor: COLORS.sand,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    ...SHADOWS.md,
   },
   successCheck: {
     ...SHADOWS.sage,
@@ -1043,27 +1053,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: COLORS.xpBlue,
-  },
-  successMascot: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 12,
-  },
-  successBubble: {
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    borderBottomLeftRadius: 4,
-    padding: 12,
-    maxWidth: 180,
-    ...SHADOWS.sm,
-    borderWidth: 1,
-    borderColor: COLORS.sand,
-  },
-  successBubbleText: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: COLORS.textPrimary,
-    fontWeight: '500',
   },
   successDoneButton: {
     paddingHorizontal: 24,
