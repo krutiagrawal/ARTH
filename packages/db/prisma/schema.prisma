@@ -264,6 +264,8 @@ enum ReportStatus {
 }
 
 enum NotificationType {
+  friend_request
+  friend_request_accepted
   follow_request
   follow_accepted
   new_follower

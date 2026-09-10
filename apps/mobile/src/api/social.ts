@@ -58,6 +58,8 @@ export async function unblockTarget(input: { userId?: string; ngoId?: string }):
 // ---------- Notifications ----------
 
 export type NotificationType =
+  | 'friend_request'
+  | 'friend_request_accepted'
   | 'follow_request'
   | 'follow_accepted'
   | 'new_follower'

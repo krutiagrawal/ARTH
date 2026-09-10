@@ -15,6 +15,10 @@ import { useMarkNotificationsRead, useNotifications } from '../hooks/useSocialQu
 /** One line of copy per notification type. The actor's name is rendered separately, in bold. */
 function describe(n: ApiNotification): string {
   switch (n.type) {
+    case 'friend_request':
+      return 'wants to be your friend';
+    case 'friend_request_accepted':
+      return 'accepted your friend request';
     case 'follow_request':
       return 'asked to follow you';
     case 'follow_accepted':
@@ -52,6 +56,10 @@ function describe(n: ApiNotification): string {
 
 function iconFor(n: ApiNotification): string {
   switch (n.type) {
+    case 'friend_request':
+      return '🧑‍🤝‍🧑';
+    case 'friend_request_accepted':
+      return '🌱';
     case 'follow_request':
       return '📬';
     case 'follow_accepted':
@@ -202,6 +210,14 @@ export function NotificationsScreen({ navigation }: any) {
       }
       if (n.type === 'follow_request') {
         navigation.navigate('NgoMain');
+        return;
+      }
+      if (n.type === 'friend_request') {
+        navigation.navigate('FriendsList', { mode: 'requests' });
+        return;
+      }
+      if (n.type === 'friend_request_accepted' && n.actor) {
+        navigation.navigate('UserPublicProfile', { userId: n.actor.id });
         return;
       }
       if (n.type === 'cart_abandoned') {

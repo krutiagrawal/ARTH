@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { createFriendRequestSchema } from '../schemas/friends.schema';
 import { BadRequestError, ConflictError, NotFoundError } from '../utils/errors';
+import { notify } from '../services/notification.service';
 
 function otherUser(friendship: any, userId: string) {
   return friendship.requesterId === userId ? friendship.addressee : friendship.requester;
@@ -73,6 +74,17 @@ export default async function friendsRoutes(fastify: FastifyInstance) {
       data: { requesterId: userId, addresseeId: parsed.data.addresseeId },
     });
 
+    const requester = await fastify.prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+    await notify(fastify.prisma, {
+      userId: parsed.data.addresseeId,
+      type: 'friend_request',
+      actorUserId: userId,
+      push: {
+        title: requester?.name ?? 'Someone',
+        body: 'wants to be your friend',
+      },
+    });
+
     reply.status(201).send(friendship);
   });
 
@@ -85,6 +97,17 @@ export default async function friendsRoutes(fastify: FastifyInstance) {
     const updated = await fastify.prisma.friendship.update({
       where: { id: friendship.id },
       data: { status: 'accepted', respondedAt: new Date() },
+    });
+
+    const accepter = await fastify.prisma.user.findUnique({ where: { id: request.user!.id }, select: { name: true } });
+    await notify(fastify.prisma, {
+      userId: friendship.requesterId,
+      type: 'friend_request_accepted',
+      actorUserId: request.user!.id,
+      push: {
+        title: accepter?.name ?? 'Someone',
+        body: 'accepted your friend request',
+      },
     });
 
     reply.send(updated);

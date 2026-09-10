@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { getAccessToken, getRefreshToken, clearTokens } from '../api/tokenStorage';
 import { ApiError, setAccountBlockedHandler, setUnauthorizedHandler } from '../api/client';
 import * as authApi from '../api/auth';
@@ -79,10 +80,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockReason, setBlockReason] = useState<string | null>(null);
   const mountedRef = useRef(true);
+  const queryClient = useQueryClient();
 
+  // Every query key in this app (friends, requests, feed, notifications, ...) is keyed by
+  // resource, not by user id, so react-query's cache — and its 30s staleTime — otherwise survives
+  // a logout/login on the same device: the next account mounts the same screens, sees the
+  // previous account's still-"fresh" cached data, and doesn't refetch. Wiping the cache on every
+  // auth transition is what makes account switching show the right account's data immediately.
   const forceLogout = useCallback(() => {
     if (mountedRef.current) setUser(null);
-  }, []);
+    queryClient.clear();
+  }, [queryClient]);
 
   const handleAccountBlocked = useCallback((reason: string | null) => {
     if (!mountedRef.current) return;
@@ -123,18 +131,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     const loggedInUser = await authApi.login({ email, password });
+    queryClient.clear();
     setUser(loggedInUser);
     setIsBlocked(false);
     setBlockReason(null);
     return loggedInUser;
-  }, []);
+  }, [queryClient]);
 
   const register = useCallback(
     async (input: { email: string; password: string; name: string; handle: string }) => {
       const registeredUser = await authApi.register(input);
+      queryClient.clear();
       setUser(registeredUser);
     },
-    []
+    [queryClient]
   );
 
   const registerNgo = useCallback(
@@ -149,9 +159,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       contactPhone?: string;
     }) => {
       const registeredUser = await authApi.registerNgo(input);
+      queryClient.clear();
       setUser(registeredUser);
     },
-    []
+    [queryClient]
   );
 
   const registerGroup = useCallback(
@@ -165,9 +176,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       description: string;
     }) => {
       const registeredUser = await authApi.registerGroup(input);
+      queryClient.clear();
       setUser(registeredUser);
     },
-    []
+    [queryClient]
   );
 
   const registerNursery = useCallback(
@@ -182,9 +194,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       contactPhone?: string;
     }) => {
       const registeredUser = await authApi.registerNursery(input);
+      queryClient.clear();
       setUser(registeredUser);
     },
-    []
+    [queryClient]
   );
 
   const registerCorporate = useCallback(
@@ -199,17 +212,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       city?: string;
     }) => {
       const registeredUser = await authApi.registerCorporate(input);
+      queryClient.clear();
       setUser(registeredUser);
     },
-    []
+    [queryClient]
   );
 
   const logout = useCallback(async () => {
     await authApi.logout();
+    queryClient.clear();
     setUser(null);
     setIsBlocked(false);
     setBlockReason(null);
-  }, []);
+  }, [queryClient]);
 
   const refreshUser = useCallback(async () => {
     const me = await authApi.fetchMe();
