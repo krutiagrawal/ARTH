@@ -18,7 +18,7 @@ export function useDeviceWeather() {
           if (mounted) setPermissionDenied(true);
           return;
         }
-        const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
         if (!mounted) return;
         setCoords({ lat: position.coords.latitude, lng: position.coords.longitude });
 
