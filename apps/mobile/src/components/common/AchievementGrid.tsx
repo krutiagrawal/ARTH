@@ -7,6 +7,9 @@ import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
 import { RADIUS, SPACING } from '../../constants/theme';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { Sheet } from './Sheet';
+import { AnimatedButton } from './AnimatedButton';
+import { ShareCardModal } from './ShareCardModal';
+import { AchievementShareCard } from '../share/AchievementShareCard';
 import { useScaleIn } from '../../hooks/useAnimations';
 import { useTimeTheme, isNightlikePeriod } from '../../hooks/useTimeTheme';
 import type { ApiAchievement } from '../../api/achievements';
@@ -21,7 +24,7 @@ import type { ApiAchievement } from '../../api/achievements';
 
 const { width: SW } = Dimensions.get('window');
 
-const RARITY_COLORS: Record<string, [string, string]> = {
+export const RARITY_COLORS: Record<string, [string, string]> = {
   common: [COLORS.sage, COLORS.sageDark],
   rare: [COLORS.xpBlue, COLORS.xpBlueDark],
   epic: [COLORS.coral, '#C0392B'],
@@ -115,6 +118,7 @@ export function AchievementDetailModal({
 }) {
   const { period } = useTimeTheme();
   const isNightMode = isNightlikePeriod(period);
+  const [shareVisible, setShareVisible] = useState(false);
 
   return (
     <Sheet visible={!!achievement} onClose={onClose} variant="fade" title={achievement?.title}>
@@ -145,9 +149,30 @@ export function AchievementDetailModal({
               </Text>
             </View>
           )}
-          {achievement.unlocked && <Text style={styles.achievementModalUnlocked}>✓ Unlocked</Text>}
+          {achievement.unlocked && (
+            <>
+              <Text style={styles.achievementModalUnlocked}>✓ Unlocked</Text>
+              <AnimatedButton
+                label="Share to Instagram"
+                icon="📸"
+                variant="secondary"
+                size="sm"
+                style={styles.achievementShareButton}
+                onPress={() => setShareVisible(true)}
+              />
+            </>
+          )}
         </View>
       )}
+
+      <ShareCardModal
+        visible={shareVisible}
+        onClose={() => setShareVisible(false)}
+        title="Share your achievement"
+        caption={achievement ? `I just unlocked "${achievement.title}" on ARTH 🏅` : undefined}
+      >
+        <AchievementShareCard achievement={achievement} />
+      </ShareCardModal>
     </Sheet>
   );
 }
@@ -285,6 +310,9 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.bodySmall,
     fontWeight: '700',
     color: COLORS.sageDark,
+    marginTop: SPACING.md,
+  },
+  achievementShareButton: {
     marginTop: SPACING.md,
   },
 });

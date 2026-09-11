@@ -7,6 +7,7 @@ import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
 import { RADIUS, SPACING, GLASS_DARK_STYLE } from '../../constants/theme';
 import { usePostStory } from '../../hooks/useApiQueries';
 import { useConfirm } from '../../context/ConfirmDialogContext';
+import { shareImageToInstagramStory } from '../../utils/shareToInstagram';
 
 export function StoryPreviewModal({
   visible,
@@ -27,6 +28,12 @@ export function StoryPreviewModal({
   useEffect(() => {
     if (visible) setCaption('');
   }, [visible]);
+
+  const handleShareInstagram = () => {
+    if (!previewUri) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    shareImageToInstagramStory(previewUri, caption);
+  };
 
   const handlePost = () => {
     if (!imageBase64) return;
@@ -69,6 +76,14 @@ export function StoryPreviewModal({
           </View>
         </View>
 
+        <TouchableOpacity
+          style={[styles.instagramButton, !imageBase64 && styles.postButtonDisabled]}
+          onPress={handleShareInstagram}
+          disabled={!imageBase64}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.instagramButtonText}>Share to Instagram  📸</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={[styles.postButton, postStoryMutation.isPending && styles.postButtonDisabled]}
           onPress={handlePost}
@@ -116,6 +131,20 @@ const styles = StyleSheet.create({
     maxHeight: 100,
     paddingHorizontal: 14,
     paddingVertical: 12,
+  },
+  instagramButton: {
+    backgroundColor: 'rgba(135,168,120,0.15)',
+    borderWidth: 1.5,
+    borderColor: COLORS.sage,
+    borderRadius: RADIUS.full,
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+  },
+  instagramButtonText: {
+    color: COLORS.forest,
+    fontSize: 16,
+    fontWeight: '800',
   },
   postButton: {
     backgroundColor: COLORS.forest,

@@ -31,7 +31,9 @@ import { useCheckPlantingEligibility } from '../hooks/useApiQueries';
 import { useVerifyPlantingPhoto } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import { SPECIES_EMOJI_OPTIONS } from '../api/species';
-import type { VerifyPlantingPhotoResult } from '../api/trees';
+import type { VerifyPlantingPhotoResult, ApiTree } from '../api/trees';
+import { ShareCardModal } from '../components/common/ShareCardModal';
+import { TreePlantedShareCard } from '../components/share/TreePlantedShareCard';
 import { NOT_APPROVED_MESSAGE } from '../constants/plantingLocation';
 import { getCurrentPositionWithTimeout } from '../utils/location';
 import { EFFECTIVE_WIDTH } from '../utils/responsive';
@@ -326,6 +328,8 @@ export function PlantTreeScreen({ navigation, route }: any) {
   }, [fetchLocation]);
 
   const [xpEarned, setXpEarned] = useState(0);
+  const [plantedTree, setPlantedTree] = useState<ApiTree | null>(null);
+  const [shareVisible, setShareVisible] = useState(false);
 
   const handleSubmit = useCallback(async () => {
     if (!selectedSpecies || !imageUri) return;
@@ -368,6 +372,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
       });
 
       setXpEarned(tree.xpEarned);
+      setPlantedTree(tree);
       success();
       setStage('success');
     } catch (e) {
@@ -666,9 +671,22 @@ export function PlantTreeScreen({ navigation, route }: any) {
               size="lg"
               fullWidth
             />
+            <AnimatedButton
+              label="Share"
+              icon="📸"
+              onPress={() => setShareVisible(true)}
+              variant="secondary"
+              size="lg"
+              fullWidth
+              style={styles.successShareButton}
+            />
           </View>
         </>
       )}
+
+      <ShareCardModal visible={shareVisible} onClose={() => setShareVisible(false)} title="Share your tree" caption="I just planted a tree with ARTH 🌱">
+        <TreePlantedShareCard tree={plantedTree} imageUri={imageUri} />
+      </ShareCardModal>
 
       <StatusModal
         visible={showNotApprovedModal}
@@ -713,7 +731,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   backIcon: {
-    fontSize: 18,
+    fontSize: 26,
     color: COLORS.textPrimary,
     fontWeight: '700',
   },
@@ -1078,5 +1096,8 @@ const styles = StyleSheet.create({
   },
   successDoneButton: {
     paddingHorizontal: 24,
+  },
+  successShareButton: {
+    marginTop: 12,
   },
 });
