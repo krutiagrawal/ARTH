@@ -3,6 +3,16 @@ import { z } from 'zod'
 import { apiRequest, ApiError } from '@/lib/apiClient'
 import { setAuthCookies } from '@/lib/apiProxy'
 
+// Prepends https:// when the user typed a bare domain (e.g. "www.example.com") instead of a
+// full URL — the plain z.string().url() rejects that outright even though it's the natural
+// thing to type into a "Website" field.
+const websiteUrl = z.preprocess((value) => {
+  if (typeof value !== 'string') return value
+  const trimmed = value.trim()
+  if (!trimmed || /^https?:\/\//i.test(trimmed)) return trimmed
+  return `https://${trimmed}`
+}, z.string().url().optional().or(z.literal('')))
+
 const schema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
@@ -13,7 +23,7 @@ const schema = z.object({
     .regex(/^[a-z0-9_]+$/, 'Handle may only contain lowercase letters, numbers, and underscores'),
   orgName: z.string().min(1),
   description: z.string().min(1),
-  website: z.string().url().optional().or(z.literal('')),
+  website: websiteUrl,
   contactPhone: z.string().optional(),
 })
 

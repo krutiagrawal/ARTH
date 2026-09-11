@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { websiteUrlSchema } from '../utils/websiteUrl';
 
 export const registerSchema = z.object({
   email: z.string().email(),
@@ -42,7 +43,7 @@ export const registerNgoSchema = z.object({
     .regex(/^[a-z0-9_]+$/, 'Handle may only contain lowercase letters, numbers, and underscores'),
   orgName: z.string().min(1).max(120),
   description: z.string().min(1).max(2000),
-  website: z.string().url().max(300).optional(),
+  website: websiteUrlSchema.optional(),
   contactPhone: z.string().max(30).optional(),
   deviceInfo: z.string().max(200).optional(),
 });
