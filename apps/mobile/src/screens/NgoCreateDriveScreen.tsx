@@ -14,6 +14,7 @@ import { useSlideUp } from '../hooks/useAnimations';
 import { PhotoPickerField, PickedPhoto } from '../components/common/PhotoPickerField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField, FormFieldShell } from '../components/common/FormField';
+import { CityPickerField } from '../components/common/CityPickerField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { useConfirm } from '../context/ConfirmDialogContext';
 
@@ -28,24 +29,48 @@ interface PlantDraft {
 }
 
 function DateField({ label, value, onChange }: { label: string; value: Date; onChange: (d: Date) => void }) {
-  const [showPicker, setShowPicker] = useState(false);
+  // Android has no real combined "datetime" mode — the library fakes it by chaining a date
+  // dialog into a time dialog internally, and unmounting the picker as soon as the first
+  // (date) callback fires — which we used to do via `setShowPicker(false)` — tears down that
+  // chain mid-flight and crashes with "Cannot read property 'dismiss' of undefined". Driving
+  // the date→time sequence ourselves keeps the component mounted across both native dialogs.
+  const [step, setStep] = useState<'date' | 'time' | null>(null);
+
+  const handleChange = (event: any, selected?: Date) => {
+    if (Platform.OS === 'ios') {
+      if (selected) onChange(selected);
+      return;
+    }
+    if (event.type !== 'set' || !selected) {
+      setStep(null);
+      return;
+    }
+    if (step === 'date') {
+      const next = new Date(value);
+      next.setFullYear(selected.getFullYear(), selected.getMonth(), selected.getDate());
+      onChange(next);
+      setStep('time');
+    } else {
+      const next = new Date(value);
+      next.setHours(selected.getHours(), selected.getMinutes());
+      onChange(next);
+      setStep(null);
+    }
+  };
 
   return (
     <>
-      <TouchableOpacity activeOpacity={0.8} onPress={() => setShowPicker(true)}>
+      <TouchableOpacity activeOpacity={0.8} onPress={() => setStep('date')}>
         <FormFieldShell label={label}>
           <Text style={styles.inputText}>{value.toLocaleString()}</Text>
         </FormFieldShell>
       </TouchableOpacity>
-      {showPicker && (
+      {step && (
         <DateTimePicker
           value={value}
-          mode="datetime"
+          mode={Platform.OS === 'ios' ? 'datetime' : step}
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={(event, date) => {
-            setShowPicker(Platform.OS === 'ios');
-            if (date) onChange(date);
-          }}
+          onChange={handleChange}
         />
       )}
     </>
@@ -61,7 +86,7 @@ export function NgoCreateDriveScreen({ navigation }: any) {
   const [description, setDescription] = useState('');
   const [instructions, setInstructions] = useState('');
   const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
+  const [city, setCity] = useState('Pune');
   const [transportMode, setTransportMode] = useState<'self_arrange' | 'ngo_provided'>('self_arrange');
   const [pickupPoints, setPickupPoints] = useState<PickupPointDraft[]>([]);
   const [plants, setPlants] = useState<PlantDraft[]>([]);
@@ -146,7 +171,7 @@ export function NgoCreateDriveScreen({ navigation }: any) {
           <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="What will volunteers do?" />
           <FormField label="Instructions for Volunteers" value={instructions} onChangeText={setInstructions} multiline placeholder="What to carry, weather, meeting point" />
           <FormField label="Address" value={address} onChangeText={setAddress} multiline placeholder="Street / Landmark" />
-          <FormField label="City" value={city} onChangeText={setCity} placeholder="Select city" />
+          <CityPickerField value={city} onChange={setCity} />
 
           <Text style={styles.sectionLabel}>Transport</Text>
           <View style={styles.chipRow}>

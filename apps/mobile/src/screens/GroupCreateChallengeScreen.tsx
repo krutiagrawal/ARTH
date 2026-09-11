@@ -23,23 +23,48 @@ const GOAL_TYPES: { value: 'trees_planted_count' | 'cities_count' | 'streak_days
 ];
 
 function DateField({ label, value, onChange }: { label: string; value: Date; onChange: (d: Date) => void }) {
-  const [showPicker, setShowPicker] = useState(false);
+  // Android has no real combined "datetime" mode — the library fakes it by chaining a date
+  // dialog into a time dialog internally, and unmounting the picker as soon as the first
+  // (date) callback fires — which we used to do via `setShowPicker(false)` — tears down that
+  // chain mid-flight and crashes with "Cannot read property 'dismiss' of undefined". Driving
+  // the date→time sequence ourselves keeps the component mounted across both native dialogs.
+  const [step, setStep] = useState<'date' | 'time' | null>(null);
+
+  const handleChange = (event: any, selected?: Date) => {
+    if (Platform.OS === 'ios') {
+      if (selected) onChange(selected);
+      return;
+    }
+    if (event.type !== 'set' || !selected) {
+      setStep(null);
+      return;
+    }
+    if (step === 'date') {
+      const next = new Date(value);
+      next.setFullYear(selected.getFullYear(), selected.getMonth(), selected.getDate());
+      onChange(next);
+      setStep('time');
+    } else {
+      const next = new Date(value);
+      next.setHours(selected.getHours(), selected.getMinutes());
+      onChange(next);
+      setStep(null);
+    }
+  };
+
   return (
     <>
-      <TouchableOpacity activeOpacity={0.8} onPress={() => setShowPicker(true)}>
+      <TouchableOpacity activeOpacity={0.8} onPress={() => setStep('date')}>
         <FormFieldShell label={label}>
           <Text style={styles.inputText}>{value.toLocaleString()}</Text>
         </FormFieldShell>
       </TouchableOpacity>
-      {showPicker && (
+      {step && (
         <DateTimePicker
           value={value}
-          mode="datetime"
+          mode={Platform.OS === 'ios' ? 'datetime' : step}
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={(event, date) => {
-            setShowPicker(Platform.OS === 'ios');
-            if (date) onChange(date);
-          }}
+          onChange={handleChange}
         />
       )}
     </>
