@@ -86,7 +86,7 @@ export function NurseryBulkRequirementsScreen({ navigation }: any) {
 
       <ScreenHeader title="Bulk Requirements" subtitle="NGO drives looking for saplings" onBack={navigation?.canGoBack?.() ? () => navigation.goBack() : undefined} />
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll} contentContainerStyle={styles.tabsRow}>
         {TABS.map((t) => (
           <TouchableOpacity key={t.key} onPress={() => setTab(t.key)} style={[styles.tab, tab === t.key && styles.tabActive]}>
             <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>{t.label}</Text>
@@ -111,7 +111,14 @@ export function NurseryBulkRequirementsScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  tabsRow: { paddingHorizontal: SPACING.md, gap: 8, paddingVertical: 10 },
+  // A horizontal ScrollView doesn't reliably self-size its height to content (especially on
+  // Android) — flexGrow: 0 pins it to its content height rather than letting it fill whatever
+  // space this flex-column screen gives it. See NurseryOrdersScreen.tsx's tabsScroll comment.
+  tabsScroll: { flexGrow: 0 },
+  // alignItems: 'center' is load-bearing — see NurseryOrdersScreen.tsx's tabsRow comment: without
+  // it a horizontal ScrollView's chips stretch to fill the row's cross-axis height instead of
+  // sizing to their own text.
+  tabsRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, gap: 8, paddingVertical: 10 },
   tab: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: 'rgba(94,133,80,0.08)' },
   tabActive: { backgroundColor: COLORS.forest },
   tabText: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },

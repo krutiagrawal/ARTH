@@ -186,14 +186,14 @@ const ACTIVITY_COPY: Record<string, (data: Record<string, any>) => { icon: strin
   nursery_impact_milestone: (d) => ({ icon: '🏆', text: d.message ?? 'You hit an impact milestone!' }),
 };
 
-function ActivityRow({ item }: { item: ApiNurseryActivityItem }) {
+function ActivityRow({ item, seamText }: { item: ApiNurseryActivityItem; seamText: { primary: string; secondary: string } }) {
   const copy = ACTIVITY_COPY[item.type]?.(item.data ?? {}) ?? { icon: '📌', text: item.type };
   return (
     <BorderCard noPadding style={styles.activityRow}>
       <Text style={styles.activityIcon}>{copy.icon}</Text>
       <View style={{ flex: 1 }}>
-        <Text style={styles.activityText}>{copy.text}</Text>
-        <Text style={styles.activityTime}>{new Date(item.createdAt).toLocaleString()}</Text>
+        <Text style={[styles.activityText, { color: seamText.primary }]}>{copy.text}</Text>
+        <Text style={[styles.activityTime, { color: seamText.secondary }]}>{new Date(item.createdAt).toLocaleString()}</Text>
       </View>
     </BorderCard>
   );
@@ -402,7 +402,7 @@ export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDas
             ) : (
               <View style={styles.activityList}>
                 {today.activity.slice(0, 10).map((item) => (
-                  <ActivityRow key={item.id} item={item} />
+                  <ActivityRow key={item.id} item={item} seamText={seamText} />
                 ))}
               </View>
             )}
@@ -480,6 +480,7 @@ const styles = StyleSheet.create({
   activityList: { gap: 8, marginTop: 4 },
   activityRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
   activityIcon: { fontSize: 18 },
-  activityText: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary },
-  activityTime: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
+  // Colors applied inline via seamText (theme-aware) at the call site, not here — see dockLabel.
+  activityText: { fontSize: 13, fontWeight: '600' },
+  activityTime: { fontSize: 11, marginTop: 2 },
 });

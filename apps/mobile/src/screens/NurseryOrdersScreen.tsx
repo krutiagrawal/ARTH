@@ -98,14 +98,14 @@ export function NurseryOrdersScreen({ navigation }: any) {
 
       <ScreenHeader title="Orders" subtitle="Marketplace purchases to fulfil" onBack={navigation?.canGoBack?.() ? () => navigation.goBack() : undefined} />
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll} contentContainerStyle={styles.tabsRow}>
         {STATUS_TABS.map((t) => (
           <TouchableOpacity key={t.key} onPress={() => setStatusTab(t.key)} style={[styles.tab, statusTab === t.key && styles.tabActive]}>
             <Text style={[styles.tabText, statusTab === t.key && styles.tabTextActive]}>{t.label}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsRowSecondary}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll} contentContainerStyle={styles.tabsRowSecondary}>
         {FULFILLMENT_TABS.map((t) => (
           <TouchableOpacity key={t.key} onPress={() => setFulfillmentTab(t.key)} style={[styles.tabSmall, fulfillmentTab === t.key && styles.tabSmallActive]}>
             <Text style={[styles.tabSmallText, fulfillmentTab === t.key && styles.tabSmallTextActive]}>{t.label}</Text>
@@ -130,12 +130,21 @@ export function NurseryOrdersScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  tabsRow: { paddingHorizontal: SPACING.md, gap: 8, paddingTop: 10, paddingBottom: 6 },
+  // A horizontal ScrollView doesn't reliably self-size its height to content (especially on
+  // Android) — left unconstrained it can grow to fill whatever space this flex-column screen
+  // gives it, which centers the (correctly-sized) chips inside a much taller box than intended.
+  // flexGrow: 0 pins it to its content height instead.
+  tabsScroll: { flexGrow: 0 },
+  // alignItems: 'center' is load-bearing — a horizontal ScrollView's content container is a flex
+  // row with no explicit height, so without it each chip defaults to `alignItems: 'stretch'` and
+  // grows to fill whatever cross-axis height the ScrollView ends up given, instead of sizing to
+  // its own text (looks like a tall vertical pill rather than a small horizontal one).
+  tabsRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, gap: 8, paddingTop: 10, paddingBottom: 6 },
   tab: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: 'rgba(94,133,80,0.08)' },
   tabActive: { backgroundColor: COLORS.forest },
   tabText: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
   tabTextActive: { color: COLORS.white },
-  tabsRowSecondary: { paddingHorizontal: SPACING.md, gap: 6, paddingBottom: 10 },
+  tabsRowSecondary: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, gap: 6, paddingBottom: 10 },
   tabSmall: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, borderWidth: 1, borderColor: COLORS.sand },
   tabSmallActive: { backgroundColor: COLORS.golden, borderColor: COLORS.golden },
   tabSmallText: { fontSize: 11, fontWeight: '600', color: COLORS.textSecondary },
