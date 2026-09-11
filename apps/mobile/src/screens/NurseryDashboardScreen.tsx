@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurTargetView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
@@ -35,7 +36,7 @@ const STATUS_COPY: Record<string, { title: string; body: string }> = {
   suspended: { title: 'Account suspended', body: 'Contact support for details.' },
 };
 
-function StatusBanner({ status }: { status: string }) {
+function StatusBanner({ status, seamText }: { status: string; seamText: { primary: string; secondary: string } }) {
   if (status === 'approved') return null;
   const copy = STATUS_COPY[status];
   if (!copy) return null;
@@ -45,8 +46,8 @@ function StatusBanner({ status }: { status: string }) {
       noPadding
       style={[styles.statusBanner, { borderLeftWidth: 4, borderLeftColor: isDanger ? COLORS.coral : COLORS.golden }]}
     >
-      <Text style={styles.statusTitle}>{copy.title}</Text>
-      <Text style={styles.statusBody}>{copy.body}</Text>
+      <Text style={[styles.statusTitle, { color: seamText.primary }]}>{copy.title}</Text>
+      <Text style={[styles.statusBody, { color: seamText.secondary }]}>{copy.body}</Text>
     </BorderCard>
   );
 }
@@ -188,15 +189,26 @@ export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDas
   const { data: pendingReservations = [] } = useNurseryReservations('pending');
   const { data: confirmedOrders = [] } = useNurseryOrders('confirmed');
   const { data: packedOrders = [] } = useNurseryOrders('packed');
+  const blurTargetRef = useRef<View>(null);
 
   const pageBackground = getHeroSeamColor(theme);
   const seamText = getHeroSeamTextColors(theme);
 
+  /** Shared props for the "Your Impact" tiles: real glass cards tinted from the time-of-day
+   * theme (same recipe as the NGO dashboard's cards / Home's EcoFactCard). */
   const tileProps = {
-    variant: 'outline' as const,
+    variant: 'glass' as const,
     fill: true,
     style: styles.gridTile,
     color: theme.accentColor,
+    dark: theme.cardTint === 'dark',
+    cardBackground: theme.cardBackground,
+    cardBackgroundAlt: theme.cardBackgroundAlt,
+    cardOverlayAlpha: theme.cardOverlayAlpha,
+    borderColor: theme.cardBorder,
+    textColor: theme.textPrimaryOnCard,
+    subTextColor: theme.textSecondaryOnCard,
+    blurTarget: blurTargetRef,
   };
 
   // Top row: the daily-use actions (inventory, incoming requests, engagement). Bottom row:
@@ -228,7 +240,7 @@ export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDas
   ];
 
   return (
-    <View style={[styles.container, { backgroundColor: pageBackground }]}>
+    <BlurTargetView ref={blurTargetRef} collapsable={false} style={[styles.container, { backgroundColor: pageBackground }]}>
       <StatusBar style={theme.statusBarStyle} />
 
       <ScrollView
@@ -273,24 +285,40 @@ export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDas
               icon="🌱"
               value={stats?.speciesCount ?? 0}
               label="Species"
-              variant="outline"
+              variant="glass"
+              dark
               color={theme.accentColor}
+              cardBackground={theme.cardBackground}
+              cardBackgroundAlt={theme.cardBackgroundAlt}
+              cardOverlayAlpha={theme.cardOverlayAlpha}
+              textColor={theme.textSecondaryOnCard}
+              subTextColor={theme.textSecondaryOnCard}
+              borderColor={theme.cardBorder}
               delay={100}
               onPress={() => navigation.navigate('NurseryStock')}
+              blurTarget={blurTargetRef}
             />
             <EcoWidget
               icon="📦"
               value={stats?.totalQuantity ?? 0}
               label="In stock"
-              variant="outline"
+              variant="glass"
+              dark
               color={theme.accentColor}
+              cardBackground={theme.cardBackground}
+              cardBackgroundAlt={theme.cardBackgroundAlt}
+              cardOverlayAlpha={theme.cardOverlayAlpha}
+              textColor={theme.textSecondaryOnCard}
+              subTextColor={theme.textSecondaryOnCard}
+              borderColor={theme.cardBorder}
               delay={200}
               onPress={() => navigation.navigate('NurseryStock')}
+              blurTarget={blurTargetRef}
             />
           </View>
         </View>
 
-        {profile && <StatusBanner status={profile.status} />}
+        {profile && <StatusBanner status={profile.status} seamText={seamText} />}
 
         <Text style={[styles.sectionTitle, { color: seamText.primary }]}>Quick Actions</Text>
         <View style={styles.dockGrid}>
@@ -324,7 +352,7 @@ export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDas
           />
         )}
       </View>
-    </View>
+    </BlurTargetView>
   );
 }
 
@@ -349,8 +377,8 @@ const styles = StyleSheet.create({
   statsRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginTop: 4, marginBottom: 20 },
   loader: { marginTop: 20, marginBottom: 8 },
   statusBanner: { padding: 14, marginTop: 4, marginBottom: 8 },
-  statusTitle: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
-  statusBody: { fontSize: 12, marginTop: 2, color: COLORS.textSecondary },
+  statusTitle: { fontSize: 14, fontWeight: '700' },
+  statusBody: { fontSize: 12, marginTop: 2 },
   gridRow: { flexDirection: 'row', alignItems: 'stretch', gap: 10, marginBottom: 10 },
   gridTile: { flex: 1 },
   sectionTitle: { fontFamily: FONTS.display, fontSize: 20, lineHeight: 27, marginTop: 20 },

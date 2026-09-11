@@ -165,7 +165,7 @@ export function EcoInsightsScreen({ navigation }: any) {
           {activePill === 'facts' && (
             ecoFacts.length > 0 ? (
               ecoFacts.map((fact, i) => (
-                <GlassCard key={`${i}-${fact.slice(0, 12)}`} variant="warm" style={styles.factoidCard}>
+                <GlassCard key={`${i}-${fact.slice(0, 12)}`} variant="sage" style={styles.factoidCard}>
                   <Text style={styles.factoidTag}>🌱</Text>
                   <Text style={styles.factoidText}>{fact}</Text>
                 </GlassCard>
@@ -182,7 +182,8 @@ export function EcoInsightsScreen({ navigation }: any) {
             <Text style={styles.ctaBody}>{ECO_CTA.body}</Text>
             <AnimatedButton
               label={ECO_CTA.buttonLabel}
-              variant="golden"
+              variant="primary"
+              gradientColors={['#7ED957', '#2FA84F']}
               fullWidth
               size="lg"
               style={styles.ctaButton}

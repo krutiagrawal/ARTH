@@ -84,12 +84,12 @@ function StreakCard({
           <View style={styles.streakRowOuter}>
             <Mascot size={64} animate={false} />
             <View style={styles.streakTextColumn}>
-              <Text style={[styles.streakTitle, { color: COLORS.textPrimary }]}>
+              <Text style={[styles.streakTitle, { color: theme.textPrimaryOnCard }]}>
                 {hasStreak ? 'Keep your streak alive!' : 'Start your streak today!'}
               </Text>
-              <Text style={[styles.streakSubtitle, { color: COLORS.textSecondary }]}>Plant. Track. Impact.</Text>
+              <Text style={[styles.streakSubtitle, { color: theme.textSecondaryOnCard }]}>Plant. Track. Impact.</Text>
 
-              <Text style={[styles.streakLabel, { color: COLORS.textSecondary }]}>Current streak</Text>
+              <Text style={[styles.streakLabel, { color: theme.textSecondaryOnCard }]}>Current streak</Text>
               <View style={styles.streakRow}>
                 <Text style={[styles.streakValue, { color: theme.accentColor }]}>
                   {streakCurrent} {streakCurrent === 1 ? 'week' : 'weeks'}
@@ -139,10 +139,10 @@ function QuickAction({
           <View style={styles.actionRow}>
             <IconBadge icon={emoji} color={color} round />
             <View style={styles.actionTextColumn}>
-              <Text style={[styles.actionTitle, { color: COLORS.textPrimary }]}>{title}</Text>
-              <Text style={[styles.actionBody, { color: COLORS.textSecondary }]}>{body}</Text>
+              <Text style={[styles.actionTitle, { color: theme.textPrimaryOnCard }]}>{title}</Text>
+              <Text style={[styles.actionBody, { color: theme.textSecondaryOnCard }]}>{body}</Text>
             </View>
-            <Text style={[styles.chevron, { color: COLORS.textSecondary }]}>›</Text>
+            <Text style={[styles.chevron, { color: theme.textSecondaryOnCard }]}>›</Text>
           </View>
         </ThemedCard>
       </TouchableOpacity>
@@ -168,16 +168,27 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
   // The page below the hero follows the illustration's ground tone, exactly as the user-facing
   // Home screen does — a fixed cream page made every period look identical below the fold.
   const pageBackground = getHeroSeamColor(theme);
-  // Headings sit on that background, so they need its text colours — not `theme.textOnSky`, which
-  // is for the sky illustration above and is white at Golden Hour/Sunset, i.e. invisible here.
+  // Headings sit directly on that flat page background (not inside a card), so they need its
+  // text colours — not `theme.textOnSky` (for the sky illustration above, white at Golden
+  // Hour/Sunset i.e. invisible here) and not `theme.textPrimaryOnCard` (calibrated for text
+  // inside a tinted glass card, not the page itself).
   const seamText = getHeroSeamTextColors(theme);
 
-  /** Shared props for the six "Your Impact" tiles: theme-tinted, and stretched to equal size. */
+  /** Shared props for the six "Your Impact" tiles: real glass cards tinted from the time-of-day
+   * theme (same recipe as StreakCard/QuickAction), stretched to equal size. */
   const tileProps = {
-    variant: 'outline' as const,
+    variant: 'glass' as const,
     fill: true,
     style: styles.gridTile,
     color: theme.accentColor,
+    dark: theme.cardTint === 'dark',
+    cardBackground: theme.cardBackground,
+    cardBackgroundAlt: theme.cardBackgroundAlt,
+    cardOverlayAlpha: theme.cardOverlayAlpha,
+    borderColor: theme.cardBorder,
+    textColor: theme.textPrimaryOnCard,
+    subTextColor: theme.textSecondaryOnCard,
+    blurTarget: blurTargetRef,
   };
 
   return (

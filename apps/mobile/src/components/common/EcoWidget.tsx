@@ -153,8 +153,10 @@ export function EcoWidget({
           <BorderCard noPadding style={[styles.glassWidget, fillCardStyle]}>
             <Animated.Text style={[styles.glassIcon, breathStyle]}>{icon}</Animated.Text>
             <Text style={[styles.glassValue, { color }]}>{value}</Text>
-            <Text style={styles.glassLabel}>{label}</Text>
-            {sublabel && <Text style={styles.glassSublabel}>{sublabel}</Text>}
+            <Text style={[styles.glassLabel, textColor && { color: textColor }]}>{label}</Text>
+            {sublabel && (
+              <Text style={[styles.glassSublabel, subTextColor && { color: subTextColor }]}>{sublabel}</Text>
+            )}
           </BorderCard>
         </TouchableOpacity>
       </Animated.View>

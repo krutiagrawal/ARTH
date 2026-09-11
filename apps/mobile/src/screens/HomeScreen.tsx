@@ -548,7 +548,7 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
 
         {/* Stories from accounts the user follows */}
         <View style={styles.trayWrap}>
-          <StoriesTray tone="onLight" />
+          <StoriesTray tone={theme.cardTint === 'dark' ? 'onDark' : 'onLight'} />
         </View>
 
         {/* Mascot greeting */}
@@ -605,7 +605,7 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
         <MissionCard missions={missions} navigation={navigation} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />
         <RecentTrees trees={trees} onNavigateTab={onNavigateTab} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />
         {todayFact ? (
-          <View>
+          <View style={styles.ecoInsightSection}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: theme.textOnSky }]}>Eco Insight</Text>
               <TouchableOpacity onPress={() => navigation.navigate('EcoInsights')}>
@@ -980,6 +980,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 4,
   },
+  ecoInsightSection: {
+    marginTop: 16,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
@@ -1090,6 +1093,7 @@ const styles = StyleSheet.create({
     padding: 20,
     overflow: 'hidden',
     ...SHADOWS.md,
+    marginTop: 10,
     marginBottom: 8,
   },
   ecoFactTag: {
