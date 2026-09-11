@@ -11,8 +11,10 @@ import { PhotoPickerField, PickedPhoto } from '../components/common/PhotoPickerF
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
+import { StatusModal } from '../components/common/StatusModal';
 import { useSlideUp } from '../hooks/useAnimations';
-import { useMyDrives, useBulkCreatePlantedTrees } from '../hooks/useApiQueries';
+import { useMyDrives, useBulkCreatePlantedTrees, useNgoProfile } from '../hooks/useApiQueries';
+import { useApprovalGate } from '../hooks/useApprovalGate';
 import { ApiError } from '../api/client';
 import { useConfirm } from '../context/ConfirmDialogContext';
 
@@ -21,6 +23,8 @@ export function NgoLogPlantedTreesScreen({ navigation }: any) {
   const { data: drives = [] } = useMyDrives();
   const bulkCreateMutation = useBulkCreatePlantedTrees();
   const confirm = useConfirm();
+  const { data: profile } = useNgoProfile();
+  const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
 
   const [driveId, setDriveId] = useState<string | undefined>(undefined);
   const [speciesName, setSpeciesName] = useState('');
@@ -112,7 +116,7 @@ export function NgoLogPlantedTreesScreen({ navigation }: any) {
 
           <AnimatedButton
             label={bulkCreateMutation.isPending ? 'Logging…' : 'Log Trees  →'}
-            onPress={handleSubmit}
+            onPress={guard(handleSubmit)}
             disabled={bulkCreateMutation.isPending}
             fullWidth
             gradientColors={[COLORS.forest, COLORS.forestDeep]}
@@ -120,6 +124,8 @@ export function NgoLogPlantedTreesScreen({ navigation }: any) {
           />
         </Animated.View>
       </ScrollView>
+
+      <StatusModal {...statusModalProps} />
     </View>
   );
 }

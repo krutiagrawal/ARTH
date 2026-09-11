@@ -9,11 +9,16 @@ import DataTable from '@/components/dashboard/DataTable'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import ResourceFormSheet from '@/components/dashboard/ResourceFormSheet'
+import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
+import { useApprovalGate } from '@/components/dashboard/useApprovalGate'
+import { useNgoProfile } from '../NgoProfileContext'
 import { useResourceCrud } from '../useResourceCrud'
 import { staffFields } from '../resourceFields'
 
 export default function StaffClient() {
+  const { profile } = useNgoProfile()
   const { items, loading, create, update, remove } = useResourceCrud('/ngo/staff', '/ngo/staff')
+  const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -81,10 +86,10 @@ export default function StaffClient() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => openEdit(staff)}>Edit</DropdownMenuItem>
+                <DropdownMenuItem onClick={guard(() => openEdit(staff))}>Edit</DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
-                  onClick={() => remove(staff.id).then(() => toast.success('Removed.')).catch((err) => toast.error(err.message))}
+                  onClick={guard(() => remove(staff.id).then(() => toast.success('Removed.')).catch((err) => toast.error(err.message)))}
                 >
                   Remove
                 </DropdownMenuItem>
@@ -94,7 +99,7 @@ export default function StaffClient() {
         },
       },
     ],
-    [remove],
+    [guard, remove],
   )
 
   return (
@@ -105,7 +110,7 @@ export default function StaffClient() {
           <h1 className="font-serif text-3xl md:text-4xl mt-2">Your team</h1>
           <p className="mt-2 text-sm text-muted-foreground">A roster of staff and coordinators – for your own records, not separate logins.</p>
         </div>
-        <Button onClick={openCreate} className="rounded-full shrink-0">
+        <Button onClick={guard(openCreate)} className="rounded-full shrink-0">
           <Plus className="h-4 w-4" /> Add staff
         </Button>
       </div>
@@ -117,7 +122,7 @@ export default function StaffClient() {
         searchKey="name"
         searchPlaceholder="Search staff…"
         emptyState={
-          <EmptyState icon={Users} title="No staff added yet" body="Add coordinators and field staff to keep a roster on file." actionLabel="Add staff" onAction={openCreate} />
+          <EmptyState icon={Users} title="No staff added yet" body="Add coordinators and field staff to keep a roster on file." actionLabel="Add staff" onAction={guard(openCreate)} />
         }
       />
 
@@ -132,6 +137,13 @@ export default function StaffClient() {
         photoLabel="Photo"
         submitting={submitting}
         onSubmit={handleSubmit}
+      />
+
+      <ApprovalGateDialog
+        open={gateOpen}
+        onOpenChange={setGateOpen}
+        status={profile?.status}
+        rejectionReason={profile?.rejectionReason}
       />
     </DashboardPageShell>
   )

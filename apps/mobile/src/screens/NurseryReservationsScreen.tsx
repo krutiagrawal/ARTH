@@ -9,11 +9,13 @@ import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
-import { useNurseryReservations, useFulfillReservation, useDeclineReservation } from '../hooks/useApiQueries';
+import { StatusModal } from '../components/common/StatusModal';
+import { useNurseryReservations, useFulfillReservation, useDeclineReservation, useNurseryProfile } from '../hooks/useApiQueries';
+import { useApprovalGate } from '../hooks/useApprovalGate';
 import type { ApiNurseryReservation } from '../api/nursery';
 import { useConfirm } from '../context/ConfirmDialogContext';
 
-function ReservationRow({ item, showActions }: { item: ApiNurseryReservation; showActions: boolean }) {
+function ReservationRow({ item, showActions, guard }: { item: ApiNurseryReservation; showActions: boolean; guard: <A extends any[]>(fn: (...a: A) => void) => (...a: A) => void }) {
   const fulfillMutation = useFulfillReservation();
   const declineMutation = useDeclineReservation();
   const confirm = useConfirm();
@@ -21,14 +23,14 @@ function ReservationRow({ item, showActions }: { item: ApiNurseryReservation; sh
   const handleFulfill = () => {
     confirm('Fulfil this request?', `Give ${item.quantity} ${item.species ?? 'saplings'} to ${item.requester?.name ?? 'this planter'}. Stock will be reduced.`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Fulfil', onPress: () => fulfillMutation.mutate(item.id) },
+      { text: 'Fulfil', onPress: guard(() => fulfillMutation.mutate(item.id)) },
     ]);
   };
 
   const handleDecline = () => {
     confirm('Decline this request?', 'The planter will be notified.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Decline', style: 'destructive', onPress: () => declineMutation.mutate(item.id) },
+      { text: 'Decline', style: 'destructive', onPress: guard(() => declineMutation.mutate(item.id)) },
     ]);
   };
 
@@ -67,6 +69,8 @@ function ReservationRow({ item, showActions }: { item: ApiNurseryReservation; sh
 export function NurseryReservationsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { data: reservations = [], isLoading } = useNurseryReservations();
+  const { data: profile } = useNurseryProfile();
+  const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
 
   const pending = reservations.filter((r) => r.status === 'pending');
   const responded = reservations.filter((r) => r.status !== 'pending');
@@ -92,7 +96,7 @@ export function NurseryReservationsScreen({ navigation }: any) {
             <>
               <Text style={styles.sectionTitle}>Pending ({pending.length})</Text>
               {pending.map((r) => (
-                <ReservationRow key={r.id} item={r} showActions />
+                <ReservationRow key={r.id} item={r} showActions guard={guard} />
               ))}
             </>
           )}
@@ -100,12 +104,14 @@ export function NurseryReservationsScreen({ navigation }: any) {
             <>
               <Text style={styles.sectionTitle}>History</Text>
               {responded.map((r) => (
-                <ReservationRow key={r.id} item={r} showActions={false} />
+                <ReservationRow key={r.id} item={r} showActions={false} guard={guard} />
               ))}
             </>
           )}
         </ScrollView>
       )}
+
+      <StatusModal {...statusModalProps} />
     </View>
   );
 }

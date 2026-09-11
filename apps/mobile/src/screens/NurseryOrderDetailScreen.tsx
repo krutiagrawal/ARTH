@@ -9,9 +9,11 @@ import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
+import { StatusModal } from '../components/common/StatusModal';
 import { useHaptics } from '../hooks/useHaptics';
 import { useConfirm } from '../context/ConfirmDialogContext';
-import { useNurseryOrder, usePackOrder, useDispatchOrder, useDeliverOrder, useCancelNurseryOrder } from '../hooks/useApiQueries';
+import { useNurseryOrder, usePackOrder, useDispatchOrder, useDeliverOrder, useCancelNurseryOrder, useNurseryProfile } from '../hooks/useApiQueries';
+import { useApprovalGate } from '../hooks/useApprovalGate';
 import { ApiError } from '../api/client';
 
 function formatRupees(cents: number) {
@@ -33,6 +35,8 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
   const [riderPhone, setRiderPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [actionError, setActionError] = useState('');
+  const { data: profile } = useNurseryProfile();
+  const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
 
   const run = async (fn: () => Promise<unknown>) => {
     setActionError('');
@@ -48,7 +52,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
   const handleCancel = () => {
     confirm('Cancel this order?', 'The customer will be refunded and notified.', [
       { text: 'Back', style: 'cancel' },
-      { text: 'Cancel order', style: 'destructive', onPress: () => run(() => cancelMutation.mutateAsync(orderId)) },
+      { text: 'Cancel order', style: 'destructive', onPress: guard(() => run(() => cancelMutation.mutateAsync(orderId))) },
     ]);
   };
 
@@ -92,7 +96,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
           {order.status === 'confirmed' && (
             <AnimatedButton
               label={packMutation.isPending ? 'Marking packed…' : 'Mark as packed'}
-              onPress={() => run(() => packMutation.mutateAsync(orderId))}
+              onPress={guard(() => run(() => packMutation.mutateAsync(orderId)))}
               disabled={packMutation.isPending}
               variant="primary"
               size="lg"
@@ -108,7 +112,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
               <TextInput style={styles.input} value={riderPhone} onChangeText={setRiderPhone} placeholder="Contact number" placeholderTextColor={COLORS.textMuted} keyboardType="phone-pad" />
               <AnimatedButton
                 label={dispatchMutation.isPending ? 'Dispatching…' : 'Dispatch order'}
-                onPress={() => run(() => dispatchMutation.mutateAsync({ id: orderId, riderName: riderName.trim() || undefined, riderPhone: riderPhone.trim() || undefined }))}
+                onPress={guard(() => run(() => dispatchMutation.mutateAsync({ id: orderId, riderName: riderName.trim() || undefined, riderPhone: riderPhone.trim() || undefined })))}
                 disabled={dispatchMutation.isPending}
                 variant="primary"
                 size="lg"
@@ -128,7 +132,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
               <TextInput style={styles.input} value={otp} onChangeText={setOtp} placeholder="4-digit code" placeholderTextColor={COLORS.textMuted} keyboardType="number-pad" maxLength={4} />
               <AnimatedButton
                 label={deliverMutation.isPending ? 'Confirming…' : 'Confirm delivery'}
-                onPress={() => run(() => deliverMutation.mutateAsync({ id: orderId, otp: otp.trim() }))}
+                onPress={guard(() => run(() => deliverMutation.mutateAsync({ id: orderId, otp: otp.trim() })))}
                 disabled={deliverMutation.isPending || otp.trim().length !== 4}
                 variant="primary"
                 size="lg"
@@ -155,6 +159,8 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
           )}
         </ScrollView>
       )}
+
+      <StatusModal {...statusModalProps} />
     </View>
   );
 }

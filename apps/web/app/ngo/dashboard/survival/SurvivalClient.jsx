@@ -10,6 +10,9 @@ import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import ResourceFormSheet from '@/components/dashboard/ResourceFormSheet'
 import StatTile from '@/components/dashboard/StatTile'
+import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
+import { useApprovalGate } from '@/components/dashboard/useApprovalGate'
+import { useNgoProfile } from '../NgoProfileContext'
 import { proxy } from '../proxy'
 
 const STATUS_VARIANT = { healthy: 'default', struggling: 'secondary', dead: 'destructive', removed: 'outline' }
@@ -28,6 +31,8 @@ const HEALTH_OPTIONS = [
 ]
 
 export default function SurvivalClient() {
+  const { profile } = useNgoProfile()
+  const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
   const [trees, setTrees] = useState([])
   const [stats, setStats] = useState(null)
   const [drives, setDrives] = useState([])
@@ -157,7 +162,7 @@ export default function SurvivalClient() {
           <h1 className="font-serif text-3xl md:text-4xl mt-2">Track what you&rsquo;ve planted</h1>
           <p className="mt-2 text-sm text-muted-foreground">Log trees after a drive, then check in on them over time.</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} className="rounded-full shrink-0">
+        <Button onClick={guard(() => setDialogOpen(true))} className="rounded-full shrink-0">
           <Plus className="h-4 w-4" /> Log planted trees
         </Button>
       </div>
@@ -195,7 +200,7 @@ export default function SurvivalClient() {
               </option>
             ))}
           </select>
-          <Button size="sm" className="rounded-full" disabled={applying} onClick={handleApplyBulkStatus}>
+          <Button size="sm" className="rounded-full" disabled={applying} onClick={guard(handleApplyBulkStatus)}>
             {applying ? 'Applying…' : `Mark as ${bulkStatus}`}
           </Button>
         </div>
@@ -210,7 +215,7 @@ export default function SurvivalClient() {
         enableRowSelection
         onSelectionChange={setSelectedTrees}
         emptyState={
-          <EmptyState icon={TreePine} title="No trees logged yet" body="After a drive, log how many trees you planted to start tracking survival." actionLabel="Log planted trees" onAction={() => setDialogOpen(true)} />
+          <EmptyState icon={TreePine} title="No trees logged yet" body="After a drive, log how many trees you planted to start tracking survival." actionLabel="Log planted trees" onAction={guard(() => setDialogOpen(true))} />
         }
       />
 
@@ -225,6 +230,13 @@ export default function SurvivalClient() {
         photoLabel="Photo (optional)"
         submitting={submitting}
         onSubmit={handleBulkLog}
+      />
+
+      <ApprovalGateDialog
+        open={gateOpen}
+        onOpenChange={setGateOpen}
+        status={profile?.status}
+        rejectionReason={profile?.rejectionReason}
       />
     </DashboardPageShell>
   )

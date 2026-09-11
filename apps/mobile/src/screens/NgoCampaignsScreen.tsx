@@ -7,7 +7,9 @@ import { COLORS } from '../constants/colors';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { IconBadge } from '../components/common/IconBadge';
-import { useMyCampaigns, useCloseCampaign, useReopenCampaign } from '../hooks/useApiQueries';
+import { StatusModal } from '../components/common/StatusModal';
+import { useMyCampaigns, useCloseCampaign, useReopenCampaign, useNgoProfile } from '../hooks/useApiQueries';
+import { useApprovalGate } from '../hooks/useApprovalGate';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 
@@ -34,13 +36,15 @@ export function NgoCampaignsScreen({ navigation }: any) {
   const { data: campaigns = [], isLoading } = useMyCampaigns();
   const closeMutation = useCloseCampaign();
   const reopenMutation = useReopenCampaign();
+  const { data: profile } = useNgoProfile();
+  const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]} showsVerticalScrollIndicator={false}>
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && campaigns.length === 0 && (
-          <EmptyState icon="💚" title="No campaigns yet" body="Start a donation campaign to fund your next drive." actionLabel="New campaign" onAction={() => navigation.navigate('NgoCreateCampaign')} />
+          <EmptyState icon="💚" title="No campaigns yet" body="Start a donation campaign to fund your next drive." actionLabel="New campaign" onAction={guard(() => navigation.navigate('NgoCreateCampaign'))} />
         )}
         {campaigns.map((c, i) => {
           const progress = c.goalAmountCents ? Math.min(1, c.raisedAmountCents / c.goalAmountCents) : null;
@@ -76,7 +80,7 @@ export function NgoCampaignsScreen({ navigation }: any) {
                     )}
                     <TouchableOpacity
                       style={styles.toggleButton}
-                      onPress={() => (c.status === 'active' ? closeMutation.mutate(c.id) : reopenMutation.mutate(c.id))}
+                      onPress={guard(() => (c.status === 'active' ? closeMutation.mutate(c.id) : reopenMutation.mutate(c.id)))}
                     >
                       <Text style={styles.toggleText}>{c.status === 'active' ? 'Close campaign' : 'Reopen campaign'}</Text>
                     </TouchableOpacity>
@@ -87,6 +91,8 @@ export function NgoCampaignsScreen({ navigation }: any) {
           );
         })}
       </ScrollView>
+
+      <StatusModal {...statusModalProps} />
     </View>
   );
 }

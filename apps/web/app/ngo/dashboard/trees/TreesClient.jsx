@@ -13,6 +13,8 @@ import EmptyState from '@/components/dashboard/EmptyState'
 import ResourceFormSheet from '@/components/dashboard/ResourceFormSheet'
 import TreeDetailSheet from './TreeDetailSheet'
 import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
+import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
+import { useApprovalGate } from '@/components/dashboard/useApprovalGate'
 import { useNgoProfile } from '../NgoProfileContext'
 import { useResourceCrud } from '../useResourceCrud'
 import { treeFields } from '../resourceFields'
@@ -22,7 +24,7 @@ const STATUS_VARIANT = { available: 'secondary', adopted: 'default', removed: 'o
 export default function TreesClient() {
   const { profile } = useNgoProfile()
   const { items, loading, create, update, remove, runAction } = useResourceCrud('/adoptable-trees')
-  const isApproved = profile?.status === 'approved'
+  const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -142,19 +144,18 @@ export default function TreesClient() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem disabled={!isApproved} onClick={() => openEdit(tree)}>
+                <DropdownMenuItem onClick={guard(() => openEdit(tree))}>
                   Edit
                 </DropdownMenuItem>
                 {tree.status === 'adopted' && (
-                  <DropdownMenuItem disabled={!isApproved} onClick={() => setReleasing(tree)}>
+                  <DropdownMenuItem onClick={guard(() => setReleasing(tree))}>
                     Release adoption
                   </DropdownMenuItem>
                 )}
                 {tree.status !== 'removed' && (
                   <DropdownMenuItem
-                    disabled={!isApproved}
                     className="text-destructive focus:text-destructive"
-                    onClick={() => remove(tree.id).then(() => toast.success('Tree removed.')).catch((err) => toast.error(err.message))}
+                    onClick={guard(() => remove(tree.id).then(() => toast.success('Tree removed.')).catch((err) => toast.error(err.message)))}
                   >
                     Remove
                   </DropdownMenuItem>
@@ -165,7 +166,7 @@ export default function TreesClient() {
         },
       },
     ],
-    [isApproved, remove],
+    [guard, remove],
   )
 
   return (
@@ -175,7 +176,7 @@ export default function TreesClient() {
           <p className="eyebrow text-primary">Adoptable trees</p>
           <h1 className="font-serif text-3xl md:text-4xl mt-2">Trees for adoption</h1>
         </div>
-        <Button onClick={openCreate} disabled={!isApproved} className="rounded-full shrink-0" title={!isApproved ? 'Your NGO must be approved to publish' : undefined}>
+        <Button onClick={guard(openCreate)} className="rounded-full shrink-0">
           <Plus className="h-4 w-4" /> New tree
         </Button>
       </div>
@@ -192,8 +193,8 @@ export default function TreesClient() {
             icon={TreePine}
             title="No adoptable trees yet"
             body="List a tree for the community to adopt – they'll be able to leave a message when they do."
-            actionLabel={isApproved ? 'New tree' : undefined}
-            onAction={isApproved ? openCreate : undefined}
+            actionLabel="New tree"
+            onAction={guard(openCreate)}
           />
         }
       />
@@ -231,7 +232,14 @@ export default function TreesClient() {
         </label>
       </ConfirmDialog>
 
-      <TreeDetailSheet tree={detailFor} onOpenChange={(open) => !open && setDetailFor(null)} onEdit={openEdit} />
+      <TreeDetailSheet tree={detailFor} onOpenChange={(open) => !open && setDetailFor(null)} onEdit={guard(openEdit)} />
+
+      <ApprovalGateDialog
+        open={gateOpen}
+        onOpenChange={setGateOpen}
+        status={profile?.status}
+        rejectionReason={profile?.rejectionReason}
+      />
     </DashboardPageShell>
   )
 }

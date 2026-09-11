@@ -6,7 +6,9 @@ import { COLORS } from '../constants/colors';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { IconBadge } from '../components/common/IconBadge';
-import { useMyAdoptableTrees } from '../hooks/useApiQueries';
+import { StatusModal } from '../components/common/StatusModal';
+import { useMyAdoptableTrees, useNgoProfile } from '../hooks/useApiQueries';
+import { useApprovalGate } from '../hooks/useApprovalGate';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 
@@ -32,13 +34,15 @@ function StatusPill({ label, color }: { label: string; color: string }) {
 export function NgoTreesScreen({ navigation }: any) {
   const bottomClearance = useBottomNavClearance();
   const { data: trees = [], isLoading } = useMyAdoptableTrees();
+  const { data: profile } = useNgoProfile();
+  const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]} showsVerticalScrollIndicator={false}>
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && trees.length === 0 && (
-          <EmptyState icon="🌳" title="No trees yet" body="List a tree for the community to adopt." actionLabel="New tree" onAction={() => navigation.navigate('NgoCreateAdoptableTree')} />
+          <EmptyState icon="🌳" title="No trees yet" body="List a tree for the community to adopt." actionLabel="New tree" onAction={guard(() => navigation.navigate('NgoCreateAdoptableTree'))} />
         )}
         {trees.map((tree, i) => (
           <FadeInRow key={tree.id} delay={i * 60}>
@@ -63,6 +67,8 @@ export function NgoTreesScreen({ navigation }: any) {
           </FadeInRow>
         ))}
       </ScrollView>
+
+      <StatusModal {...statusModalProps} />
     </View>
   );
 }

@@ -7,7 +7,9 @@ import { FONTS } from '../constants/typography';
 
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
-import { useMyDrives } from '../hooks/useApiQueries';
+import { StatusModal } from '../components/common/StatusModal';
+import { useMyDrives, useNgoProfile } from '../hooks/useApiQueries';
+import { useApprovalGate } from '../hooks/useApprovalGate';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { resolveMediaUrl } from '../api/client';
@@ -43,13 +45,15 @@ function MetaRow({ icon, text, style }: { icon: string; text: string; style?: an
 export function NgoDrivesScreen({ navigation }: any) {
   const bottomClearance = useBottomNavClearance();
   const { data: drives = [], isLoading } = useMyDrives();
+  const { data: profile } = useNgoProfile();
+  const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]} showsVerticalScrollIndicator={false}>
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && drives.length === 0 && (
-          <EmptyState icon="🤝" title="No drives yet" body="Publish your first planting drive to start collecting RSVPs." actionLabel="New drive" onAction={() => navigation.navigate('NgoCreateDrive')} />
+          <EmptyState icon="🤝" title="No drives yet" body="Publish your first planting drive to start collecting RSVPs." actionLabel="New drive" onAction={guard(() => navigation.navigate('NgoCreateDrive'))} />
         )}
         {drives.length > 0 && <Text style={styles.sectionTitle}>Upcoming Drives</Text>}
         {drives.map((drive, i) => {
@@ -110,6 +114,8 @@ export function NgoDrivesScreen({ navigation }: any) {
           );
         })}
       </ScrollView>
+
+      <StatusModal {...statusModalProps} />
     </View>
   );
 }

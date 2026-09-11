@@ -9,6 +9,9 @@ import { FONTS } from '../constants/typography';
 import { RADIUS } from '../constants/theme';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { LeafBranch } from '../components/common/LeafBranch';
+import { StatusModal } from '../components/common/StatusModal';
+import { useNgoProfile } from '../hooks/useApiQueries';
+import { useApprovalGate } from '../hooks/useApprovalGate';
 import { NgoDrivesScreen } from './NgoDrivesScreen';
 import { NgoCampaignsScreen } from './NgoCampaignsScreen';
 import { NgoTreesScreen } from './NgoTreesScreen';
@@ -25,6 +28,8 @@ export function NgoManageScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [segment, setSegment] = useState<Segment>('drives');
   const active = SEGMENTS.find((s) => s.key === segment)!;
+  const { data: profile } = useNgoProfile();
+  const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
 
   return (
     <View style={styles.container}>
@@ -43,7 +48,7 @@ export function NgoManageScreen({ navigation }: any) {
 
       <AnimatedButton
         label={active.newLabel}
-        onPress={() => navigation.navigate(active.createRoute)}
+        onPress={guard(() => navigation.navigate(active.createRoute))}
         size="sm"
         gradientColors={[COLORS.forest, COLORS.forestDeep]}
         style={styles.newButton}
@@ -66,6 +71,8 @@ export function NgoManageScreen({ navigation }: any) {
         {segment === 'campaigns' && <NgoCampaignsScreen navigation={navigation} />}
         {segment === 'trees' && <NgoTreesScreen navigation={navigation} />}
       </View>
+
+      <StatusModal {...statusModalProps} />
     </View>
   );
 }

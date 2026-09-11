@@ -12,12 +12,15 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { FormField } from '../components/common/FormField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
+import { StatusModal } from '../components/common/StatusModal';
 import type { PickedPhoto } from '../components/common/PhotoPickerField';
 import {
   useSaplingStock,
   useCreateSaplingStock,
   useDeleteSaplingStock,
+  useNurseryProfile,
 } from '../hooks/useApiQueries';
+import { useApprovalGate } from '../hooks/useApprovalGate';
 import type { ApiSaplingStock } from '../api/nursery';
 import { ApiError, resolveMediaUrl } from '../api/client';
 import { useConfirm } from '../context/ConfirmDialogContext';
@@ -52,6 +55,8 @@ export function NurseryStockScreen({ navigation }: any) {
   const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const confirm = useConfirm();
+  const { data: profile } = useNurseryProfile();
+  const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
 
   const pickPhoto = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -94,7 +99,7 @@ export function NurseryStockScreen({ navigation }: any) {
   const handleDelete = (item: ApiSaplingStock) => {
     confirm('Remove stock item?', `Remove ${item.species} from your inventory.`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => deleteMutation.mutate(item.id) },
+      { text: 'Remove', style: 'destructive', onPress: guard(() => deleteMutation.mutate(item.id)) },
     ]);
   };
 
@@ -126,7 +131,7 @@ export function NurseryStockScreen({ navigation }: any) {
         {error && <Text style={styles.error}>{error}</Text>}
         <AnimatedButton
           label={createMutation.isPending ? 'Adding…' : '+ Add to inventory'}
-          onPress={handleAdd}
+          onPress={guard(handleAdd)}
           disabled={createMutation.isPending}
           fullWidth
           gradientColors={[COLORS.forest, COLORS.forestDeep]}
@@ -147,6 +152,8 @@ export function NurseryStockScreen({ navigation }: any) {
           }
         />
       )}
+
+      <StatusModal {...statusModalProps} />
     </View>
   );
 }

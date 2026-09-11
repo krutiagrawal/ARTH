@@ -13,7 +13,9 @@ import { EmptyState } from '../components/common/EmptyState';
 import { PhotoPickerField, PickedPhoto } from '../components/common/PhotoPickerField';
 import { FormField } from '../components/common/FormField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
-import { useStaff, useCreateStaff, useDeleteStaff } from '../hooks/useApiQueries';
+import { StatusModal } from '../components/common/StatusModal';
+import { useStaff, useCreateStaff, useDeleteStaff, useNgoProfile } from '../hooks/useApiQueries';
+import { useApprovalGate } from '../hooks/useApprovalGate';
 import { ApiError } from '../api/client';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useConfirm } from '../context/ConfirmDialogContext';
@@ -29,6 +31,8 @@ export function NgoStaffScreen({ navigation }: any) {
   const createMutation = useCreateStaff();
   const deleteMutation = useDeleteStaff();
   const confirm = useConfirm();
+  const { data: profile } = useNgoProfile();
+  const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
 
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
@@ -70,7 +74,7 @@ export function NgoStaffScreen({ navigation }: any) {
   const handleDelete = (id: string, staffName: string) => {
     confirm('Remove staff member', `Remove ${staffName} from your roster?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => deleteMutation.mutate(id) },
+      { text: 'Remove', style: 'destructive', onPress: guard(() => deleteMutation.mutate(id)) },
     ]);
   };
 
@@ -84,7 +88,7 @@ export function NgoStaffScreen({ navigation }: any) {
         subtitle="Manage your team's public listing"
         onBack={() => navigation.goBack()}
         right={
-          <TouchableOpacity onPress={() => setShowForm((v) => !v)} style={styles.addButton}>
+          <TouchableOpacity onPress={() => (showForm ? setShowForm(false) : guard(() => setShowForm(true))())} style={styles.addButton}>
             <Text style={styles.addIcon}>{showForm ? '×' : '+'}</Text>
           </TouchableOpacity>
         }
@@ -118,7 +122,7 @@ export function NgoStaffScreen({ navigation }: any) {
               placeholder="Optional"
             />
             {error && <Text style={styles.error}>{error}</Text>}
-            <TouchableOpacity style={[styles.submitButton, createMutation.isPending && styles.submitButtonDisabled]} onPress={handleAdd} disabled={createMutation.isPending}>
+            <TouchableOpacity style={[styles.submitButton, createMutation.isPending && styles.submitButtonDisabled]} onPress={guard(handleAdd)} disabled={createMutation.isPending}>
               {createMutation.isPending ? <ActivityIndicator size="small" color={COLORS.white} /> : <Text style={styles.submitText}>Add to roster</Text>}
             </TouchableOpacity>
           </View>
@@ -126,7 +130,7 @@ export function NgoStaffScreen({ navigation }: any) {
 
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && staff.length === 0 && !showForm && (
-          <EmptyState icon="🧑‍🤝‍🧑" title="No staff listed yet" body="Add your team so supporters know who's behind the work." actionLabel="Add staff" onAction={() => setShowForm(true)} />
+          <EmptyState icon="🧑‍🤝‍🧑" title="No staff listed yet" body="Add your team so supporters know who's behind the work." actionLabel="Add staff" onAction={guard(() => setShowForm(true))} />
         )}
         {staff.map((member, i) => (
           <FadeInRow key={member.id} delay={i * 60}>
@@ -148,6 +152,8 @@ export function NgoStaffScreen({ navigation }: any) {
           </FadeInRow>
         ))}
       </ScrollView>
+
+      <StatusModal {...statusModalProps} />
     </View>
   );
 }

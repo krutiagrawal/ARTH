@@ -9,7 +9,9 @@ import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
-import { usePlantedTrees, useSurvivalStats, useLogBulkHealthChecks } from '../hooks/useApiQueries';
+import { StatusModal } from '../components/common/StatusModal';
+import { usePlantedTrees, useSurvivalStats, useLogBulkHealthChecks, useNgoProfile } from '../hooks/useApiQueries';
+import { useApprovalGate } from '../hooks/useApprovalGate';
 import type { TreeHealthStatus } from '../api/plantedTrees';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useConfirm } from '../context/ConfirmDialogContext';
@@ -33,6 +35,8 @@ export function NgoHealthCheckScreen({ navigation }: any) {
   const bulkMutation = useLogBulkHealthChecks();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const confirm = useConfirm();
+  const { data: profile } = useNgoProfile();
+  const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
 
   const trees = data?.trees ?? [];
 
@@ -45,7 +49,7 @@ export function NgoHealthCheckScreen({ navigation }: any) {
     });
   };
 
-  const applyStatus = (status: TreeHealthStatus) => {
+  const applyStatus = guard((status: TreeHealthStatus) => {
     if (selected.size === 0) return;
     confirm(`Mark ${selected.size} tree${selected.size === 1 ? '' : 's'} as ${STATUS_META[status].label.toLowerCase()}?`, undefined, [
       { text: 'Cancel', style: 'cancel' },
@@ -57,7 +61,7 @@ export function NgoHealthCheckScreen({ navigation }: any) {
         },
       },
     ]);
-  };
+  });
 
   return (
     <View style={styles.container}>
@@ -71,7 +75,7 @@ export function NgoHealthCheckScreen({ navigation }: any) {
           </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Health Checks</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('NgoLogPlantedTrees')} style={styles.addButton}>
+        <TouchableOpacity onPress={guard(() => navigation.navigate('NgoLogPlantedTrees'))} style={styles.addButton}>
           <View style={styles.backBlur}>
             <Text style={styles.addIcon}>+</Text>
           </View>
@@ -89,7 +93,7 @@ export function NgoHealthCheckScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: (selected.size > 0 ? 100 : 32) + insets.bottom }]} showsVerticalScrollIndicator={false}>
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && trees.length === 0 && (
-          <EmptyState icon="🌳" title="No planted trees logged" body="Log a batch of planted trees to start tracking survival." actionLabel="Log trees" onAction={() => navigation.navigate('NgoLogPlantedTrees')} />
+          <EmptyState icon="🌳" title="No planted trees logged" body="Log a batch of planted trees to start tracking survival." actionLabel="Log trees" onAction={guard(() => navigation.navigate('NgoLogPlantedTrees'))} />
         )}
         {trees.map((tree, i) => {
           const meta = STATUS_META[tree.latestStatus];
@@ -132,6 +136,8 @@ export function NgoHealthCheckScreen({ navigation }: any) {
           </View>
         </View>
       )}
+
+      <StatusModal {...statusModalProps} />
     </View>
   );
 }

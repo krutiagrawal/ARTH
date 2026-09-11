@@ -9,11 +9,13 @@ import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
+import { StatusModal } from '../components/common/StatusModal';
 import { useHaptics } from '../hooks/useHaptics';
-import { useNurseryReviews, useRespondToReview } from '../hooks/useApiQueries';
+import { useNurseryReviews, useRespondToReview, useNurseryProfile } from '../hooks/useApiQueries';
+import { useApprovalGate } from '../hooks/useApprovalGate';
 import type { ApiNurseryReview } from '../api/nursery';
 
-function ReviewRow({ review }: { review: ApiNurseryReview }) {
+function ReviewRow({ review, guard }: { review: ApiNurseryReview; guard: <A extends any[]>(fn: (...a: A) => void) => (...a: A) => void }) {
   const respondMutation = useRespondToReview();
   const { success } = useHaptics();
   const [responding, setResponding] = useState(false);
@@ -42,17 +44,17 @@ function ReviewRow({ review }: { review: ApiNurseryReview }) {
           <TouchableOpacity
             style={styles.sendButton}
             disabled={!text.trim() || respondMutation.isPending}
-            onPress={async () => {
+            onPress={guard(async () => {
               await respondMutation.mutateAsync({ id: review.id, response: text.trim() });
               success();
               setResponding(false);
-            }}
+            })}
           >
             <Text style={styles.sendText}>{respondMutation.isPending ? 'Sending…' : 'Send response'}</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <TouchableOpacity onPress={() => setResponding(true)} style={styles.respondButton}>
+        <TouchableOpacity onPress={guard(() => setResponding(true))} style={styles.respondButton}>
           <Text style={styles.respondText}>Respond</Text>
         </TouchableOpacity>
       )}
@@ -63,6 +65,8 @@ function ReviewRow({ review }: { review: ApiNurseryReview }) {
 export function NurseryReviewsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { data: reviews = [], isLoading } = useNurseryReviews();
+  const { data: profile } = useNurseryProfile();
+  const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
 
   return (
     <View style={styles.container}>
@@ -78,10 +82,12 @@ export function NurseryReviewsScreen({ navigation }: any) {
       ) : (
         <ScrollView contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
           {reviews.map((r) => (
-            <ReviewRow key={r.id} review={r} />
+            <ReviewRow key={r.id} review={r} guard={guard} />
           ))}
         </ScrollView>
       )}
+
+      <StatusModal {...statusModalProps} />
     </View>
   );
 }

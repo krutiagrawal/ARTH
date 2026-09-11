@@ -12,6 +12,8 @@ import EmptyState from '@/components/dashboard/EmptyState'
 import DriveFormSheet from '@/components/dashboard/DriveFormSheet'
 import DriveDetailSheet from './DriveDetailSheet'
 import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
+import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
+import { useApprovalGate } from '@/components/dashboard/useApprovalGate'
 import { useNgoProfile } from '../NgoProfileContext'
 import { useResourceCrud } from '../useResourceCrud'
 
@@ -21,7 +23,7 @@ const TRANSPORT_LABEL = { self_arrange: 'Self-arrange', ngo_provided: 'NGO trans
 export default function DrivesClient() {
   const { profile } = useNgoProfile()
   const { items, loading, create, update, remove, runAction } = useResourceCrud('/drives')
-  const isApproved = profile?.status === 'approved'
+  const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -163,19 +165,18 @@ export default function DrivesClient() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem disabled={!isApproved} onClick={() => openEdit(drive)}>
+                <DropdownMenuItem onClick={guard(() => openEdit(drive))}>
                   Edit
                 </DropdownMenuItem>
                 {drive.status === 'upcoming' && (
-                  <DropdownMenuItem disabled={!isApproved} onClick={() => setConfirm({ type: 'complete', drive })}>
+                  <DropdownMenuItem onClick={guard(() => setConfirm({ type: 'complete', drive }))}>
                     Mark completed
                   </DropdownMenuItem>
                 )}
                 {drive.status === 'upcoming' && (
                   <DropdownMenuItem
-                    disabled={!isApproved}
                     className="text-destructive focus:text-destructive"
-                    onClick={() => setConfirm({ type: 'cancel', drive })}
+                    onClick={guard(() => setConfirm({ type: 'cancel', drive }))}
                   >
                     Cancel drive
                   </DropdownMenuItem>
@@ -186,7 +187,7 @@ export default function DrivesClient() {
         },
       },
     ],
-    [isApproved],
+    [guard],
   )
 
   return (
@@ -196,7 +197,7 @@ export default function DrivesClient() {
           <p className="eyebrow text-primary">Drives</p>
           <h1 className="font-serif text-3xl md:text-4xl mt-2">Planting drives</h1>
         </div>
-        <Button onClick={openCreate} disabled={!isApproved} className="rounded-full shrink-0" title={!isApproved ? 'Your NGO must be approved to publish' : undefined}>
+        <Button onClick={guard(openCreate)} className="rounded-full shrink-0">
           <Plus className="h-4 w-4" /> New drive
         </Button>
       </div>
@@ -213,8 +214,8 @@ export default function DrivesClient() {
             icon={CalendarDays}
             title="No drives yet"
             body="Create your first planting drive to start collecting RSVPs from volunteers."
-            actionLabel={isApproved ? 'New drive' : undefined}
-            onAction={isApproved ? openCreate : undefined}
+            actionLabel="New drive"
+            onAction={guard(openCreate)}
           />
         }
       />
@@ -227,7 +228,7 @@ export default function DrivesClient() {
         onSubmit={handleSubmit}
       />
 
-      <DriveDetailSheet drive={detailFor} onOpenChange={(open) => !open && setDetailFor(null)} onEdit={openEdit} />
+      <DriveDetailSheet drive={detailFor} onOpenChange={(open) => !open && setDetailFor(null)} onEdit={guard(openEdit)} />
 
       <ConfirmDialog
         open={Boolean(confirm)}
@@ -241,6 +242,13 @@ export default function DrivesClient() {
         confirmLabel={confirm?.type === 'cancel' ? 'Cancel drive' : 'Mark completed'}
         destructive={confirm?.type === 'cancel'}
         onConfirm={handleConfirm}
+      />
+
+      <ApprovalGateDialog
+        open={gateOpen}
+        onOpenChange={setGateOpen}
+        status={profile?.status}
+        rejectionReason={profile?.rejectionReason}
       />
     </DashboardPageShell>
   )

@@ -13,6 +13,8 @@ import EmptyState from '@/components/dashboard/EmptyState'
 import ResourceFormSheet from '@/components/dashboard/ResourceFormSheet'
 import CampaignDetailSheet from './CampaignDetailSheet'
 import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
+import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
+import { useApprovalGate } from '@/components/dashboard/useApprovalGate'
 import { useNgoProfile } from '../NgoProfileContext'
 import { useResourceCrud } from '../useResourceCrud'
 import { campaignFields } from '../resourceFields'
@@ -26,7 +28,7 @@ function rupees(cents) {
 export default function CampaignsClient() {
   const { profile } = useNgoProfile()
   const { items, loading, create, update, remove, runAction } = useResourceCrud('/campaigns')
-  const isApproved = profile?.status === 'approved'
+  const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -140,19 +142,18 @@ export default function CampaignsClient() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem disabled={!isApproved} onClick={() => openEdit(campaign)}>
+                <DropdownMenuItem onClick={guard(() => openEdit(campaign))}>
                   Edit
                 </DropdownMenuItem>
                 {campaign.status === 'active' ? (
                   <DropdownMenuItem
-                    disabled={!isApproved}
                     className="text-destructive focus:text-destructive"
-                    onClick={() => setConfirm({ type: 'close', campaign })}
+                    onClick={guard(() => setConfirm({ type: 'close', campaign }))}
                   >
                     Close campaign
                   </DropdownMenuItem>
                 ) : (
-                  <DropdownMenuItem disabled={!isApproved} onClick={() => setConfirm({ type: 'reopen', campaign })}>
+                  <DropdownMenuItem onClick={guard(() => setConfirm({ type: 'reopen', campaign }))}>
                     Reopen campaign
                   </DropdownMenuItem>
                 )}
@@ -162,7 +163,7 @@ export default function CampaignsClient() {
         },
       },
     ],
-    [isApproved],
+    [guard],
   )
 
   return (
@@ -172,7 +173,7 @@ export default function CampaignsClient() {
           <p className="eyebrow text-primary">Campaigns</p>
           <h1 className="font-serif text-3xl md:text-4xl mt-2">Donation campaigns</h1>
         </div>
-        <Button onClick={openCreate} disabled={!isApproved} className="rounded-full shrink-0" title={!isApproved ? 'Your NGO must be approved to publish' : undefined}>
+        <Button onClick={guard(openCreate)} className="rounded-full shrink-0">
           <Plus className="h-4 w-4" /> New campaign
         </Button>
       </div>
@@ -189,8 +190,8 @@ export default function CampaignsClient() {
             icon={Heart}
             title="No donation campaigns yet"
             body="Start a campaign to collect donations toward a goal – you'll see every donor here as they give."
-            actionLabel={isApproved ? 'New campaign' : undefined}
-            onAction={isApproved ? openCreate : undefined}
+            actionLabel="New campaign"
+            onAction={guard(openCreate)}
           />
         }
       />
@@ -208,7 +209,7 @@ export default function CampaignsClient() {
         onSubmit={handleSubmit}
       />
 
-      <CampaignDetailSheet campaign={detailFor} onOpenChange={(open) => !open && setDetailFor(null)} onEdit={openEdit} />
+      <CampaignDetailSheet campaign={detailFor} onOpenChange={(open) => !open && setDetailFor(null)} onEdit={guard(openEdit)} />
 
       <ConfirmDialog
         open={Boolean(confirm)}
@@ -222,6 +223,13 @@ export default function CampaignsClient() {
         confirmLabel={confirm?.type === 'close' ? 'Close campaign' : 'Reopen campaign'}
         destructive={confirm?.type === 'close'}
         onConfirm={handleConfirm}
+      />
+
+      <ApprovalGateDialog
+        open={gateOpen}
+        onOpenChange={setGateOpen}
+        status={profile?.status}
+        rejectionReason={profile?.rejectionReason}
       />
     </DashboardPageShell>
   )
