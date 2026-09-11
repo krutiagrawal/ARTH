@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40 },
   addButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
-  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
+  backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
   addIcon: { fontSize: 20, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
   statsBar: { paddingHorizontal: 20, paddingBottom: 10 },

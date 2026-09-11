@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
-  backIcon: { fontSize: 18, color: COLORS.white, fontWeight: '700' },
+  backIcon: { fontSize: 26, color: COLORS.white, fontWeight: '700' },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: ON_DARK_SURFACE.primary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
   card: { marginBottom: 14 },

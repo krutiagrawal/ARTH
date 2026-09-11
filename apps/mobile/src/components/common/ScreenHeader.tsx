@@ -4,7 +4,6 @@ import { Text } from './AppText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../../constants/colors';
 import { FONTS } from '../../constants/typography';
-import { RADIUS } from '../../constants/theme';
 
 /**
  * Header used by every pushed NGO screen: a back button, a title, and an
@@ -59,12 +58,10 @@ const styles = StyleSheet.create({
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.beige,
   },
-  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
+  backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
   title: { flex: 1, fontFamily: FONTS.displayBold, fontSize: 23, lineHeight: 31, color: COLORS.textPrimary },
   titleCenter: { textAlign: 'center' },
   titleLeft: { textAlign: 'left' },

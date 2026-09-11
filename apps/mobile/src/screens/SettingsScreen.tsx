@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   backIconDark: {
-    fontSize: 18,
+    fontSize: 26,
     color: COLORS.textPrimary,
     fontWeight: '700',
   },

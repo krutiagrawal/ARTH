@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.05)',
   },
-  backIcon: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
+  backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: {
     fontFamily: FONTS.displayBold,
     fontSize: 22,
