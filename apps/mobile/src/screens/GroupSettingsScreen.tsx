@@ -13,6 +13,7 @@ import { useGroupProfile, useUpdateGroupProfile, useRegenerateGroupInviteCode, u
 import { PickedPhoto } from '../components/common/PhotoPickerField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
+import { CityPickerField } from '../components/common/CityPickerField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
 import { Toggle } from '../components/common/Toggle';
@@ -69,7 +70,7 @@ export function GroupSettingsScreen({ navigation }: any) {
   const [groupName, setGroupName] = useState('');
   const [groupType, setGroupType] = useState<'family' | 'school' | 'club' | 'other'>('other');
   const [description, setDescription] = useState('');
-  const [city, setCity] = useState('');
+  const [city, setCity] = useState('Pune');
   const [logo, setLogo] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cardAnim = useSlideUp(0, 24);
@@ -119,7 +120,7 @@ export function GroupSettingsScreen({ navigation }: any) {
     setGroupName(profile.groupName);
     setGroupType(profile.groupType);
     setDescription(profile.description);
-    setCity(profile.city ?? '');
+    setCity(profile.city || 'Pune');
   }, [profile]);
 
   const pickLogo = useCallback(async () => {
@@ -197,7 +198,7 @@ export function GroupSettingsScreen({ navigation }: any) {
             </View>
 
             <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="What's your group about?" />
-            <FormField label="City" value={city} onChangeText={setCity} placeholder="City" />
+            <CityPickerField value={city} onChange={setCity} />
 
             {error && <Text style={styles.error}>{error}</Text>}
 

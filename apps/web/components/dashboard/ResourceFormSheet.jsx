@@ -7,6 +7,7 @@ import { z } from 'zod'
 import DrawerFormShell, { FormSection, FieldLabel, fieldInputClassName, fieldTextareaClassName, fieldButtonClassName } from './DrawerFormShell'
 import { Button } from '@/components/ui/button'
 import PhotoUploadField from './PhotoUploadField'
+import CitySelect from './CitySelect'
 
 function schemaFor(field) {
   if (field.type === 'number') {
@@ -31,11 +32,12 @@ function defaultsFromItem(fields, item) {
   const defaults = {}
   for (const f of fields) {
     if (!item) {
-      defaults[f.name] = f.type === 'number' ? undefined : ''
+      defaults[f.name] = f.type === 'number' ? undefined : f.type === 'city-select' ? 'Pune' : ''
       continue
     }
     const raw = item[f.apiName || f.name]
-    defaults[f.name] = f.fromApi ? f.fromApi(raw) : raw ?? (f.type === 'number' ? undefined : '')
+    const fallback = f.type === 'number' ? undefined : f.type === 'city-select' ? 'Pune' : ''
+    defaults[f.name] = f.fromApi ? f.fromApi(raw) : (f.type === 'city-select' ? raw || fallback : raw ?? fallback)
   }
   return defaults
 }
@@ -89,6 +91,8 @@ function FieldInput({ form, field: f }) {
           <FieldLabel required={f.required}>{f.label}</FieldLabel>
           {f.type === 'textarea' ? (
             <textarea {...field} value={field.value ?? ''} rows={3} placeholder={f.placeholder} className={fieldTextareaClassName} />
+          ) : f.type === 'city-select' ? (
+            <CitySelect value={field.value} onChange={field.onChange} className="mt-2 h-9" />
           ) : f.type === 'select' ? (
             <select {...field} value={field.value ?? ''} className={fieldInputClassName}>
               <option value="">{f.placeholder || 'None'}</option>

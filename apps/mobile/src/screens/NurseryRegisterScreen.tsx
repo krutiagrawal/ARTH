@@ -9,6 +9,7 @@ import { RADIUS, SPACING } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { PasswordInput } from '../components/common/PasswordInput';
 import { AnimatedButton } from '../components/common/AnimatedButton';
+import { CityPickerField } from '../components/common/CityPickerField';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
 
@@ -25,7 +26,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
   const { registerNursery } = useAuth();
   const [nurseryName, setNurseryName] = useState('');
   const [description, setDescription] = useState('');
-  const [city, setCity] = useState('');
+  const [city, setCity] = useState('Pune');
   const [contactPhone, setContactPhone] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [email, setEmail] = useState('');
@@ -97,13 +98,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
             onChangeText={setDescription}
             multiline
           />
-          <TextInput
-            style={styles.input}
-            placeholder="City (optional)"
-            placeholderTextColor={ON_DARK_SURFACE.muted}
-            value={city}
-            onChangeText={setCity}
-          />
+          <CityPickerField value={city} onChange={setCity} variant="dark" />
           <TextInput
             style={styles.input}
             placeholder="Contact phone (optional)"

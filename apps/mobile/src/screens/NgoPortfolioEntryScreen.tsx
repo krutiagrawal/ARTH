@@ -18,10 +18,14 @@ import { ScreenHeader } from '../components/common/ScreenHeader';
 import { FormField, FormFieldShell } from '../components/common/FormField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { MultiPhotoPickerField } from '../components/social/MultiPhotoPickerField';
+import { StatusModal } from '../components/common/StatusModal';
+import { CityPickerField } from '../components/common/CityPickerField';
 import { resolveMediaUrl } from '../api/client';
 import type { PickedPhoto } from '../components/common/PhotoPickerField';
 import type { ApiPortfolioEntry } from '../api/portfolio';
 import { useCreatePortfolioEntry, useUpdatePortfolioEntry } from '../hooks/useSocialQueries';
+import { useNgoProfile } from '../hooks/useApiQueries';
+import { useApprovalGate } from '../hooks/useApprovalGate';
 import { useConfirm } from '../context/ConfirmDialogContext';
 
 /**
@@ -42,7 +46,7 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
   );
   const [showPicker, setShowPicker] = useState(false);
   const [locationLabel, setLocationLabel] = useState(existing?.locationLabel ?? '');
-  const [city, setCity] = useState(existing?.city ?? '');
+  const [city, setCity] = useState(existing?.city || 'Pune');
   const [treesPlanted, setTreesPlanted] = useState(
     existing?.treesPlanted != null ? String(existing.treesPlanted) : '',
   );
@@ -57,6 +61,8 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
   const update = useUpdatePortfolioEntry();
   const busy = create.isPending || update.isPending;
   const confirm = useConfirm();
+  const { data: profile } = useNgoProfile();
+  const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
 
   const submit = () => {
     if (!title.trim()) {
@@ -163,7 +169,7 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
             value={locationLabel}
             onChangeText={setLocationLabel}
           />
-          <FormField label="City" placeholder="Delhi" value={city} onChangeText={setCity} />
+          <CityPickerField value={city} onChange={setCity} />
 
           <Text style={styles.sectionTitle}>Impact</Text>
           <Text style={styles.sectionHint}>
@@ -221,13 +227,15 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
 
           <AnimatedButton
             label={busy ? 'Saving…' : isEdit ? 'Save changes' : 'Add to profile'}
-            onPress={submit}
+            onPress={guard(submit)}
             disabled={busy}
             gradientColors={[COLORS.forest, COLORS.forestDeep]}
             style={styles.submit}
           />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <StatusModal {...statusModalProps} />
     </View>
   );
 }

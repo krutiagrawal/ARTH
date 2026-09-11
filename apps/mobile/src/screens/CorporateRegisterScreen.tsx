@@ -9,6 +9,7 @@ import { RADIUS, SPACING } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { PasswordInput } from '../components/common/PasswordInput';
 import { AnimatedButton } from '../components/common/AnimatedButton';
+import { CityPickerField } from '../components/common/CityPickerField';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
 
@@ -26,7 +27,7 @@ export function CorporateRegisterScreen({ navigation }: any) {
   const [companyName, setCompanyName] = useState('');
   const [description, setDescription] = useState('');
   const [industry, setIndustry] = useState('');
-  const [city, setCity] = useState('');
+  const [city, setCity] = useState('Pune');
   const [contactName, setContactName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -104,13 +105,7 @@ export function CorporateRegisterScreen({ navigation }: any) {
             value={industry}
             onChangeText={setIndustry}
           />
-          <TextInput
-            style={styles.input}
-            placeholder="City (optional)"
-            placeholderTextColor={ON_DARK_SURFACE.muted}
-            value={city}
-            onChangeText={setCity}
-          />
+          <CityPickerField value={city} onChange={setCity} variant="dark" />
 
           <Text style={styles.sectionLabel}>Your account</Text>
           <TextInput

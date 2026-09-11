@@ -16,7 +16,7 @@ export const treeFields = [
     section: 'Identity',
   },
   { name: 'locationLabel', label: 'Location', placeholder: 'Area / landmark', section: 'Location' },
-  { name: 'city', label: 'City', required: true, section: 'Location' },
+  { name: 'city', label: 'City', required: true, type: 'city-select', section: 'Location' },
 ]
 
 export const campaignFields = [

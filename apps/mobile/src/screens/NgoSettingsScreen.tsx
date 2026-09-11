@@ -12,6 +12,7 @@ import { useNgoProfile, useUpdateNgoProfile } from '../hooks/useApiQueries';
 import { PickedPhoto } from '../components/common/PhotoPickerField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
+import { CityPickerField } from '../components/common/CityPickerField';
 import { Toggle } from '../components/common/Toggle';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { useSlideUp } from '../hooks/useAnimations';
@@ -49,7 +50,7 @@ export function NgoSettingsScreen({ navigation }: any) {
     setDescription(profile.description);
     setWebsite(profile.website ?? '');
     setContactPhone(profile.contactPhone ?? '');
-    setCity(profile.city ?? '');
+    setCity(profile.city || 'Pune');
     setFoundedYear(profile.foundedYear ? String(profile.foundedYear) : '');
     setVolunteerCountEstimate(profile.volunteerCountEstimate ? String(profile.volunteerCountEstimate) : '');
     setAwards(profile.awards ?? []);
@@ -161,7 +162,7 @@ export function NgoSettingsScreen({ navigation }: any) {
             <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="We plant. We protect. We inspire." />
             <FormField label="Website" value={website} onChangeText={setWebsite} autoCapitalize="none" keyboardType="url" placeholder="https://" />
             <FormField label="Contact Phone" value={contactPhone} onChangeText={setContactPhone} keyboardType="phone-pad" placeholder="Phone number" />
-            <FormField label="City" value={city} onChangeText={setCity} placeholder="City" />
+            <CityPickerField value={city} onChange={setCity} />
             <FormField
               label="Founded Year"
               value={foundedYear}

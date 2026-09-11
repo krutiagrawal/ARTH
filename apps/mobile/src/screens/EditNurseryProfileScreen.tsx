@@ -14,6 +14,7 @@ import { BorderCard } from '../components/common/BorderCard';
 import { PickedPhoto } from '../components/common/PhotoPickerField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
+import { CityPickerField } from '../components/common/CityPickerField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { Toggle } from '../components/common/Toggle';
 import { useSlideUp } from '../hooks/useAnimations';
@@ -34,7 +35,7 @@ export function EditNurseryProfileScreen({ navigation }: any) {
 
   const [nurseryName, setNurseryName] = useState('');
   const [description, setDescription] = useState('');
-  const [city, setCity] = useState('');
+  const [city, setCity] = useState('Pune');
   const [contactPhone, setContactPhone] = useState('');
   const [offersDelivery, setOffersDelivery] = useState(true);
   const [deliveryRadiusKm, setDeliveryRadiusKm] = useState('');
@@ -53,7 +54,7 @@ export function EditNurseryProfileScreen({ navigation }: any) {
     if (!profile) return;
     setNurseryName(profile.nurseryName);
     setDescription(profile.description);
-    setCity(profile.city ?? '');
+    setCity(profile.city || 'Pune');
     setContactPhone(profile.contactPhone ?? '');
     setOffersDelivery(profile.offersDelivery);
     setDeliveryRadiusKm(profile.deliveryRadiusKm != null ? String(profile.deliveryRadiusKm) : '');
@@ -165,7 +166,7 @@ export function EditNurseryProfileScreen({ navigation }: any) {
 
             <FormField label="Nursery Name" value={nurseryName} onChangeText={setNurseryName} placeholder="Your nursery" />
             <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="What does your nursery grow?" />
-            <FormField label="City" value={city} onChangeText={setCity} placeholder="City" />
+            <CityPickerField value={city} onChange={setCity} />
             <FormField label="Contact phone" value={contactPhone} onChangeText={setContactPhone} placeholder="Phone" keyboardType="phone-pad" />
 
             <BorderCard noPadding style={styles.deliveryCard}>

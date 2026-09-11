@@ -370,6 +370,38 @@ async function seedApprovedPlantingLocations() {
   }
 }
 
+async function seedCities() {
+  const cities = [
+    'Pune',
+    'Mumbai',
+    'Delhi',
+    'Bangalore',
+    'Hyderabad',
+    'Chennai',
+    'Kolkata',
+    'Ahmedabad',
+    'Jaipur',
+    'Surat',
+    'Lucknow',
+    'Nagpur',
+    'Indore',
+    'Thane',
+    'Bhopal',
+    'Visakhapatnam',
+    'Vadodara',
+    'Nashik',
+  ];
+
+  for (const [i, name] of cities.entries()) {
+    const isLaunched = name === 'Pune';
+    await prisma.city.upsert({
+      where: { name },
+      update: { isLaunched, sortOrder: i },
+      create: { name, isLaunched, sortOrder: i },
+    });
+  }
+}
+
 async function main() {
   await seedSpecies();
   await seedAchievements();
@@ -384,6 +416,7 @@ async function main() {
   await seedAppConfig();
   await seedForestLevelTiers();
   await seedApprovedPlantingLocations();
+  await seedCities();
   console.log('Seed complete.');
 }
 

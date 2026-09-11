@@ -11,6 +11,7 @@ import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
 import speciesRoutes, { speciesAuthRoutes } from './routes/species.routes';
 import ecoFactsRoutes from './routes/ecoFacts.routes';
+import citiesRoutes from './routes/cities.routes';
 import communityRoutes from './routes/community.routes';
 import challengesPublicRoutes from './routes/challenges.public.routes';
 import usersPublicRoutes from './routes/users.public.routes';
@@ -88,6 +89,7 @@ export async function buildApp() {
   await app.register(authRoutes, { prefix: '/api/auth' });
   await app.register(speciesRoutes, { prefix: '/api/species' });
   await app.register(ecoFactsRoutes, { prefix: '/api/eco-facts' });
+  await app.register(citiesRoutes, { prefix: '/api/cities' });
   await app.register(communityRoutes, { prefix: '/api/community' });
   await app.register(challengesPublicRoutes, { prefix: '/api/challenges' });
   await app.register(usersPublicRoutes, { prefix: '/api/users' });

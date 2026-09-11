@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { MapPin } from 'lucide-react'
 import { apiRequest } from '@/lib/apiClient'
+import { prisma } from '@/lib/prisma'
 import { resolveMediaUrl } from '@/lib/media'
 
 export const metadata = {
@@ -22,6 +23,8 @@ export default async function NgosPage({ searchParams }) {
     ngos = []
   }
 
+  const cities = await prisma.city.findMany({ orderBy: { sortOrder: 'asc' } })
+
   return (
     <div className="container py-16">
       <p className="eyebrow text-primary">NGOs</p>
@@ -36,13 +39,19 @@ export default async function NgosPage({ searchParams }) {
           placeholder="Search by name…"
           className="h-11 flex-1 min-w-[180px] rounded-full border border-border/70 bg-background px-4 text-sm"
         />
-        <input
-          type="text"
+        <select
           name="city"
           defaultValue={city || ''}
-          placeholder="City"
           className="h-11 w-40 rounded-full border border-border/70 bg-background px-4 text-sm"
-        />
+        >
+          <option value="">All cities</option>
+          {cities.map((c) => (
+            <option key={c.id} value={c.name} disabled={!c.isLaunched}>
+              {c.name}
+              {!c.isLaunched ? ' (coming soon)' : ''}
+            </option>
+          ))}
+        </select>
         <button type="submit" className="h-11 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground">
           Search
         </button>

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import PhotoUploadField from '@/components/dashboard/PhotoUploadField'
+import CitySelect from '@/components/dashboard/CitySelect'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
 import { useGroupProfile } from '../GroupProfileContext'
@@ -34,7 +35,7 @@ export default function SettingsClient() {
         groupName: profile.groupName || '',
         groupType: profile.groupType || 'other',
         description: profile.description || '',
-        city: profile.city || '',
+        city: profile.city || 'Pune',
       })
     }
   }, [profile])
@@ -115,7 +116,7 @@ export default function SettingsClient() {
         </label>
         <label className="block">
           <span className="eyebrow">City</span>
-          <Input value={form.city} onChange={set('city')} className="mt-2 h-11 rounded-full" />
+          <CitySelect value={form.city} onChange={(v) => setForm((s) => ({ ...s, city: v }))} />
         </label>
 
         <Button disabled={submitting} type="submit" className="rounded-full h-11">

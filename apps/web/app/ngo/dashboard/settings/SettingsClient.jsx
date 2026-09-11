@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import PhotoUploadField from '@/components/dashboard/PhotoUploadField'
+import CitySelect from '@/components/dashboard/CitySelect'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import { useNgoProfile } from '../NgoProfileContext'
 import { proxy } from '../proxy'
@@ -25,7 +26,7 @@ export default function SettingsClient() {
         description: profile.description || '',
         website: profile.website || '',
         contactPhone: profile.contactPhone || '',
-        city: profile.city || '',
+        city: profile.city || 'Pune',
         foundedYear: profile.foundedYear ?? '',
         volunteerCountEstimate: profile.volunteerCountEstimate ?? '',
         awards: profile.awards?.length ? profile.awards : [],
@@ -128,7 +129,7 @@ export default function SettingsClient() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <label className="block">
             <span className="eyebrow">City</span>
-            <Input value={form.city} onChange={set('city')} className="mt-2 h-11 rounded-full" />
+            <CitySelect value={form.city} onChange={(v) => setForm((s) => ({ ...s, city: v }))} />
           </label>
           <label className="block">
             <span className="eyebrow">Founded year</span>

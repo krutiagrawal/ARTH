@@ -9,6 +9,7 @@ import DrawerFormShell, { FormSection, FieldLabel, fieldInputClassName, fieldTex
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import PhotoUploadField from './PhotoUploadField'
+import CitySelect from './CitySelect'
 
 const numberField = (message) =>
   z.preprocess(
@@ -56,7 +57,7 @@ function defaultsFromItem(item) {
       description: '',
       instructions: '',
       address: '',
-      city: '',
+      city: 'Pune',
       transportMode: 'self_arrange',
       pickupPoints: [],
       plants: [],
@@ -70,7 +71,7 @@ function defaultsFromItem(item) {
     description: item.description ?? '',
     instructions: item.instructions ?? '',
     address: item.address ?? '',
-    city: item.city ?? '',
+    city: item.city || 'Pune',
     transportMode: item.transportMode ?? 'self_arrange',
     pickupPoints: (item.pickupPoints ?? []).map((p) => ({ address: p.address, arrivalBy: toDatetimeLocal(p.arrivalBy) })),
     plants: (item.plants ?? []).map((p) => ({ speciesName: p.speciesName, priceRupees: p.priceCents / 100 })),
@@ -189,7 +190,11 @@ export default function DriveFormSheet({ open, onOpenChange, item, submitting, o
           </label>
           <label className="block">
             <FieldLabel required>City</FieldLabel>
-            <input {...form.register('city')} className={fieldInputClassName} />
+            <Controller
+              control={form.control}
+              name="city"
+              render={({ field }) => <CitySelect value={field.value} onChange={field.onChange} className="mt-2 h-9" />}
+            />
             {form.formState.errors.city && <p className="mt-1 text-xs text-destructive">{form.formState.errors.city.message}</p>}
           </label>
         </FormSection>

@@ -1312,6 +1312,17 @@ model ApprovedPlantingLocation {
   @@map("approved_planting_locations")
 }
 
+model City {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  isLaunched Boolean  @default(false) @map("is_launched")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("cities")
+}
+
 // ---------- NGO / Community Actions ----------
 
 // Despite the name, this now backs any org-type account (role ngo/community/nursery/

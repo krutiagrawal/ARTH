@@ -9,6 +9,7 @@ import { COLORS } from '../constants/colors';
 import { PhotoPickerField, PickedPhoto } from '../components/common/PhotoPickerField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
+import { CityPickerField } from '../components/common/CityPickerField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useCreateAdoptableTree } from '../hooks/useApiQueries';
@@ -25,7 +26,7 @@ export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
   const [description, setDescription] = useState('');
   const [instructions, setInstructions] = useState('');
   const [locationLabel, setLocationLabel] = useState('');
-  const [city, setCity] = useState('');
+  const [city, setCity] = useState('Pune');
   const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cardAnim = useSlideUp(0, 24);
@@ -111,12 +112,7 @@ export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
             placeholder="Optional"
           />
 
-          <FormField
-            label="City"
-            value={city}
-            onChangeText={setCity}
-            placeholder="City"
-          />
+          <CityPickerField value={city} onChange={setCity} />
 
           {error && <Text style={styles.error}>{error}</Text>}
 

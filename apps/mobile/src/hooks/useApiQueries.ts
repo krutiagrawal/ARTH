@@ -6,6 +6,7 @@ import { fetchApprovedLocations, checkPlantingEligibility } from '../api/plantin
 import { fetchSpecies, createSpecies } from '../api/species';
 import { fetchTodayMissions, completeMission } from '../api/missions';
 import { fetchEcoFacts } from '../api/ecoFacts';
+import { fetchCities } from '../api/cities';
 import { fetchAchievements, fetchUserAchievements } from '../api/achievements';
 import { fetchStreakCalendar } from '../api/streaks';
 import { fetchThemes, selectTheme } from '../api/themes';
@@ -275,6 +276,10 @@ export function useCompleteMission() {
 
 export function useEcoFacts() {
   return useQuery({ queryKey: ['eco-facts'], queryFn: fetchEcoFacts, staleTime: Infinity });
+}
+
+export function useCities() {
+  return useQuery({ queryKey: ['cities'], queryFn: fetchCities, staleTime: Infinity });
 }
 
 export function useAchievements() {
