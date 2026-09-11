@@ -18,7 +18,7 @@ export function useDeviceWeather() {
           if (mounted) setPermissionDenied(true);
           return;
         }
-        const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
+        const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
         if (!mounted) return;
         setCoords({ lat: position.coords.latitude, lng: position.coords.longitude });
 
@@ -28,7 +28,10 @@ export function useDeviceWeather() {
             longitude: position.coords.longitude,
           });
           if (mounted && place) {
-            setResolvedCity(place.city ?? place.subregion ?? place.region ?? null);
+            // district maps to the neighborhood/locality (e.g. Kothrud, Warje) on Android's
+            // Geocoder; city maps to the whole metro area (e.g. Pune) and would show the same
+            // value everywhere in town, so prefer the more specific field when it's available.
+            setResolvedCity(place.district ?? place.city ?? place.subregion ?? place.region ?? null);
           }
         } catch {
           // City name falls back to the weather API's own resolved name below.
