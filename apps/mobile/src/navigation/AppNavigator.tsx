@@ -122,46 +122,46 @@ export type AdminTabName = 'Overview' | 'NGOs' | 'Reports' | 'AuditLog' | 'More'
 export type GroupTabName = 'Home' | 'Manage' | 'Activity' | 'Settings';
 
 const GROUP_TABS: TabItem[] = [
-  { name: 'Home', icon: 'ðŸ¡', label: 'Home' },
-  { name: 'Manage', icon: 'ðŸ‘¥', label: 'Manage', raised: true },
-  { name: 'Activity', icon: 'ðŸ“£', label: 'Activity' },
-  { name: 'Settings', icon: 'âš™ï¸', label: 'Settings' },
+  { name: 'Home', icon: '🏡', label: 'Home' },
+  { name: 'Manage', icon: '👥', label: 'Manage', raised: true },
+  { name: 'Activity', icon: '📣', label: 'Activity' },
+  { name: 'Settings', icon: '⚙️', label: 'Settings' },
 ];
 
 export type NurseryTabName = 'Home' | 'Stock' | 'Settings';
 
 const NURSERY_TABS: TabItem[] = [
-  { name: 'Home', icon: 'ðŸ¡', label: 'Home' },
-  { name: 'Stock', icon: 'ðŸ“¦', label: 'Stock', raised: true },
-  { name: 'Settings', icon: 'âš™ï¸', label: 'Settings' },
+  { name: 'Home', icon: '🏡', label: 'Home' },
+  { name: 'Stock', icon: '📦', label: 'Stock', raised: true },
+  { name: 'Settings', icon: '⚙️', label: 'Settings' },
 ];
 
 export type CorporateTabName = 'Home' | 'Sponsorships' | 'Settings';
 
 const CORPORATE_TABS: TabItem[] = [
-  { name: 'Home', icon: 'ðŸ¡', label: 'Home' },
-  { name: 'Sponsorships', icon: 'ðŸ¤', label: 'Sponsor', raised: true },
-  { name: 'Settings', icon: 'âš™ï¸', label: 'Settings' },
+  { name: 'Home', icon: '🏡', label: 'Home' },
+  { name: 'Sponsorships', icon: '🤝', label: 'Sponsor', raised: true },
+  { name: 'Settings', icon: '⚙️', label: 'Settings' },
 ];
 
 // Post takes the centre as a raised FAB, mirroring the user app's Plant button — posting is the
 // action an NGO repeats most, and its weekly streak depends on it. Map moved into More: an NGO
 // browsing the map is rare next to managing its own drives and community.
 const NGO_TABS: TabItem[] = [
-  { name: 'Home', icon: 'ðŸ¡', label: 'Home' },
-  { name: 'Community', icon: 'ðŸ‘¥', label: 'Community' },
-  { name: 'Post', icon: 'âž•', label: 'Post', raised: true },
-  { name: 'Manage', icon: 'ðŸ“‹', label: 'Manage' },
-  { name: 'More', icon: 'âš™ï¸', label: 'More' },
+  { name: 'Home', icon: '🏡', label: 'Home' },
+  { name: 'Community', icon: '👥', label: 'Community' },
+  { name: 'Post', icon: '➕', label: 'Post', raised: true },
+  { name: 'Manage', icon: '📋', label: 'Manage' },
+  { name: 'More', icon: '⚙️', label: 'More' },
 ];
 
 // NGO approvals is the action admins repeat most (AdminHomeScreen's own mascot line nags about
 // pending count), so it takes the raised centre slot — same treatment as Post/Plant above.
 const ADMIN_TABS: TabItem[] = [
-  { name: 'Overview', icon: 'ðŸ“Š', label: 'Overview' },
-  { name: 'NGOs', icon: 'ðŸ¢', label: 'NGOs', raised: true },
-  { name: 'Reports', icon: 'ðŸš©', label: 'Reports' },
-  { name: 'AuditLog', icon: 'ðŸ“œ', label: 'Audit Log' },
+  { name: 'Overview', icon: '📊', label: 'Overview' },
+  { name: 'NGOs', icon: '🏢', label: 'NGOs', raised: true },
+  { name: 'Reports', icon: '🚩', label: 'Reports' },
+  { name: 'AuditLog', icon: '📜', label: 'Audit Log' },
   { name: 'More', icon: '⚙️', label: 'More' },
 ];
 

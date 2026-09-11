@@ -224,19 +224,35 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
               icon="🤝"
               value={stats?.upcomingDrives ?? 0}
               label="Drives"
-              variant="outline"
+              variant="glass"
+              dark
               color={theme.accentColor}
+              cardBackground={theme.cardBackground}
+              cardBackgroundAlt={theme.cardBackgroundAlt}
+              cardOverlayAlpha={theme.cardOverlayAlpha}
+              textColor={theme.textSecondaryOnCard}
+              subTextColor={theme.textSecondaryOnCard}
+              borderColor={theme.cardBorder}
               delay={100}
               onPress={() => onNavigateTab('Manage')}
+              blurTarget={blurTargetRef}
             />
             <EcoWidget
               icon="🔥"
               value={streakCurrent}
               label="Streak"
-              variant="outline"
+              variant="glass"
+              dark
               color={theme.accentColor}
+              cardBackground={theme.cardBackground}
+              cardBackgroundAlt={theme.cardBackgroundAlt}
+              cardOverlayAlpha={theme.cardOverlayAlpha}
+              textColor={theme.textSecondaryOnCard}
+              subTextColor={theme.textSecondaryOnCard}
+              borderColor={theme.cardBorder}
               delay={200}
               onPress={() => navigation.navigate('NgoProfile')}
+              blurTarget={blurTargetRef}
             />
           </View>
         </View>
