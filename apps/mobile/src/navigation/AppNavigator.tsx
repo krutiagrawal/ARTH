@@ -68,6 +68,7 @@ import { FriendsListScreen } from '../screens/FriendsListScreen';
 import { DrivesListScreen } from '../screens/DrivesListScreen';
 import { AdoptTreeListScreen } from '../screens/AdoptTreeListScreen';
 import { AdoptTreeDetailScreen } from '../screens/AdoptTreeDetailScreen';
+import { EcoInsightsScreen } from '../screens/EcoInsightsScreen';
 import { CampaignsListScreen } from '../screens/CampaignsListScreen';
 import { NgoDashboardScreen } from '../screens/NgoDashboardScreen';
 import { NgoProfileScreen } from '../screens/NgoProfileScreen';
@@ -346,6 +347,7 @@ export type RootStackParamList = {
   ChangePassword: undefined;
   Sessions: undefined;
   StaticContent: { title: string; body: string };
+  EcoInsights: undefined;
   EditProfile: undefined;
   EmojiPicker: { selected?: string; onSelect: (emoji: string) => void } | undefined;
   HomeThemePicker: { current: string | null } | undefined;
@@ -781,6 +783,7 @@ export function AppNavigator() {
         <Stack.Screen name="DriveDetail" component={DriveDetailScreen} />
         <Stack.Screen name="AdoptTreeList" component={AdoptTreeListScreen} />
         <Stack.Screen name="AdoptTreeDetail" component={AdoptTreeDetailScreen} />
+        <Stack.Screen name="EcoInsights" component={EcoInsightsScreen} />
         <Stack.Screen name="Campaigns" component={CampaignsListScreen} />
         <Stack.Screen name="NgoMain" component={NgoMainApp} />
         <Stack.Screen name="NgoProfile" component={NgoProfileScreen} />

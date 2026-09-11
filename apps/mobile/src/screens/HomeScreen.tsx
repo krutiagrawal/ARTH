@@ -604,7 +604,17 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
 
         <MissionCard missions={missions} navigation={navigation} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />
         <RecentTrees trees={trees} onNavigateTab={onNavigateTab} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />
-        {todayFact ? <EcoFactCard fact={todayFact} blurTarget={blurTargetRef} previewPeriod={previewPeriod} /> : null}
+        {todayFact ? (
+          <View>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.textOnSky }]}>Eco Insight</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('EcoInsights')}>
+                <Text style={[styles.seeAll, { color: homeTextColor(theme, theme.accentColor) }]}>Learn more →</Text>
+              </TouchableOpacity>
+            </View>
+            <EcoFactCard fact={todayFact} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />
+          </View>
+        ) : null}
       </ScrollView>
 
       {onClosePreview && (
