@@ -12,6 +12,7 @@ import { SHADOWS } from '../constants/theme';
 import { EcoWidget } from '../components/common/EcoWidget';
 import { MuteButton } from '../components/common/MuteButton';
 import { BorderCard } from '../components/common/BorderCard';
+import { EmptyState } from '../components/common/EmptyState';
 import { ForestHeroCanvas } from '../components/common/ForestHeroCanvas';
 import { AmbientCreatures } from '../components/common/AmbientCreatures';
 import { FloatingParticles } from '../components/common/FloatingParticles';
@@ -19,7 +20,8 @@ import { getSceneryMode, RainEffect, WindEffect } from '../components/common/Wea
 import { useTimeTheme, type TimeTheme } from '../hooks/useTimeTheme';
 import { useDeviceWeather } from '../hooks/useDeviceWeather';
 import { useAuth } from '../context/AuthContext';
-import { useNurseryProfile, useNurseryStats, useNurseryReservations, useNurseryOrders } from '../hooks/useApiQueries';
+import { useNurseryProfile, useNurseryStats, useNurseryReservations, useNurseryOrders, useNurseryDashboardToday } from '../hooks/useApiQueries';
+import type { ApiNurseryActivityItem } from '../api/nursery';
 import { useUnreadNotificationCount } from '../hooks/useSocialQueries';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
@@ -172,6 +174,31 @@ function NotificationBell({ onPress }: { onPress: () => void }) {
   );
 }
 
+const ACTIVITY_COPY: Record<string, (data: Record<string, any>) => { icon: string; text: string }> = {
+  order_placed: (d) => ({ icon: '🛒', text: `New order placed${d.species ? ` for ${d.species}` : ''}` }),
+  order_picked_up: (d) => ({ icon: '🤝', text: `Order picked up by ${d.customerName ?? 'a planter'}` }),
+  order_delivered: (d) => ({ icon: '🚚', text: `Order delivered to ${d.customerName ?? 'a planter'}` }),
+  sapling_planted: (d) => ({ icon: '🌱', text: `${d.species ?? 'A sapling'} you supplied was planted${d.locationLabel ? ` at ${d.locationLabel}` : ''}` }),
+  stock_low: (d) => ({ icon: '⚠️', text: `${d.species ?? 'A species'} is running low on stock` }),
+  stock_out_of_stock: (d) => ({ icon: '🚫', text: `${d.species ?? 'A species'} is out of stock` }),
+  bulk_requirement_nearby: (d) => ({ icon: '🤝', text: `${d.ngoName ?? 'An NGO'} is looking for saplings nearby` }),
+  nursery_tree_milestone: (d) => ({ icon: '🌳', text: d.message ?? 'You hit a tree milestone!' }),
+  nursery_impact_milestone: (d) => ({ icon: '🏆', text: d.message ?? 'You hit an impact milestone!' }),
+};
+
+function ActivityRow({ item }: { item: ApiNurseryActivityItem }) {
+  const copy = ACTIVITY_COPY[item.type]?.(item.data ?? {}) ?? { icon: '📌', text: item.type };
+  return (
+    <BorderCard noPadding style={styles.activityRow}>
+      <Text style={styles.activityIcon}>{copy.icon}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.activityText}>{copy.text}</Text>
+        <Text style={styles.activityTime}>{new Date(item.createdAt).toLocaleString()}</Text>
+      </View>
+    </BorderCard>
+  );
+}
+
 interface NurseryDashboardScreenProps {
   navigation: any;
   onNavigateTab: (tab: NurseryTabName) => void;
@@ -189,6 +216,7 @@ export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDas
   const { data: pendingReservations = [] } = useNurseryReservations('pending');
   const { data: confirmedOrders = [] } = useNurseryOrders('confirmed');
   const { data: packedOrders = [] } = useNurseryOrders('packed');
+  const { data: today } = useNurseryDashboardToday();
   const blurTargetRef = useRef<View>(null);
 
   const pageBackground = getHeroSeamColor(theme);
@@ -237,7 +265,26 @@ export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDas
     { key: 'editProfile', emoji: '⚙️', color: COLORS.earth, title: 'Edit nursery profile', onPress: () => navigation.navigate('EditNurseryProfile') },
     { key: 'viewProfile', emoji: '🌿', color: COLORS.forest, title: 'View public profile', onPress: () => navigation.navigate('NurseryProfile') },
     { key: 'map', emoji: '🗺️', color: COLORS.coral, title: 'View on Map', onPress: () => navigation.navigate('NurseryMap') },
+    { key: 'pickupDelivery', emoji: '🚴', color: COLORS.xpBlue, title: 'Pickup & Delivery', onPress: () => navigation.navigate('NurseryPickupDeliveryConfig') },
+    {
+      key: 'bulkRequirements',
+      emoji: '🤝',
+      color: COLORS.amber,
+      title: 'Bulk Requirements',
+      badge: today?.upcomingBulkRequirements?.length,
+      onPress: () => navigation.navigate('NurseryBulkRequirements'),
+    },
+    { key: 'impact', emoji: '🌳', color: COLORS.sage, title: 'Nursery Impact', onPress: () => navigation.navigate('NurseryImpact') },
   ];
+
+  // Every dock item now actually renders — the grid used to hardcode `.slice(0, 3)` /
+  // `.slice(3, 6)`, silently dropping anything past the 6th entry as the dock grew. Chunking the
+  // full array into rows of 3 keeps the same equal-width-column layout for however many items
+  // exist, old or new.
+  const dockRows: DockActionSpec[][] = [];
+  for (let i = 0; i < dockActions.length; i += 3) {
+    dockRows.push(dockActions.slice(i, i + 3));
+  }
 
   return (
     <BlurTargetView ref={blurTargetRef} collapsable={false} style={[styles.container, { backgroundColor: pageBackground }]}>
@@ -320,11 +367,47 @@ export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDas
 
         {profile && <StatusBanner status={profile.status} seamText={seamText} />}
 
+        {today && (
+          <>
+            <Text style={[styles.sectionTitle, { color: seamText.primary }]}>Today</Text>
+            <View style={styles.gridRow}>
+              <EcoWidget {...tileProps} icon="🛒" value={String(today.ordersToday)} label="Orders today" delay={0} onPress={() => navigation.navigate('NurseryOrders')} />
+              <EcoWidget {...tileProps} icon="🆕" value={String(today.newPending)} label="New pending" delay={60} onPress={() => navigation.navigate('NurseryOrders')} />
+            </View>
+            <View style={styles.gridRow}>
+              <EcoWidget {...tileProps} icon="📦" value={String(today.readyForPickup)} label="Ready for pickup" delay={120} onPress={() => navigation.navigate('NurseryOrders')} />
+              <EcoWidget {...tileProps} icon="🚴" value={String(today.deliveriesPending)} label="Deliveries pending" delay={180} onPress={() => navigation.navigate('NurseryOrders')} />
+            </View>
+          </>
+        )}
+
         <Text style={[styles.sectionTitle, { color: seamText.primary }]}>Quick Actions</Text>
         <View style={styles.dockGrid}>
-          <DockRow theme={theme} seamText={seamText} delayStart={120} items={dockActions.slice(0, 3)} />
-          <DockRow theme={theme} seamText={seamText} delayStart={210} items={dockActions.slice(3, 6)} />
+          {dockRows.map((row, i) => (
+            <DockRow
+              key={i}
+              theme={theme}
+              seamText={seamText}
+              delayStart={120 + i * 90}
+              items={row.length === 3 ? row : [...row, ...Array(3 - row.length).fill(null)]}
+            />
+          ))}
         </View>
+
+        {today && (
+          <>
+            <Text style={[styles.sectionTitle, { color: seamText.primary }]}>Recent Activity</Text>
+            {today.activity.length === 0 ? (
+              <EmptyState icon="📋" title="No activity yet" body="Orders, plantings, and milestones will show up here." />
+            ) : (
+              <View style={styles.activityList}>
+                {today.activity.slice(0, 10).map((item) => (
+                  <ActivityRow key={item.id} item={item} />
+                ))}
+              </View>
+            )}
+          </>
+        )}
 
         {isLoading || !stats ? (
           <ActivityIndicator color={theme.accentColor} style={styles.loader} />
@@ -394,4 +477,9 @@ const styles = StyleSheet.create({
   dockBadge: { position: 'absolute', top: -3, right: -6, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: COLORS.coral, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
   dockBadgeText: { fontSize: 10, fontWeight: '700', color: COLORS.white },
   dockLabel: { fontSize: 14, fontWeight: '700', textAlign: 'center', marginTop: 8, lineHeight: 17 },
+  activityList: { gap: 8, marginTop: 4 },
+  activityRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
+  activityIcon: { fontSize: 18 },
+  activityText: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary },
+  activityTime: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
 });

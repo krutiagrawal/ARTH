@@ -12,30 +12,42 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useHaptics } from '../hooks/useHaptics';
 import { useMyOrder, useCancelOrder, useSubmitOrderReview } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
-import type { OrderStatus } from '../api/orders';
+import type { OrderFulfillmentType, OrderStatus } from '../api/orders';
 
 function formatRupees(cents: number) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`;
 }
 
-const STAGES: { key: OrderStatus; label: string }[] = [
+// Both branches converge on plantation_verified once the saplings are actually planted and
+// AI/GPS-verified — that's the true end of the order lifecycle, not delivered/picked_up.
+const DELIVERY_STAGES: { key: OrderStatus; label: string }[] = [
   { key: 'confirmed', label: 'Confirmed' },
   { key: 'packed', label: 'Packed' },
   { key: 'out_for_delivery', label: 'Out for delivery' },
   { key: 'delivered', label: 'Delivered' },
+  { key: 'plantation_verified', label: 'Plantation verified' },
 ];
 
-function StatusTimeline({ status }: { status: OrderStatus }) {
-  const currentIndex = STAGES.findIndex((s) => s.key === status);
+const PICKUP_STAGES: { key: OrderStatus; label: string }[] = [
+  { key: 'confirmed', label: 'Confirmed' },
+  { key: 'packed', label: 'Packed' },
+  { key: 'ready_for_pickup', label: 'Ready for pickup' },
+  { key: 'picked_up', label: 'Picked up' },
+  { key: 'plantation_verified', label: 'Plantation verified' },
+];
+
+function StatusTimeline({ status, fulfillmentType }: { status: OrderStatus; fulfillmentType: OrderFulfillmentType }) {
+  const stages = fulfillmentType === 'pickup' ? PICKUP_STAGES : DELIVERY_STAGES;
+  const currentIndex = stages.findIndex((s) => s.key === status);
   return (
     <View style={styles.timeline}>
-      {STAGES.map((stage, i) => {
+      {stages.map((stage, i) => {
         const done = currentIndex >= i;
         return (
           <View key={stage.key} style={styles.timelineStep}>
             <View style={[styles.timelineDot, done && styles.timelineDotDone]} />
             <Text style={[styles.timelineLabel, done && styles.timelineLabelDone]}>{stage.label}</Text>
-            {i < STAGES.length - 1 ? <View style={[styles.timelineLine, currentIndex > i && styles.timelineLineDone]} /> : null}
+            {i < stages.length - 1 ? <View style={[styles.timelineLine, currentIndex > i && styles.timelineLineDone]} /> : null}
           </View>
         );
       })}
@@ -138,7 +150,13 @@ export function OrderDetailScreen({ route, navigation }: any) {
               <Text style={styles.cancelledText}>This order was cancelled.</Text>
             </View>
           ) : (
-            <StatusTimeline status={order.status} />
+            <StatusTimeline status={order.status} fulfillmentType={order.fulfillmentType} />
+          )}
+
+          {order.status === 'plantation_verified' && (
+            <View style={styles.verifiedBanner}>
+              <Text style={styles.verifiedText}>🌳 Every sapling in this order is now a verified ARTH Tree.</Text>
+            </View>
           )}
 
           {showTracking && order.tracking && (
@@ -160,10 +178,12 @@ export function OrderDetailScreen({ route, navigation }: any) {
             </View>
           )}
 
-          {order.status === 'out_for_delivery' && order.deliveryOtp && (
+          {((order.status === 'out_for_delivery') || (order.status === 'ready_for_pickup')) && order.handoffCode && (
             <BorderCard style={styles.card}>
-              <Text style={styles.otpLabel}>Delivery OTP – share this with the rider</Text>
-              <Text style={styles.otpValue}>{order.deliveryOtp}</Text>
+              <Text style={styles.otpLabel}>
+                {order.status === 'ready_for_pickup' ? 'Pickup code – show this at the nursery' : 'Delivery OTP – share this with the rider'}
+              </Text>
+              <Text style={styles.otpValue}>{order.handoffCode}</Text>
             </BorderCard>
           )}
 
@@ -185,9 +205,15 @@ export function OrderDetailScreen({ route, navigation }: any) {
               </View>
             ))}
             <View style={styles.divider} />
+            {order.fulfillmentType === 'delivery' && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Delivery fee</Text>
+                <Text style={styles.summaryValue}>{order.deliveryFeeCents === 0 ? 'Free' : formatRupees(order.deliveryFeeCents)}</Text>
+              </View>
+            )}
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Delivery fee</Text>
-              <Text style={styles.summaryValue}>{order.deliveryFeeCents === 0 ? 'Free' : formatRupees(order.deliveryFeeCents)}</Text>
+              <Text style={styles.summaryLabel}>Platform fee</Text>
+              <Text style={styles.summaryValue}>{formatRupees(order.platformFeeCents)}</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.totalLabel}>Total</Text>
@@ -195,14 +221,26 @@ export function OrderDetailScreen({ route, navigation }: any) {
             </View>
           </BorderCard>
 
-          <Text style={styles.sectionTitle}>Delivering to</Text>
-          <BorderCard style={styles.card}>
-            <Text style={styles.addressText}>
-              {[order.address.line1, order.address.line2, order.address.landmark, `${order.address.city} ${order.address.pincode}`].filter(Boolean).join(', ')}
-            </Text>
-          </BorderCard>
+          {order.fulfillmentType === 'delivery' && order.address ? (
+            <>
+              <Text style={styles.sectionTitle}>Delivering to</Text>
+              <BorderCard style={styles.card}>
+                <Text style={styles.addressText}>
+                  {[order.address.line1, order.address.line2, order.address.landmark, `${order.address.city} ${order.address.pincode}`].filter(Boolean).join(', ')}
+                </Text>
+              </BorderCard>
+            </>
+          ) : (
+            <>
+              <Text style={styles.sectionTitle}>Pickup</Text>
+              <BorderCard style={styles.card}>
+                <Text style={styles.addressText}>Pickup from {order.nursery.nurseryName}</Text>
+                {order.pickupWindowLabel ? <Text style={styles.addressText}>{order.pickupWindowLabel}</Text> : null}
+              </BorderCard>
+            </>
+          )}
 
-          {order.status === 'delivered' && !order.review && <ReviewForm orderId={order.id} />}
+          {['delivered', 'picked_up', 'plantation_verified'].includes(order.status) && !order.review && <ReviewForm orderId={order.id} />}
           {order.review && (
             <BorderCard style={styles.card}>
               <Text style={styles.reviewThanks}>Your rating: {'★'.repeat(order.review.nurseryRating)}</Text>
@@ -263,15 +301,18 @@ const styles = StyleSheet.create({
   addressText: { fontSize: 13, lineHeight: 19, color: COLORS.textPrimary },
   cancelledBanner: { backgroundColor: COLORS.dangerLight, borderRadius: RADIUS.lg, padding: 16, marginBottom: 16 },
   cancelledText: { fontSize: 13, color: COLORS.dangerDark, fontWeight: '600', textAlign: 'center' },
+  verifiedBanner: { backgroundColor: 'rgba(94,133,80,0.12)', borderRadius: RADIUS.lg, padding: 16, marginBottom: 16 },
+  verifiedText: { fontSize: 13, color: COLORS.forest, fontWeight: '700', textAlign: 'center' },
   errorText: { fontSize: 13, color: COLORS.dangerDark, textAlign: 'center', marginTop: 8 },
   starsRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   star: { fontSize: 32, color: COLORS.sand },
   starActive: { color: COLORS.amber },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    // No fill — an outline on the page, not a panel laid over it. Matches FormField's recipe.
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(94,133,80,0.2)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(139, 107, 71, 0.30)',
     padding: 12,
     fontSize: 14,
     color: COLORS.textPrimary,

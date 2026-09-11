@@ -16,14 +16,15 @@ import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
 import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
 import { useApprovalGate } from '@/components/dashboard/useApprovalGate'
 import { useNgoProfile } from '../NgoProfileContext'
-import { useResourceCrud } from '../useResourceCrud'
+import { useResourceCrud } from '@/lib/useResourceCrud'
+import { proxy } from '../proxy'
 import { treeFields } from '../resourceFields'
 
 const STATUS_VARIANT = { available: 'secondary', adopted: 'default', removed: 'outline' }
 
 export default function TreesClient() {
   const { profile } = useNgoProfile()
-  const { items, loading, create, update, remove, runAction } = useResourceCrud('/adoptable-trees')
+  const { items, loading, create, update, remove, runAction } = useResourceCrud(proxy, '/adoptable-trees')
   const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
 
   const [dialogOpen, setDialogOpen] = useState(false)

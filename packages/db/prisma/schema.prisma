@@ -177,6 +177,31 @@ enum NurseryAchievementCriteriaType {
   saplings_given_out
   reservations_fulfilled
   streak_days
+  native_species_listed
+  saplings_supplied_via_arth
+  ngo_requirements_fulfilled
+  // Distinct-NGOs-repeat-supplied-to count — separate from ngo_requirements_fulfilled's raw
+  // count so "NGO Partner" (>=1 fulfilled) and "NGO Favourite" (>=2 distinct repeat NGOs) can
+  // both be defined against the same criteria-type-driven progress calculator.
+  ngo_repeat_partners
+  fulfilment_rate_pct
+  cancellation_free_order_streak
+  monsoon_saplings_supplied
+}
+
+// Botanical detail on TreeSpecies (decision 6) — nullable/free-text where real-world
+// variation makes a clean enum brittle (soil), a real enum where the value set is small
+// and stable enough to drive filters/UI consistently (sunlight/water).
+enum SunlightNeeds {
+  full_sun
+  partial_shade
+  shade
+}
+
+enum WaterNeeds {
+  low
+  medium
+  high
 }
 
 enum ReservationStatus {
@@ -199,9 +224,20 @@ enum OrderStatus {
   pending_payment
   confirmed
   packed
+  ready_for_pickup
   out_for_delivery
+  picked_up
   delivered
+  plantation_verified
   cancelled
+}
+
+// Chosen once at checkout. `pickup` orders never get a DeliveryTracking row and move
+// packed -> ready_for_pickup -> picked_up instead of the delivery branch's
+// packed -> out_for_delivery -> delivered. Both branches converge on plantation_verified.
+enum OrderFulfillmentType {
+  pickup
+  delivery
 }
 
 // `mock` is the only implementation until a real provider's business account/API keys are
@@ -211,6 +247,32 @@ enum DeliveryProvider {
   mock
   porter
   nursery_staff
+}
+
+// Lifecycle of one physical, traceable sapling — the "ARTH Sapling ID" a QR code points at.
+// One row per unit of quantity on an OrderItem/SaplingReservation/BulkRequirementResponse
+// (never per line item), since each physical sapling is independently scanned and planted.
+enum ArthSaplingUnitStatus {
+  issued
+  collected
+  planted
+  void
+}
+
+enum BulkRequirementStatus {
+  open
+  partially_fulfilled
+  fulfilled
+  cancelled
+  expired
+}
+
+enum BulkRequirementResponseStatus {
+  proposed
+  accepted
+  declined
+  fulfilled
+  withdrawn
 }
 
 // Whether an NGO auto-accepts followers or vets each one. Set per NGO in its settings.
@@ -287,6 +349,18 @@ enum NotificationType {
   streak_broken
   reengagement_nudge
   cart_abandoned
+  order_ready_for_pickup
+  order_picked_up
+  order_plantation_verified
+  order_fulfillment_today
+  stock_low
+  stock_out_of_stock
+  bulk_requirement_nearby
+  bulk_requirement_response_received
+  bulk_requirement_response_accepted
+  sapling_planted
+  nursery_tree_milestone
+  nursery_impact_milestone
 }
 
 // ---------- Core ----------
@@ -440,7 +514,27 @@ model TreeSpecies {
   isActive     Boolean  @default(true) @map("is_active")
   sortOrder    Int      @default(0) @map("sort_order")
 
-  trees Tree[]
+  // Botanical detail added for nursery inventory + location-aware recommendations (decision 6).
+  // Nullable throughout: the original rows (and any quick add via the open POST /species
+  // endpoint) never populate these, only a nursery's curated inline-create does.
+  scientificName     String?        @map("scientific_name")
+  localName          String?        @map("local_name")
+  isNative           Boolean?       @map("is_native")
+  sunlightNeeds      SunlightNeeds? @map("sunlight_needs")
+  waterNeeds         WaterNeeds?    @map("water_needs")
+  soilNeeds          String?        @map("soil_needs")
+  matureHeightLabel  String?        @map("mature_height_label")
+  plantingSeasons    String[]       @map("planting_seasons")
+  // True only for a nursery-authored/upgraded record with real botanical detail — the open
+  // "any signed-in user" quick-add endpoint never sets this. Recommendation-matching and
+  // nursery storefront display should treat only curated rows as authoritative for these facts.
+  isCuratedBotanical Boolean        @default(false) @map("is_curated_botanical")
+  addedByRole        UserRole?      @map("added_by_role")
+
+  trees            Tree[]
+  stock            SaplingStock[]
+  saplingUnits     ArthSaplingUnit[]
+  bulkRequirements BulkRequirement[]
 
   @@map("tree_species")
 }
@@ -464,17 +558,24 @@ model Tree {
   reviewedByAdminId    String?                @map("reviewed_by_admin_id")
   reviewedAt           DateTime?              @map("reviewed_at")
   isDeleted            Boolean                @default(false) @map("is_deleted")
+  // Denormalized provenance link — set when this tree came from a scanned ArthSaplingUnit
+  // (marketplace order, free reservation, or NGO bulk-requirement supply). Null for every
+  // ordinary self-sourced "Plant by Yourself" tree, which is most of them.
+  nurseryId            String?                @map("nursery_id")
   createdAt            DateTime               @default(now()) @map("created_at")
   updatedAt            DateTime               @updatedAt @map("updated_at")
 
-  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  species TreeSpecies @relation(fields: [speciesId], references: [id])
-  posts   Post[]
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  species    TreeSpecies      @relation(fields: [speciesId], references: [id])
+  nursery    NurseryProfile?  @relation(fields: [nurseryId], references: [id])
+  posts      Post[]
+  sourceUnit ArthSaplingUnit?
 
   @@index([userId])
   @@index([plantedAt(sort: Desc)])
   @@index([userId, plantedAt(sort: Desc)])
   @@index([lat, lng])
+  @@index([nurseryId])
   @@map("trees")
 }
 
@@ -625,47 +726,60 @@ model GroupChallengeParticipant {
 // A Nursery sells/donates sapling stock — approval-gated like NgoProfile, since an
 // inventory claim is a real-world commitment worth an admin vetting before it goes live.
 model NurseryProfile {
-  id               String            @id @default(uuid())
-  userId           String            @unique @map("user_id")
-  nurseryName      String            @map("nursery_name")
-  description      String
-  logoUrl          String?           @map("logo_url")
-  city             String?
-  contactPhone     String?           @map("contact_phone")
-  lat              Decimal?          @db.Decimal(9, 6)
-  lng              Decimal?          @db.Decimal(9, 6)
-  status           NgoApprovalStatus @default(pending)
-  rejectionReason  String?           @map("rejection_reason")
-  approvedAt       DateTime?         @map("approved_at")
-  approvedByUserId String?           @map("approved_by_user_id")
-  streakCurrent    Int               @default(0) @map("streak_current")
-  streakMax        Int               @default(0) @map("streak_max")
-  badgesCount      Int               @default(0) @map("badges_count")
+  id                    String            @id @default(uuid())
+  userId                String            @unique @map("user_id")
+  nurseryName           String            @map("nursery_name")
+  description           String
+  logoUrl               String?           @map("logo_url")
+  city                  String?
+  contactPhone          String?           @map("contact_phone")
+  lat                   Decimal?          @db.Decimal(9, 6)
+  lng                   Decimal?          @db.Decimal(9, 6)
+  status                NgoApprovalStatus @default(pending)
+  rejectionReason       String?           @map("rejection_reason")
+  approvedAt            DateTime?         @map("approved_at")
+  approvedByUserId      String?           @map("approved_by_user_id")
+  streakCurrent         Int               @default(0) @map("streak_current")
+  streakMax             Int               @default(0) @map("streak_max")
+  badgesCount           Int               @default(0) @map("badges_count")
   // Denormalized from OrderReview so the directory/profile list never needs a per-row aggregate
   // query, same pattern as Post.likeCount. Recomputed in the same transaction as each new review.
-  avgRating        Decimal?          @map("avg_rating") @db.Decimal(3, 2)
-  reviewCount      Int               @default(0) @map("review_count")
-  offersDelivery   Boolean           @default(true) @map("offers_delivery")
-  deliveryRadiusKm Int?              @map("delivery_radius_km")
-  coverPhotoUrl    String?           @map("cover_photo_url")
-  followPolicy     FollowPolicy      @default(open) @map("follow_policy")
-  createdAt        DateTime          @default(now()) @map("created_at")
-  updatedAt        DateTime          @updatedAt @map("updated_at")
+  avgRating             Decimal?          @map("avg_rating") @db.Decimal(3, 2)
+  reviewCount           Int               @default(0) @map("review_count")
+  offersDelivery        Boolean           @default(true) @map("offers_delivery")
+  deliveryRadiusKm      Int?              @map("delivery_radius_km")
+  coverPhotoUrl         String?           @map("cover_photo_url")
+  followPolicy          FollowPolicy      @default(open) @map("follow_policy")
+  // Pickup/delivery configuration (section 4) — delivery must remain optional, so the service
+  // layer rejects a profile update that would leave both offersPickup and offersDelivery false.
+  offersPickup          Boolean           @default(true) @map("offers_pickup")
+  deliveryFeeCents      Int?              @map("delivery_fee_cents")
+  minDeliveryOrderCents Int?              @map("min_delivery_order_cents")
+  // Free-shape JSON, app-owned/Zod-validated (mirrors NgoProfile.awards' convention) — a
+  // handful of labeled slots, deliberately not a recurring-calendar scheduling system.
+  operatingHours        Json?             @map("operating_hours")
+  pickupWindows         Json?             @map("pickup_windows")
+  pickupInstructions    String?           @map("pickup_instructions")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
 
-  user               User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  saplingStock       SaplingStock[]
-  reservations       SaplingReservation[]
-  stockLedger        SaplingStockLedger[]
-  streakHistory      NurseryStreakHistory[]
-  achievementUnlocks NurseryAchievementUnlock[]
-  cartItems          CartItem[]
-  orders             Order[]
-  orderReviews       OrderReview[]
-  wishlistedBy       WishlistItem[]
-  posts                  Post[]
-  stories                Story[]
-  followers              Follow[]
-  notificationsTriggered Notification[] @relation("NotificationActorNursery")
+  user                     User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  saplingStock             SaplingStock[]
+  reservations             SaplingReservation[]
+  stockLedger              SaplingStockLedger[]
+  streakHistory            NurseryStreakHistory[]
+  achievementUnlocks       NurseryAchievementUnlock[]
+  cartItems                CartItem[]
+  orders                   Order[]
+  orderReviews             OrderReview[]
+  wishlistedBy             WishlistItem[]
+  posts                    Post[]
+  stories                  Story[]
+  followers                Follow[]
+  notificationsTriggered   Notification[]             @relation("NotificationActorNursery")
+  saplingUnits             ArthSaplingUnit[]
+  bulkRequirementResponses BulkRequirementResponse[]
+  suppliedTrees            Tree[]
 
   @@index([status])
   @@map("nursery_profiles")
@@ -682,7 +796,21 @@ model SaplingStock {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
+  // Detailed inventory (section 2). speciesId is nullable at the DB level even though every
+  // new write should set it — see the backfill migration for pre-existing free-text rows.
+  speciesId            String?  @map("species_id")
+  scientificNameSnap   String?  @map("scientific_name_snapshot")
+  ageLabel             String?  @map("age_label")
+  heightLabel          String?  @map("height_label")
+  potSize              String?  @map("pot_size")
+  suitableEnvironments String[] @map("suitable_environments")
+  nurseryNotes         String?  @map("nursery_notes")
+  // Availability status (Available/Low Stock/Out of Stock) is derived from quantity vs this
+  // threshold at serialization time, not stored — editing stays "touch one number."
+  lowStockThreshold    Int      @default(5) @map("low_stock_threshold")
+
   nursery            NurseryProfile       @relation(fields: [nurseryId], references: [id], onDelete: Cascade)
+  speciesRef         TreeSpecies?         @relation(fields: [speciesId], references: [id])
   reservations       SaplingReservation[]
   SaplingStockLedger SaplingStockLedger[]
   cartItems          CartItem[]
@@ -690,6 +818,7 @@ model SaplingStock {
   wishlistedBy       WishlistItem[]
 
   @@index([nurseryId])
+  @@index([speciesId])
   @@map("sapling_stock")
 }
 
@@ -707,9 +836,10 @@ model SaplingReservation {
   createdAt   DateTime          @default(now()) @map("created_at")
   respondedAt DateTime?         @map("responded_at")
 
-  stock   SaplingStock   @relation(fields: [stockId], references: [id], onDelete: Cascade)
-  nursery NurseryProfile @relation(fields: [nurseryId], references: [id], onDelete: Cascade)
-  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stock        SaplingStock      @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  nursery      NurseryProfile    @relation(fields: [nurseryId], references: [id], onDelete: Cascade)
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  saplingUnits ArthSaplingUnit[]
 
   @@index([nurseryId, status])
   @@index([userId])
@@ -834,30 +964,46 @@ model CartItem {
 // left untouched for nurseries that still list free stock). Every paid marketplace purchase goes
 // through here instead.
 model Order {
-  id                    String      @id @default(uuid())
-  userId                String      @map("user_id")
-  nurseryId             String      @map("nursery_id")
-  addressId             String      @map("address_id")
-  status                OrderStatus @default(pending_payment)
-  subtotalCents         Int         @map("subtotal_cents")
-  deliveryFeeCents      Int         @default(0) @map("delivery_fee_cents")
-  totalCents            Int         @map("total_cents")
-  currency              String      @default("inr")
-  stripePaymentIntentId String?     @unique @map("stripe_payment_intent_id")
-  confirmedAt           DateTime?   @map("confirmed_at")
-  packedAt              DateTime?   @map("packed_at")
-  outForDeliveryAt      DateTime?   @map("out_for_delivery_at")
-  deliveredAt           DateTime?   @map("delivered_at")
-  cancelledAt           DateTime?   @map("cancelled_at")
+  id                    String               @id @default(uuid())
+  userId                String               @map("user_id")
+  nurseryId             String               @map("nursery_id")
+  // Nullable: a pickup order (fulfillmentType='pickup') never sets an address.
+  addressId             String?              @map("address_id")
+  fulfillmentType       OrderFulfillmentType @default(delivery) @map("fulfillment_type")
+  status                OrderStatus          @default(pending_payment)
+  subtotalCents         Int                  @map("subtotal_cents")
+  deliveryFeeCents      Int                  @default(0) @map("delivery_fee_cents")
+  // Flat ARTH platform fee, charged on every order regardless of fulfillment type (unlike
+  // deliveryFeeCents, which is pickup-exempt) — see PLATFORM_FEE_CENTS in order.service.ts.
+  platformFeeCents      Int                  @default(0) @map("platform_fee_cents")
+  totalCents            Int                  @map("total_cents")
+  currency              String               @default("inr")
+  stripePaymentIntentId String?              @unique @map("stripe_payment_intent_id")
+  // Requested pickup/delivery date+time chosen at checkout, and (pickup only) which of the
+  // nursery's configured pickupWindows the customer picked.
+  scheduledFor          DateTime?            @map("scheduled_for")
+  pickupWindowLabel     String?              @map("pickup_window_label")
+  confirmedAt           DateTime?            @map("confirmed_at")
+  packedAt              DateTime?            @map("packed_at")
+  readyForPickupAt      DateTime?            @map("ready_for_pickup_at")
+  outForDeliveryAt      DateTime?            @map("out_for_delivery_at")
+  pickedUpAt            DateTime?            @map("picked_up_at")
+  deliveredAt           DateTime?            @map("delivered_at")
+  plantationVerifiedAt  DateTime?            @map("plantation_verified_at")
+  cancelledAt           DateTime?            @map("cancelled_at")
   // Shown to the rider/nursery staff at handoff, entered by the customer to confirm receipt —
-  // avoids needing a signature or app-to-app handshake for proof of delivery.
-  deliveryOtp           String?     @map("delivery_otp")
-  createdAt             DateTime    @default(now()) @map("created_at")
-  updatedAt             DateTime    @updatedAt @map("updated_at")
+  // avoids needing a signature or app-to-app handshake for proof of delivery. One field for
+  // both branches (delivery rider handoff and in-person pickup handoff) since it's the same
+  // artifact either way. Replaces the old delivery-only `deliveryOtp` column (kept temporarily,
+  // unused by application code, for a safe expand->backfill->contract migration).
+  handoffCode           String?              @map("handoff_code")
+  deliveryOtp           String?              @map("delivery_otp")
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
 
   user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   nursery  NurseryProfile    @relation(fields: [nurseryId], references: [id], onDelete: Cascade)
-  address  Address           @relation(fields: [addressId], references: [id])
+  address  Address?          @relation(fields: [addressId], references: [id])
   items    OrderItem[]
   tracking DeliveryTracking?
   review   OrderReview?
@@ -877,8 +1023,9 @@ model OrderItem {
   quantity       Int
   unitPriceCents Int     @map("unit_price_cents")
 
-  order Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  stock SaplingStock? @relation(fields: [stockId], references: [id], onDelete: SetNull)
+  order        Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  stock        SaplingStock?     @relation(fields: [stockId], references: [id], onDelete: SetNull)
+  saplingUnits ArthSaplingUnit[]
 
   @@index([orderId])
   @@map("order_items")
@@ -908,16 +1055,16 @@ model DeliveryTracking {
 // ("rate delivery experience separately"); nurseryId is denormalized so a nursery's profile
 // rating aggregate query never has to join through Order.
 model OrderReview {
-  id                  String    @id @default(uuid())
-  orderId             String    @unique @map("order_id")
-  userId              String    @map("user_id")
-  nurseryId           String    @map("nursery_id")
-  nurseryRating       Int       @map("nursery_rating")
-  deliveryRating      Int?      @map("delivery_rating")
-  comment             String?
-  nurseryResponse     String?   @map("nursery_response")
-  nurseryRespondedAt  DateTime? @map("nursery_responded_at")
-  createdAt           DateTime  @default(now()) @map("created_at")
+  id                 String    @id @default(uuid())
+  orderId            String    @unique @map("order_id")
+  userId             String    @map("user_id")
+  nurseryId          String    @map("nursery_id")
+  nurseryRating      Int       @map("nursery_rating")
+  deliveryRating     Int?      @map("delivery_rating")
+  comment            String?
+  nurseryResponse    String?   @map("nursery_response")
+  nurseryRespondedAt DateTime? @map("nursery_responded_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
 
   order   Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
   user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -925,6 +1072,41 @@ model OrderReview {
 
   @@index([nurseryId])
   @@map("order_reviews")
+}
+
+// The traceable "ARTH Sapling ID" a QR code points at (sections 5/6) — one row per physical
+// sapling, not per line item, since a quantity-5 OrderItem is 5 independently scannable units.
+// Exactly one of orderItemId/reservationId/bulkRequirementResponseId is set: the three ways a
+// sapling can leave a nursery's stock (paid marketplace order, free reservation claim, or an
+// NGO bulk-requirement fulfilment). Species/age are snapshotted at issue time so a later stock
+// edit or deletion never rewrites a unit's already-printed QR passport.
+model ArthSaplingUnit {
+  id                        String                @id @default(uuid())
+  orderItemId               String?               @map("order_item_id")
+  reservationId             String?               @map("reservation_id")
+  bulkRequirementResponseId String?               @map("bulk_requirement_response_id")
+  nurseryId                 String                @map("nursery_id")
+  speciesId                 String?               @map("species_id")
+  speciesNameSnapshot       String                @map("species_name_snapshot")
+  ageAtSupplyLabel          String?               @map("age_at_supply_label")
+  supplyDate                DateTime              @default(now()) @map("supply_date")
+  status                    ArthSaplingUnitStatus @default(issued)
+  collectedAt               DateTime?             @map("collected_at")
+  // One-to-one once planted — set by tree.service.ts's plantTree, never elsewhere.
+  treeId                    String?               @unique @map("tree_id")
+
+  orderItem               OrderItem?               @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  reservation             SaplingReservation?      @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  bulkRequirementResponse BulkRequirementResponse? @relation(fields: [bulkRequirementResponseId], references: [id], onDelete: Cascade)
+  nursery                 NurseryProfile           @relation(fields: [nurseryId], references: [id], onDelete: Cascade)
+  species                 TreeSpecies?             @relation(fields: [speciesId], references: [id])
+  tree                    Tree?                    @relation(fields: [treeId], references: [id])
+
+  @@index([nurseryId])
+  @@index([orderItemId])
+  @@index([reservationId])
+  @@index([bulkRequirementResponseId])
+  @@map("arth_sapling_units")
 }
 
 // Saves either a whole nursery or one specific stock listing — exactly one of nurseryId/stockId
@@ -1369,6 +1551,7 @@ model NgoProfile {
   plantedTrees           PlantedTree[]
   streakHistory          NgoStreakHistory[]
   achievementUnlocks     NgoAchievementUnlock[]
+  bulkRequirements       BulkRequirement[]
 
   @@index([status])
   @@map("ngo_profiles")
@@ -1395,13 +1578,14 @@ model Drive {
   createdAt       DateTime           @default(now()) @map("created_at")
   updatedAt       DateTime           @updatedAt @map("updated_at")
 
-  ngo             NgoProfile         @relation(fields: [ngoId], references: [id], onDelete: Cascade)
-  rsvps           DriveRsvp[]
-  pickupPoints    DrivePickupPoint[]
-  plants          DrivePlant[]
-  posts           Post[]
-  plantedTrees    PlantedTree[]
-  csrSponsorships CsrSponsorship[]
+  ngo              NgoProfile         @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  rsvps            DriveRsvp[]
+  pickupPoints     DrivePickupPoint[]
+  plants           DrivePlant[]
+  posts            Post[]
+  plantedTrees     PlantedTree[]
+  csrSponsorships  CsrSponsorship[]
+  bulkRequirements BulkRequirement[]
 
   @@index([ngoId])
   @@index([lat, lng])
@@ -1468,6 +1652,68 @@ model DriveRsvp {
   @@index([driveId])
   @@index([userId])
   @@map("drive_rsvps")
+}
+
+// NGO<->Nursery bulk sapling matching (section 10). Standalone, not required to be tied to a
+// Drive (driveId nullable) — an NGO can post ahead of an event. Mirrors SaplingReservation's
+// pending->fulfilled/declined shape rather than Order's, since this is a many-to-many
+// negotiation ("100 needed -> Nursery A supplies 60, Nursery B supplies 40"), not a single-buyer
+// transaction, and is explicitly not meant to become a bidding marketplace.
+model BulkRequirement {
+  id                String                @id @default(uuid())
+  ngoId             String                @map("ngo_id")
+  driveId           String?               @map("drive_id")
+  speciesId         String?               @map("species_id")
+  // Free text when the need isn't a single catalog species ("any native species").
+  speciesNote       String?               @map("species_note")
+  nativePreferred   Boolean               @default(false) @map("native_preferred")
+  quantityNeeded    Int                   @map("quantity_needed")
+  // Denormalized rollup of accepted responses' quantityOffered — recomputed in the same
+  // transaction as acceptResponse, same convention as NurseryProfile.avgRating.
+  quantityFulfilled Int                   @default(0) @map("quantity_fulfilled")
+  neededByDate      DateTime?             @map("needed_by_date")
+  city              String?
+  lat               Decimal?              @db.Decimal(9, 6)
+  lng               Decimal?              @db.Decimal(9, 6)
+  notes             String?
+  status            BulkRequirementStatus @default(open)
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+
+  ngo       NgoProfile                @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  drive     Drive?                    @relation(fields: [driveId], references: [id])
+  species   TreeSpecies?              @relation(fields: [speciesId], references: [id])
+  responses BulkRequirementResponse[]
+
+  @@index([ngoId, status])
+  @@index([status, city])
+  @@index([lat, lng])
+  @@map("bulk_requirements")
+}
+
+model BulkRequirementResponse {
+  id              String                        @id @default(uuid())
+  requirementId   String                        @map("requirement_id")
+  nurseryId       String                        @map("nursery_id")
+  quantityOffered Int                           @map("quantity_offered")
+  // Null = free/in-kind supply.
+  priceCents      Int?                          @map("price_cents")
+  canDeliver      Boolean                       @default(false) @map("can_deliver")
+  canPickup       Boolean                       @default(true) @map("can_pickup")
+  message         String?
+  status          BulkRequirementResponseStatus @default(proposed)
+  respondedAt     DateTime?                     @map("responded_at")
+  createdAt       DateTime                      @default(now()) @map("created_at")
+
+  requirement  BulkRequirement   @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  nursery      NurseryProfile    @relation(fields: [nurseryId], references: [id], onDelete: Cascade)
+  saplingUnits ArthSaplingUnit[]
+
+  // One active offer per nursery per requirement — a nursery revises by updating this row.
+  @@unique([requirementId, nurseryId])
+  @@index([requirementId, status])
+  @@index([nurseryId, status])
+  @@map("bulk_requirement_responses")
 }
 
 model AdoptableTree {
@@ -1769,9 +2015,9 @@ model Block {
 // ---------- Notifications ----------
 
 model Notification {
-  id          String           @id @default(uuid())
-  userId      String           @map("user_id")
-  type        NotificationType
+  id             String           @id @default(uuid())
+  userId         String           @map("user_id")
+  type           NotificationType
   actorUserId    String?          @map("actor_user_id")
   actorNgoId     String?          @map("actor_ngo_id")
   actorNurseryId String?          @map("actor_nursery_id")

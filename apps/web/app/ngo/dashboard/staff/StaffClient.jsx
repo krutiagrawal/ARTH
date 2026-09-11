@@ -12,12 +12,13 @@ import ResourceFormSheet from '@/components/dashboard/ResourceFormSheet'
 import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
 import { useApprovalGate } from '@/components/dashboard/useApprovalGate'
 import { useNgoProfile } from '../NgoProfileContext'
-import { useResourceCrud } from '../useResourceCrud'
+import { useResourceCrud } from '@/lib/useResourceCrud'
+import { proxy } from '../proxy'
 import { staffFields } from '../resourceFields'
 
 export default function StaffClient() {
   const { profile } = useNgoProfile()
-  const { items, loading, create, update, remove } = useResourceCrud('/ngo/staff', '/ngo/staff')
+  const { items, loading, create, update, remove } = useResourceCrud(proxy, '/ngo/staff', '/ngo/staff')
   const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
 
   const [dialogOpen, setDialogOpen] = useState(false)

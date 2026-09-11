@@ -16,6 +16,19 @@ function formatRupees(cents) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`
 }
 
+// The public nursery-detail endpoint returns raw SaplingStock rows (quantity,
+// lowStockThreshold, ageLabel, heightLabel, potSize, …) without a derived
+// availability status the way the nursery's own /nursery/stock list does —
+// mirrored here client-side, presentation-only, no backend change needed.
+function availabilityOf(item) {
+  if (item.quantity <= 0) return 'out_of_stock'
+  if (item.quantity <= (item.lowStockThreshold ?? 5)) return 'low_stock'
+  return 'available'
+}
+
+const AVAILABILITY_LABEL = { available: 'In stock', low_stock: 'Low stock', out_of_stock: 'Out of stock' }
+const AVAILABILITY_VARIANT = { available: 'secondary', low_stock: 'outline', out_of_stock: 'destructive' }
+
 function EmptyStockIllustration() {
   return (
     <svg width="110" height="110" viewBox="0 0 110 110" fill="none" aria-hidden>
@@ -132,10 +145,20 @@ export default function NurseryDetailClient({ nurseryId }) {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{item.species}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium truncate">{item.species}</p>
+                    <Badge variant={AVAILABILITY_VARIANT[availabilityOf(item)]} className="shrink-0 text-[10px]">
+                      {AVAILABILITY_LABEL[availabilityOf(item)]}
+                    </Badge>
+                  </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {item.quantity} available · {item.isFree ? 'Free – request in the mobile app' : formatRupees(item.priceCents)}
                   </p>
+                  {(item.ageLabel || item.heightLabel || item.potSize) && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {[item.ageLabel, item.heightLabel, item.potSize].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
                   {!item.isFree && (
                     <Button
                       variant="outline"

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { Prisma, PrismaClient } from '@plant/db';
 import { ForbiddenError, NotFoundError, BadRequestError } from '../utils/errors';
 import { notify } from './notification.service';
 import { recordNurseryActiveToday } from './nurseryStreak.service';
@@ -17,14 +17,42 @@ interface UpdateProfileInput {
   offersDelivery?: boolean;
   deliveryRadiusKm?: number | null;
   followPolicy?: 'open' | 'approval';
+  offersPickup?: boolean;
+  deliveryFeeCents?: number | null;
+  minDeliveryOrderCents?: number | null;
+  operatingHours?: unknown;
+  pickupWindows?: unknown;
+  pickupInstructions?: string;
+}
+
+interface InlineSpeciesInput {
+  commonName: string;
+  scientificName?: string;
+  localName?: string;
+  emoji?: string;
+  isNative?: boolean;
+  sunlightNeeds?: 'full_sun' | 'partial_shade' | 'shade';
+  waterNeeds?: 'low' | 'medium' | 'high';
+  soilNeeds?: string;
+  matureHeightLabel?: string;
+  plantingSeasons?: string[];
+  co2KgPerYear?: number;
+  description?: string;
 }
 
 interface StockInput {
-  species: string;
+  speciesId?: string;
+  species?: InlineSpeciesInput;
   quantity: number;
   isFree?: boolean;
   priceCents?: number;
   photoUrl?: string;
+  ageLabel?: string;
+  heightLabel?: string;
+  potSize?: string;
+  suitableEnvironments?: string[];
+  nurseryNotes?: string;
+  lowStockThreshold?: number;
 }
 
 export async function getOwnProfile(prisma: PrismaClient, userId: string) {
@@ -35,7 +63,87 @@ export async function getOwnProfile(prisma: PrismaClient, userId: string) {
 
 export async function updateOwnProfile(prisma: PrismaClient, userId: string, input: UpdateProfileInput) {
   const profile = await getOwnProfile(prisma, userId);
-  return prisma.nurseryProfile.update({ where: { id: profile.id }, data: input });
+
+  const nextOffersDelivery = input.offersDelivery ?? profile.offersDelivery;
+  const nextOffersPickup = input.offersPickup ?? profile.offersPickup;
+  if (!nextOffersDelivery && !nextOffersPickup) {
+    throw new BadRequestError('A nursery must offer at least one of pickup or delivery');
+  }
+
+  return prisma.nurseryProfile.update({
+    where: { id: profile.id },
+    data: input as Prisma.NurseryProfileUpdateInput,
+  });
+}
+
+// Resolves a stock write's species link — exactly one of speciesId/species is expected (Zod
+// enforces this on create; update allows omitting both to leave the existing link untouched).
+// speciesId re-links to an existing catalog entry as-is. An inline `species` payload finds an
+// existing TreeSpecies by case-insensitive commonName match (same convention as
+// species.routes.ts's open quick-add) and upgrades it to curated botanical detail, or creates a
+// new curated row — curated because only the approval-gated nursery role can reach this path.
+async function resolveSpeciesLink(
+  prisma: PrismaClient,
+  input: Pick<StockInput, 'speciesId' | 'species'>,
+): Promise<{ speciesId?: string; speciesDisplayName?: string }> {
+  if (input.speciesId) {
+    const species = await prisma.treeSpecies.findUnique({ where: { id: input.speciesId } });
+    if (!species) throw new NotFoundError('Species not found');
+    return { speciesId: species.id, speciesDisplayName: species.commonName };
+  }
+
+  if (!input.species) return {};
+  const commonName = input.species.commonName.trim();
+
+  const existing = await prisma.treeSpecies.findFirst({
+    where: { commonName: { equals: commonName, mode: 'insensitive' } },
+  });
+
+  const botanicalData = {
+    scientificName: input.species.scientificName,
+    localName: input.species.localName,
+    isNative: input.species.isNative,
+    sunlightNeeds: input.species.sunlightNeeds,
+    waterNeeds: input.species.waterNeeds,
+    soilNeeds: input.species.soilNeeds,
+    matureHeightLabel: input.species.matureHeightLabel,
+    plantingSeasons: input.species.plantingSeasons,
+    co2KgPerYear: input.species.co2KgPerYear,
+    description: input.species.description,
+    isCuratedBotanical: true,
+    addedByRole: 'nursery' as const,
+  };
+
+  if (existing) {
+    const updated = await prisma.treeSpecies.update({ where: { id: existing.id }, data: botanicalData });
+    return { speciesId: updated.id, speciesDisplayName: updated.commonName };
+  }
+
+  const baseKey = commonName
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 40) || 'species';
+  let key = baseKey;
+  let suffix = 1;
+  while (await prisma.treeSpecies.findUnique({ where: { key } })) {
+    suffix += 1;
+    key = `${baseKey}_${suffix}`;
+  }
+  const maxSortOrder = await prisma.treeSpecies.aggregate({ _max: { sortOrder: true } });
+
+  const created = await prisma.treeSpecies.create({
+    data: {
+      key,
+      commonName,
+      emoji: input.species.emoji ?? '🌱',
+      isActive: true,
+      sortOrder: (maxSortOrder._max.sortOrder ?? 0) + 1,
+      ...botanicalData,
+    },
+  });
+  return { speciesId: created.id, speciesDisplayName: created.commonName };
 }
 
 // Mirrors ngo.service.ts's resubmitProfile — a rejected nursery edits its details, then
@@ -70,16 +178,50 @@ export async function getOwnStats(prisma: PrismaClient, userId: string) {
   };
 }
 
-export async function listStock(prisma: PrismaClient, userId: string) {
+interface StockFilter {
+  species?: string;
+  native?: boolean;
+  availability?: 'available' | 'low_stock' | 'out_of_stock';
+  season?: string;
+}
+
+function deriveAvailability(quantity: number, lowStockThreshold: number): 'available' | 'low_stock' | 'out_of_stock' {
+  if (quantity <= 0) return 'out_of_stock';
+  if (quantity <= lowStockThreshold) return 'low_stock';
+  return 'available';
+}
+
+function withAvailability<T extends { quantity: number; lowStockThreshold: number }>(item: T) {
+  return { ...item, availabilityStatus: deriveAvailability(item.quantity, item.lowStockThreshold) };
+}
+
+export async function listStock(prisma: PrismaClient, userId: string, filter: StockFilter = {}) {
   const profile = await getOwnProfile(prisma, userId);
-  return prisma.saplingStock.findMany({ where: { nurseryId: profile.id }, orderBy: { createdAt: 'desc' } });
+  const rows = await prisma.saplingStock.findMany({
+    where: {
+      nurseryId: profile.id,
+      ...(filter.species ? { species: { contains: filter.species, mode: 'insensitive' } } : {}),
+      ...(filter.native !== undefined ? { speciesRef: { isNative: filter.native } } : {}),
+      ...(filter.season ? { speciesRef: { plantingSeasons: { has: filter.season } } } : {}),
+    },
+    include: { speciesRef: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  const withStatus = rows.map(withAvailability);
+  return filter.availability ? withStatus.filter((r) => r.availabilityStatus === filter.availability) : withStatus;
 }
 
 export async function createStock(prisma: PrismaClient, userId: string, input: StockInput) {
   const profile = await getOwnProfile(prisma, userId);
+  const { speciesId, speciesDisplayName } = await resolveSpeciesLink(prisma, input);
+  if (!speciesDisplayName) throw new BadRequestError('Provide either speciesId or species details');
+
+  const { species: _species, speciesId: _speciesId, ...rest } = input;
 
   return prisma.$transaction(async (tx) => {
-    const item = await tx.saplingStock.create({ data: { nurseryId: profile.id, ...input } });
+    const item = await tx.saplingStock.create({
+      data: { ...rest, nurseryId: profile.id, species: speciesDisplayName, speciesId },
+    });
     if (item.quantity > 0) {
       await tx.saplingStockLedger.create({
         data: {
@@ -92,18 +234,23 @@ export async function createStock(prisma: PrismaClient, userId: string, input: S
       });
     }
     await recordNurseryActiveToday(tx, profile.id);
-    return item;
+    return withAvailability(item);
   });
 }
 
 export async function updateStock(prisma: PrismaClient, userId: string, stockId: string, input: Partial<StockInput>) {
   const profile = await getOwnProfile(prisma, userId);
+  const { speciesId, speciesDisplayName } = await resolveSpeciesLink(prisma, input);
+  const { species: _species, ...rest } = input;
 
-  const { updated, wishlisterIds } = await prisma.$transaction(async (tx) => {
+  const { updated, wishlisterIds, stockAlert } = await prisma.$transaction(async (tx) => {
     const existing = await tx.saplingStock.findFirst({ where: { id: stockId, nurseryId: profile.id } });
     if (!existing) throw new NotFoundError('Stock item not found');
 
-    const updated = await tx.saplingStock.update({ where: { id: stockId }, data: input });
+    const updated = await tx.saplingStock.update({
+      where: { id: stockId },
+      data: { ...rest, ...(speciesId ? { speciesId, species: speciesDisplayName } : {}) },
+    });
 
     if (input.quantity !== undefined && input.quantity !== existing.quantity) {
       await tx.saplingStockLedger.create({
@@ -127,19 +274,41 @@ export async function updateStock(prisma: PrismaClient, userId: string, stockId:
       wishlisterIds = wishlisters.map((w) => w.userId);
     }
 
-    return { updated, wishlisterIds };
+    // Self-targeted low-stock/out-of-stock nudge (section 1/11) — fires only on the band-crossing
+    // transition, same "don't spam every bump" reasoning as the wishlist notify above.
+    const threshold = updated.lowStockThreshold;
+    const wasAvailability = deriveAvailability(existing.quantity, existing.lowStockThreshold);
+    const nowAvailability = deriveAvailability(updated.quantity, threshold);
+    let stockAlert: 'stock_low' | 'stock_out_of_stock' | null = null;
+    if (nowAvailability !== wasAvailability && (nowAvailability === 'low_stock' || nowAvailability === 'out_of_stock')) {
+      stockAlert = nowAvailability === 'out_of_stock' ? 'stock_out_of_stock' : 'stock_low';
+    }
+
+    return { updated, wishlisterIds, stockAlert };
   });
 
-  for (const userId of wishlisterIds) {
+  for (const wishlisterId of wishlisterIds) {
     await notify(prisma, {
-      userId,
+      userId: wishlisterId,
       type: 'wishlist_back_in_stock',
       data: { stockId, species: updated.species, nurseryName: profile.nurseryName },
       push: { title: `${updated.species} is back in stock!`, body: `${profile.nurseryName} just restocked ${updated.species}.` },
     });
   }
 
-  return updated;
+  if (stockAlert) {
+    await notify(prisma, {
+      userId,
+      type: stockAlert,
+      data: { stockId, species: updated.species, quantity: updated.quantity },
+      push:
+        stockAlert === 'stock_out_of_stock'
+          ? { title: 'Out of stock', body: `${updated.species} just ran out — update it once you restock.` }
+          : { title: 'Running low', body: `${updated.species} is down to ${updated.quantity} — restock soon.` },
+    });
+  }
+
+  return withAvailability(updated);
 }
 
 /** Nursery responds once to a review left on one of their orders. */
@@ -317,6 +486,136 @@ export async function getStockLedger(prisma: PrismaClient, userId: string, page 
     take: capped,
     skip: (Math.max(page, 1) - 1) * capped,
   });
+}
+
+// ---------- Dashboard (section 1) ----------
+// Purpose-built aggregation, not a bolt-on to getOwnStats above — the dashboard needs
+// order-status counts and ArthSaplingUnit/BulkRequirement joins getOwnStats doesn't touch.
+export async function getDashboardSummary(prisma: PrismaClient, userId: string) {
+  const profile = await getOwnProfile(prisma, userId);
+  const todayStart = startOfUtcDay(new Date());
+
+  const [
+    ordersToday,
+    newPending,
+    readyForPickupCount,
+    deliveriesPendingCount,
+    lowStockRows,
+    saplingsSuppliedLifetime,
+    verifiedPlantations,
+    revenueAgg,
+    upcomingRequirements,
+    activityNotifications,
+  ] = await Promise.all([
+    prisma.order.count({ where: { nurseryId: profile.id, createdAt: { gte: todayStart } } }),
+    prisma.order.count({ where: { nurseryId: profile.id, status: 'confirmed' } }),
+    prisma.order.count({ where: { nurseryId: profile.id, status: 'ready_for_pickup' } }),
+    prisma.order.count({ where: { nurseryId: profile.id, status: 'out_for_delivery' } }),
+    prisma.saplingStock.findMany({ where: { nurseryId: profile.id } }),
+    prisma.arthSaplingUnit.count({ where: { nurseryId: profile.id, status: { in: ['collected', 'planted'] } } }),
+    prisma.tree.count({ where: { nurseryId: profile.id, aiVerificationStatus: 'verified' } }),
+    prisma.order.aggregate({
+      where: { nurseryId: profile.id, status: { notIn: ['pending_payment', 'cancelled'] } },
+      _sum: { totalCents: true },
+    }),
+    prisma.bulkRequirement.findMany({
+      where: {
+        status: { in: ['open', 'partially_fulfilled'] },
+        ...(profile.city ? { city: profile.city } : {}),
+      },
+      orderBy: { neededByDate: 'asc' },
+      take: 5,
+      include: { ngo: { select: { orgName: true } }, species: { select: { commonName: true } } },
+    }),
+    prisma.notification.findMany({
+      where: {
+        userId,
+        type: {
+          in: [
+            'order_placed',
+            'order_picked_up',
+            'order_delivered',
+            'sapling_planted',
+            'stock_low',
+            'stock_out_of_stock',
+            'bulk_requirement_nearby',
+            'nursery_tree_milestone',
+            'nursery_impact_milestone',
+          ],
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    }),
+  ]);
+
+  const lowStock = lowStockRows.map(withAvailability).filter((r) => r.availabilityStatus !== 'available');
+
+  return {
+    ordersToday,
+    newPending,
+    readyForPickup: readyForPickupCount,
+    deliveriesPending: deliveriesPendingCount,
+    lowStockSpecies: lowStock.map((s) => ({ id: s.id, species: s.species, quantity: s.quantity, availabilityStatus: s.availabilityStatus })),
+    saplingsSuppliedLifetime,
+    verifiedPlantations,
+    revenueViaArthCents: revenueAgg._sum.totalCents ?? 0,
+    upcomingBulkRequirements: upcomingRequirements.map((r) => ({
+      id: r.id,
+      ngoName: r.ngo.orgName,
+      species: r.species?.commonName ?? r.speciesNote,
+      quantityNeeded: r.quantityNeeded,
+      quantityFulfilled: r.quantityFulfilled,
+      neededByDate: r.neededByDate,
+      city: r.city,
+    })),
+    activity: activityNotifications.map((n) => ({ id: n.id, type: n.type, data: n.data, createdAt: n.createdAt })),
+  };
+}
+
+// ---------- Impact (section 7) ----------
+export async function getImpact(prisma: PrismaClient, userId: string) {
+  const profile = await getOwnProfile(prisma, userId);
+
+  const [treesGrowingThroughYou, plantedUnits, speciesCount, co2Agg, fulfilledResponses, sixMonthUnits] = await Promise.all([
+    prisma.tree.count({ where: { nurseryId: profile.id, aiVerificationStatus: 'verified' } }),
+    prisma.arthSaplingUnit.findMany({
+      where: { nurseryId: profile.id, status: 'planted' },
+      include: { tree: { select: { aiVerificationStatus: true } } },
+    }),
+    prisma.saplingStock.count({ where: { nurseryId: profile.id } }),
+    prisma.tree.aggregate({ where: { nurseryId: profile.id }, _sum: { co2Absorbed: true } }),
+    prisma.bulkRequirementResponse.findMany({
+      where: { nurseryId: profile.id, status: 'fulfilled' },
+      include: { requirement: { select: { ngoId: true, driveId: true } } },
+    }),
+    prisma.arthSaplingUnit.findMany({
+      where: { nurseryId: profile.id, supplyDate: { gte: addDays(startOfUtcDay(new Date()), -180) } },
+      select: { supplyDate: true },
+    }),
+  ]);
+
+  const verifiedPlantedUnits = plantedUnits.filter((u) => u.tree?.aiVerificationStatus === 'verified').length;
+  const verificationPercentage = plantedUnits.length > 0 ? Math.round((verifiedPlantedUnits / plantedUnits.length) * 100) : 0;
+  const ngoDrivesSupported = new Set(fulfilledResponses.map((r) => r.requirement.driveId).filter(Boolean)).size;
+
+  const monthlyTrend = new Map<string, number>();
+  for (const unit of sixMonthUnits) {
+    const key = unit.supplyDate.toISOString().slice(0, 7); // YYYY-MM
+    monthlyTrend.set(key, (monthlyTrend.get(key) ?? 0) + 1);
+  }
+
+  return {
+    treesGrowingThroughYou,
+    totalSaplingsSupplied: plantedUnits.length,
+    verificationPercentage,
+    speciesCount,
+    ngoDrivesSupported,
+    estimatedCo2Kg: Number(co2Agg._sum.co2Absorbed ?? 0),
+    monthlyTrend: Array.from(monthlyTrend.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, count]) => ({ month, count })),
+  };
 }
 
 export async function getStockAnalytics(prisma: PrismaClient, userId: string) {

@@ -119,6 +119,18 @@ async function seedNurseryAchievements() {
     { key: 'nursery_trusted_nursery', title: 'Trusted Nursery', description: 'Fulfil 10 reservation requests', icon: '🤝', rarity: 'rare', criteriaType: 'reservations_fulfilled', criteriaTarget: 10, sortOrder: 5 },
     { key: 'nursery_week_long_streak', title: 'Week-Long Streak', description: 'Stay active for 7 days in a row', icon: '🔥', rarity: 'common', criteriaType: 'streak_days', criteriaTarget: 7, sortOrder: 6 },
     { key: 'nursery_century_streak', title: 'Century Streak', description: 'Stay active for 100 days in a row', icon: '⭐', rarity: 'legendary', criteriaType: 'streak_days', criteriaTarget: 100, sortOrder: 7 },
+    // Added for the nursery module extension (section 9) — calculated from real ArthSaplingUnit/
+    // Order/BulkRequirementResponse activity by nurseryAchievement.service.ts, not manually assigned.
+    { key: 'nursery_native_species_champion', title: 'Native Species Champion', description: 'List 8 native species in stock', icon: '🍃', rarity: 'rare', criteriaType: 'native_species_listed', criteriaTarget: 8, sortOrder: 8 },
+    { key: 'nursery_100_trees_supplied', title: '100 Trees Supplied', description: 'Supply 100 saplings through ARTH', icon: '🌱', rarity: 'rare', criteriaType: 'saplings_supplied_via_arth', criteriaTarget: 100, sortOrder: 9 },
+    { key: 'nursery_500_trees_supplied', title: '500 Trees Supplied', description: 'Supply 500 saplings through ARTH', icon: '🌳', rarity: 'epic', criteriaType: 'saplings_supplied_via_arth', criteriaTarget: 500, sortOrder: 10 },
+    { key: 'nursery_1000_trees_supplied', title: '1K Trees Supplied', description: 'Supply 1,000 saplings through ARTH', icon: '🌲', rarity: 'legendary', criteriaType: 'saplings_supplied_via_arth', criteriaTarget: 1000, sortOrder: 11 },
+    { key: 'nursery_ngo_partner', title: 'NGO Partner', description: 'Fulfil your first NGO bulk requirement', icon: '🤝', rarity: 'common', criteriaType: 'ngo_requirements_fulfilled', criteriaTarget: 1, sortOrder: 12 },
+    { key: 'nursery_ngo_favourite', title: 'NGO Favourite', description: 'Fulfil requirements for 2 different NGOs', icon: '💚', rarity: 'rare', criteriaType: 'ngo_repeat_partners', criteriaTarget: 2, sortOrder: 13 },
+    { key: 'nursery_95_fulfilment', title: '95%+ Fulfilment', description: 'Maintain a 95% or higher order fulfilment rate', icon: '✅', rarity: 'epic', criteriaType: 'fulfilment_rate_pct', criteriaTarget: 95, sortOrder: 14 },
+    { key: 'nursery_zero_cancellation', title: 'Zero Cancellation Partner', description: 'Complete 20 orders in a row with no cancellations', icon: '🛡️', rarity: 'rare', criteriaType: 'cancellation_free_order_streak', criteriaTarget: 20, sortOrder: 15 },
+    { key: 'nursery_monsoon_hero', title: 'Monsoon Hero', description: 'Supply 50 saplings during the monsoon season', icon: '🌧️', rarity: 'rare', criteriaType: 'monsoon_saplings_supplied', criteriaTarget: 50, sortOrder: 16 },
+    { key: 'nursery_biodiversity_champion', title: 'Biodiversity Champion', description: 'List 20 different species in stock', icon: '🦋', rarity: 'legendary', criteriaType: 'species_listed', criteriaTarget: 20, sortOrder: 17 },
   ] as const;
 
   for (const a of achievements) {

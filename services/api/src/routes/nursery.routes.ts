@@ -36,6 +36,12 @@ function serializeProfile(profile: any) {
     offersDelivery: profile.offersDelivery,
     deliveryRadiusKm: profile.deliveryRadiusKm,
     followPolicy: profile.followPolicy,
+    offersPickup: profile.offersPickup,
+    deliveryFeeCents: profile.deliveryFeeCents,
+    minDeliveryOrderCents: profile.minDeliveryOrderCents,
+    operatingHours: profile.operatingHours,
+    pickupWindows: profile.pickupWindows,
+    pickupInstructions: profile.pickupInstructions,
     createdAt: profile.createdAt,
   };
 }
@@ -89,6 +95,7 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
     const profile = await nurseryService.updateOwnProfile(fastify.prisma, request.user!.id, {
       ...parsed.data,
       offersDelivery: parsed.data.offersDelivery !== undefined ? isTrue(parsed.data.offersDelivery) : undefined,
+      offersPickup: parsed.data.offersPickup !== undefined ? isTrue(parsed.data.offersPickup) : undefined,
       ...(logoUrl ? { logoUrl } : {}),
       ...(coverPhotoUrl ? { coverPhotoUrl } : {}),
     });
@@ -103,9 +110,29 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
     reply.send(await nurseryService.getOwnStats(fastify.prisma, request.user!.id));
   });
 
-  fastify.get('/stock', async (request, reply) => {
-    reply.send(await nurseryService.listStock(fastify.prisma, request.user!.id));
+  // Section 1 — prioritizes today's actions/activity over decorative stats.
+  fastify.get('/dashboard/today', async (request, reply) => {
+    reply.send(await nurseryService.getDashboardSummary(fastify.prisma, request.user!.id));
   });
+
+  // Section 7 — "Trees Growing Through You" and the rest of the impact payload.
+  fastify.get('/impact', async (request, reply) => {
+    reply.send(await nurseryService.getImpact(fastify.prisma, request.user!.id));
+  });
+
+  fastify.get<{ Querystring: { species?: string; native?: string; availability?: string; season?: string } }>(
+    '/stock',
+    async (request, reply) => {
+      reply.send(
+        await nurseryService.listStock(fastify.prisma, request.user!.id, {
+          species: request.query.species,
+          native: request.query.native !== undefined ? isTrue(request.query.native) : undefined,
+          availability: request.query.availability as any,
+          season: request.query.season,
+        }),
+      );
+    },
+  );
 
   fastify.post('/stock', async (request, reply) => {
     const isMultipart = (request.headers['content-type'] ?? '').includes('multipart/form-data');
@@ -193,9 +220,14 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
 
   // ---------- Marketplace orders (paid cart checkouts — distinct from the free /reservations flow) ----------
 
-  fastify.get<{ Querystring: { status?: string } }>('/orders', async (request, reply) => {
+  fastify.get<{ Querystring: { status?: string; fulfillmentType?: string } }>('/orders', async (request, reply) => {
     const profile = await nurseryService.getOwnProfile(fastify.prisma, request.user!.id);
-    reply.send(await orderService.listNurseryOrders(fastify.prisma, profile.id, request.query.status));
+    reply.send(
+      await orderService.listNurseryOrders(fastify.prisma, profile.id, {
+        status: request.query.status,
+        fulfillmentType: request.query.fulfillmentType,
+      }),
+    );
   });
 
   fastify.get<{ Params: { id: string } }>('/orders/:id', async (request, reply) => {
@@ -206,6 +238,17 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
   fastify.post<{ Params: { id: string } }>('/orders/:id/pack', async (request, reply) => {
     const profile = await nurseryService.getOwnProfile(fastify.prisma, request.user!.id);
     reply.send(await orderService.markOrderPacked(fastify.prisma, profile.id, request.params.id));
+  });
+
+  // Pickup branch: packed -> ready_for_pickup -> picked_up (instead of out_for_delivery -> delivered).
+  fastify.post<{ Params: { id: string } }>('/orders/:id/ready-for-pickup', async (request, reply) => {
+    const profile = await nurseryService.getOwnProfile(fastify.prisma, request.user!.id);
+    reply.send(await orderService.markOrderReadyForPickup(fastify.prisma, profile.id, request.params.id));
+  });
+
+  fastify.post<{ Params: { id: string }; Body: { code?: string } }>('/orders/:id/picked-up', async (request, reply) => {
+    const profile = await nurseryService.getOwnProfile(fastify.prisma, request.user!.id);
+    reply.send(await orderService.markOrderPickedUp(fastify.prisma, profile.id, request.params.id, request.body?.code));
   });
 
   fastify.post<{ Params: { id: string }; Body: { riderName?: string; riderPhone?: string } }>(
@@ -221,9 +264,11 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
     },
   );
 
-  fastify.post<{ Params: { id: string }; Body: { otp?: string } }>('/orders/:id/deliver', async (request, reply) => {
+  fastify.post<{ Params: { id: string }; Body: { otp?: string; code?: string } }>('/orders/:id/deliver', async (request, reply) => {
     const profile = await nurseryService.getOwnProfile(fastify.prisma, request.user!.id);
-    reply.send(await orderService.markOrderDelivered(fastify.prisma, profile.id, request.params.id, request.body?.otp));
+    reply.send(
+      await orderService.markOrderDelivered(fastify.prisma, profile.id, request.params.id, request.body?.code ?? request.body?.otp),
+    );
   });
 
   fastify.post<{ Params: { id: string } }>('/orders/:id/cancel', async (request, reply) => {

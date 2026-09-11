@@ -19,6 +19,15 @@ export async function middleware(request) {
     return NextResponse.next()
   }
 
+  if (pathname.startsWith('/nursery/dashboard')) {
+    if (!request.cookies.get('nursery_refresh_token')?.value) {
+      const loginUrl = new URL('/nursery/login', request.url)
+      loginUrl.searchParams.set('next', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+    return NextResponse.next()
+  }
+
   if (pathname.startsWith('/group/dashboard')) {
     if (!request.cookies.get('group_refresh_token')?.value) {
       const loginUrl = new URL('/group/login', request.url)
@@ -70,6 +79,7 @@ export const config = {
     '/drives/:path*',
     '/dashboard/:path*',
     '/ngo/dashboard/:path*',
+    '/nursery/dashboard/:path*',
     '/group/dashboard/:path*',
     '/admin/:path*',
   ],

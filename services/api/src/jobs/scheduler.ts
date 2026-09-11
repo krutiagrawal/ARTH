@@ -2,6 +2,8 @@ import { FastifyInstance } from 'fastify';
 import { runStreakAtRiskJob, runStreakBrokenJob } from './streaks.job';
 import { runReengagementJob } from './reengagement.job';
 import { runCartAbandonedJob } from './cartAbandoned.job';
+import { runNurseryFulfillmentTodayJob } from './nurseryFulfillmentToday.job';
+import { runTreeMilestonesJob } from './treeMilestones.job';
 
 const TICK_INTERVAL_MS = 15 * 60 * 1000;
 const INITIAL_DELAY_MS = 10 * 1000;
@@ -26,6 +28,8 @@ export function startScheduler(app: FastifyInstance): void {
       await runStreakBrokenJob(app.prisma);
       await runReengagementJob(app.prisma);
       await runCartAbandonedJob(app.prisma);
+      await runNurseryFulfillmentTodayJob(app.prisma);
+      await runTreeMilestonesJob(app.prisma);
     } catch (error) {
       app.log.warn({ error }, '[scheduler] tick failed');
     } finally {

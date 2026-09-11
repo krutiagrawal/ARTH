@@ -29,6 +29,7 @@ import { useSpecies, useCreateSpecies } from '../hooks/useApiQueries';
 import { usePlantTree } from '../hooks/useApiQueries';
 import { useCheckPlantingEligibility } from '../hooks/useApiQueries';
 import { useVerifyPlantingPhoto } from '../hooks/useApiQueries';
+import { useNearbyStock } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import { SPECIES_EMOJI_OPTIONS } from '../api/species';
 import type { VerifyPlantingPhotoResult, ApiTree } from '../api/trees';
@@ -199,10 +200,15 @@ export function PlantTreeScreen({ navigation, route }: any) {
   const verifiedLat: number | undefined = route?.params?.verifiedLat;
   const verifiedLng: number | undefined = route?.params?.verifiedLng;
   const isPreVerified = verifiedLat != null && verifiedLng != null;
+  // Set when this screen was reached via ScanSaplingScreen — the species is pre-filled and
+  // locked (the planter can't swap it after scanning a specific physical sapling), and the final
+  // submit ties the planting back to that exact nursery-issued unit.
+  const sourceUnitId: string | undefined = route?.params?.sourceUnitId;
+  const lockedSpeciesId: string | undefined = route?.params?.lockedSpeciesId;
 
   const [stage, setStage] = useState<Stage>('upload');
   const [imageUri, setImageUri] = useState<string | null>(null);
-  const [selectedSpeciesId, setSelectedSpeciesId] = useState<string | null>(null);
+  const [selectedSpeciesId, setSelectedSpeciesId] = useState<string | null>(lockedSpeciesId ?? null);
   const [nickname, setNickname] = useState('');
   const [caption, setCaption] = useState('');
   const [showAddSpecies, setShowAddSpecies] = useState(false);
@@ -237,6 +243,15 @@ export function PlantTreeScreen({ navigation, route }: any) {
   const selectedSpecies = speciesList.find(s => s.id === selectedSpeciesId) ?? null;
   const visibleSpecies = showAllSpecies ? speciesList : speciesList.slice(0, INITIAL_SPECIES_COUNT);
   const hasMoreSpecies = speciesList.length > INITIAL_SPECIES_COUNT;
+  const isSpeciesLocked = !!lockedSpeciesId;
+
+  // "Recommended nearby" card — only for a manually-picked species (never shown for a scanned
+  // sapling, which already has a specific physical source), and only once GPS has resolved.
+  const { data: nearbyStock = [] } = useNearbyStock(
+    !isSpeciesLocked ? selectedSpeciesId : null,
+    location?.lat ?? null,
+    location?.lng ?? null,
+  );
 
   const fetchLocation = useCallback(async () => {
     if (isPreVerified) return;
@@ -369,6 +384,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
         locationLabel: location?.label,
         caption: caption.trim() || undefined,
         photo: { uri: imageUri, name: filename, type: mimeType },
+        sourceUnitId,
       });
 
       setXpEarned(tree.xpEarned);
@@ -382,7 +398,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
         setSubmitError(e instanceof Error ? e.message : 'Could not save your tree. Please try again.');
       }
     }
-  }, [selectedSpecies, imageUri, nickname, caption, location, plantTreeMutation, success]);
+  }, [selectedSpecies, imageUri, nickname, caption, location, plantTreeMutation, success, sourceUnitId]);
 
   const handleAddSpecies = useCallback(async () => {
     const commonName = newSpeciesName.trim();
@@ -507,55 +523,91 @@ export function PlantTreeScreen({ navigation, route }: any) {
             </LinearGradient>
           </View>
 
-          <Text style={styles.detailsLabel}>Choose Species</Text>
-          <View style={styles.speciesGrid}>
-            {visibleSpecies.map(species => (
-              <TouchableOpacity
-                key={species.id}
-                style={[
-                  styles.speciesChip,
-                  selectedSpeciesId === species.id && styles.speciesChipSelected,
-                ]}
-                onPress={() => {
-                  setSelectedSpeciesId(species.id);
-                  medium();
-                }}
-              >
-                <Text style={styles.speciesEmoji}>{species.emoji}</Text>
-                <Text
-                  style={[styles.speciesName, selectedSpeciesId === species.id && styles.speciesNameSelected]}
-                  numberOfLines={1}
-                >
-                  {species.commonName}
-                </Text>
-              </TouchableOpacity>
-            ))}
-            {hasMoreSpecies && (
-              <TouchableOpacity
-                style={[styles.speciesChip, styles.speciesChipAdd]}
-                onPress={() => setShowAllSpecies((prev) => !prev)}
-              >
-                <Text style={styles.speciesEmoji}>{showAllSpecies ? '▲' : '▼'}</Text>
-                <Text style={styles.speciesName} numberOfLines={1}>
-                  {showAllSpecies ? 'Show less' : `See more (${speciesList.length - INITIAL_SPECIES_COUNT})`}
-                </Text>
+          <View style={styles.speciesLabelRow}>
+            <Text style={styles.detailsLabel}>Choose Species</Text>
+            {!isSpeciesLocked && (
+              <TouchableOpacity onPress={() => navigation.navigate('ScanSapling')} style={styles.scanLink}>
+                <Text style={styles.scanLinkText}>📷 Scan a sapling QR</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity
-              style={[styles.speciesChip, styles.speciesChipAdd]}
-              onPress={() => {
-                setShowAddSpecies((prev) => !prev);
-                setAddSpeciesError(null);
-              }}
-            >
-              <Text style={styles.speciesEmoji}>{showAddSpecies ? '✕' : '➕'}</Text>
-              <Text style={styles.speciesName} numberOfLines={1}>
-                {showAddSpecies ? 'Cancel' : "Can't find it?"}
-              </Text>
-            </TouchableOpacity>
           </View>
 
-          {showAddSpecies && (
+          {isSpeciesLocked ? (
+            <View style={[styles.speciesChip, styles.speciesChipSelected, styles.speciesChipLocked]}>
+              <Text style={styles.speciesEmoji}>{selectedSpecies?.emoji ?? '🌱'}</Text>
+              <Text style={[styles.speciesName, styles.speciesNameSelected]} numberOfLines={1}>
+                {selectedSpecies?.commonName ?? 'Scanned sapling'}
+              </Text>
+              <Text style={styles.speciesLockedHint}>Locked to your scanned sapling</Text>
+            </View>
+          ) : (
+            <View style={styles.speciesGrid}>
+              {visibleSpecies.map(species => (
+                <TouchableOpacity
+                  key={species.id}
+                  style={[
+                    styles.speciesChip,
+                    selectedSpeciesId === species.id && styles.speciesChipSelected,
+                  ]}
+                  onPress={() => {
+                    setSelectedSpeciesId(species.id);
+                    medium();
+                  }}
+                >
+                  <Text style={styles.speciesEmoji}>{species.emoji}</Text>
+                  <Text
+                    style={[styles.speciesName, selectedSpeciesId === species.id && styles.speciesNameSelected]}
+                    numberOfLines={1}
+                  >
+                    {species.commonName}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              {hasMoreSpecies && (
+                <TouchableOpacity
+                  style={[styles.speciesChip, styles.speciesChipAdd]}
+                  onPress={() => setShowAllSpecies((prev) => !prev)}
+                >
+                  <Text style={styles.speciesEmoji}>{showAllSpecies ? '▲' : '▼'}</Text>
+                  <Text style={styles.speciesName} numberOfLines={1}>
+                    {showAllSpecies ? 'Show less' : `See more (${speciesList.length - INITIAL_SPECIES_COUNT})`}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[styles.speciesChip, styles.speciesChipAdd]}
+                onPress={() => {
+                  setShowAddSpecies((prev) => !prev);
+                  setAddSpeciesError(null);
+                }}
+              >
+                <Text style={styles.speciesEmoji}>{showAddSpecies ? '✕' : '➕'}</Text>
+                <Text style={styles.speciesName} numberOfLines={1}>
+                  {showAddSpecies ? 'Cancel' : "Can't find it?"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {!isSpeciesLocked && nearbyStock.length > 0 && (
+            <BorderCard style={styles.nearbyCard}>
+              <Text style={styles.nearbyTitle}>🌿 Recommended nearby</Text>
+              {nearbyStock.slice(0, 3).map((n) => (
+                <TouchableOpacity
+                  key={n.stockId}
+                  style={styles.nearbyRow}
+                  onPress={() => navigation.navigate('NurseryPublicProfile', { nurseryId: n.nurseryId })}
+                >
+                  <Text style={styles.nearbyText}>
+                    {selectedSpecies?.commonName ?? 'This species'} — {n.quantity} available at {n.nurseryName}, {n.distanceKm.toFixed(1)} km away
+                    {n.isFree ? ' · Free' : n.priceCents != null ? ` · ₹${(n.priceCents / 100).toFixed(0)}` : ''}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </BorderCard>
+          )}
+
+          {showAddSpecies && !isSpeciesLocked && (
             <BorderCard style={styles.addSpeciesCard}>
               <Text style={styles.detailsLabel}>Species name</Text>
               <TextInput
@@ -935,6 +987,46 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.textPrimary,
     letterSpacing: 0.3,
+  },
+  speciesLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  scanLink: {
+    paddingVertical: 4,
+  },
+  scanLinkText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.forest,
+  },
+  speciesChipLocked: {
+    width: '100%',
+    justifyContent: 'flex-start',
+    gap: 8,
+  },
+  speciesLockedHint: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.85)',
+    marginLeft: 'auto',
+  },
+  nearbyCard: {
+    gap: 6,
+    marginTop: 4,
+  },
+  nearbyTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.forest,
+  },
+  nearbyRow: {
+    paddingVertical: 4,
+  },
+  nearbyText: {
+    fontSize: 12,
+    color: COLORS.textPrimary,
+    lineHeight: 17,
   },
   speciesGrid: {
     flexDirection: 'row',

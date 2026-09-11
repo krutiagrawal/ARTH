@@ -9,6 +9,13 @@ import {
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000';
 
+// No existing constant in this app points at the web app's own public URL (apps/web) — every other
+// API_URL usage here targets the backend (services/api). Sapling QR codes need a web-reachable link
+// (a nursery may print/show this to a planter who then opens it outside the app), so this is a new,
+// separately configurable env var. Defaults to the local web dev server for parity with API_URL's
+// localhost fallback.
+export const WEB_PUBLIC_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'http://localhost:3000';
+
 /**
  * Wraps a device photo URI (from ImagePicker etc.) for `FormData.append`. Expo SDK 57 / RN's
  * New Architecture FormData bridge rejects the old `{uri, name, type}` object-literal trick

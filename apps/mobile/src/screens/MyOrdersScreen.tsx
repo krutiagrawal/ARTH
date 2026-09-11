@@ -19,8 +19,11 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   pending_payment: 'Payment pending',
   confirmed: 'Confirmed',
   packed: 'Packed',
+  ready_for_pickup: 'Ready for pickup',
   out_for_delivery: 'Out for delivery',
+  picked_up: 'Picked up',
   delivered: 'Delivered',
+  plantation_verified: '🌳 Plantation verified',
   cancelled: 'Cancelled',
 };
 
@@ -28,8 +31,11 @@ const STATUS_COLOR: Record<OrderStatus, string> = {
   pending_payment: COLORS.textMuted,
   confirmed: COLORS.forest,
   packed: COLORS.forest,
+  ready_for_pickup: COLORS.amber,
   out_for_delivery: COLORS.amber,
+  picked_up: COLORS.forest,
   delivered: COLORS.forest,
+  plantation_verified: COLORS.forest,
   cancelled: COLORS.dangerDark,
 };
 

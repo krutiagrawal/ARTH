@@ -15,14 +15,15 @@ import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
 import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
 import { useApprovalGate } from '@/components/dashboard/useApprovalGate'
 import { useNgoProfile } from '../NgoProfileContext'
-import { useResourceCrud } from '../useResourceCrud'
+import { useResourceCrud } from '@/lib/useResourceCrud'
+import { proxy } from '../proxy'
 
 const STATUS_VARIANT = { upcoming: 'default', completed: 'secondary', cancelled: 'destructive' }
 const TRANSPORT_LABEL = { self_arrange: 'Self-arrange', ngo_provided: 'NGO transport' }
 
 export default function DrivesClient() {
   const { profile } = useNgoProfile()
-  const { items, loading, create, update, remove, runAction } = useResourceCrud('/drives')
+  const { items, loading, create, update, remove, runAction } = useResourceCrud(proxy, '/drives')
   const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
 
   const [dialogOpen, setDialogOpen] = useState(false)

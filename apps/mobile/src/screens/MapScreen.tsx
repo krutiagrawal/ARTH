@@ -20,6 +20,7 @@ import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
 import { useAuth } from '../context/AuthContext';
 import {
   useTrees,
+  useTreesMap,
   useAdoptableTrees,
   useDrives,
   useMyDrives,
@@ -340,7 +341,7 @@ function TreeInfoCard({ tree, onClose, isNight }: {
   );
 }
 
-export function MapScreen({ navigation, mode = 'user' }: any) {
+export function MapScreen({ navigation, route, mode = 'user' }: any) {
   const insets = useSafeAreaInsets();
   const theme = useTimeTheme();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
@@ -351,11 +352,16 @@ export function MapScreen({ navigation, mode = 'user' }: any) {
   const headerSlide = useSlideUp(0, 20, 350);
   const { user } = useAuth();
   const isNgo = mode === 'ngo';
+  // A nursery scoped in from NurseryImpactScreen's "View on map" button — when present, the tree
+  // layer shows only that nursery's sourced trees (via /trees/map?nurseryId=) instead of the
+  // viewer's own personal forest.
+  const scopeNurseryId: string | undefined = route?.params?.nurseryId;
   // Both public and NGO-owned feeds are always fetched (stable per-mount `mode` prop, never
   // toggles) so this never has to call hooks conditionally — whichever pair isn't relevant for
   // this mode is simply not used below. NGO mode has no personal "planted trees" concept at all.
-  const { data: rawTrees = [] } = useTrees(undefined, !isNgo);
-  const trees = isNgo ? [] : rawTrees;
+  const { data: rawTrees = [] } = useTrees(undefined, !isNgo && !scopeNurseryId);
+  const { data: nurseryScopedTrees = [] } = useTreesMap({ scope: 'global', nurseryId: scopeNurseryId }, !!scopeNurseryId);
+  const trees = isNgo ? [] : scopeNurseryId ? nurseryScopedTrees : rawTrees;
   const { data: publicAdoptableTrees = [] } = useAdoptableTrees(undefined, undefined, !isNgo);
   const { data: myAdoptableTrees = [] } = useMyAdoptableTrees(isNgo);
   const adoptableTrees = isNgo ? myAdoptableTrees : publicAdoptableTrees;

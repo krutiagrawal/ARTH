@@ -1,6 +1,9 @@
 import { FastifyInstance } from 'fastify';
 import { createSpeciesSchema } from '../schemas/species.schema';
 import { BadRequestError } from '../utils/errors';
+import { haversineDistanceKm } from '../utils/geo';
+
+const DEFAULT_NEARBY_RADIUS_KM = 15;
 
 export default async function speciesRoutes(fastify: FastifyInstance) {
   fastify.get('/', async (_request, reply) => {
@@ -10,6 +13,40 @@ export default async function speciesRoutes(fastify: FastifyInstance) {
     });
     reply.send(species);
   });
+
+  // Section 12/2 — "Plant by Yourself" nearby-nursery-stock recommendation. Real (not fuzzy)
+  // matching via SaplingStock.speciesId now that inventory links to the shared TreeSpecies
+  // catalog (decision 6), so a location-aware suggestion is a real relationship, not a guess.
+  fastify.get<{ Params: { id: string }; Querystring: { lat?: string; lng?: string; radiusKm?: string } }>(
+    '/:id/nearby-stock',
+    async (request, reply) => {
+      const lat = Number(request.query.lat);
+      const lng = Number(request.query.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new BadRequestError('lat and lng are required');
+      const radiusKm = Number(request.query.radiusKm) || DEFAULT_NEARBY_RADIUS_KM;
+
+      const stock = await fastify.prisma.saplingStock.findMany({
+        where: { speciesId: request.params.id, quantity: { gt: 0 }, nursery: { status: 'approved' } },
+        include: { nursery: { select: { id: true, nurseryName: true, lat: true, lng: true } } },
+      });
+
+      const results = stock
+        .filter((s) => s.nursery.lat != null && s.nursery.lng != null)
+        .map((s) => ({
+          nurseryId: s.nursery.id,
+          nurseryName: s.nursery.nurseryName,
+          distanceKm: haversineDistanceKm({ lat, lng }, { lat: Number(s.nursery.lat), lng: Number(s.nursery.lng) }),
+          quantity: s.quantity,
+          priceCents: s.priceCents,
+          isFree: s.isFree,
+          stockId: s.id,
+        }))
+        .filter((r) => r.distanceKm <= radiusKm)
+        .sort((a, b) => a.distanceKm - b.distanceKm);
+
+      reply.send(results);
+    },
+  );
 }
 
 function slugify(name: string): string {

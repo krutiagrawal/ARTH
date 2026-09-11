@@ -47,6 +47,12 @@ import { NurseryOrderDetailScreen } from '../screens/NurseryOrderDetailScreen';
 import { NurseryReviewsScreen } from '../screens/NurseryReviewsScreen';
 import { MyAdoptionsScreen } from '../screens/MyAdoptionsScreen';
 import { NurseryFollowersScreen } from '../screens/NurseryFollowersScreen';
+import { NurseryPickupDeliveryConfigScreen } from '../screens/NurseryPickupDeliveryConfigScreen';
+import { NurseryBulkRequirementsScreen } from '../screens/NurseryBulkRequirementsScreen';
+import { NurseryBulkRequirementDetailScreen } from '../screens/NurseryBulkRequirementDetailScreen';
+import { NurseryImpactScreen } from '../screens/NurseryImpactScreen';
+import { NgoBulkRequirementsScreen } from '../screens/NgoBulkRequirementsScreen';
+import { ScanSaplingScreen } from '../screens/ScanSaplingScreen';
 import { CorporateRegisterScreen } from '../screens/CorporateRegisterScreen';
 import { CorporateDashboardScreen } from '../screens/CorporateDashboardScreen';
 import { CorporateSettingsScreen } from '../screens/CorporateSettingsScreen';
@@ -239,11 +245,11 @@ function NgoMapScreen({ navigation }: any) {
  * map planters browse — the default ('user') mode, not 'ngo' mode, since 'ngo' mode hides the
  * nurseries layer entirely. A nursery had no way to reach this screen at all before this route
  * existed; there was no "Map" tab on its own bottom nav the way the regular User role has. */
-function NurseryMapScreen({ navigation }: any) {
+function NurseryMapScreen({ navigation, route }: any) {
   return (
     <MapErrorBoundary>
       <Suspense fallback={<View style={styles.mainContainer} />}>
-        <MapScreen navigation={navigation} />
+        <MapScreen navigation={navigation} route={route} />
       </Suspense>
     </MapErrorBoundary>
   );
@@ -317,7 +323,7 @@ export type RootStackParamList = {
   NurseryStreakBadges: undefined;
   NurseryReservations: undefined;
   NurseryStockAnalytics: undefined;
-  NurseryMap: undefined;
+  NurseryMap: { nurseryId?: string } | undefined;
   NurseryDirectory: undefined;
   NurseryPublicProfile: { nurseryId: string };
   SaplingReservation: { nurseryId: string; stockId: string };
@@ -332,6 +338,12 @@ export type RootStackParamList = {
   NurseryOrders: undefined;
   NurseryOrderDetail: { orderId: string };
   NurseryReviews: undefined;
+  NurseryPickupDeliveryConfig: undefined;
+  NurseryBulkRequirements: undefined;
+  NurseryBulkRequirementDetail: { requirementId: string };
+  NurseryImpact: undefined;
+  NgoBulkRequirements: undefined;
+  ScanSapling: undefined;
   MyAdoptions: undefined;
   NurseryFollowers: undefined;
   NurseryPostUpdate: undefined;
@@ -339,7 +351,7 @@ export type RootStackParamList = {
   CorporateMain: undefined;
   CorporateSponsorships: undefined;
   Main: undefined;
-  PlantTree: { verifiedLat?: number; verifiedLng?: number } | undefined;
+  PlantTree: { verifiedLat?: number; verifiedLng?: number; sourceUnitId?: string; lockedSpeciesId?: string } | undefined;
   StreakProtection: undefined;
   Settings: undefined;
   Profile: undefined;
@@ -827,6 +839,12 @@ export function AppNavigator() {
         <Stack.Screen name="NurseryReviews" component={NurseryReviewsScreen} />
         <Stack.Screen name="MyAdoptions" component={MyAdoptionsScreen} />
         <Stack.Screen name="NurseryFollowers" component={NurseryFollowersScreen} />
+        <Stack.Screen name="NurseryPickupDeliveryConfig" component={NurseryPickupDeliveryConfigScreen} />
+        <Stack.Screen name="NurseryBulkRequirements" component={NurseryBulkRequirementsScreen} />
+        <Stack.Screen name="NurseryBulkRequirementDetail" component={NurseryBulkRequirementDetailScreen} />
+        <Stack.Screen name="NurseryImpact" component={NurseryImpactScreen} />
+        <Stack.Screen name="NgoBulkRequirements" component={NgoBulkRequirementsScreen} />
+        <Stack.Screen name="ScanSapling" component={ScanSaplingScreen} />
         <Stack.Screen name="NurseryPostUpdate" component={PostComposerScreen} />
         <Stack.Screen name="FollowingFeed" component={FollowingFeedScreen} />
         <Stack.Screen name="AdminMain" component={AdminMainApp} />

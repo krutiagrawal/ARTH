@@ -20,9 +20,17 @@ export const updateCartItemSchema = z.object({
   quantity: z.coerce.number().int().min(1).max(1000),
 });
 
-export const checkoutSchema = z.object({
-  addressId: z.string().uuid(),
-});
+export const checkoutSchema = z
+  .object({
+    fulfillmentType: z.enum(['pickup', 'delivery']).default('delivery'),
+    addressId: z.string().uuid().optional(),
+    pickupWindowLabel: z.string().max(100).optional(),
+    scheduledFor: z.string().datetime().optional(),
+  })
+  .refine((v) => v.fulfillmentType !== 'delivery' || !!v.addressId, {
+    message: 'An address is required for delivery',
+    path: ['addressId'],
+  });
 
 export const submitOrderReviewSchema = z.object({
   nurseryRating: z.coerce.number().int().min(1).max(5),

@@ -10,9 +10,19 @@ import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { StatusModal } from '../components/common/StatusModal';
+import { SaplingQrCode } from '../components/common/SaplingQrCode';
 import { useHaptics } from '../hooks/useHaptics';
 import { useConfirm } from '../context/ConfirmDialogContext';
-import { useNurseryOrder, usePackOrder, useDispatchOrder, useDeliverOrder, useCancelNurseryOrder, useNurseryProfile } from '../hooks/useApiQueries';
+import {
+  useNurseryOrder,
+  usePackOrder,
+  useDispatchOrder,
+  useDeliverOrder,
+  useReadyForPickupOrder,
+  usePickedUpOrder,
+  useCancelNurseryOrder,
+  useNurseryProfile,
+} from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import { ApiError } from '../api/client';
 
@@ -29,11 +39,13 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
   const packMutation = usePackOrder();
   const dispatchMutation = useDispatchOrder();
   const deliverMutation = useDeliverOrder();
+  const readyForPickupMutation = useReadyForPickupOrder();
+  const pickedUpMutation = usePickedUpOrder();
   const cancelMutation = useCancelNurseryOrder();
 
   const [riderName, setRiderName] = useState('');
   const [riderPhone, setRiderPhone] = useState('');
-  const [otp, setOtp] = useState('');
+  const [code, setCode] = useState('');
   const [actionError, setActionError] = useState('');
   const { data: profile } = useNurseryProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
@@ -56,6 +68,13 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
     ]);
   };
 
+  const isPickup = order?.fulfillmentType === 'pickup';
+
+  // Every issued sapling unit for this order, flattened out of each item — only populated once
+  // this came from the order-detail endpoint (see api/nursery.ts's ApiNurseryOrder).
+  const allSaplingUnits = order ? order.items.flatMap((item) => item.saplingUnits ?? []) : [];
+  const showQrSection = !!order && ['packed', 'ready_for_pickup', 'out_for_delivery', 'picked_up', 'delivered', 'plantation_verified'].includes(order.status) && allSaplingUnits.length > 0;
+
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
@@ -70,6 +89,9 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
           <BorderCard style={styles.card}>
             <Text style={styles.customer}>{order.user.name}</Text>
             <Text style={styles.handle}>@{order.user.handle}</Text>
+            <View style={styles.fulfillmentTag}>
+              <Text style={styles.fulfillmentTagText}>{isPickup ? '🚶 Pickup' : '🚴 Delivery'}{order.pickupWindowLabel ? ` · ${order.pickupWindowLabel}` : ''}</Text>
+            </View>
             <View style={styles.divider} />
             {order.items.map((item, i) => (
               <View key={i} style={styles.summaryRow}>
@@ -84,12 +106,30 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
             </View>
           </BorderCard>
 
-          <Text style={styles.sectionTitle}>Deliver to</Text>
-          <BorderCard style={styles.card}>
-            <Text style={styles.addressText}>
-              {[order.address.line1, order.address.line2, order.address.landmark, `${order.address.city} ${order.address.pincode}`].filter(Boolean).join(', ')}
-            </Text>
-          </BorderCard>
+          {!isPickup && order.address && (
+            <>
+              <Text style={styles.sectionTitle}>Deliver to</Text>
+              <BorderCard style={styles.card}>
+                <Text style={styles.addressText}>
+                  {[order.address.line1, order.address.line2, order.address.landmark, `${order.address.city} ${order.address.pincode}`].filter(Boolean).join(', ')}
+                </Text>
+              </BorderCard>
+            </>
+          )}
+
+          {showQrSection && (
+            <>
+              <Text style={styles.sectionTitle}>Sapling QR codes</Text>
+              <BorderCard style={styles.card}>
+                <Text style={styles.qrHint}>Show or print these at handoff — each one traces back to this order once planted.</Text>
+                <View style={styles.qrGrid}>
+                  {allSaplingUnits.map((unit) => (
+                    <SaplingQrCode key={unit.id} unitId={unit.id} size={92} label={unit.speciesNameSnapshot ?? unit.species} />
+                  ))}
+                </View>
+              </BorderCard>
+            </>
+          )}
 
           {actionError ? <Text style={styles.errorText}>{actionError}</Text> : null}
 
@@ -104,7 +144,38 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
             />
           )}
 
-          {order.status === 'packed' && (
+          {order.status === 'packed' && isPickup && (
+            <AnimatedButton
+              label={readyForPickupMutation.isPending ? 'Marking ready…' : 'Mark ready for pickup'}
+              onPress={guard(() => run(() => readyForPickupMutation.mutateAsync(orderId)))}
+              disabled={readyForPickupMutation.isPending}
+              variant="primary"
+              size="lg"
+              fullWidth
+            />
+          )}
+
+          {order.status === 'ready_for_pickup' && isPickup && (
+            <>
+              {order.handoffCode && (
+                <View style={styles.otpHint}>
+                  <Text style={styles.otpHintText}>Ask the planter for their handoff code</Text>
+                </View>
+              )}
+              <Text style={styles.fieldLabel}>Handoff code</Text>
+              <TextInput style={styles.input} value={code} onChangeText={setCode} placeholder="4-digit code" placeholderTextColor={COLORS.textMuted} keyboardType="number-pad" maxLength={4} />
+              <AnimatedButton
+                label={pickedUpMutation.isPending ? 'Confirming…' : 'Confirm picked up'}
+                onPress={guard(() => run(() => pickedUpMutation.mutateAsync({ id: orderId, code: code.trim() })))}
+                disabled={pickedUpMutation.isPending || code.trim().length !== 4}
+                variant="primary"
+                size="lg"
+                fullWidth
+              />
+            </>
+          )}
+
+          {order.status === 'packed' && !isPickup && (
             <>
               <Text style={styles.fieldLabel}>Rider name</Text>
               <TextInput style={styles.input} value={riderName} onChangeText={setRiderName} placeholder="Who's delivering this?" placeholderTextColor={COLORS.textMuted} />
@@ -121,19 +192,19 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
             </>
           )}
 
-          {order.status === 'out_for_delivery' && (
+          {order.status === 'out_for_delivery' && !isPickup && (
             <>
-              {order.deliveryOtp && (
+              {order.handoffCode && (
                 <View style={styles.otpHint}>
-                  <Text style={styles.otpHintText}>Ask the customer for their delivery OTP</Text>
+                  <Text style={styles.otpHintText}>Ask the customer for their delivery code</Text>
                 </View>
               )}
-              <Text style={styles.fieldLabel}>Delivery OTP</Text>
-              <TextInput style={styles.input} value={otp} onChangeText={setOtp} placeholder="4-digit code" placeholderTextColor={COLORS.textMuted} keyboardType="number-pad" maxLength={4} />
+              <Text style={styles.fieldLabel}>Delivery code</Text>
+              <TextInput style={styles.input} value={code} onChangeText={setCode} placeholder="4-digit code" placeholderTextColor={COLORS.textMuted} keyboardType="number-pad" maxLength={4} />
               <AnimatedButton
                 label={deliverMutation.isPending ? 'Confirming…' : 'Confirm delivery'}
-                onPress={guard(() => run(() => deliverMutation.mutateAsync({ id: orderId, otp: otp.trim() })))}
-                disabled={deliverMutation.isPending || otp.trim().length !== 4}
+                onPress={guard(() => run(() => deliverMutation.mutateAsync({ id: orderId, code: code.trim() })))}
+                disabled={deliverMutation.isPending || code.trim().length !== 4}
                 variant="primary"
                 size="lg"
                 fullWidth
@@ -147,9 +218,19 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
             </TouchableOpacity>
           )}
 
+          {order.status === 'picked_up' && (
+            <View style={styles.doneBanner}>
+              <Text style={styles.doneText}>✅ Picked up</Text>
+            </View>
+          )}
           {order.status === 'delivered' && (
             <View style={styles.doneBanner}>
               <Text style={styles.doneText}>✅ Delivered</Text>
+            </View>
+          )}
+          {order.status === 'plantation_verified' && (
+            <View style={styles.doneBanner}>
+              <Text style={styles.doneText}>🌳 Plantation verified</Text>
             </View>
           )}
           {order.status === 'cancelled' && (
@@ -171,6 +252,8 @@ const styles = StyleSheet.create({
   card: { marginBottom: 16 },
   customer: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary },
   handle: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
+  fulfillmentTag: { alignSelf: 'flex-start', backgroundColor: 'rgba(94,133,80,0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, marginTop: 8 },
+  fulfillmentTagText: { fontSize: 11, fontWeight: '700', color: COLORS.forest },
   divider: { height: 1, backgroundColor: 'rgba(94,133,80,0.15)', marginVertical: 10 },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
   summaryLabel: { fontSize: 13, color: COLORS.textSecondary },
@@ -179,12 +262,15 @@ const styles = StyleSheet.create({
   totalValue: { fontSize: 17, color: COLORS.textPrimary, fontWeight: '800' },
   addressText: { fontSize: 13, lineHeight: 19, color: COLORS.textPrimary },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 8 },
+  qrHint: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 10 },
+  qrGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 6, marginTop: 4 },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    // No fill — an outline on the page, not a panel laid over it. Matches FormField's recipe.
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(94,133,80,0.2)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(139, 107, 71, 0.30)',
     padding: 12,
     fontSize: 14,
     color: COLORS.textPrimary,

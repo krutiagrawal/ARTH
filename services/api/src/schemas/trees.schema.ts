@@ -12,6 +12,8 @@ export const plantTreeSchema = z.object({
   // Not z.coerce.boolean() — that treats any non-empty string, including "false", as truthy.
   // This also conveniently defaults a missing field to plain `false` via the transform.
   mocked: z.enum(['true', 'false']).optional().transform((v) => v === 'true'),
+  // Set when this planting came from scanning an ARTH Sapling QR — see ArthSaplingUnit.
+  sourceUnitId: z.string().uuid().optional(),
 });
 
 export const updateTreeSchema = z.object({

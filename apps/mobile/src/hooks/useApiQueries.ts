@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
-import { fetchTrees, plantTree, verifyPlantingPhoto, type PlantTreeInput } from '../api/trees';
+import { fetchTrees, plantTree, verifyPlantingPhoto, fetchSaplingUnit, fetchTreesMap, type PlantTreeInput } from '../api/trees';
 import { fetchNgoPublicFollowers, fetchNurseryPublicFollowers } from '../api/publicFollowers';
 import { fetchApprovedLocations, checkPlantingEligibility } from '../api/plantingLocations';
-import { fetchSpecies, createSpecies } from '../api/species';
+import { fetchSpecies, createSpecies, fetchNearbyStock } from '../api/species';
 import { fetchTodayMissions, completeMission } from '../api/missions';
 import { fetchEcoFacts } from '../api/ecoFacts';
 import { fetchCities } from '../api/cities';
@@ -154,14 +154,35 @@ import {
   packOrder,
   dispatchOrder,
   deliverOrder,
+  readyForPickupOrder,
+  pickedUpOrder,
   cancelNurseryOrder,
   fetchNurseryReviews,
   respondToReview as respondToReviewApi,
+  fetchNurseryDashboardToday,
+  fetchNurseryImpact,
+  fetchNurseryBulkRequirements,
+  respondToBulkRequirement,
+  withdrawBulkResponse,
+  markBulkResponseFulfilled,
   UpdateNurseryProfileInput,
   SaplingStockInput,
+  StockFilter,
   ReservationStatus,
   NurseryOrderStatus,
+  NurseryOrdersFilter,
+  BulkRequirementStatus,
+  RespondToBulkRequirementInput,
 } from '../api/nursery';
+import {
+  fetchNgoBulkRequirements,
+  fetchNgoBulkRequirement,
+  createNgoBulkRequirement,
+  cancelNgoBulkRequirement,
+  acceptNgoBulkResponse,
+  declineNgoBulkResponse,
+  CreateNgoBulkRequirementInput,
+} from '../api/ngoBulkRequirements';
 import { fetchNurseryStreakCalendar } from '../api/nurseryStreaks';
 import {
   browseNurseries,
@@ -235,6 +256,29 @@ export function useTrees(limit?: number, enabled: boolean = true) {
 
 export function useSpecies() {
   return useQuery({ queryKey: ['species'], queryFn: fetchSpecies });
+}
+
+/** Nursery-scoped tree pins for NurseryImpactScreen's "View on map" — separate from `useTrees`
+ * (the user's own personal-forest list), this hits `/api/trees/map` which supports the global +
+ * nurseryId scoping the map screens need. */
+export function useTreesMap(params: { scope?: 'mine' | 'global'; nurseryId?: string } = {}, enabled: boolean = true) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['trees', 'map', params],
+    queryFn: () => fetchTreesMap(params),
+    enabled: isAuthenticated && enabled,
+  });
+}
+
+/** "Recommended nearby" card on PlantTreeScreen — only enabled once a species + a GPS fix are
+ * both available, so it never fires on a half-picked form. */
+export function useNearbyStock(speciesId: string | null, lat: number | null, lng: number | null) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['species', speciesId, 'nearbyStock', lat, lng],
+    queryFn: () => fetchNearbyStock(speciesId as string, lat as number, lng as number),
+    enabled: isAuthenticated && !!speciesId && lat != null && lng != null,
+  });
 }
 
 /** Adds a species missing from the list — shared immediately, so it's there for everyone
@@ -1428,6 +1472,19 @@ export function useUpdateAdminCatalogItem(model: AdminCatalogModel) {
   });
 }
 
+/** One-shot lookup for ScanSaplingScreen: resolves a scanned QR's unitId to its current state.
+ * `enabled: false` by default — the caller triggers it via `refetch()` right after a successful
+ * scan, rather than this firing automatically off a route param. */
+export function useSaplingUnit(unitId: string | null) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['trees', 'sapling', unitId],
+    queryFn: () => fetchSaplingUnit(unitId as string),
+    enabled: isAuthenticated && !!unitId,
+    retry: false,
+  });
+}
+
 export function useVerifyPlantingPhoto() {
   return useMutation({
     mutationFn: (photo: { uri: string; name: string; type: string }) => verifyPlantingPhoto(photo),
@@ -1706,11 +1763,30 @@ export function useNurseryStats() {
   });
 }
 
-export function useSaplingStock() {
+export function useNurseryDashboardToday() {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: ['nursery', 'stock'],
-    queryFn: fetchSaplingStock,
+    queryKey: ['nursery', 'dashboard', 'today'],
+    queryFn: fetchNurseryDashboardToday,
+    enabled: isAuthenticated,
+    refetchInterval: 30000,
+  });
+}
+
+export function useNurseryImpact() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nursery', 'impact'],
+    queryFn: fetchNurseryImpact,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useSaplingStock(filter: StockFilter = {}) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nursery', 'stock', filter],
+    queryFn: () => fetchSaplingStock(filter),
     enabled: isAuthenticated,
   });
 }
@@ -1824,11 +1900,11 @@ export function useStockAnalytics() {
 
 // ---------- Nursery marketplace orders (Nursery-side) ----------
 
-export function useNurseryOrders(status?: NurseryOrderStatus) {
+export function useNurseryOrders(filter: NurseryOrdersFilter | NurseryOrderStatus = {}) {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: ['nursery', 'orders', status],
-    queryFn: () => fetchNurseryOrders(status),
+    queryKey: ['nursery', 'orders', filter],
+    queryFn: () => fetchNurseryOrders(filter),
     enabled: isAuthenticated,
     refetchInterval: 15000,
   });
@@ -1864,7 +1940,23 @@ export function useDispatchOrder() {
 export function useDeliverOrder() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, otp }: { id: string; otp: string }) => deliverOrder(id, otp),
+    mutationFn: ({ id, code }: { id: string; code: string }) => deliverOrder(id, code),
+    onSuccess: () => invalidateNurseryOrders(queryClient),
+  });
+}
+
+export function useReadyForPickupOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => readyForPickupOrder(id),
+    onSuccess: () => invalidateNurseryOrders(queryClient),
+  });
+}
+
+export function usePickedUpOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, code }: { id: string; code: string }) => pickedUpOrder(id, code),
     onSuccess: () => invalidateNurseryOrders(queryClient),
   });
 }
@@ -1889,6 +1981,138 @@ export function useRespondToReview() {
   return useMutation({
     mutationFn: ({ id, response }: { id: string; response: string }) => respondToReviewApi(id, response),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['nursery', 'reviews'] }),
+  });
+}
+
+// ---------- Bulk requirements (nursery side) ----------
+
+export function useNurseryBulkRequirements(status?: BulkRequirementStatus) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nursery', 'bulkRequirements', status],
+    queryFn: () => fetchNurseryBulkRequirements(status),
+    enabled: isAuthenticated,
+  });
+}
+
+/** There's no `GET /api/nursery/bulk-requirements/:id` route — the nursery side only exposes a
+ * list (see api/nursery.ts's `fetchNurseryBulkRequirements`). This fetches the two status sets
+ * that cover every tab the nursery UI shows (the default open/partially_fulfilled set, plus
+ * fulfilled) and merges them, so both the list screen and the "detail" screen (which just looks
+ * up one id out of this combined set) share the same cached data. */
+export function useNurseryBulkRequirementsCombined() {
+  const { isAuthenticated } = useAuth();
+  const openQuery = useQuery({
+    queryKey: ['nursery', 'bulkRequirements', undefined],
+    queryFn: () => fetchNurseryBulkRequirements(),
+    enabled: isAuthenticated,
+  });
+  const fulfilledQuery = useQuery({
+    queryKey: ['nursery', 'bulkRequirements', 'fulfilled'],
+    queryFn: () => fetchNurseryBulkRequirements('fulfilled'),
+    enabled: isAuthenticated,
+  });
+
+  const byId = new Map<string, import('../api/nursery').ApiBulkRequirement>();
+  for (const r of openQuery.data ?? []) byId.set(r.id, r);
+  for (const r of fulfilledQuery.data ?? []) byId.set(r.id, r);
+
+  return {
+    data: Array.from(byId.values()),
+    isLoading: openQuery.isLoading || fulfilledQuery.isLoading,
+  };
+}
+
+export function useNurseryBulkRequirement(id: string | null) {
+  const { data, isLoading } = useNurseryBulkRequirementsCombined();
+  return { data: id ? data.find((r) => r.id === id) : undefined, isLoading };
+}
+
+function invalidateNurseryBulkRequirements(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: ['nursery', 'bulkRequirements'] });
+}
+
+export function useRespondToBulkRequirement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: RespondToBulkRequirementInput }) => respondToBulkRequirement(id, input),
+    onSuccess: () => invalidateNurseryBulkRequirements(queryClient),
+  });
+}
+
+export function useWithdrawBulkResponse() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (responseId: string) => withdrawBulkResponse(responseId),
+    onSuccess: () => invalidateNurseryBulkRequirements(queryClient),
+  });
+}
+
+export function useMarkBulkResponseFulfilled() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (responseId: string) => markBulkResponseFulfilled(responseId),
+    onSuccess: () => {
+      invalidateNurseryBulkRequirements(queryClient);
+      queryClient.invalidateQueries({ queryKey: ['nursery', 'stock'] });
+      queryClient.invalidateQueries({ queryKey: ['nursery', 'dashboard'] });
+    },
+  });
+}
+
+// ---------- Bulk requirements (NGO side) ----------
+
+export function useNgoBulkRequirements(status?: BulkRequirementStatus) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'bulkRequirements', status],
+    queryFn: () => fetchNgoBulkRequirements(status),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useNgoBulkRequirement(id: string | null) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'bulkRequirements', 'detail', id],
+    queryFn: () => fetchNgoBulkRequirement(id as string),
+    enabled: isAuthenticated && !!id,
+  });
+}
+
+function invalidateNgoBulkRequirements(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: ['ngo', 'bulkRequirements'] });
+}
+
+export function useCreateNgoBulkRequirement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateNgoBulkRequirementInput) => createNgoBulkRequirement(input),
+    onSuccess: () => invalidateNgoBulkRequirements(queryClient),
+  });
+}
+
+export function useCancelNgoBulkRequirement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => cancelNgoBulkRequirement(id),
+    onSuccess: () => invalidateNgoBulkRequirements(queryClient),
+  });
+}
+
+export function useAcceptNgoBulkResponse() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (responseId: string) => acceptNgoBulkResponse(responseId),
+    onSuccess: () => invalidateNgoBulkRequirements(queryClient),
+  });
+}
+
+export function useDeclineNgoBulkResponse() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (responseId: string) => declineNgoBulkResponse(responseId),
+    onSuccess: () => invalidateNgoBulkRequirements(queryClient),
   });
 }
 

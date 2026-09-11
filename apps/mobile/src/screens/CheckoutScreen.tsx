@@ -57,7 +57,10 @@ export function CheckoutScreen({ navigation }: any) {
   const currentAddressId = selectedAddressId ?? activeAddresses.find((a) => a.isDefault)?.id ?? activeAddresses[0]?.id ?? null;
 
   const deliveryFeeCents = cart && cart.subtotalCents >= 49900 ? 0 : 4900;
-  const totalCents = (cart?.subtotalCents ?? 0) + deliveryFeeCents;
+  // Flat ARTH platform fee, charged on every order — matches order.service.ts's PLATFORM_FEE_CENTS.
+  // This is a display-only preview; the authoritative total is computed server-side at checkout.
+  const platformFeeCents = 100;
+  const totalCents = (cart?.subtotalCents ?? 0) + deliveryFeeCents + platformFeeCents;
 
   const useCurrentLocation = async () => {
     setLocating(true);
@@ -93,14 +96,18 @@ export function CheckoutScreen({ navigation }: any) {
     try {
       const { clientSecret } = await checkoutMutation.mutateAsync(currentAddressId);
 
-      const { error: initError } = await initPaymentSheet({ merchantDisplayName: 'PLANT', paymentIntentClientSecret: clientSecret });
-      if (initError) throw new Error(initError.message);
+      // No Stripe key configured on the backend (local/dev only) — the order already came back
+      // confirmed, so there's no payment sheet to present. Skip straight to success.
+      if (clientSecret) {
+        const { error: initError } = await initPaymentSheet({ merchantDisplayName: 'PLANT', paymentIntentClientSecret: clientSecret });
+        if (initError) throw new Error(initError.message);
 
-      const { error: presentError } = await presentPaymentSheet();
-      if (presentError) {
-        if (presentError.code !== 'Canceled') throw new Error(presentError.message);
-        setPaying(false);
-        return;
+        const { error: presentError } = await presentPaymentSheet();
+        if (presentError) {
+          if (presentError.code !== 'Canceled') throw new Error(presentError.message);
+          setPaying(false);
+          return;
+        }
       }
 
       success();
@@ -175,6 +182,10 @@ export function CheckoutScreen({ navigation }: any) {
               <Text style={styles.summaryLabel}>Delivery fee</Text>
               <Text style={styles.summaryValue}>{deliveryFeeCents === 0 ? 'Free' : formatRupees(deliveryFeeCents)}</Text>
             </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Platform fee</Text>
+              <Text style={styles.summaryValue}>{formatRupees(platformFeeCents)}</Text>
+            </View>
             <View style={styles.divider} />
             <View style={styles.summaryRow}>
               <Text style={styles.totalLabel}>Total</Text>
@@ -217,10 +228,11 @@ const styles = StyleSheet.create({
   addAddressText: { fontSize: 14, fontWeight: '700', color: COLORS.forest },
   card: { marginBottom: 8 },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    // No fill — an outline on the page, not a panel laid over it. Matches FormField's recipe.
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(94,133,80,0.2)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(139, 107, 71, 0.30)',
     padding: 12,
     fontSize: 14,
     color: COLORS.textPrimary,

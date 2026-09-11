@@ -18,7 +18,10 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.plant.ecoapp",
       "infoPlist": {
-        "LSApplicationQueriesSchemes": ["instagram", "instagram-stories"]
+        "LSApplicationQueriesSchemes": [
+          "instagram",
+          "instagram-stories"
+        ]
       }
     },
     "android": {
@@ -62,7 +65,8 @@
           "icon": "./assets/icon.png",
           "color": "#2D5A27"
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "eas": {

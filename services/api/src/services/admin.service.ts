@@ -4,6 +4,9 @@ import { addXp } from './xp.service';
 import { getAdminNgoProfile } from './ngoPublic.service';
 import { getAdminNurseryProfile } from './nurseryPublic.service';
 import { serializePost, viewerInclude } from './post.service';
+import { evaluateNurseryAchievements } from './nurseryAchievement.service';
+import { maybeMarkOrderPlantationVerified } from './order.service';
+import { notify } from './notification.service';
 
 interface ListNgosFilter {
   status?: NgoApprovalStatus;
@@ -649,7 +652,7 @@ export async function reviewTree(
   // XP withheld — approving one now is the one case that must award it.
   const shouldAwardWithheldXp = input.decision === 'approve' && tree.aiVerificationStatus === 'rejected';
 
-  return prisma.$transaction(async (tx) => {
+  const { updated, provenanceFollowUp } = await prisma.$transaction(async (tx) => {
     const updated = await tx.tree.update({
       where: { id: treeId },
       data: {
@@ -676,6 +679,51 @@ export async function reviewTree(
       },
     });
 
-    return updated;
+    // Delayed-verification provenance follow-up (mirrors tree.service.ts's plantTree): a
+    // nursery-sourced tree that was unverified/rejected at submit time skipped the nursery
+    // achievement/order-completion hooks then — approving it now is the one place that must not
+    // silently skip them too.
+    let provenanceFollowUp: { nurseryUserId: string; species: string; locationLabel: string | null; orderId: string | null } | null = null;
+    if (input.decision === 'approve') {
+      const unit = await tx.arthSaplingUnit.findUnique({
+        where: { treeId },
+        include: { nursery: { select: { userId: true } }, orderItem: { select: { orderId: true } } },
+      });
+      if (unit) {
+        await evaluateNurseryAchievements(tx, unit.nurseryId);
+        let orderCompleted = false;
+        if (unit.orderItem) {
+          orderCompleted = await maybeMarkOrderPlantationVerified(tx, unit.orderItem.orderId);
+        }
+        const species = await tx.treeSpecies.findUnique({ where: { id: updated.speciesId }, select: { commonName: true } });
+        provenanceFollowUp = {
+          nurseryUserId: unit.nursery.userId,
+          species: species?.commonName ?? 'sapling',
+          locationLabel: updated.locationLabel,
+          orderId: orderCompleted && unit.orderItem ? unit.orderItem.orderId : null,
+        };
+      }
+    }
+
+    return { updated, provenanceFollowUp };
   });
+
+  if (provenanceFollowUp) {
+    await notify(prisma, {
+      userId: provenanceFollowUp.nurseryUserId,
+      type: 'sapling_planted',
+      data: { treeId, species: provenanceFollowUp.species, locationLabel: provenanceFollowUp.locationLabel },
+      push: { title: '🌱 One of your saplings just became an ARTH Tree', body: `A ${provenanceFollowUp.species} you supplied was just verified.` },
+    });
+    if (provenanceFollowUp.orderId) {
+      await notify(prisma, {
+        userId: provenanceFollowUp.nurseryUserId,
+        type: 'order_plantation_verified',
+        data: { orderId: provenanceFollowUp.orderId },
+        push: { title: '🌳 Plantation verified', body: 'Every sapling in this order is now a verified ARTH Tree.' },
+      });
+    }
+  }
+
+  return updated;
 }

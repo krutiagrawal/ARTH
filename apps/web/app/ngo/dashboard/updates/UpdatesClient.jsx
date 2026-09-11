@@ -11,14 +11,14 @@ import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
 import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
 import { useApprovalGate } from '@/components/dashboard/useApprovalGate'
 import { useNgoProfile } from '../NgoProfileContext'
-import { useResourceCrud } from '../useResourceCrud'
+import { useResourceCrud } from '@/lib/useResourceCrud'
 import { updateFields } from '../resourceFields'
 import { proxy } from '../proxy'
 import { resolveMediaUrl } from '@/lib/media'
 
 export default function UpdatesClient() {
   const { profile } = useNgoProfile()
-  const { items, loading, create, remove } = useResourceCrud('/ngo/updates', '/ngo/updates')
+  const { items, loading, create, remove } = useResourceCrud(proxy, '/ngo/updates', '/ngo/updates')
   const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
   const [drives, setDrives] = useState([])
   const [dialogOpen, setDialogOpen] = useState(false)

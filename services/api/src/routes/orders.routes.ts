@@ -12,7 +12,7 @@ export default async function ordersRoutes(fastify: FastifyInstance) {
     const parsed = checkoutSchema.safeParse(request.body);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
 
-    const result = await orderService.checkout(fastify.prisma, request.user!.id, parsed.data.addressId);
+    const result = await orderService.checkout(fastify.prisma, request.user!.id, parsed.data);
     reply.status(201).send(result);
   });
 

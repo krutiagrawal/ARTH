@@ -2,16 +2,18 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { proxy } from './proxy'
 
-// Shared create/list/update/delete/action logic for Drives, Adoptable Trees,
-// Campaigns, Staff, and Updates — structurally identical CRUD surfaces (see
-// ResourceTab.jsx's old version of this same comment). `listPath` defaults to
-// `${basePath}/mine` (Drives/Trees/Campaigns' convention, which share a prefix
-// with a public listing) — pass it explicitly for resources like Staff/Updates
-// whose "list mine" endpoint is just the bare basePath (no public counterpart
-// to disambiguate from).
-export function useResourceCrud(basePath, listPath = `${basePath}/mine`) {
+// Shared create/list/update/delete/action logic for any dashboard resource that's
+// structurally identical CRUD — originally lived in apps/web/app/ngo/dashboard/useResourceCrud.js
+// (Drives, Adoptable Trees, Campaigns, Staff, Updates) and was hoisted here, unchanged, so the
+// Nursery dashboard (Inventory, Reviews, Followers, …) can reuse it too. It carries no NGO- or
+// nursery-specific logic: the caller passes in its own role-scoped `proxy` function (NGO's hits
+// `/api/ngo/proxy`, Nursery's hits `/api/nursery/proxy`, etc.), so this stays role-agnostic.
+//
+// `listPath` defaults to `${basePath}/mine` (Drives/Trees/Campaigns' convention, which share a
+// prefix with a public listing) — pass it explicitly for resources like Staff/Updates/Inventory
+// whose "list mine" endpoint is just the bare basePath (no public counterpart to disambiguate from).
+export function useResourceCrud(proxy, basePath, listPath = `${basePath}/mine`) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -24,7 +26,7 @@ export function useResourceCrud(basePath, listPath = `${basePath}/mine`) {
     } finally {
       setLoading(false)
     }
-  }, [listPath])
+  }, [proxy, listPath])
 
   useEffect(() => {
     load()
@@ -38,7 +40,7 @@ export function useResourceCrud(basePath, listPath = `${basePath}/mine`) {
       await proxy(basePath, { method: 'POST', body })
       await load()
     },
-    [basePath, load],
+    [proxy, basePath, load],
   )
 
   const update = useCallback(
@@ -53,7 +55,7 @@ export function useResourceCrud(basePath, listPath = `${basePath}/mine`) {
       }
       await load()
     },
-    [basePath, load],
+    [proxy, basePath, load],
   )
 
   const remove = useCallback(
@@ -61,7 +63,7 @@ export function useResourceCrud(basePath, listPath = `${basePath}/mine`) {
       await proxy(`${basePath}/${id}`, { method: 'DELETE' })
       await load()
     },
-    [basePath, load],
+    [proxy, basePath, load],
   )
 
   const runAction = useCallback(
@@ -69,7 +71,7 @@ export function useResourceCrud(basePath, listPath = `${basePath}/mine`) {
       await proxy(`${basePath}/${id}/${action}`, { method: 'POST', body })
       await load()
     },
-    [basePath, load],
+    [proxy, basePath, load],
   )
 
   return { items, loading, load, create, update, remove, runAction }

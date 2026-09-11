@@ -334,6 +334,16 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
           onPress={() => onNavigateTab('Manage')}
           blurTarget={blurTargetRef}
         />
+        <QuickAction
+          theme={theme}
+          delay={240}
+          emoji="🤝"
+          color={COLORS.amber}
+          title="Bulk requirements"
+          body="Ask nurseries for saplings at scale."
+          onPress={() => navigation.navigate('NgoBulkRequirements')}
+          blurTarget={blurTargetRef}
+        />
       </ScrollView>
 
       <View style={styles.ambientLayer} pointerEvents="none">

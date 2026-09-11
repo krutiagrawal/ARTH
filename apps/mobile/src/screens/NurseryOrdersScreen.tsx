@@ -20,8 +20,11 @@ const STATUS_LABEL: Record<NurseryOrderStatus, string> = {
   pending_payment: 'Payment pending',
   confirmed: 'New order',
   packed: 'Packed',
+  ready_for_pickup: 'Ready for pickup',
+  picked_up: 'Picked up',
   out_for_delivery: 'Out for delivery',
   delivered: 'Delivered',
+  plantation_verified: 'Plantation verified',
   cancelled: 'Cancelled',
 };
 
@@ -29,17 +32,32 @@ const STATUS_COLOR: Record<NurseryOrderStatus, string> = {
   pending_payment: COLORS.textMuted,
   confirmed: COLORS.golden,
   packed: COLORS.xpBlue,
+  ready_for_pickup: COLORS.amber,
+  picked_up: COLORS.sage,
   out_for_delivery: COLORS.amber,
   delivered: COLORS.sage,
+  plantation_verified: COLORS.forest,
   cancelled: COLORS.coral,
 };
 
-const TABS: { key: NurseryOrderStatus; label: string }[] = [
+// Kept to a single row of simple chips per the product spec ("not a complex filter UI") — status
+// on top, fulfillment type underneath, rather than one combinatorial picker.
+const STATUS_TABS: { key: NurseryOrderStatus | 'all'; label: string }[] = [
+  { key: 'all', label: 'All' },
   { key: 'confirmed', label: 'New' },
-  { key: 'packed', label: 'Packed' },
-  { key: 'out_for_delivery', label: 'Delivering' },
+  { key: 'packed', label: 'Preparing' },
+  { key: 'ready_for_pickup', label: 'Ready for pickup' },
+  { key: 'picked_up', label: 'Picked up' },
+  { key: 'out_for_delivery', label: 'Out for delivery' },
   { key: 'delivered', label: 'Delivered' },
+  { key: 'plantation_verified', label: 'Plantation verified' },
   { key: 'cancelled', label: 'Cancelled' },
+];
+
+const FULFILLMENT_TABS: { key: 'all' | 'pickup' | 'delivery'; label: string }[] = [
+  { key: 'all', label: 'All types' },
+  { key: 'pickup', label: 'Pickup' },
+  { key: 'delivery', label: 'Delivery' },
 ];
 
 function OrderRow({ order, navigation }: { order: ApiNurseryOrder; navigation: any }) {
@@ -51,8 +69,11 @@ function OrderRow({ order, navigation }: { order: ApiNurseryOrder; navigation: a
           <Text style={styles.items} numberOfLines={1}>
             {order.items.map((i) => `${i.species} × ${i.quantity}`).join(', ')}
           </Text>
-          <View style={[styles.statusBadge, { backgroundColor: `${STATUS_COLOR[order.status]}22` }]}>
-            <Text style={[styles.statusText, { color: STATUS_COLOR[order.status] }]}>{STATUS_LABEL[order.status]}</Text>
+          <View style={styles.badgeRow}>
+            <View style={[styles.statusBadge, { backgroundColor: `${STATUS_COLOR[order.status]}22` }]}>
+              <Text style={[styles.statusText, { color: STATUS_COLOR[order.status] }]}>{STATUS_LABEL[order.status]}</Text>
+            </View>
+            <Text style={styles.fulfillmentTag}>{order.fulfillmentType === 'pickup' ? '🚶 Pickup' : '🚴 Delivery'}</Text>
           </View>
         </View>
         <Text style={styles.total}>{formatRupees(order.totalCents)}</Text>
@@ -63,8 +84,12 @@ function OrderRow({ order, navigation }: { order: ApiNurseryOrder; navigation: a
 
 export function NurseryOrdersScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const [tab, setTab] = useState<NurseryOrderStatus>('confirmed');
-  const { data: orders = [], isLoading } = useNurseryOrders(tab);
+  const [statusTab, setStatusTab] = useState<NurseryOrderStatus | 'all'>('confirmed');
+  const [fulfillmentTab, setFulfillmentTab] = useState<'all' | 'pickup' | 'delivery'>('all');
+  const { data: orders = [], isLoading } = useNurseryOrders({
+    status: statusTab === 'all' ? undefined : statusTab,
+    fulfillmentType: fulfillmentTab === 'all' ? undefined : fulfillmentTab,
+  });
 
   return (
     <View style={styles.container}>
@@ -74,9 +99,16 @@ export function NurseryOrdersScreen({ navigation }: any) {
       <ScreenHeader title="Orders" subtitle="Marketplace purchases to fulfil" onBack={navigation?.canGoBack?.() ? () => navigation.goBack() : undefined} />
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsRow}>
-        {TABS.map((t) => (
-          <TouchableOpacity key={t.key} onPress={() => setTab(t.key)} style={[styles.tab, tab === t.key && styles.tabActive]}>
-            <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>{t.label}</Text>
+        {STATUS_TABS.map((t) => (
+          <TouchableOpacity key={t.key} onPress={() => setStatusTab(t.key)} style={[styles.tab, statusTab === t.key && styles.tabActive]}>
+            <Text style={[styles.tabText, statusTab === t.key && styles.tabTextActive]}>{t.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsRowSecondary}>
+        {FULFILLMENT_TABS.map((t) => (
+          <TouchableOpacity key={t.key} onPress={() => setFulfillmentTab(t.key)} style={[styles.tabSmall, fulfillmentTab === t.key && styles.tabSmallActive]}>
+            <Text style={[styles.tabSmallText, fulfillmentTab === t.key && styles.tabSmallTextActive]}>{t.label}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -98,16 +130,23 @@ export function NurseryOrdersScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  tabsRow: { paddingHorizontal: SPACING.md, gap: 8, paddingVertical: 10 },
+  tabsRow: { paddingHorizontal: SPACING.md, gap: 8, paddingTop: 10, paddingBottom: 6 },
   tab: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: 'rgba(94,133,80,0.08)' },
   tabActive: { backgroundColor: COLORS.forest },
   tabText: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
   tabTextActive: { color: COLORS.white },
+  tabsRowSecondary: { paddingHorizontal: SPACING.md, gap: 6, paddingBottom: 10 },
+  tabSmall: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, borderWidth: 1, borderColor: COLORS.sand },
+  tabSmallActive: { backgroundColor: COLORS.golden, borderColor: COLORS.golden },
+  tabSmallText: { fontSize: 11, fontWeight: '600', color: COLORS.textSecondary },
+  tabSmallTextActive: { color: COLORS.white },
   list: { paddingHorizontal: SPACING.md },
   row: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md, padding: 14, marginBottom: 10 },
   customer: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
   items: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
-  statusBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, marginTop: 6 },
+  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  statusBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999 },
   statusText: { fontSize: 11, fontWeight: '700' },
+  fulfillmentTag: { fontSize: 11, color: COLORS.textMuted, fontWeight: '600' },
   total: { fontSize: 15, fontWeight: '800', color: COLORS.textPrimary },
 });

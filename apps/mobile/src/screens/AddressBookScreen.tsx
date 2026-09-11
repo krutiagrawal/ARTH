@@ -138,10 +138,11 @@ const styles = StyleSheet.create({
   deleteText: { color: COLORS.dangerDark },
   card: { marginBottom: 8 },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    // No fill — an outline on the page, not a panel laid over it. Matches FormField's recipe.
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(94,133,80,0.2)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(139, 107, 71, 0.30)',
     padding: 12,
     fontSize: 14,
     color: COLORS.textPrimary,
