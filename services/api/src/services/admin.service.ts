@@ -378,6 +378,7 @@ const ACCOUNT_SELECT = {
   ngoProfile: { select: { id: true, orgName: true, status: true } },
   nurseryProfile: { select: { id: true, nurseryName: true, status: true } },
   corporateProfile: { select: { id: true, companyName: true, status: true } },
+  groupProfile: { select: { id: true, groupName: true, status: true } },
 } satisfies Prisma.UserSelect;
 
 // One query against User covers all four account types since NgoProfile/
@@ -421,13 +422,56 @@ export async function getAccountProfile(prisma: PrismaClient, userId: string) {
   if (!account) throw new NotFoundError('Account not found');
 
   if (account.role === 'ngo' && account.ngoProfile) {
-    const content = await getAdminNgoProfile(prisma, account.ngoProfile.id);
-    return { account, kind: 'ngo' as const, content };
+    const ngoId = account.ngoProfile.id;
+    const [content, stories, campaigns, adoptableTrees, plantedTrees, achievements] = await Promise.all([
+      getAdminNgoProfile(prisma, ngoId),
+      prisma.story.findMany({ where: { authorType: 'ngo', ngoId }, orderBy: { createdAt: 'desc' }, take: 50 }),
+      prisma.donationCampaign.findMany({ where: { ngoId }, orderBy: { createdAt: 'desc' }, take: 50 }),
+      prisma.adoptableTree.findMany({
+        where: { ngoId },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+        include: { adoption: { include: { user: { select: { name: true, handle: true } } } } },
+      }),
+      prisma.plantedTree.findMany({ where: { ngoId }, orderBy: { plantedAt: 'desc' }, take: 50 }),
+      prisma.ngoAchievementUnlock.findMany({
+        where: { ngoId, unlocked: true },
+        orderBy: { unlockedAt: 'desc' },
+        include: { achievement: true },
+      }),
+    ]);
+
+    // Campaign rows don't carry a denormalised total, unlike the NGO dashboard's own
+    // serializer — computed here the same way, so the admin view matches what the NGO sees.
+    const raisedByCampaign = campaigns.length
+      ? await prisma.donation.groupBy({
+          by: ['campaignId'],
+          where: { campaignId: { in: campaigns.map((c) => c.id) }, status: 'succeeded' },
+          _sum: { amountCents: true },
+        })
+      : [];
+    const raisedMap = new Map(raisedByCampaign.map((r) => [r.campaignId, r._sum.amountCents ?? 0]));
+    const campaignsWithRaised = campaigns.map((c) => ({ ...c, raisedAmountCents: raisedMap.get(c.id) ?? 0 }));
+
+    return {
+      account,
+      kind: 'ngo' as const,
+      content: { ...content, stories, campaigns: campaignsWithRaised, adoptableTrees, plantedTrees, achievements },
+    };
   }
 
   if (account.role === 'nursery' && account.nurseryProfile) {
-    const content = await getAdminNurseryProfile(prisma, account.nurseryProfile.id);
-    return { account, kind: 'nursery' as const, content };
+    const nurseryId = account.nurseryProfile.id;
+    const [content, stories, achievements] = await Promise.all([
+      getAdminNurseryProfile(prisma, nurseryId),
+      prisma.story.findMany({ where: { authorType: 'nursery', nurseryId }, orderBy: { createdAt: 'desc' }, take: 50 }),
+      prisma.nurseryAchievementUnlock.findMany({
+        where: { nurseryId, unlocked: true },
+        orderBy: { unlockedAt: 'desc' },
+        include: { achievement: true },
+      }),
+    ]);
+    return { account, kind: 'nursery' as const, content: { ...content, stories, achievements } };
   }
 
   if (account.role === 'corporate' && account.corporateProfile) {
@@ -441,27 +485,69 @@ export async function getAccountProfile(prisma: PrismaClient, userId: string) {
     return { account, kind: 'corporate' as const, content: { ...corporate, sponsorships } };
   }
 
-  // Individual/group accounts: no dedicated profile row — surface their post
-  // history and planted trees directly.
-  const [posts, trees] = await Promise.all([
+  // Groups have their own profile row (unlike the old assumption that only ngo/nursery/
+  // corporate do) — members/challenges/posts-shared-to-the-group/stories/achievements,
+  // not a user's personal posts/trees.
+  if (account.role === 'group' && account.groupProfile) {
+    const groupId = account.groupProfile.id;
+    const [groupProfile, members, challenges, posts, stories, achievements] = await Promise.all([
+      prisma.groupProfile.findUnique({ where: { id: groupId } }),
+      prisma.groupMember.findMany({
+        where: { groupId },
+        include: { user: { select: { id: true, name: true, handle: true, avatarEmoji: true } } },
+        orderBy: { joinedAt: 'asc' },
+        take: 100,
+      }),
+      prisma.groupChallenge.findMany({ where: { groupId }, orderBy: { startsAt: 'desc' }, take: 50 }),
+      prisma.post.findMany({
+        where: { groupId, isHidden: false },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+        include: viewerInclude(),
+      }),
+      // Story (unlike Post) supports real group authorship via authorType: 'group'.
+      prisma.story.findMany({ where: { authorType: 'group', groupId }, orderBy: { createdAt: 'desc' }, take: 50 }),
+      prisma.groupAchievementUnlock.findMany({
+        where: { groupId, unlocked: true },
+        orderBy: { unlockedAt: 'desc' },
+        include: { achievement: true },
+      }),
+    ]);
+
+    return {
+      account,
+      kind: 'group' as const,
+      content: { ...groupProfile, members, challenges, posts: posts.map((p) => serializePost(p as any)), stories, achievements },
+    };
+  }
+
+  // Individual accounts: no dedicated profile row — surface their post history, trees,
+  // stories, and achievements directly.
+  const [posts, trees, stories, achievements] = await Promise.all([
     prisma.post.findMany({
       where: { authorType: 'user', userId, isHidden: false },
       orderBy: { createdAt: 'desc' },
-      take: 30,
+      take: 50,
       include: viewerInclude(),
     }),
     prisma.tree.findMany({
       where: { userId, isDeleted: false },
       orderBy: { plantedAt: 'desc' },
-      take: 30,
+      take: 50,
       include: { species: { select: { commonName: true, emoji: true } } },
+    }),
+    prisma.story.findMany({ where: { authorType: 'user', userId }, orderBy: { createdAt: 'desc' }, take: 50 }),
+    prisma.userAchievement.findMany({
+      where: { userId, unlocked: true },
+      orderBy: { unlockedAt: 'desc' },
+      include: { achievement: true },
     }),
   ]);
 
   return {
     account,
     kind: 'user' as const,
-    content: { posts: posts.map((p) => serializePost(p as any)), trees },
+    content: { posts: posts.map((p) => serializePost(p as any)), trees, stories, achievements },
   };
 }
 
