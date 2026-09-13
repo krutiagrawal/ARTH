@@ -52,22 +52,33 @@ export function AddressBookScreen({ navigation }: any) {
   const [pincode, setPincode] = useState('');
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const useCurrentLocation = async () => {
     setLocating(true);
+    setError(null);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
         setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+      } else {
+        setError('Location permission is needed so deliveries can be tracked to this address.');
       }
-    } catch {}
+    } catch {
+      setError("Couldn't get your location. Please try again.");
+    }
     setLocating(false);
   };
 
   const handleAdd = async () => {
+    setError(null);
     if (!line1.trim() || !pincode.trim()) return;
-    await createMutation.mutateAsync({ line1: line1.trim(), pincode: pincode.trim(), lat: coords?.lat, lng: coords?.lng });
+    if (!coords) {
+      setError('Tap "Use current location" so deliveries can be tracked to this address.');
+      return;
+    }
+    await createMutation.mutateAsync({ line1: line1.trim(), pincode: pincode.trim(), lat: coords.lat, lng: coords.lng });
     setShowForm(false);
     setLine1('');
     setPincode('');
@@ -104,9 +115,10 @@ export function AddressBookScreen({ navigation }: any) {
               <TextInput style={styles.input} placeholder="Flat / street / society" placeholderTextColor={COLORS.textMuted} value={line1} onChangeText={setLine1} />
               <TextInput style={styles.input} placeholder="Pincode" placeholderTextColor={COLORS.textMuted} value={pincode} onChangeText={setPincode} keyboardType="number-pad" />
               <TouchableOpacity style={styles.locationButton} onPress={useCurrentLocation} disabled={locating}>
-                <Text style={styles.locationButtonText}>{locating ? 'Locating…' : coords ? '📍 Location captured' : '📍 Use current location'}</Text>
+                <Text style={styles.locationButtonText}>{locating ? 'Locating…' : coords ? '📍 Location captured' : '📍 Use current location (required)'}</Text>
               </TouchableOpacity>
-              <AnimatedButton label="Save address" onPress={handleAdd} variant="primary" size="md" fullWidth disabled={createMutation.isPending} />
+              {error && <Text style={styles.errorText}>{error}</Text>}
+              <AnimatedButton label="Save address" onPress={handleAdd} variant="primary" size="md" fullWidth disabled={createMutation.isPending || !coords} />
             </BorderCard>
           ) : (
             <TouchableOpacity onPress={() => setShowForm(true)} style={styles.addAddressButton}>
@@ -150,6 +162,7 @@ const styles = StyleSheet.create({
   },
   locationButton: { paddingVertical: 10, marginBottom: 10 },
   locationButtonText: { fontSize: 13, fontWeight: '600', color: COLORS.forest },
+  errorText: { fontSize: 12, color: COLORS.dangerDark, marginBottom: 10 },
   addAddressButton: { paddingVertical: 12, alignItems: 'center' },
   addAddressText: { fontSize: 14, fontWeight: '700', color: COLORS.forest },
 });

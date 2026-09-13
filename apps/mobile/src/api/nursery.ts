@@ -6,6 +6,7 @@ export interface ApiNurseryProfile {
   description: string;
   logoUrl: string | null;
   coverPhotoUrl: string | null;
+  line1: string | null;
   city: string | null;
   contactPhone: string | null;
   lat: number | string | null;
@@ -45,6 +46,7 @@ export interface PickupWindowRow {
 export interface UpdateNurseryProfileInput {
   nurseryName?: string;
   description?: string;
+  line1?: string;
   city?: string;
   contactPhone?: string;
   lat?: number;
@@ -70,6 +72,7 @@ export async function updateNurseryProfile(input: UpdateNurseryProfileInput): Pr
   const form = new FormData();
   if (input.nurseryName !== undefined) form.append('nurseryName', input.nurseryName);
   if (input.description !== undefined) form.append('description', input.description);
+  if (input.line1 !== undefined) form.append('line1', input.line1);
   if (input.city !== undefined) form.append('city', input.city);
   if (input.contactPhone !== undefined) form.append('contactPhone', input.contactPhone);
   if (input.lat !== undefined) form.append('lat', String(input.lat));
@@ -430,6 +433,12 @@ export interface ApiNurseryOrder {
   /** Null for a pickup order — a pickup never has a delivery address. */
   address: { line1: string; line2: string | null; landmark: string | null; city: string; pincode: string } | null;
   user: { id: string; name: string; handle: string };
+  /** Only populated on the order-detail endpoint (`GET /api/nursery/orders/:id`) — the list
+   * endpoint doesn't include it, and a pickup order never gets a DeliveryTracking row.
+   * `riderName`/`riderPhone` are null until the nursery dispatches to a delivery partner. Once
+   * assigned, confirming delivery with the customer's handoff code happens in the partner's own
+   * app — this is read-only here so the nursery can see who they assigned. */
+  tracking?: { deliveryPartnerId: string | null; riderName: string | null; riderPhone: string | null } | null;
 }
 
 export interface NurseryOrdersFilter {

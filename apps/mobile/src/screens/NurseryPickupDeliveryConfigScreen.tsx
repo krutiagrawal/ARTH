@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } fro
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
+import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
@@ -30,6 +31,9 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
 
   const [offersPickup, setOffersPickup] = useState(true);
   const [offersDelivery, setOffersDelivery] = useState(true);
+  const [line1, setLine1] = useState('');
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
   const [deliveryFeeCents, setDeliveryFeeCents] = useState('');
   const [minDeliveryOrderCents, setMinDeliveryOrderCents] = useState('');
   const [deliveryRadiusKm, setDeliveryRadiusKm] = useState('');
@@ -43,6 +47,7 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
     if (!profile) return;
     setOffersPickup(profile.offersPickup ?? true);
     setOffersDelivery(profile.offersDelivery ?? false);
+    setLine1(profile.line1 ?? '');
     setDeliveryFeeCents(profile.deliveryFeeCents != null ? String(profile.deliveryFeeCents / 100) : '');
     setMinDeliveryOrderCents(profile.minDeliveryOrderCents != null ? String(profile.minDeliveryOrderCents / 100) : '');
     setDeliveryRadiusKm(profile.deliveryRadiusKm != null ? String(profile.deliveryRadiusKm) : '');
@@ -56,6 +61,25 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
   const updateHourRow = (i: number, patch: Partial<OperatingHourRow>) =>
     setOperatingHours((prev) => prev.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
 
+  const useCurrentLocation = async () => {
+    setLocating(true);
+    setError(null);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+      } else {
+        setError('Location permission is needed so customers and delivery partners can track deliveries.');
+      }
+    } catch {
+      setError("Couldn't get your location. Please try again.");
+    }
+    setLocating(false);
+  };
+
+  const hasLocation = coords != null || (profile?.lat != null && profile?.lng != null);
+
   const addWindowRow = () => setPickupWindows((prev) => [...prev, { label: 'Morning', startTime: '09:00', endTime: '12:00' }]);
   const removeWindowRow = (i: number) => setPickupWindows((prev) => prev.filter((_, idx) => idx !== i));
   const updateWindowRow = (i: number, patch: Partial<PickupWindowRow>) =>
@@ -68,10 +92,16 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
       setError('Enable at least one of pickup or delivery — you can’t turn both off.');
       return;
     }
+    if (offersDelivery && !hasLocation && !line1.trim()) {
+      setError('Add your nursery\'s address or tap "Use current location" below before turning on delivery — customers and your delivery partners both need it to track deliveries.');
+      return;
+    }
     try {
       await updateMutation.mutateAsync({
         offersPickup,
         offersDelivery,
+        line1: line1.trim() || undefined,
+        ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
         deliveryFeeCents: deliveryFeeCents.trim() ? Math.round(Number(deliveryFeeCents) * 100) : null,
         minDeliveryOrderCents: minDeliveryOrderCents.trim() ? Math.round(Number(minDeliveryOrderCents) * 100) : null,
         deliveryRadiusKm: deliveryRadiusKm.trim() ? Number(deliveryRadiusKm) : undefined,
@@ -118,6 +148,19 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
         {offersDelivery && (
           <>
             <Text style={styles.sectionTitle}>Delivery details</Text>
+
+            <FormField label="Nursery address" value={line1} onChangeText={setLine1} placeholder="e.g. 12 Baner Road, near City Mall" />
+            <View style={styles.locationRow}>
+              <Text style={styles.locationStatus}>
+                {hasLocation ? '📍 Location set' : '📍 No location set — required to offer delivery'}
+              </Text>
+              <TouchableOpacity onPress={useCurrentLocation} disabled={locating} style={styles.locationButton}>
+                <Text style={styles.locationButtonText}>
+                  {locating ? 'Locating…' : coords ? 'Location captured ✓' : 'Use current location'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.inlineRow}>
               <View style={styles.inlineField}>
                 <FormField label="Delivery fee ₹ (blank = platform default)" value={deliveryFeeCents} onChangeText={setDeliveryFeeCents} placeholder="0" keyboardType="number-pad" />
@@ -231,6 +274,14 @@ const styles = StyleSheet.create({
   toggleBody: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   divider: { height: 1, backgroundColor: 'rgba(94,133,80,0.15)' },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, marginTop: 20, marginBottom: 4 },
+  locationRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: 'rgba(94,133,80,0.08)', borderRadius: RADIUS.md,
+    paddingHorizontal: 14, paddingVertical: 10, marginBottom: 14,
+  },
+  locationStatus: { fontSize: 12, color: COLORS.textSecondary, flex: 1, marginRight: 8 },
+  locationButton: { paddingVertical: 4 },
+  locationButtonText: { fontSize: 12, fontWeight: '700', color: COLORS.forest },
   inlineRow: { flexDirection: 'row', gap: 12 },
   inlineField: { flex: 1 },
   listHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20 },

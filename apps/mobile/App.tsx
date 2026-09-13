@@ -1,10 +1,11 @@
 import 'react-native-gesture-handler';
 import './global.css';
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet, View } from 'react-native';
 import { useFonts } from 'expo-font';
+import { syncAndroidNavigationBarStyle } from './src/utils/androidNavigationBar';
 // Per-face subpath imports, not the package roots. Importing from the root pulls that package's
 // index, which requires every .ttf it ships — including all the italics we never use — and Metro
 // then bundles ~1.8 MB of dead font data.
@@ -96,6 +97,13 @@ export default function App() {
 
   // A font failure must not brick the app — log it and render in the system face instead.
   if (fontError) console.warn('[App] font loading failed, falling back to system fonts:', fontError);
+
+  // Dark icon/button style for the (transparent, edge-to-edge) nav bar, matching the app's
+  // dominant light theme; screens with a full-bleed dark theme (Splash, Onboarding) override it
+  // themselves while mounted. See androidNavigationBar.ts — has no visible effect in Expo Go.
+  useEffect(() => {
+    syncAndroidNavigationBarStyle('dark');
+  }, []);
 
   // No expo-splash-screen in this project, so hold on a plain cream field rather than letting
   // the whole UI paint once in Roboto/SF and then reflow into Nunito.

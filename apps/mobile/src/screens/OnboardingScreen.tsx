@@ -22,6 +22,7 @@ import { MascotInteraction } from '../components/common/MascotInteraction';
 import { MuteButton } from '../components/common/MuteButton';
 import { ONBOARDING_PAGES } from '../data/dummyData';
 import { useFadeIn, useFloat } from '../hooks/useAnimations';
+import { syncAndroidNavigationBarStyle } from '../utils/androidNavigationBar';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -148,6 +149,11 @@ export function OnboardingScreen({ navigation }: any) {
   const handleMomentumScrollEnd = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const index = Math.round(e.nativeEvent.contentOffset.x / SW);
     setCurrentIndex(index);
+  }, []);
+
+  useEffect(() => {
+    syncAndroidNavigationBarStyle('light');
+    return () => syncAndroidNavigationBarStyle('dark');
   }, []);
 
   const finishOnboarding = useCallback(() => {

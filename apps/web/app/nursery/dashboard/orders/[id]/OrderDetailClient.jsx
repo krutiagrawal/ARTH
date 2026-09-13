@@ -2,19 +2,15 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { ArrowLeft, MapPin, Truck, Printer, QrCode, User } from 'lucide-react'
+import { ArrowLeft, MapPin, Truck, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
-import QrCodeCanvas from '@/components/dashboard/QrCodeCanvas'
 import { proxy } from '../../proxy'
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 
 const STATUS_LABEL = {
   pending_payment: 'Pending payment',
@@ -76,7 +72,6 @@ function CodeDialog({ open, onOpenChange, title, description, onSubmit, loading 
 }
 
 export default function OrderDetailClient({ orderId }) {
-  const router = useRouter()
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState(false)
@@ -125,9 +120,6 @@ export default function OrderDetailClient({ orderId }) {
       </DashboardPageShell>
     )
   }
-
-  const saplingUnits = (order.items ?? []).flatMap((i) => i.saplingUnits ?? [])
-  const showQr = !['pending_payment', 'confirmed', 'cancelled'].includes(order.status)
 
   return (
     <DashboardPageShell className="space-y-6 max-w-3xl">
@@ -214,35 +206,8 @@ export default function OrderDetailClient({ orderId }) {
               Cancel order
             </Button>
           )}
-          {showQr && saplingUnits.length > 0 && (
-            <Button variant="outline" className="rounded-full ml-auto" onClick={() => router.push(`/nursery/dashboard/orders/${orderId}/print`)}>
-              <Printer className="h-4 w-4" /> Print QR sheet
-            </Button>
-          )}
         </div>
       </div>
-
-      {showQr && (
-        <div className="rounded-3xl border border-border/70 bg-card p-6 soft-shadow">
-          <div className="flex items-center gap-2 mb-4">
-            <QrCode className="h-4 w-4 text-primary" />
-            <p className="font-serif text-lg">Sapling QR codes</p>
-          </div>
-          {saplingUnits.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No sapling units generated yet.</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {saplingUnits.map((unit) => (
-                <div key={unit.id} className="rounded-2xl border border-border/60 p-3 text-center">
-                  <QrCodeCanvas value={`${SITE_URL}/sapling/${unit.id}`} size={120} className="mx-auto" />
-                  <p className="mt-2 text-xs font-medium truncate">{unit.speciesNameSnapshot}</p>
-                  <Badge variant="outline" className="mt-1 text-[10px] capitalize">{unit.status}</Badge>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       <DispatchDialog open={dispatchOpen} onOpenChange={setDispatchOpen} loading={acting} onSubmit={(body) => runAction('dispatch', body)} />
       <CodeDialog

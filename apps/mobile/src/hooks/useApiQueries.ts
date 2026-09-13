@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
-import { fetchTrees, plantTree, verifyPlantingPhoto, fetchSaplingUnit, fetchTreesMap, type PlantTreeInput } from '../api/trees';
+import { fetchTrees, plantTree, verifyPlantingPhoto, fetchTreesMap, type PlantTreeInput } from '../api/trees';
 import { fetchNgoPublicFollowers, fetchNurseryPublicFollowers } from '../api/publicFollowers';
 import { fetchApprovedLocations, checkPlantingEligibility } from '../api/plantingLocations';
 import { fetchSpecies, createSpecies, fetchNearbyStock } from '../api/species';
@@ -182,7 +182,7 @@ import {
   CreateDeliveryPartnerInput,
   UpdateDeliveryPartnerInput as UpdateDeliveryPartnerProfileInput,
 } from '../api/deliveryPartners';
-import { fetchMyPartnerProfile, fetchMyDeliveryQueue, reportMyLocation, completeDelivery } from '../api/deliveryPartnerApp';
+import { fetchMyPartnerProfile, fetchMyDeliveryQueue, startDelivery, reportMyLocation, completeDelivery } from '../api/deliveryPartnerApp';
 import {
   fetchNgoBulkRequirements,
   fetchNgoBulkRequirement,
@@ -1481,19 +1481,6 @@ export function useUpdateAdminCatalogItem(model: AdminCatalogModel) {
   });
 }
 
-/** One-shot lookup for ScanSaplingScreen: resolves a scanned QR's unitId to its current state.
- * `enabled: false` by default — the caller triggers it via `refetch()` right after a successful
- * scan, rather than this firing automatically off a route param. */
-export function useSaplingUnit(unitId: string | null) {
-  const { isAuthenticated } = useAuth();
-  return useQuery({
-    queryKey: ['trees', 'sapling', unitId],
-    queryFn: () => fetchSaplingUnit(unitId as string),
-    enabled: isAuthenticated && !!unitId,
-    retry: false,
-  });
-}
-
 export function useVerifyPlantingPhoto() {
   return useMutation({
     mutationFn: (photo: { uri: string; name: string; type: string }) => verifyPlantingPhoto(photo),
@@ -2033,6 +2020,14 @@ export function useMyDeliveryQueue() {
   });
 }
 
+export function useStartDelivery() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (orderId: string) => startDelivery(orderId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['deliveryPartner', 'queue'] }),
+  });
+}
+
 export function useReportDeliveryLocation() {
   return useMutation({
     mutationFn: ({ lat, lng }: { lat: number; lng: number }) => reportMyLocation(lat, lng),
@@ -2338,11 +2333,20 @@ export function useAddresses() {
   return useQuery({ queryKey: ['addresses'], queryFn: fetchAddresses, enabled: isAuthenticated });
 }
 
+// A new/edited/deleted address can change which address is default, and the backend now re-
+// points every in-flight delivery order at whichever address is currently default (see
+// address.service.ts's reassignActiveOrdersToAddress) — so every address mutation must also
+// invalidate order queries, or an already-fetched order screen keeps showing the stale address.
+function invalidateAddressesAndOrders(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: ['addresses'] });
+  queryClient.invalidateQueries({ queryKey: ['orders', 'mine'] });
+}
+
 export function useCreateAddress() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: UpsertAddressInput) => createAddress(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['addresses'] }),
+    onSuccess: () => invalidateAddressesAndOrders(queryClient),
   });
 }
 
@@ -2350,7 +2354,7 @@ export function useUpdateAddress() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: Partial<UpsertAddressInput> }) => updateAddress(id, input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['addresses'] }),
+    onSuccess: () => invalidateAddressesAndOrders(queryClient),
   });
 }
 
@@ -2358,7 +2362,7 @@ export function useDeleteAddress() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteAddress(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['addresses'] }),
+    onSuccess: () => invalidateAddressesAndOrders(queryClient),
   });
 }
 

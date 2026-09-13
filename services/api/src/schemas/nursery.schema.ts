@@ -34,6 +34,7 @@ export const updateNurseryProfileSchema = z.object({
   description: z.string().min(1).max(2000).optional(),
   logoUrl: z.string().max(500).optional(),
   coverPhotoUrl: z.string().max(500).optional(),
+  line1: z.string().max(200).optional(),
   city: z.string().max(100).optional(),
   contactPhone: z.string().max(30).optional(),
   lat: z.coerce.number().min(-90).max(90).optional(),

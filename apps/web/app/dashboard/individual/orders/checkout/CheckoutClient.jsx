@@ -61,6 +61,9 @@ export default function CheckoutClient() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [line1, setLine1] = useState('')
   const [pincode, setPincode] = useState('')
+  const [coords, setCoords] = useState(null)
+  const [locating, setLocating] = useState(false)
+  const [addAddressError, setAddAddressError] = useState('')
   const [clientSecret, setClientSecret] = useState(null)
   const [preparing, setPreparing] = useState(false)
 
@@ -77,15 +80,40 @@ export default function CheckoutClient() {
   const deliveryFeeCents = cart && cart.subtotalCents >= 49900 ? 0 : 4900
   const totalCents = (cart?.subtotalCents ?? 0) + deliveryFeeCents
 
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setAddAddressError('Your browser doesn’t support location — try a different browser or device.')
+      return
+    }
+    setLocating(true)
+    setAddAddressError('')
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+        setLocating(false)
+      },
+      () => {
+        setAddAddressError('Location permission is needed so deliveries can be tracked to this address.')
+        setLocating(false)
+      },
+    )
+  }
+
   const handleAddAddress = async () => {
+    setAddAddressError('')
     if (!line1.trim() || !pincode.trim()) return
+    if (!coords) {
+      setAddAddressError('Use your current location so deliveries can be tracked to this address.')
+      return
+    }
     try {
-      const created = await proxy('/addresses', { method: 'POST', body: { line1: line1.trim(), pincode: pincode.trim() } })
+      const created = await proxy('/addresses', { method: 'POST', body: { line1: line1.trim(), pincode: pincode.trim(), lat: coords.lat, lng: coords.lng } })
       setAddresses((prev) => [...(prev ?? []), created])
       setSelectedAddressId(created.id)
       setShowAddForm(false)
       setLine1('')
       setPincode('')
+      setCoords(null)
     } catch (err) {
       toast.error(err.message || 'Could not save this address.')
     }
@@ -150,7 +178,11 @@ export default function CheckoutClient() {
               <div className="mt-3 space-y-2 rounded-2xl border border-border/70 p-4">
                 <Input placeholder="Flat / street / society" value={line1} onChange={(e) => setLine1(e.target.value)} />
                 <Input placeholder="Pincode" value={pincode} onChange={(e) => setPincode(e.target.value)} />
-                <Button variant="outline" className="rounded-full" onClick={handleAddAddress}>
+                <button type="button" className="text-sm text-primary hover:underline" onClick={useCurrentLocation} disabled={locating}>
+                  {locating ? 'Locating…' : coords ? '📍 Location captured' : '📍 Use current location (required)'}
+                </button>
+                {addAddressError && <p className="text-sm text-destructive">{addAddressError}</p>}
+                <Button variant="outline" className="rounded-full" onClick={handleAddAddress} disabled={!coords}>
                   Save address
                 </Button>
               </div>

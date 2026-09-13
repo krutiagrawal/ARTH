@@ -17,10 +17,13 @@ export interface ApiDeliveryPartnerProfile {
 export interface ApiDeliveryQueueItem {
   orderId: string;
   outForDeliveryAt: string | null;
+  /** Set once the rider taps "Start delivery" for this order — null means assigned but not yet
+   * begun. Location reporting (see reportMyLocation) only fans out to started orders. */
+  startedAt: string | null;
   itemCount: number;
   items: { species: string; quantity: number }[];
   customer: { name: string; handle: string };
-  address: { line1: string; line2: string | null; landmark: string | null; city: string; pincode: string } | null;
+  address: { line1: string; line2: string | null; landmark: string | null; city: string; pincode: string; lat: number | null; lng: number | null } | null;
   nursery: { id: string; nurseryName: string; lat: number | null; lng: number | null };
 }
 
@@ -30,6 +33,10 @@ export async function fetchMyPartnerProfile(): Promise<ApiDeliveryPartnerProfile
 
 export async function fetchMyDeliveryQueue(): Promise<ApiDeliveryQueueItem[]> {
   return apiFetch<ApiDeliveryQueueItem[]>('/api/delivery-partner/queue');
+}
+
+export async function startDelivery(orderId: string): Promise<{ started: boolean }> {
+  return apiFetch<{ started: boolean }>(`/api/delivery-partner/orders/${orderId}/start`, { method: 'POST' });
 }
 
 export async function reportMyLocation(lat: number, lng: number): Promise<{ updatedOrders: number }> {

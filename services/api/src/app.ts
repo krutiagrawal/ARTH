@@ -63,7 +63,6 @@ import ordersRoutes from './routes/orders.routes';
 import wishlistRoutes from './routes/wishlist.routes';
 import ngoBulkRequirementsRoutes from './routes/ngoBulkRequirements.routes';
 import nurseryBulkRequirementsRoutes from './routes/nurseryBulkRequirements.routes';
-import saplingUnitsPublicRoutes from './routes/saplingUnits.public.routes';
 import nurseryDeliveryPartnersRoutes from './routes/nurseryDeliveryPartners.routes';
 import deliveryPartnerRoutes from './routes/deliveryPartner.routes';
 
@@ -103,7 +102,6 @@ export async function buildApp() {
   await app.register(ngosPublicRoutes, { prefix: '/api/ngos' });
   await app.register(nurseriesPublicRoutes, { prefix: '/api/nurseries' });
   await app.register(competitionsPublicRoutes, { prefix: '/api/competitions' });
-  await app.register(saplingUnitsPublicRoutes, { prefix: '/api/sapling-units' });
 
   // Protected routes (JWT required)
   await app.register(async (instance) => {

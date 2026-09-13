@@ -162,7 +162,10 @@ export function NurseryProfileScreen({ route, navigation }: any) {
         )}
         <Text style={styles.topBarTitle} numberOfLines={1}>{name}</Text>
         {isOwn ? (
-          <TouchableOpacity onPress={() => navigation.navigate('EditNurseryProfile')} style={styles.iconButton}>
+          // Settings, not editing — "Edit profile" is the primaryAction button below (matches the
+          // individual user's own profile screen: gear icon = Settings, button under the avatar =
+          // Edit profile). This icon used to duplicate the button by also opening EditNurseryProfile.
+          <TouchableOpacity onPress={() => navigation.navigate('NurserySettings')} style={styles.iconButton}>
             <View style={styles.iconBlur}>
               <Text style={styles.iconText}>⚙️</Text>
             </View>

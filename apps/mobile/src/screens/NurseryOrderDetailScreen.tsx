@@ -4,14 +4,14 @@ import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS } from '../constants/colors';
+import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { StatusModal } from '../components/common/StatusModal';
-import { SaplingQrCode } from '../components/common/SaplingQrCode';
 import { Sheet } from '../components/common/Sheet';
+import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
 import { useHaptics } from '../hooks/useHaptics';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import {
@@ -51,6 +51,11 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
   const [pickerVisible, setPickerVisible] = useState(false);
   const { data: profile } = useNurseryProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
+  // Sheet switches to a dark navy surface at night (see Sheet.tsx's isNightMode) but has no way
+  // to tell its children — every text color in the partner-picker below is applied inline off
+  // this instead of the fixed light-mode style colors, same pattern as NgoBulkRequirementsScreen.
+  const { period } = useTimeTheme();
+  const isNightMode = isNightlikePeriod(period);
 
   const run = async (fn: () => Promise<unknown>) => {
     setActionError('');
@@ -71,11 +76,6 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
   };
 
   const isPickup = order?.fulfillmentType === 'pickup';
-
-  // Every issued sapling unit for this order, flattened out of each item — only populated once
-  // this came from the order-detail endpoint (see api/nursery.ts's ApiNurseryOrder).
-  const allSaplingUnits = order ? order.items.flatMap((item) => item.saplingUnits ?? []) : [];
-  const showQrSection = !!order && ['packed', 'ready_for_pickup', 'out_for_delivery', 'picked_up', 'delivered', 'plantation_verified'].includes(order.status) && allSaplingUnits.length > 0;
 
   return (
     <View style={styles.container}>
@@ -119,16 +119,12 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
             </>
           )}
 
-          {showQrSection && (
+          {!isPickup && order.tracking?.riderName && (
             <>
-              <Text style={styles.sectionTitle}>Sapling QR codes</Text>
+              <Text style={styles.sectionTitle}>Delivery partner</Text>
               <BorderCard style={styles.card}>
-                <Text style={styles.qrHint}>Show or print these at handoff — each one traces back to this order once planted.</Text>
-                <View style={styles.qrGrid}>
-                  {allSaplingUnits.map((unit) => (
-                    <SaplingQrCode key={unit.id} unitId={unit.id} size={92} label={unit.speciesNameSnapshot ?? unit.species} />
-                  ))}
-                </View>
+                <Text style={styles.partnerAssignedName}>{order.tracking.riderName}</Text>
+                {order.tracking.riderPhone && <Text style={styles.partnerAssignedPhone}>{order.tracking.riderPhone}</Text>}
               </BorderCard>
             </>
           )}
@@ -189,23 +185,31 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
           )}
 
           {order.status === 'out_for_delivery' && !isPickup && (
-            <>
-              {order.handoffCode && (
-                <View style={styles.otpHint}>
-                  <Text style={styles.otpHintText}>Ask the customer for their delivery code</Text>
-                </View>
-              )}
-              <Text style={styles.fieldLabel}>Delivery code</Text>
-              <TextInput style={styles.input} value={code} onChangeText={setCode} placeholder="4-digit code" placeholderTextColor={COLORS.textMuted} keyboardType="number-pad" maxLength={4} />
-              <AnimatedButton
-                label={deliverMutation.isPending ? 'Confirming…' : 'Confirm delivery'}
-                onPress={guard(() => run(() => deliverMutation.mutateAsync({ id: orderId, code: code.trim() })))}
-                disabled={deliverMutation.isPending || code.trim().length !== 4}
-                variant="primary"
-                size="lg"
-                fullWidth
-              />
-            </>
+            order.tracking?.riderName ? (
+              // A delivery partner is assigned — confirming delivery with the customer's handoff
+              // code now happens in the partner's own app (DeliveryPartnerQueueScreen), not here.
+              <View style={styles.otpHint}>
+                <Text style={styles.otpHintText}>Waiting for {order.tracking.riderName} to confirm delivery with the customer</Text>
+              </View>
+            ) : (
+              <>
+                {order.handoffCode && (
+                  <View style={styles.otpHint}>
+                    <Text style={styles.otpHintText}>Ask the customer for their delivery code</Text>
+                  </View>
+                )}
+                <Text style={styles.fieldLabel}>Delivery code</Text>
+                <TextInput style={styles.input} value={code} onChangeText={setCode} placeholder="4-digit code" placeholderTextColor={COLORS.textMuted} keyboardType="number-pad" maxLength={4} />
+                <AnimatedButton
+                  label={deliverMutation.isPending ? 'Confirming…' : 'Confirm delivery'}
+                  onPress={guard(() => run(() => deliverMutation.mutateAsync({ id: orderId, code: code.trim() })))}
+                  disabled={deliverMutation.isPending || code.trim().length !== 4}
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                />
+              </>
+            )
           )}
 
           {['confirmed', 'packed'].includes(order.status) && (
@@ -239,14 +243,16 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
 
       <Sheet visible={pickerVisible} onClose={() => setPickerVisible(false)} title="Assign a delivery partner" scrollable>
         {(deliveryPartners ?? []).filter((p) => p.isActive).length === 0 ? (
-          <Text style={styles.emptyPartnersText}>No active delivery partners yet — add one from the Delivery Partners screen first.</Text>
+          <Text style={[styles.emptyPartnersText, isNightMode && { color: ON_DARK_SURFACE.secondary }]}>
+            No active delivery partners yet — add one from the Delivery Partners screen first.
+          </Text>
         ) : (
           (deliveryPartners ?? [])
             .filter((p) => p.isActive)
             .map((partner) => (
               <TouchableOpacity
                 key={partner.id}
-                style={styles.partnerRow}
+                style={[styles.partnerRow, isNightMode && styles.partnerRowNight]}
                 disabled={dispatchMutation.isPending}
                 onPress={() => {
                   setPickerVisible(false);
@@ -254,8 +260,8 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
                 }}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.partnerName}>{partner.name}</Text>
-                  <Text style={styles.partnerPhone}>{partner.phone}</Text>
+                  <Text style={[styles.partnerName, isNightMode && { color: ON_DARK_SURFACE.primary }]}>{partner.name}</Text>
+                  <Text style={[styles.partnerPhone, isNightMode && { color: ON_DARK_SURFACE.secondary }]}>{partner.phone}</Text>
                 </View>
                 <View style={styles.partnerQueueBadge}>
                   <Text style={styles.partnerQueueBadgeText}>{partner.activeOrderCount} active</Text>
@@ -286,8 +292,6 @@ const styles = StyleSheet.create({
   totalValue: { fontSize: 17, color: COLORS.textPrimary, fontWeight: '800' },
   addressText: { fontSize: 13, lineHeight: 19, color: COLORS.textPrimary },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 8 },
-  qrHint: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 10 },
-  qrGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 6, marginTop: 4 },
   input: {
     // No fill — an outline on the page, not a panel laid over it. Matches FormField's recipe.
@@ -302,6 +306,8 @@ const styles = StyleSheet.create({
   },
   otpHint: { backgroundColor: 'rgba(212,168,83,0.15)', borderRadius: RADIUS.md, padding: 10, marginBottom: 10 },
   otpHintText: { fontSize: 12, color: COLORS.earth, fontWeight: '600', textAlign: 'center' },
+  partnerAssignedName: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
+  partnerAssignedPhone: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
   errorText: { fontSize: 13, color: COLORS.dangerDark, textAlign: 'center', marginBottom: 12 },
   cancelButton: { marginTop: 16, alignItems: 'center', paddingVertical: 10 },
   cancelText: { fontSize: 13, fontWeight: '700', color: COLORS.dangerDark },
@@ -318,6 +324,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(94,133,80,0.12)',
   },
+  // Low-contrast brown/green border on the Sheet's dark navy night surface, same reasoning as
+  // NgoBulkRequirementsScreen's offerCardNight.
+  partnerRowNight: { borderBottomColor: 'rgba(255,255,255,0.18)' },
   partnerName: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
   partnerPhone: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   partnerQueueBadge: { backgroundColor: 'rgba(94,133,80,0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },

@@ -56,7 +56,6 @@ import { DeliveryPartnerProfileScreen } from '../screens/DeliveryPartnerProfileS
 import { useDeliveryLocationReporting } from '../hooks/useDeliveryLocationReporting';
 import { NurseryImpactScreen } from '../screens/NurseryImpactScreen';
 import { NgoBulkRequirementsScreen } from '../screens/NgoBulkRequirementsScreen';
-import { ScanSaplingScreen } from '../screens/ScanSaplingScreen';
 import { CorporateRegisterScreen } from '../screens/CorporateRegisterScreen';
 import { CorporateDashboardScreen } from '../screens/CorporateDashboardScreen';
 import { CorporateSettingsScreen } from '../screens/CorporateSettingsScreen';
@@ -362,7 +361,6 @@ export type RootStackParamList = {
   DeliveryPartnerMain: undefined;
   NurseryImpact: undefined;
   NgoBulkRequirements: undefined;
-  ScanSapling: undefined;
   MyAdoptions: undefined;
   NurseryFollowers: undefined;
   NurseryPostUpdate: undefined;
@@ -370,7 +368,7 @@ export type RootStackParamList = {
   CorporateMain: undefined;
   CorporateSponsorships: undefined;
   Main: undefined;
-  PlantTree: { verifiedLat?: number; verifiedLng?: number; sourceUnitId?: string; lockedSpeciesId?: string } | undefined;
+  PlantTree: { verifiedLat?: number; verifiedLng?: number } | undefined;
   StreakProtection: undefined;
   Settings: undefined;
   Profile: undefined;
@@ -897,7 +895,6 @@ export function AppNavigator() {
         <Stack.Screen name="NurseryDeliveryPartners" component={NurseryDeliveryPartnersScreen} />
         <Stack.Screen name="NurseryImpact" component={NurseryImpactScreen} />
         <Stack.Screen name="NgoBulkRequirements" component={NgoBulkRequirementsScreen} />
-        <Stack.Screen name="ScanSapling" component={ScanSaplingScreen} />
         <Stack.Screen name="NurseryPostUpdate" component={PostComposerScreen} />
         <Stack.Screen name="FollowingFeed" component={FollowingFeedScreen} />
         <Stack.Screen name="AdminMain" component={AdminMainApp} />

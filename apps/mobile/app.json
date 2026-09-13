@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#2D5A27"
+      "backgroundColor": "#1A3A16"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -27,7 +27,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#2D5A27"
+        "backgroundColor": "#1A3A16"
       },
       "package": "com.plant.ecoapp",
       "googleServicesFile": "./google-services.json",
@@ -59,6 +59,12 @@
       ],
       "expo-audio",
       "@maplibre/maplibre-react-native",
+      [
+        "expo-navigation-bar",
+        {
+          "enforceContrast": false
+        }
+      ],
       [
         "expo-notifications",
         {

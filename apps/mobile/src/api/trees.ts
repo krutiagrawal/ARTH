@@ -41,9 +41,6 @@ export interface PlantTreeInput {
   accuracy?: number;
   mocked?: boolean;
   photo?: { uri: string; name: string; type: string };
-  /** Set when this planting fulfils a specific scanned sapling unit (see ScanSaplingScreen) —
-   * ties the planted tree back to the nursery-issued unit for traceability. */
-  sourceUnitId?: string;
 }
 
 export async function plantTree(input: PlantTreeInput): Promise<ApiTree> {
@@ -56,30 +53,11 @@ export async function plantTree(input: PlantTreeInput): Promise<ApiTree> {
   if (input.caption?.trim()) form.append('caption', input.caption.trim());
   if (input.accuracy !== undefined) form.append('accuracy', String(input.accuracy));
   if (input.mocked !== undefined) form.append('mocked', input.mocked ? 'true' : 'false');
-  if (input.sourceUnitId) form.append('sourceUnitId', input.sourceUnitId);
   if (input.photo) {
     form.append('photo', toFormFile(input.photo.uri), input.photo.name);
   }
 
   return apiFetch<ApiTree>('/api/trees', { method: 'POST', body: form, isForm: true });
-}
-
-export interface ApiSaplingUnitDetail {
-  id: string;
-  status: 'issued' | 'collected' | 'planted' | 'void';
-  speciesId: string;
-  speciesName: string;
-  speciesEmoji: string;
-  nurseryName: string;
-  ageAtSupplyLabel: string | null;
-  alreadyPlanted: boolean;
-  readyToPlant: boolean;
-}
-
-/** Resolves a scanned sapling QR's unitId (see components/common/SaplingQrCode.tsx and
- * screens/ScanSaplingScreen.tsx) to the unit's current state. */
-export async function fetchSaplingUnit(unitId: string): Promise<ApiSaplingUnitDetail> {
-  return apiFetch<ApiSaplingUnitDetail>(`/api/trees/sapling/${unitId}`);
 }
 
 export interface VerifyPlantingPhotoResult {

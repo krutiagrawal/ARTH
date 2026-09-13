@@ -444,6 +444,7 @@ export async function getNurseryOrder(prisma: PrismaClient, nurseryId: string, o
       items: { include: { saplingUnits: { select: { id: true, status: true, speciesNameSnapshot: true } } } },
       address: true,
       user: { select: { id: true, name: true, handle: true } },
+      tracking: { select: { deliveryPartnerId: true, riderName: true, riderPhone: true } },
     },
   });
   if (!order) throw new NotFoundError('Order not found');

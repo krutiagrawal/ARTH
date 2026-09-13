@@ -1,21 +1,26 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Linking } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import MapView, { MarkerAnimated, AnimatedRegion, PROVIDER_DEFAULT, LatLng } from 'react-native-maps';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
-import { SaplingMarker } from '../components/common/SaplingMarker';
+import { MapErrorBoundary } from '../components/common/MapErrorBoundary';
 import { useHaptics } from '../hooks/useHaptics';
 import { useMyOrder, useCancelOrder, useSubmitOrderReview } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import type { OrderFulfillmentType, OrderStatus } from '../api/orders';
 
-const TRACKING_REGION_DELTA = { latitudeDelta: 0.05, longitudeDelta: 0.05 };
+// This screen must never import react-native-maps directly (or anything re-exported from it,
+// like AnimatedRegion) — Metro evaluates the whole package on import, including its native
+// MapView binding, which has no native module in Expo Go on Android. React.lazy() defers that
+// import until this component actually mounts, and MapErrorBoundary (below) catches it failing.
+const LazyDeliveryTrackingMap = React.lazy(() =>
+  import('../components/common/DeliveryTrackingMap').then((m) => ({ default: m.DeliveryTrackingMap }))
+);
 
 function formatRupees(cents: number) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`;
@@ -130,29 +135,6 @@ export function OrderDetailScreen({ route, navigation }: any) {
   const { data: order, isLoading } = useMyOrder(orderId);
   const cancelMutation = useCancelOrder();
   const [actionError, setActionError] = useState('');
-  const [animatedRegion, setAnimatedRegion] = useState<AnimatedRegion | null>(null);
-  const lastTrackedRef = useRef<{ lat: number; lng: number } | null>(null);
-
-  // Smoothly tweens the marker between the ~8s tracking polls instead of snapping to each new
-  // fix — react-native-maps' MarkerAnimated/AnimatedRegion pair is built for exactly this.
-  useEffect(() => {
-    const lat = order?.tracking?.lat;
-    const lng = order?.tracking?.lng;
-    if (lat == null || lng == null) return;
-
-    if (!animatedRegion) {
-      setAnimatedRegion(new AnimatedRegion({ latitude: lat, longitude: lng, ...TRACKING_REGION_DELTA }));
-      lastTrackedRef.current = { lat, lng };
-      return;
-    }
-    if (lastTrackedRef.current?.lat === lat && lastTrackedRef.current?.lng === lng) return;
-    lastTrackedRef.current = { lat, lng };
-    // `toValue` is required by the (mis-)typed TimingAnimationConfig intersection but unused —
-    // AnimatedRegion.timing() overwrites it per-field internally (see the library's own source).
-    animatedRegion
-      .timing({ latitude: lat, longitude: lng, ...TRACKING_REGION_DELTA, duration: 7000, useNativeDriver: false, toValue: 0 })
-      .start();
-  }, [order?.tracking?.lat, order?.tracking?.lng, animatedRegion]);
 
   const handleCancel = async () => {
     setActionError('');
@@ -201,26 +183,12 @@ export function OrderDetailScreen({ route, navigation }: any) {
             </View>
           )}
 
-          {showTracking && order.tracking && animatedRegion && (
-            <View style={styles.mapWrap}>
-              <MapView
-                provider={PROVIDER_DEFAULT}
-                style={styles.map}
-                region={{ latitude: order.tracking.lat!, longitude: order.tracking.lng!, ...TRACKING_REGION_DELTA }}
-              >
-                {/* react-native-maps types MarkerAnimated's coordinate as a plain LatLng, but at
-                    runtime it accepts (and requires, to animate) the AnimatedRegion instance
-                    itself — a known gap in the library's typings. */}
-                <MarkerAnimated coordinate={animatedRegion as unknown as LatLng}>
-                  <SaplingMarker size={28} />
-                </MarkerAnimated>
-              </MapView>
-              <View style={styles.etaBadge}>
-                <Text style={styles.etaText}>
-                  {order.tracking.etaMinutes != null ? `Arriving in ~${order.tracking.etaMinutes} min` : 'On the way'}
-                </Text>
-              </View>
-            </View>
+          {showTracking && order.tracking && (
+            <MapErrorBoundary>
+              <Suspense fallback={<View style={styles.mapPlaceholder} />}>
+                <LazyDeliveryTrackingMap lat={order.tracking.lat!} lng={order.tracking.lng!} etaMinutes={order.tracking.etaMinutes} />
+              </Suspense>
+            </MapErrorBoundary>
           )}
 
           {((order.status === 'out_for_delivery') || (order.status === 'ready_for_pickup')) && order.handoffCode && (
@@ -332,10 +300,7 @@ const styles = StyleSheet.create({
   timelineLabelDone: { color: COLORS.forest, fontWeight: '700' },
   timelineLine: { position: 'absolute', top: 6, left: '50%', width: '100%', height: 2, backgroundColor: COLORS.sand, zIndex: -1 },
   timelineLineDone: { backgroundColor: COLORS.forest },
-  mapWrap: { height: 180, borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: 16 },
-  map: { flex: 1 },
-  etaBadge: { position: 'absolute', bottom: 10, left: 10, right: 10, backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: RADIUS.md, padding: 8, alignItems: 'center' },
-  etaText: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
+  mapPlaceholder: { height: 180, borderRadius: RADIUS.lg, marginBottom: 16 },
   otpLabel: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
   otpValue: { fontSize: 28, fontWeight: '800', color: COLORS.textPrimary, letterSpacing: 6, marginTop: 4 },
   callButton: { marginBottom: 12, padding: 14, borderRadius: RADIUS.lg, backgroundColor: 'rgba(94,133,80,0.1)', alignItems: 'center' },

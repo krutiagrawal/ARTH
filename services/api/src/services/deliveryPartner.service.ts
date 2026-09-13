@@ -165,23 +165,60 @@ export async function listMyQueue(prisma: PrismaClient, partnerUserId: string) {
   return trackingRows.map((t) => ({
     orderId: t.order.id,
     outForDeliveryAt: t.order.outForDeliveryAt,
+    startedAt: t.startedAt,
     itemCount: t.order.items.reduce((sum, i) => sum + i.quantity, 0),
     items: t.order.items.map((i) => ({ species: i.species, quantity: i.quantity })),
     customer: { name: t.order.user.name, handle: t.order.user.handle },
-    address: t.order.address,
-    nursery: { id: t.order.nursery.id, nurseryName: t.order.nursery.nurseryName, lat: t.order.nursery.lat, lng: t.order.nursery.lng },
+    address: t.order.address
+      ? {
+          line1: t.order.address.line1,
+          line2: t.order.address.line2,
+          landmark: t.order.address.landmark,
+          city: t.order.address.city,
+          pincode: t.order.address.pincode,
+          lat: t.order.address.lat != null ? Number(t.order.address.lat) : null,
+          lng: t.order.address.lng != null ? Number(t.order.address.lng) : null,
+        }
+      : null,
+    nursery: {
+      id: t.order.nursery.id,
+      nurseryName: t.order.nursery.nurseryName,
+      lat: t.order.nursery.lat != null ? Number(t.order.nursery.lat) : null,
+      lng: t.order.nursery.lng != null ? Number(t.order.nursery.lng) : null,
+    },
   }));
+}
+
+// The rider taps "Start delivery" when they actually begin the journey for this specific order —
+// a separate moment from the nursery's dispatch (Order.outForDeliveryAt). Idempotent: re-tapping
+// an already-started order is a no-op rather than an error, since the button just gets replaced
+// by the live map once started and shouldn't be re-tappable, but a race (e.g. duplicate request)
+// should never surface as a user-facing failure.
+export async function startDelivery(prisma: PrismaClient, partnerUserId: string, orderId: string) {
+  const profile = await prisma.deliveryPartnerProfile.findUnique({ where: { userId: partnerUserId } });
+  if (!profile) throw new NotFoundError('Delivery partner profile not found');
+
+  const tracking = await prisma.deliveryTracking.findFirst({
+    where: { orderId, deliveryPartnerId: profile.id, order: { status: 'out_for_delivery' } },
+  });
+  if (!tracking) throw new NotFoundError('Order not found');
+
+  if (!tracking.startedAt) {
+    await prisma.deliveryTracking.update({ where: { id: tracking.id }, data: { startedAt: new Date() } });
+  }
+  return { started: true };
 }
 
 // One GPS fix moves every parcel this partner is currently carrying — a partner carries one
 // phone, not one per order, so this fans out across their whole active queue instead of taking
-// an orderId.
+// an orderId. Only orders the rider has actually started (see startDelivery) receive it — an
+// assigned-but-not-yet-started order shouldn't silently start moving on the customer's map.
 export async function reportLocation(prisma: PrismaClient, partnerUserId: string, input: { lat: number; lng: number }) {
   const profile = await prisma.deliveryPartnerProfile.findUnique({ where: { userId: partnerUserId } });
   if (!profile) throw new NotFoundError('Delivery partner profile not found');
 
   const result = await prisma.deliveryTracking.updateMany({
-    where: { deliveryPartnerId: profile.id, order: { status: 'out_for_delivery' } },
+    where: { deliveryPartnerId: profile.id, startedAt: { not: null }, order: { status: 'out_for_delivery' } },
     data: { lat: input.lat, lng: input.lng, updatedAt: new Date() },
   });
   return { updatedOrders: result.count };

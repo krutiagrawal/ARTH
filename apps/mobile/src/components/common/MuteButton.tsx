@@ -10,21 +10,26 @@ interface MuteButtonProps {
   /** Real frosted-glass look, for use over Home's illustrated sky. Everywhere else defaults to a
    * flat, brown-bordered circle instead. */
   glass?: boolean;
+  /** No border, no background — just the bare icon. For surfaces (like SplashScreen) that
+   * already have enough visual chrome and don't want another circle drawn on top. */
+  bare?: boolean;
 }
 
-export function MuteButton({ style, glass = false }: MuteButtonProps) {
+export function MuteButton({ style, glass = false, bare = false }: MuteButtonProps) {
   const { isMuted, toggleMute } = useSoundSystem();
   const icon = <Text style={styles.icon}>{isMuted ? '🔇' : '🔊'}</Text>;
 
   return (
     <TouchableOpacity
       onPress={toggleMute}
-      style={[styles.wrapper, style]}
+      style={[styles.wrapper, bare && styles.wrapperBare, style]}
       activeOpacity={0.75}
       accessibilityRole="button"
       accessibilityLabel={isMuted ? 'Unmute ambient sound' : 'Mute ambient sound'}
     >
-      {glass ? (
+      {bare ? (
+        icon
+      ) : glass ? (
         <BlurView intensity={40} tint="dark" style={styles.blur}>
           {icon}
         </BlurView>
@@ -46,6 +51,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 6,
     elevation: 5,
+  },
+  wrapperBare: {
+    overflow: 'visible',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   blur: {
     flex: 1,

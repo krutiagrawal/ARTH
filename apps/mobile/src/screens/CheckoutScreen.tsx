@@ -64,23 +64,33 @@ export function CheckoutScreen({ navigation }: any) {
 
   const useCurrentLocation = async () => {
     setLocating(true);
+    setActionError('');
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
         setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+      } else {
+        setActionError('Location permission is needed so deliveries can be tracked to this address.');
       }
-    } catch {}
+    } catch {
+      setActionError("Couldn't get your location. Please try again.");
+    }
     setLocating(false);
   };
 
   const handleAddAddress = async () => {
+    setActionError('');
     if (!line1.trim() || !pincode.trim()) return;
+    if (!coords) {
+      setActionError('Tap "Use current location" so deliveries can be tracked to this address.');
+      return;
+    }
     const created = await createAddressMutation.mutateAsync({
       line1: line1.trim(),
       pincode: pincode.trim(),
-      lat: coords?.lat,
-      lng: coords?.lng,
+      lat: coords.lat,
+      lng: coords.lng,
     });
     setSelectedAddressId(created.id);
     setShowAddForm(false);
@@ -155,9 +165,9 @@ export function CheckoutScreen({ navigation }: any) {
               <TextInput style={styles.input} placeholder="Flat / street / society" placeholderTextColor={COLORS.textMuted} value={line1} onChangeText={setLine1} />
               <TextInput style={styles.input} placeholder="Pincode" placeholderTextColor={COLORS.textMuted} value={pincode} onChangeText={setPincode} keyboardType="number-pad" />
               <TouchableOpacity style={styles.locationButton} onPress={useCurrentLocation} disabled={locating}>
-                <Text style={styles.locationButtonText}>{locating ? 'Locating…' : coords ? '📍 Location captured' : '📍 Use current location'}</Text>
+                <Text style={styles.locationButtonText}>{locating ? 'Locating…' : coords ? '📍 Location captured' : '📍 Use current location (required)'}</Text>
               </TouchableOpacity>
-              <AnimatedButton label="Save address" onPress={handleAddAddress} variant="secondary" size="md" fullWidth disabled={createAddressMutation.isPending} />
+              <AnimatedButton label="Save address" onPress={handleAddAddress} variant="secondary" size="md" fullWidth disabled={createAddressMutation.isPending || !coords} />
             </BorderCard>
           ) : (
             <TouchableOpacity onPress={() => setShowAddForm(true)} style={styles.addAddressButton}>

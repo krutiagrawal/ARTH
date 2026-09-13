@@ -18,6 +18,10 @@ export default async function deliveryPartnerRoutes(fastify: FastifyInstance) {
     reply.send(await deliveryPartnerService.listMyQueue(fastify.prisma, request.user!.id));
   });
 
+  fastify.post<{ Params: { id: string } }>('/orders/:id/start', async (request, reply) => {
+    reply.send(await deliveryPartnerService.startDelivery(fastify.prisma, request.user!.id, request.params.id));
+  });
+
   fastify.post('/location', async (request, reply) => {
     const parsed = reportLocationSchema.safeParse(request.body);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');

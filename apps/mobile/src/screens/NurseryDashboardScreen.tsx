@@ -3,7 +3,7 @@ import { View, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicato
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurTargetView, BlurView } from 'expo-blur';
+import { BlurTargetView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
@@ -148,11 +148,11 @@ function DockRow({
   );
 }
 
-// Sits in the header next to MuteButton and the avatar — the same 44px blurred-circle shape as
-// MuteButton's `glass` variant, so the two read as a matched pair of icon buttons over the hero
-// image rather than a flat brown-bordered circle (which reads fine over the plain cream body but
-// looks out of place over the illustrated sky). `useUnreadNotificationCount` already existed
-// (built for a badge like this) but no screen had ever actually rendered it.
+// Sits in the header next to MuteButton (bare) and the avatar — deliberately no circular
+// background (a blurred-circle wrapper here previously clipped the unread badge, since the badge
+// overhangs the circle's edge and the circle needed `overflow: hidden` to stay round).
+// `useUnreadNotificationCount` already existed (built for a badge like this) but no screen had
+// ever actually rendered it.
 function NotificationBell({ onPress }: { onPress: () => void }) {
   const { data } = useUnreadNotificationCount();
   const unreadCount = data?.count ?? 0;
@@ -164,9 +164,7 @@ function NotificationBell({ onPress }: { onPress: () => void }) {
       accessibilityRole="button"
       accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
     >
-      <BlurView intensity={40} tint="dark" style={styles.bellBlur}>
-        <Text style={styles.bellIcon}>🔔</Text>
-      </BlurView>
+      <Text style={styles.bellIcon}>🔔</Text>
       {unreadCount > 0 && (
         <View style={styles.bellBadge}>
           <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
@@ -317,7 +315,7 @@ export function NurseryDashboardScreen({ navigation }: NurseryDashboardScreenPro
               <Text style={[styles.orgName, { color: theme.textOnSky }]}>{profile?.nurseryName ?? user?.name ?? 'Your nursery'}</Text>
             </View>
             <View style={styles.headerRight}>
-              <MuteButton glass />
+              <MuteButton bare />
               <NotificationBell onPress={() => navigation.navigate('Notifications')} />
               <TouchableOpacity style={styles.avatarButton} onPress={() => navigation.navigate('NurseryProfile')}>
                 <LinearGradient colors={[COLORS.sageLight, COLORS.forest]} style={styles.avatar}>
@@ -452,16 +450,10 @@ const styles = StyleSheet.create({
   bellButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  bellBlur: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.18)' },
-  bellIcon: { fontSize: 18 },
+  bellIcon: { fontSize: 20, textShadowColor: 'rgba(0,0,0,0.35)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
   bellBadge: { position: 'absolute', top: -3, right: -3, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: COLORS.coral, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 1.5, borderColor: COLORS.cream },
   bellBadgeText: { fontSize: 9, fontWeight: '700', color: COLORS.white },
   avatarButton: {},

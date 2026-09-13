@@ -4,12 +4,14 @@ import { notify } from './notification.service';
 import { recordNurseryActiveToday } from './nurseryStreak.service';
 import { evaluateNurseryAchievements } from './nurseryAchievement.service';
 import { startOfUtcDay, addDays } from './streak.service';
+import { geocodeAddress } from '../utils/geocode';
 
 interface UpdateProfileInput {
   nurseryName?: string;
   description?: string;
   logoUrl?: string;
   coverPhotoUrl?: string;
+  line1?: string;
   city?: string;
   contactPhone?: string;
   lat?: number;
@@ -69,10 +71,39 @@ export async function updateOwnProfile(prisma: PrismaClient, userId: string, inp
   if (!nextOffersDelivery && !nextOffersPickup) {
     throw new BadRequestError('A nursery must offer at least one of pickup or delivery');
   }
+  // A nursery can set its location either by GPS (lat/lng sent directly) or by typing an address
+  // (line1, geocoded here into lat/lng) — GPS wins if both arrive in the same request, since a
+  // fresh device fix is always more precise than a text-address lookup.
+  let geocodedLat: number | undefined;
+  let geocodedLng: number | undefined;
+  if (input.line1 && input.lat == null && input.lng == null) {
+    const query = [input.line1, input.city ?? profile.city].filter(Boolean).join(', ');
+    const result = await geocodeAddress(query);
+    if (!result) {
+      throw new BadRequestError("Couldn't find that address. Try adding more detail, or use your current location instead.");
+    }
+    geocodedLat = result.lat;
+    geocodedLng = result.lng;
+  }
+
+  // Delivery-partner tracking (and the old mock-route simulation before it) both need a real
+  // origin point — only enforced at the moment delivery is actually being turned on, not on every
+  // unrelated profile edit, so a nursery that enabled delivery before this check existed can still
+  // save other changes without being blocked until they happen to touch this toggle again.
+  if (input.offersDelivery === true) {
+    const nextLat = input.lat ?? geocodedLat ?? profile.lat;
+    const nextLng = input.lng ?? geocodedLng ?? profile.lng;
+    if (nextLat == null || nextLng == null) {
+      throw new BadRequestError('Set your nursery location before enabling delivery');
+    }
+  }
 
   return prisma.nurseryProfile.update({
     where: { id: profile.id },
-    data: input as Prisma.NurseryProfileUpdateInput,
+    data: {
+      ...input,
+      ...(geocodedLat != null && geocodedLng != null ? { lat: geocodedLat, lng: geocodedLng } : {}),
+    } as Prisma.NurseryProfileUpdateInput,
   });
 }
 

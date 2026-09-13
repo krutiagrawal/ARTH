@@ -89,37 +89,6 @@ export default async function treesRoutes(fastify: FastifyInstance) {
     reply.send({ isPlanting: verification.status !== 'rejected', reason: verification.reason });
   });
 
-  // Lets the "Scan a sapling QR" flow pre-fill/lock the species picker before the user commits
-  // to the full plant-tree form — a read-only lookup, the real ownership/status check happens
-  // again inside plantTree() at submit time.
-  fastify.get<{ Params: { unitId: string } }>('/sapling/:unitId', async (request, reply) => {
-    const unit = await fastify.prisma.arthSaplingUnit.findUnique({
-      where: { id: request.params.unitId },
-      include: {
-        species: { select: { id: true, commonName: true, emoji: true } },
-        nursery: { select: { id: true, nurseryName: true } },
-        orderItem: { select: { order: { select: { userId: true, status: true } } } },
-        reservation: { select: { userId: true } },
-      },
-    });
-    if (!unit) throw new NotFoundError('Sapling not found');
-
-    const ownerId = unit.orderItem?.order.userId ?? unit.reservation?.userId ?? null;
-    if (ownerId !== request.user!.id) throw new NotFoundError('Sapling not found');
-
-    reply.send({
-      id: unit.id,
-      status: unit.status,
-      speciesId: unit.speciesId,
-      speciesName: unit.species?.commonName ?? unit.speciesNameSnapshot,
-      speciesEmoji: unit.species?.emoji ?? '🌱',
-      nurseryName: unit.nursery.nurseryName,
-      ageAtSupplyLabel: unit.ageAtSupplyLabel,
-      alreadyPlanted: unit.status === 'planted',
-      readyToPlant: unit.status === 'collected',
-    });
-  });
-
   fastify.post('/', async (request, reply) => {
     const body = request.body as Record<string, MultipartFile | { value: string }>;
 
@@ -170,7 +139,6 @@ export default async function treesRoutes(fastify: FastifyInstance) {
       caption: parsed.data.caption,
       photoUrl,
       aiVerificationStatus,
-      sourceUnitId: parsed.data.sourceUnitId,
     });
 
     reply.status(201).send(serializeTree(tree));

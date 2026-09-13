@@ -9,14 +9,16 @@ const REPORT_INTERVAL_MS = 12_000;
 /**
  * Foreground-only GPS reporting for the delivery partner's active queue. Background tracking is
  * explicitly out of scope for this pass (no background-location permission/infra) — reporting
- * runs only while the app is in the foreground and the partner has at least one active delivery,
- * and stops the moment either condition stops holding. Mount once at the top of
- * DeliveryPartnerMainApp so it survives the partner switching between the Queue/Profile tabs.
+ * runs only while the app is in the foreground and the partner has at least one order they've
+ * actually tapped "Start delivery" on (an assigned-but-not-started order stays silent — see
+ * deliveryPartner.service.ts's reportLocation), and stops the moment either condition stops
+ * holding. Mount once at the top of DeliveryPartnerMainApp so it survives the partner switching
+ * between the Queue/Profile tabs.
  */
 export function useDeliveryLocationReporting() {
   const { data: queue } = useMyDeliveryQueue();
   const reportMutation = useReportDeliveryLocation();
-  const hasActiveDeliveries = (queue?.length ?? 0) > 0;
+  const hasActiveDeliveries = (queue ?? []).some((item) => item.startedAt != null);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const appStateRef = useRef(AppState.currentState);

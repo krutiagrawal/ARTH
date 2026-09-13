@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { Text } from '../components/common/AppText';
+import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS } from '../constants/colors';
+import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
+import { Sheet } from '../components/common/Sheet';
+import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
 import { useNurseryOrders } from '../hooks/useApiQueries';
 import type { ApiNurseryOrder, NurseryOrderStatus } from '../api/nursery';
 
@@ -40,8 +42,9 @@ const STATUS_COLOR: Record<NurseryOrderStatus, string> = {
   cancelled: COLORS.coral,
 };
 
-// Kept to a single row of simple chips per the product spec ("not a complex filter UI") — status
-// on top, fulfillment type underneath, rather than one combinatorial picker.
+// A dropdown sheet rather than a horizontally-scrolling chip row — 9 statuses made for a long
+// scroll, and a separate fulfillment-type row duplicated concepts already visible per-order
+// (each row already tags itself Pickup/Delivery) — one combined filter control instead.
 const STATUS_TABS: { key: NurseryOrderStatus | 'all'; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'confirmed', label: 'New' },
@@ -52,12 +55,6 @@ const STATUS_TABS: { key: NurseryOrderStatus | 'all'; label: string }[] = [
   { key: 'delivered', label: 'Delivered' },
   { key: 'plantation_verified', label: 'Plantation verified' },
   { key: 'cancelled', label: 'Cancelled' },
-];
-
-const FULFILLMENT_TABS: { key: 'all' | 'pickup' | 'delivery'; label: string }[] = [
-  { key: 'all', label: 'All types' },
-  { key: 'pickup', label: 'Pickup' },
-  { key: 'delivery', label: 'Delivery' },
 ];
 
 function OrderRow({ order, navigation }: { order: ApiNurseryOrder; navigation: any }) {
@@ -85,11 +82,27 @@ function OrderRow({ order, navigation }: { order: ApiNurseryOrder; navigation: a
 export function NurseryOrdersScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [statusTab, setStatusTab] = useState<NurseryOrderStatus | 'all'>('confirmed');
-  const [fulfillmentTab, setFulfillmentTab] = useState<'all' | 'pickup' | 'delivery'>('all');
+  const [showStatusSheet, setShowStatusSheet] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { data: orders = [], isLoading } = useNurseryOrders({
     status: statusTab === 'all' ? undefined : statusTab,
-    fulfillmentType: fulfillmentTab === 'all' ? undefined : fulfillmentTab,
   });
+
+  const filteredOrders = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return orders;
+    return orders.filter(
+      (o) => o.user.name.toLowerCase().includes(q) || o.items.some((i) => i.species.toLowerCase().includes(q)),
+    );
+  }, [orders, searchQuery]);
+
+  const currentStatusLabel = STATUS_TABS.find((t) => t.key === statusTab)?.label ?? 'All';
+
+  // The Sheet component switches to a dark navy surface at night (see Sheet.tsx's `isNightMode`)
+  // but has no way to tell its children — without this, the sheet's option text stayed the
+  // light-mode dark/green colors, illegible on that dark background.
+  const { period } = useTimeTheme();
+  const isNightMode = isNightlikePeriod(period);
 
   return (
     <View style={styles.container}>
@@ -98,28 +111,58 @@ export function NurseryOrdersScreen({ navigation }: any) {
 
       <ScreenHeader title="Orders" subtitle="Marketplace purchases to fulfil" onBack={navigation?.canGoBack?.() ? () => navigation.goBack() : undefined} />
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll} contentContainerStyle={styles.tabsRow}>
-        {STATUS_TABS.map((t) => (
-          <TouchableOpacity key={t.key} onPress={() => setStatusTab(t.key)} style={[styles.tab, statusTab === t.key && styles.tabActive]}>
-            <Text style={[styles.tabText, statusTab === t.key && styles.tabTextActive]}>{t.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll} contentContainerStyle={styles.tabsRowSecondary}>
-        {FULFILLMENT_TABS.map((t) => (
-          <TouchableOpacity key={t.key} onPress={() => setFulfillmentTab(t.key)} style={[styles.tabSmall, fulfillmentTab === t.key && styles.tabSmallActive]}>
-            <Text style={[styles.tabSmallText, fulfillmentTab === t.key && styles.tabSmallTextActive]}>{t.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <View style={styles.filterRow}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search customer or species"
+          placeholderTextColor={COLORS.textMuted}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        <TouchableOpacity style={styles.filterButton} onPress={() => setShowStatusSheet(true)} activeOpacity={0.85}>
+          <Text style={styles.filterButtonText} numberOfLines={1}>{currentStatusLabel}</Text>
+          <Text style={styles.filterButtonChevron}>▾</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Sheet visible={showStatusSheet} onClose={() => setShowStatusSheet(false)} title="Filter by status" scrollable>
+        {STATUS_TABS.map((t) => {
+          const active = statusTab === t.key;
+          return (
+            <TouchableOpacity
+              key={t.key}
+              style={[styles.sheetOption, isNightMode && styles.sheetOptionNight]}
+              onPress={() => {
+                setStatusTab(t.key);
+                setShowStatusSheet(false);
+              }}
+            >
+              <Text
+                style={[
+                  styles.sheetOptionText,
+                  { color: isNightMode ? ON_DARK_SURFACE.primary : COLORS.textPrimary },
+                  active && { color: isNightMode ? COLORS.mintLight : COLORS.forest, fontWeight: '700' },
+                ]}
+              >
+                {t.label}
+              </Text>
+              {active && <Text style={[styles.sheetCheck, { color: isNightMode ? COLORS.mintLight : COLORS.forest }]}>✓</Text>}
+            </TouchableOpacity>
+          );
+        })}
+      </Sheet>
 
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 20 }} />
-      ) : orders.length === 0 ? (
-        <EmptyState icon="🚚" title="Nothing here" body="Orders in this stage will show up here." />
+      ) : filteredOrders.length === 0 ? (
+        <EmptyState
+          icon="🚚"
+          title="Nothing here"
+          body={searchQuery.trim() && orders.length > 0 ? 'No orders match your search.' : 'Orders in this stage will show up here.'}
+        />
       ) : (
         <ScrollView contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
-          {orders.map((o) => (
+          {filteredOrders.map((o) => (
             <OrderRow key={o.id} order={o} navigation={navigation} />
           ))}
         </ScrollView>
@@ -130,25 +173,44 @@ export function NurseryOrdersScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  // A horizontal ScrollView doesn't reliably self-size its height to content (especially on
-  // Android) — left unconstrained it can grow to fill whatever space this flex-column screen
-  // gives it, which centers the (correctly-sized) chips inside a much taller box than intended.
-  // flexGrow: 0 pins it to its content height instead.
-  tabsScroll: { flexGrow: 0 },
-  // alignItems: 'center' is load-bearing — a horizontal ScrollView's content container is a flex
-  // row with no explicit height, so without it each chip defaults to `alignItems: 'stretch'` and
-  // grows to fill whatever cross-axis height the ScrollView ends up given, instead of sizing to
-  // its own text (looks like a tall vertical pill rather than a small horizontal one).
-  tabsRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, gap: 8, paddingTop: 10, paddingBottom: 6 },
-  tab: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: 'rgba(94,133,80,0.08)' },
-  tabActive: { backgroundColor: COLORS.forest },
-  tabText: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
-  tabTextActive: { color: COLORS.white },
-  tabsRowSecondary: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, gap: 6, paddingBottom: 10 },
-  tabSmall: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, borderWidth: 1, borderColor: COLORS.sand },
-  tabSmallActive: { backgroundColor: COLORS.golden, borderColor: COLORS.golden },
-  tabSmallText: { fontSize: 11, fontWeight: '600', color: COLORS.textSecondary },
-  tabSmallTextActive: { color: COLORS.white },
+  filterRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: SPACING.md, paddingTop: 10, paddingBottom: 10 },
+  searchInput: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    borderRadius: RADIUS.full,
+    borderWidth: 1.5,
+    borderColor: 'rgba(139, 107, 71, 0.30)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: COLORS.textPrimary,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'transparent',
+    borderRadius: RADIUS.full,
+    borderWidth: 1.5,
+    borderColor: 'rgba(139, 107, 71, 0.30)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    maxWidth: 150,
+  },
+  filterButtonText: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary },
+  filterButtonChevron: { fontSize: 12, color: COLORS.textSecondary },
+  sheetOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(139, 107, 71, 0.15)',
+  },
+  sheetOptionNight: { borderBottomColor: 'rgba(255,255,255,0.12)' },
+  // Colors applied inline based on isNightMode at the call site — see the sheetOption comment.
+  sheetOptionText: { fontSize: 15 },
+  sheetCheck: { fontSize: 16, fontWeight: '700' },
   list: { paddingHorizontal: SPACING.md },
   row: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md, padding: 14, marginBottom: 10 },
   customer: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },

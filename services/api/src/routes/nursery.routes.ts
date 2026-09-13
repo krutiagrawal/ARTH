@@ -23,6 +23,7 @@ function serializeProfile(profile: any) {
     description: profile.description,
     logoUrl: profile.logoUrl,
     coverPhotoUrl: profile.coverPhotoUrl,
+    line1: profile.line1,
     city: profile.city,
     contactPhone: profile.contactPhone,
     lat: profile.lat,

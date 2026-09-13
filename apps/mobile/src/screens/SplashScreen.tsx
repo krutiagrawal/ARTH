@@ -22,6 +22,7 @@ import { FloatingParticles } from '../components/common/FloatingParticles';
 import { MuteButton } from '../components/common/MuteButton';
 import { useAuth } from '../context/AuthContext';
 import { ROLE_ROUTES } from '../constants/roleRoutes';
+import { syncAndroidNavigationBarStyle } from '../utils/androidNavigationBar';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -66,6 +67,11 @@ export function SplashScreen({ navigation }: any) {
     const onboarded = await AsyncStorage.getItem(ONBOARDED_KEY);
     navigation.replace(onboarded === 'true' ? 'Login' : 'Onboarding');
   };
+
+  useEffect(() => {
+    syncAndroidNavigationBarStyle('light');
+    return () => syncAndroidNavigationBarStyle('dark');
+  }, []);
 
   useEffect(() => {
     // Sequence: glow → hero image grows → heading appears → navigate
@@ -166,7 +172,7 @@ export function SplashScreen({ navigation }: any) {
       />
 
       {/* Mute button */}
-      <MuteButton style={styles.muteBtn} />
+      <MuteButton style={styles.muteBtn} bare />
     </Animated.View>
   );
 }

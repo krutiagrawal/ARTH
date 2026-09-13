@@ -26,9 +26,34 @@ export default function PickupDeliveryClient() {
   const [form, setForm] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [line1, setLine1] = useState('')
+  const [coords, setCoords] = useState(null)
+  const [locating, setLocating] = useState(false)
+
+  const hasLocation = coords != null || (profile?.lat != null && profile?.lng != null)
+
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setError('Your browser doesn’t support location — try a different browser or device.')
+      return
+    }
+    setLocating(true)
+    setError('')
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+        setLocating(false)
+      },
+      () => {
+        setError('Location permission is needed so customers and delivery partners can track deliveries.')
+        setLocating(false)
+      },
+    )
+  }
 
   useEffect(() => {
     if (profile) {
+      setLine1(profile.line1 || '')
       setForm({
         offersPickup: Boolean(profile.offersPickup),
         offersDelivery: Boolean(profile.offersDelivery),
@@ -57,14 +82,20 @@ export default function PickupDeliveryClient() {
       setError('Offer at least one of pickup or delivery.')
       return
     }
+    if (form.offersDelivery && !hasLocation && !line1.trim()) {
+      setError('Add your nursery’s address or use current location below before turning on delivery.')
+      return
+    }
     setSubmitting(true)
     try {
       const payload = {
         offersPickup: form.offersPickup,
         offersDelivery: form.offersDelivery,
+        line1: line1.trim() || undefined,
         pickupInstructions: form.pickupInstructions || undefined,
         pickupWindows: form.pickupWindows,
         operatingHours: form.operatingHours,
+        ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
       }
       if (form.offersDelivery) {
         if (form.deliveryRadiusKm !== '') payload.deliveryRadiusKm = Number(form.deliveryRadiusKm)
@@ -118,6 +149,23 @@ export default function PickupDeliveryClient() {
         {form.offersDelivery && (
           <div className="rounded-2xl border border-border/60 bg-secondary/20 p-4 space-y-3">
             <p className="eyebrow">Delivery settings</p>
+            <label className="block">
+              <span className="text-xs text-muted-foreground">Nursery address</span>
+              <Input
+                placeholder="e.g. 12 Baner Road, near City Mall"
+                value={line1}
+                onChange={(e) => setLine1(e.target.value)}
+                className="mt-1 h-10 rounded-full"
+              />
+            </label>
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background px-3 py-2.5">
+              <span className="text-sm">
+                {hasLocation ? '📍 Nursery location set' : '📍 No location set — type an address above, or use current location'}
+              </span>
+              <Button type="button" variant="outline" size="sm" className="rounded-full shrink-0" onClick={useCurrentLocation} disabled={locating}>
+                {locating ? 'Locating…' : hasLocation ? 'Update location' : 'Use current location'}
+              </Button>
+            </div>
             <div className="grid grid-cols-3 gap-3">
               <label className="block">
                 <span className="text-xs text-muted-foreground">Radius (km)</span>

@@ -735,6 +735,11 @@ model NurseryProfile {
   nurseryName           String            @map("nursery_name")
   description           String
   logoUrl               String?           @map("logo_url")
+  // Free-text street address, optional — used only to derive lat/lng via geocoding when the
+  // nursery types an address instead of tapping "use current location" (see nursery.service.ts's
+  // updateOwnProfile). Not shown anywhere as a formatted mailing address; `city` remains the only
+  // structured location field.
+  line1                 String?
   city                  String?
   contactPhone          String?           @map("contact_phone")
   lat                   Decimal?          @db.Decimal(9, 6)
@@ -1080,6 +1085,12 @@ model DeliveryTracking {
   deliveryPartnerId String?          @map("delivery_partner_id")
   riderName         String?          @map("rider_name")
   riderPhone        String?          @map("rider_phone")
+  // Set when the delivery partner taps "Start delivery" in their own app — distinct from
+  // dispatch (Order.outForDeliveryAt), which is the nursery assigning the order. Location
+  // reporting/fan-out (deliveryPartner.service.ts's reportLocation) only applies to orders with
+  // startedAt set, so a rider carrying several assigned orders controls which leg is "active"
+  // right now instead of every assigned order silently moving as soon as they're dispatched.
+  startedAt         DateTime?        @map("started_at")
   lat               Decimal?         @db.Decimal(9, 6)
   lng               Decimal?         @db.Decimal(9, 6)
   etaMinutes        Int?             @map("eta_minutes")
