@@ -10,6 +10,7 @@ import {
   updateSaplingStockSchema,
   respondToReviewSchema,
 } from '../schemas/nursery.schema';
+import { dispatchOrderSchema } from '../schemas/deliveryPartner.schema';
 
 function isTrue(v: unknown) {
   return v === true || v === 'true';
@@ -251,15 +252,15 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
     reply.send(await orderService.markOrderPickedUp(fastify.prisma, profile.id, request.params.id, request.body?.code));
   });
 
-  fastify.post<{ Params: { id: string }; Body: { riderName?: string; riderPhone?: string } }>(
+  fastify.post<{ Params: { id: string }; Body: { deliveryPartnerId: string } }>(
     '/orders/:id/dispatch',
     async (request, reply) => {
+      const parsed = dispatchOrderSchema.safeParse(request.body);
+      if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
       const profile = await nurseryService.getOwnProfile(fastify.prisma, request.user!.id);
       reply.send(
-        await orderService.markOrderOutForDelivery(fastify.prisma, profile.id, request.params.id, {
-          name: request.body?.riderName,
-          phone: request.body?.riderPhone,
-        }),
+        await orderService.markOrderOutForDelivery(fastify.prisma, profile.id, request.params.id, parsed.data.deliveryPartnerId),
       );
     },
   );

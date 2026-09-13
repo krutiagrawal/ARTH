@@ -87,6 +87,9 @@ enum UserRole {
   nursery
   corporate
   admin
+  // Nursery-owned sub-account (see DeliveryPartnerProfile) — mobile-app-only login,
+  // created by a nursery (not self-registered) to carry out its own deliveries.
+  delivery_partner
 }
 
 enum GroupType {
@@ -420,6 +423,7 @@ model User {
   groupProfile           GroupProfile?
   nurseryProfile         NurseryProfile?
   corporateProfile       CorporateProfile?
+  deliveryPartnerProfile DeliveryPartnerProfile?
   groupMemberships       GroupMember[]
   groupChallengesCreated GroupChallenge[]            @relation("GroupChallengeCreator")
   groupChallengeEntries  GroupChallengeParticipant[]
@@ -780,9 +784,39 @@ model NurseryProfile {
   saplingUnits             ArthSaplingUnit[]
   bulkRequirementResponses BulkRequirementResponse[]
   suppliedTrees            Tree[]
+  deliveryPartners         DeliveryPartnerProfile[]
 
   @@index([status])
   @@map("nursery_profiles")
+}
+
+// Nursery-owned delivery rider sub-account. Unlike every other role, this User is created BY the
+// nursery (auth.service.ts's createDeliveryPartner, not a self-service register* flow) — the
+// nursery sets an initial password directly, no OTP/invite step. Mobile-app-only login; there is
+// no web dashboard for this role. Display name/handle live on the linked User, same convention as
+// every other profile model.
+model DeliveryPartnerProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  nurseryId   String   @map("nursery_id")
+  phone       String
+  photoUrl    String?  @map("photo_url")
+  // Soft-disable so a nursery can revoke a partner's ability to receive new dispatches without
+  // deleting the account or orphaning their already-in-flight/past DeliveryTracking rows.
+  isActive    Boolean  @default(true) @map("is_active")
+  // Denormalized from OrderReview.deliveryRating, same pattern as NurseryProfile.avgRating.
+  avgRating   Decimal? @map("avg_rating") @db.Decimal(3, 2)
+  reviewCount Int      @default(0) @map("review_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nursery    NurseryProfile     @relation(fields: [nurseryId], references: [id], onDelete: Cascade)
+  deliveries DeliveryTracking[]
+  reviews    OrderReview[]
+
+  @@index([nurseryId])
+  @@map("delivery_partner_profiles")
 }
 
 model SaplingStock {
@@ -1034,31 +1068,42 @@ model OrderItem {
 // One row per order, created once payment succeeds. `provider` starts as `mock` (a simulated
 // route animated between nursery and delivery address) for every order until a real Porter/
 // nursery-staff-app integration is wired in — the polling/read API shape doesn't change either way.
+// Dispatching to a registered DeliveryPartnerProfile flips provider to `nursery_staff` and
+// riderName/riderPhone become a snapshot of that partner (taken at dispatch time, same convention
+// as OrderItem's species/unitPriceCents snapshot) rather than nursery-entered free text — kept
+// denormalized so serializeOrder()'s per-poll read never needs to join through to User.
 model DeliveryTracking {
-  id            String           @id @default(uuid())
-  orderId       String           @unique @map("order_id")
-  provider      DeliveryProvider @default(mock)
-  externalRefId String?          @map("external_ref_id")
-  riderName     String?          @map("rider_name")
-  riderPhone    String?          @map("rider_phone")
-  lat           Decimal?         @db.Decimal(9, 6)
-  lng           Decimal?         @db.Decimal(9, 6)
-  etaMinutes    Int?             @map("eta_minutes")
-  updatedAt     DateTime         @updatedAt @map("updated_at")
+  id                String           @id @default(uuid())
+  orderId           String           @unique @map("order_id")
+  provider          DeliveryProvider @default(mock)
+  externalRefId     String?          @map("external_ref_id")
+  deliveryPartnerId String?          @map("delivery_partner_id")
+  riderName         String?          @map("rider_name")
+  riderPhone        String?          @map("rider_phone")
+  lat               Decimal?         @db.Decimal(9, 6)
+  lng               Decimal?         @db.Decimal(9, 6)
+  etaMinutes        Int?             @map("eta_minutes")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
 
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order           Order                   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  deliveryPartner DeliveryPartnerProfile? @relation(fields: [deliveryPartnerId], references: [id])
 
+  @@index([deliveryPartnerId])
   @@map("delivery_tracking")
 }
 
 // One review per delivered order. nurseryRating/deliveryRating are split per the phase-1 spec
 // ("rate delivery experience separately"); nurseryId is denormalized so a nursery's profile
-// rating aggregate query never has to join through Order.
+// rating aggregate query never has to join through Order. deliveryPartnerId is denormalized the
+// same way, so DeliveryPartnerProfile.avgRating/reviewCount recompute without joining through
+// Order -> DeliveryTracking; only set when deliveryRating is (an order with no assigned partner,
+// e.g. a pickup order, has neither).
 model OrderReview {
   id                 String    @id @default(uuid())
   orderId            String    @unique @map("order_id")
   userId             String    @map("user_id")
   nurseryId          String    @map("nursery_id")
+  deliveryPartnerId  String?   @map("delivery_partner_id")
   nurseryRating      Int       @map("nursery_rating")
   deliveryRating     Int?      @map("delivery_rating")
   comment            String?
@@ -1066,11 +1111,13 @@ model OrderReview {
   nurseryRespondedAt DateTime? @map("nursery_responded_at")
   createdAt          DateTime  @default(now()) @map("created_at")
 
-  order   Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  nursery NurseryProfile @relation(fields: [nurseryId], references: [id], onDelete: Cascade)
+  order           Order                   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nursery         NurseryProfile          @relation(fields: [nurseryId], references: [id], onDelete: Cascade)
+  deliveryPartner DeliveryPartnerProfile? @relation(fields: [deliveryPartnerId], references: [id])
 
   @@index([nurseryId])
+  @@index([deliveryPartnerId])
   @@map("order_reviews")
 }
 

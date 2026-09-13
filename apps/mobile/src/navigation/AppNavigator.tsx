@@ -50,6 +50,10 @@ import { NurseryFollowersScreen } from '../screens/NurseryFollowersScreen';
 import { NurseryPickupDeliveryConfigScreen } from '../screens/NurseryPickupDeliveryConfigScreen';
 import { NurseryBulkRequirementsScreen } from '../screens/NurseryBulkRequirementsScreen';
 import { NurseryBulkRequirementDetailScreen } from '../screens/NurseryBulkRequirementDetailScreen';
+import { NurseryDeliveryPartnersScreen } from '../screens/NurseryDeliveryPartnersScreen';
+import { DeliveryPartnerQueueScreen } from '../screens/DeliveryPartnerQueueScreen';
+import { DeliveryPartnerProfileScreen } from '../screens/DeliveryPartnerProfileScreen';
+import { useDeliveryLocationReporting } from '../hooks/useDeliveryLocationReporting';
 import { NurseryImpactScreen } from '../screens/NurseryImpactScreen';
 import { NgoBulkRequirementsScreen } from '../screens/NgoBulkRequirementsScreen';
 import { ScanSaplingScreen } from '../screens/ScanSaplingScreen';
@@ -134,12 +138,24 @@ const GROUP_TABS: TabItem[] = [
   { name: 'Settings', icon: '⚙️', label: 'Settings' },
 ];
 
-export type NurseryTabName = 'Home' | 'Stock' | 'Settings';
+// Settings moved off the tab bar and into the nursery's own profile screen (gear icon, next to
+// the "Edit profile" button) — the same place individual users reach Settings from, rather than
+// a dedicated tab. Orders takes the freed-up slot since it's a daily-use action.
+export type NurseryTabName = 'Home' | 'Stock' | 'Orders';
 
 const NURSERY_TABS: TabItem[] = [
   { name: 'Home', icon: '🏡', label: 'Home' },
   { name: 'Stock', icon: '📦', label: 'Stock', raised: true },
-  { name: 'Settings', icon: '⚙️', label: 'Settings' },
+  { name: 'Orders', icon: '🚚', label: 'Orders' },
+];
+
+// Deliberately tiny — this role's whole feature surface is "see my assigned deliveries" and
+// "see my own account/log out", unlike every other role's multi-tab dashboard.
+export type DeliveryPartnerTabName = 'Queue' | 'Profile';
+
+const DELIVERY_PARTNER_TABS: TabItem[] = [
+  { name: 'Queue', icon: '🛵', label: 'Deliveries', raised: true },
+  { name: 'Profile', icon: '👤', label: 'Profile' },
 ];
 
 export type CorporateTabName = 'Home' | 'Sponsorships' | 'Settings';
@@ -318,6 +334,7 @@ export type RootStackParamList = {
   NurseryRegister: undefined;
   NurseryMain: undefined;
   NurseryStock: undefined;
+  NurserySettings: undefined;
   NurseryProfile: undefined;
   EditNurseryProfile: undefined;
   NurseryStreakBadges: undefined;
@@ -341,6 +358,8 @@ export type RootStackParamList = {
   NurseryPickupDeliveryConfig: undefined;
   NurseryBulkRequirements: undefined;
   NurseryBulkRequirementDetail: { requirementId: string };
+  NurseryDeliveryPartners: undefined;
+  DeliveryPartnerMain: undefined;
   NurseryImpact: undefined;
   NgoBulkRequirements: undefined;
   ScanSapling: undefined;
@@ -563,13 +582,13 @@ function NurseryMainApp({ navigation }: any) {
   const renderScreen = useCallback(() => {
     switch (activeTab) {
       case 'Home':
-        return <NurseryDashboardScreen navigation={navigation} onNavigateTab={setActiveTab} />;
+        return <NurseryDashboardScreen navigation={navigation} />;
       case 'Stock':
         return <NurseryStockScreen navigation={navigation} />;
-      case 'Settings':
-        return <NurserySettingsScreen navigation={navigation} />;
+      case 'Orders':
+        return <NurseryOrdersScreen navigation={navigation} />;
       default:
-        return <NurseryDashboardScreen navigation={navigation} onNavigateTab={setActiveTab} />;
+        return <NurseryDashboardScreen navigation={navigation} />;
     }
   }, [activeTab, navigation]);
 
@@ -581,6 +600,37 @@ function NurseryMainApp({ navigation }: any) {
         activeTab={activeTab}
         onTabPress={setActiveTab as (t: TabName) => void}
         theme={activeTab === 'Home' ? dashboardTheme : null}
+      />
+    </View>
+  );
+}
+
+function DeliveryPartnerMainApp({ navigation }: any) {
+  const [activeTab, setActiveTab] = useState<DeliveryPartnerTabName>('Queue');
+  const dashboardTheme = useTimeTheme();
+  // Mounted once here (not per-tab) so foreground GPS reporting keeps running while the partner
+  // is on the Profile tab too, and stops the moment this whole role-app unmounts (e.g. logout).
+  useDeliveryLocationReporting();
+
+  const renderScreen = useCallback(() => {
+    switch (activeTab) {
+      case 'Queue':
+        return <DeliveryPartnerQueueScreen />;
+      case 'Profile':
+        return <DeliveryPartnerProfileScreen navigation={navigation} />;
+      default:
+        return <DeliveryPartnerQueueScreen />;
+    }
+  }, [activeTab, navigation]);
+
+  return (
+    <View style={styles.mainContainer}>
+      {renderScreen()}
+      <BottomNav
+        tabs={DELIVERY_PARTNER_TABS}
+        activeTab={activeTab}
+        onTabPress={setActiveTab as (t: TabName) => void}
+        theme={activeTab === 'Queue' ? dashboardTheme : null}
       />
     </View>
   );
@@ -712,7 +762,9 @@ export function AppNavigator() {
         <Stack.Screen name="GroupPostUpdate" component={PostComposerScreen} />
         <Stack.Screen name="NurseryRegister" component={NurseryRegisterScreen} />
         <Stack.Screen name="NurseryMain" component={NurseryMainApp} />
+        <Stack.Screen name="DeliveryPartnerMain" component={DeliveryPartnerMainApp} />
         <Stack.Screen name="NurseryStock" component={NurseryStockScreen} />
+        <Stack.Screen name="NurserySettings" component={NurserySettingsScreen} />
         <Stack.Screen name="NurseryProfile" component={NurseryProfileScreen} />
         <Stack.Screen name="EditNurseryProfile" component={EditNurseryProfileScreen} />
         <Stack.Screen name="NurseryStreakBadges" component={NurseryStreakBadgesScreen} />
@@ -842,6 +894,7 @@ export function AppNavigator() {
         <Stack.Screen name="NurseryPickupDeliveryConfig" component={NurseryPickupDeliveryConfigScreen} />
         <Stack.Screen name="NurseryBulkRequirements" component={NurseryBulkRequirementsScreen} />
         <Stack.Screen name="NurseryBulkRequirementDetail" component={NurseryBulkRequirementDetailScreen} />
+        <Stack.Screen name="NurseryDeliveryPartners" component={NurseryDeliveryPartnersScreen} />
         <Stack.Screen name="NurseryImpact" component={NurseryImpactScreen} />
         <Stack.Screen name="NgoBulkRequirements" component={NgoBulkRequirementsScreen} />
         <Stack.Screen name="ScanSapling" component={ScanSaplingScreen} />

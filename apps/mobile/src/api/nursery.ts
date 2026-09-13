@@ -454,8 +454,8 @@ export async function packOrder(id: string): Promise<ApiNurseryOrder> {
   return apiFetch<ApiNurseryOrder>(`/api/nursery/orders/${id}/pack`, { method: 'POST' });
 }
 
-export async function dispatchOrder(id: string, riderName?: string, riderPhone?: string): Promise<ApiNurseryOrder> {
-  return apiFetch<ApiNurseryOrder>(`/api/nursery/orders/${id}/dispatch`, { method: 'POST', body: { riderName, riderPhone } });
+export async function dispatchOrder(id: string, deliveryPartnerId: string): Promise<ApiNurseryOrder> {
+  return apiFetch<ApiNurseryOrder>(`/api/nursery/orders/${id}/dispatch`, { method: 'POST', body: { deliveryPartnerId } });
 }
 
 export async function deliverOrder(id: string, code: string): Promise<ApiNurseryOrder> {

@@ -8,4 +8,5 @@ export const ROLE_ROUTES: Record<ApiUser['role'], string> = {
   nursery: 'NurseryMain',
   corporate: 'CorporateMain',
   admin: 'AdminMain',
+  delivery_partner: 'DeliveryPartnerMain',
 };

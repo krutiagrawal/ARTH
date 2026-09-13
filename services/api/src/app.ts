@@ -64,6 +64,8 @@ import wishlistRoutes from './routes/wishlist.routes';
 import ngoBulkRequirementsRoutes from './routes/ngoBulkRequirements.routes';
 import nurseryBulkRequirementsRoutes from './routes/nurseryBulkRequirements.routes';
 import saplingUnitsPublicRoutes from './routes/saplingUnits.public.routes';
+import nurseryDeliveryPartnersRoutes from './routes/nurseryDeliveryPartners.routes';
+import deliveryPartnerRoutes from './routes/deliveryPartner.routes';
 
 export async function buildApp() {
   const app = Fastify({ logger: true });
@@ -152,6 +154,8 @@ export async function buildApp() {
     await instance.register(nurseryFollowersRoutes, { prefix: '/api/nursery/followers' });
     await instance.register(ngoBulkRequirementsRoutes, { prefix: '/api/ngo/bulk-requirements' });
     await instance.register(nurseryBulkRequirementsRoutes, { prefix: '/api/nursery/bulk-requirements' });
+    await instance.register(nurseryDeliveryPartnersRoutes, { prefix: '/api/nursery/delivery-partners' });
+    await instance.register(deliveryPartnerRoutes, { prefix: '/api/delivery-partner' });
   });
 
   return app;

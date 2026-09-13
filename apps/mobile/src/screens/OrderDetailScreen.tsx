@@ -1,18 +1,21 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Linking } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
+import MapView, { MarkerAnimated, AnimatedRegion, PROVIDER_DEFAULT, LatLng } from 'react-native-maps';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
+import { SaplingMarker } from '../components/common/SaplingMarker';
 import { useHaptics } from '../hooks/useHaptics';
 import { useMyOrder, useCancelOrder, useSubmitOrderReview } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import type { OrderFulfillmentType, OrderStatus } from '../api/orders';
+
+const TRACKING_REGION_DELTA = { latitudeDelta: 0.05, longitudeDelta: 0.05 };
 
 function formatRupees(cents: number) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`;
@@ -55,9 +58,10 @@ function StatusTimeline({ status, fulfillmentType }: { status: OrderStatus; fulf
   );
 }
 
-function ReviewForm({ orderId }: { orderId: string }) {
+function ReviewForm({ orderId, showDeliveryRating }: { orderId: string; showDeliveryRating: boolean }) {
   const submitMutation = useSubmitOrderReview();
   const [rating, setRating] = useState(5);
+  const [deliveryRating, setDeliveryRating] = useState(5);
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const { success } = useHaptics();
@@ -80,6 +84,18 @@ function ReviewForm({ orderId }: { orderId: string }) {
           </TouchableOpacity>
         ))}
       </View>
+      {showDeliveryRating && (
+        <>
+          <Text style={styles.sectionTitle}>Rate your delivery partner</Text>
+          <View style={styles.starsRow}>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <TouchableOpacity key={n} onPress={() => setDeliveryRating(n)}>
+                <Text style={[styles.star, n <= deliveryRating && styles.starActive]}>★</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      )}
       <TextInput
         style={styles.input}
         placeholder="How was the delivery? (optional)"
@@ -91,7 +107,10 @@ function ReviewForm({ orderId }: { orderId: string }) {
       <AnimatedButton
         label={submitMutation.isPending ? 'Submitting…' : 'Submit review'}
         onPress={async () => {
-          await submitMutation.mutateAsync({ id: orderId, input: { nurseryRating: rating, comment: comment.trim() || undefined } });
+          await submitMutation.mutateAsync({
+            id: orderId,
+            input: { nurseryRating: rating, deliveryRating: showDeliveryRating ? deliveryRating : undefined, comment: comment.trim() || undefined },
+          });
           success();
           setSubmitted(true);
         }}
@@ -111,6 +130,29 @@ export function OrderDetailScreen({ route, navigation }: any) {
   const { data: order, isLoading } = useMyOrder(orderId);
   const cancelMutation = useCancelOrder();
   const [actionError, setActionError] = useState('');
+  const [animatedRegion, setAnimatedRegion] = useState<AnimatedRegion | null>(null);
+  const lastTrackedRef = useRef<{ lat: number; lng: number } | null>(null);
+
+  // Smoothly tweens the marker between the ~8s tracking polls instead of snapping to each new
+  // fix — react-native-maps' MarkerAnimated/AnimatedRegion pair is built for exactly this.
+  useEffect(() => {
+    const lat = order?.tracking?.lat;
+    const lng = order?.tracking?.lng;
+    if (lat == null || lng == null) return;
+
+    if (!animatedRegion) {
+      setAnimatedRegion(new AnimatedRegion({ latitude: lat, longitude: lng, ...TRACKING_REGION_DELTA }));
+      lastTrackedRef.current = { lat, lng };
+      return;
+    }
+    if (lastTrackedRef.current?.lat === lat && lastTrackedRef.current?.lng === lng) return;
+    lastTrackedRef.current = { lat, lng };
+    // `toValue` is required by the (mis-)typed TimingAnimationConfig intersection but unused —
+    // AnimatedRegion.timing() overwrites it per-field internally (see the library's own source).
+    animatedRegion
+      .timing({ latitude: lat, longitude: lng, ...TRACKING_REGION_DELTA, duration: 7000, useNativeDriver: false, toValue: 0 })
+      .start();
+  }, [order?.tracking?.lat, order?.tracking?.lng, animatedRegion]);
 
   const handleCancel = async () => {
     setActionError('');
@@ -159,16 +201,19 @@ export function OrderDetailScreen({ route, navigation }: any) {
             </View>
           )}
 
-          {showTracking && order.tracking && (
+          {showTracking && order.tracking && animatedRegion && (
             <View style={styles.mapWrap}>
               <MapView
                 provider={PROVIDER_DEFAULT}
                 style={styles.map}
-                region={{ latitude: order.tracking.lat!, longitude: order.tracking.lng!, latitudeDelta: 0.05, longitudeDelta: 0.05 }}
+                region={{ latitude: order.tracking.lat!, longitude: order.tracking.lng!, ...TRACKING_REGION_DELTA }}
               >
-                <Marker coordinate={{ latitude: order.tracking.lat!, longitude: order.tracking.lng! }}>
-                  <Text style={{ fontSize: 28 }}>🌱</Text>
-                </Marker>
+                {/* react-native-maps types MarkerAnimated's coordinate as a plain LatLng, but at
+                    runtime it accepts (and requires, to animate) the AnimatedRegion instance
+                    itself — a known gap in the library's typings. */}
+                <MarkerAnimated coordinate={animatedRegion as unknown as LatLng}>
+                  <SaplingMarker size={28} />
+                </MarkerAnimated>
               </MapView>
               <View style={styles.etaBadge}>
                 <Text style={styles.etaText}>
@@ -240,10 +285,15 @@ export function OrderDetailScreen({ route, navigation }: any) {
             </>
           )}
 
-          {['delivered', 'picked_up', 'plantation_verified'].includes(order.status) && !order.review && <ReviewForm orderId={order.id} />}
+          {['delivered', 'picked_up', 'plantation_verified'].includes(order.status) && !order.review && (
+            <ReviewForm orderId={order.id} showDeliveryRating={order.fulfillmentType === 'delivery' && !!order.tracking?.riderName} />
+          )}
           {order.review && (
             <BorderCard style={styles.card}>
               <Text style={styles.reviewThanks}>Your rating: {'★'.repeat(order.review.nurseryRating)}</Text>
+              {order.review.deliveryRating != null && (
+                <Text style={styles.reviewThanks}>Delivery partner: {'★'.repeat(order.review.deliveryRating)}</Text>
+              )}
               {order.review.comment ? <Text style={styles.addressText}>{order.review.comment}</Text> : null}
             </BorderCard>
           )}

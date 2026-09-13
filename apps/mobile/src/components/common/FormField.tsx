@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, TextInputProps, ViewStyle, StyleProp } from 'react-native';
 import { Text, TextInput } from './AppText';
-import { COLORS } from '../../constants/colors';
+import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
 import { RADIUS } from '../../constants/theme';
 
 /**
@@ -12,22 +12,30 @@ import { RADIUS } from '../../constants/theme';
  */
 interface FormFieldProps extends Pick<
   TextInputProps,
-  'value' | 'onChangeText' | 'placeholder' | 'keyboardType' | 'autoCapitalize' | 'editable' | 'multiline'
+  'value' | 'onChangeText' | 'placeholder' | 'keyboardType' | 'autoCapitalize' | 'editable' | 'multiline' | 'secureTextEntry'
 > {
   label: string;
   /** Rendered at the right edge of the box — e.g. a dropdown chevron. */
   rightAccessory?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  /**
+   * Set true when this field is rendered inside a dark surface — e.g. a `Sheet` currently in its
+   * night-mode chrome. FormField has no way to know its own surroundings (most screens place it
+   * on a fixed light cream background regardless of time of day, so it can't just check the
+   * global time-of-day theme itself), so the caller must compute that and pass it down — see
+   * Sheet.tsx's own `isNightMode` for the same check callers should reuse.
+   */
+  dark?: boolean;
 }
 
-export function FormField({ label, rightAccessory, style, multiline, ...inputProps }: FormFieldProps) {
+export function FormField({ label, rightAccessory, style, multiline, dark, ...inputProps }: FormFieldProps) {
   return (
-    <View style={[styles.box, style]}>
+    <View style={[styles.box, dark && styles.boxDark, style]}>
       <View style={styles.textColumn}>
-        <Text style={styles.label}>{label}</Text>
+        <Text style={[styles.label, dark && styles.labelDark]}>{label}</Text>
         <TextInput
-          style={[styles.input, multiline && styles.multiline]}
-          placeholderTextColor={COLORS.textMuted}
+          style={[styles.input, dark && styles.inputDark, multiline && styles.multiline]}
+          placeholderTextColor={dark ? ON_DARK_SURFACE.muted : COLORS.textMuted}
           multiline={multiline}
           {...inputProps}
         />
@@ -46,16 +54,18 @@ export function FormFieldShell({
   children,
   rightAccessory,
   style,
+  dark,
 }: {
   label: string;
   children: React.ReactNode;
   rightAccessory?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  dark?: boolean;
 }) {
   return (
-    <View style={[styles.box, style]}>
+    <View style={[styles.box, dark && styles.boxDark, style]}>
       <View style={styles.textColumn}>
-        <Text style={styles.label}>{label}</Text>
+        <Text style={[styles.label, dark && styles.labelDark]}>{label}</Text>
         {children}
       </View>
       {rightAccessory}
@@ -83,8 +93,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginTop: 12,
   },
+  boxDark: { borderColor: 'rgba(255,255,255,0.25)' },
   textColumn: { flex: 1 },
   label: { fontSize: 12, color: COLORS.textMuted, fontWeight: '500' },
+  labelDark: { color: ON_DARK_SURFACE.secondary },
   input: {
     fontSize: 15,
     fontWeight: '600',
@@ -92,6 +104,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 0,
   },
+  inputDark: { color: ON_DARK_SURFACE.primary },
   multiline: { minHeight: 72, textAlignVertical: 'top' },
 });
 

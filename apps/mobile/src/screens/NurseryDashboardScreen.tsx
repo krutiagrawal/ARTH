@@ -1,9 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useRef, type RefObject } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurTargetView } from 'expo-blur';
+import { BlurTargetView, BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
@@ -12,6 +12,7 @@ import { SHADOWS } from '../constants/theme';
 import { EcoWidget } from '../components/common/EcoWidget';
 import { MuteButton } from '../components/common/MuteButton';
 import { BorderCard } from '../components/common/BorderCard';
+import { ThemedCard } from '../components/common/ThemedCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { ForestHeroCanvas } from '../components/common/ForestHeroCanvas';
 import { AmbientCreatures } from '../components/common/AmbientCreatures';
@@ -20,14 +21,13 @@ import { getSceneryMode, RainEffect, WindEffect } from '../components/common/Wea
 import { useTimeTheme, type TimeTheme } from '../hooks/useTimeTheme';
 import { useDeviceWeather } from '../hooks/useDeviceWeather';
 import { useAuth } from '../context/AuthContext';
-import { useNurseryProfile, useNurseryStats, useNurseryReservations, useNurseryOrders, useNurseryDashboardToday } from '../hooks/useApiQueries';
+import { useNurseryProfile, useNurseryStats, useNurseryReservations, useNurseryDashboardToday } from '../hooks/useApiQueries';
 import type { ApiNurseryActivityItem } from '../api/nursery';
 import { useUnreadNotificationCount } from '../hooks/useSocialQueries';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { getHeroSeamColor, getHeroSeamTextColors } from '../utils/heroSeam';
 import { hexToRgba } from '../utils/color';
-import type { NurseryTabName } from '../navigation/AppNavigator';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const HERO_HEIGHT = SH * 0.5;
@@ -149,8 +149,10 @@ function DockRow({
 }
 
 // Sits in the header next to MuteButton and the avatar — the same 44px blurred-circle shape as
-// MuteButton, so the two read as a matched pair of icon buttons. `useUnreadNotificationCount`
-// already existed (built for a badge like this) but no screen had ever actually rendered it.
+// MuteButton's `glass` variant, so the two read as a matched pair of icon buttons over the hero
+// image rather than a flat brown-bordered circle (which reads fine over the plain cream body but
+// looks out of place over the illustrated sky). `useUnreadNotificationCount` already existed
+// (built for a badge like this) but no screen had ever actually rendered it.
 function NotificationBell({ onPress }: { onPress: () => void }) {
   const { data } = useUnreadNotificationCount();
   const unreadCount = data?.count ?? 0;
@@ -162,9 +164,9 @@ function NotificationBell({ onPress }: { onPress: () => void }) {
       accessibilityRole="button"
       accessibilityLabel={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
     >
-      <View style={styles.bellBlur}>
+      <BlurView intensity={40} tint="dark" style={styles.bellBlur}>
         <Text style={styles.bellIcon}>🔔</Text>
-      </View>
+      </BlurView>
       {unreadCount > 0 && (
         <View style={styles.bellBadge}>
           <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
@@ -186,25 +188,34 @@ const ACTIVITY_COPY: Record<string, (data: Record<string, any>) => { icon: strin
   nursery_impact_milestone: (d) => ({ icon: '🏆', text: d.message ?? 'You hit an impact milestone!' }),
 };
 
-function ActivityRow({ item, seamText }: { item: ApiNurseryActivityItem; seamText: { primary: string; secondary: string } }) {
+function ActivityRow({
+  item,
+  seamText,
+  theme,
+  blurTarget,
+}: {
+  item: ApiNurseryActivityItem;
+  seamText: { primary: string; secondary: string };
+  theme: TimeTheme;
+  blurTarget: RefObject<View | null>;
+}) {
   const copy = ACTIVITY_COPY[item.type]?.(item.data ?? {}) ?? { icon: '📌', text: item.type };
   return (
-    <BorderCard noPadding style={styles.activityRow}>
+    <ThemedCard theme={theme} blurTarget={blurTarget} noPadding style={styles.activityRow}>
       <Text style={styles.activityIcon}>{copy.icon}</Text>
       <View style={{ flex: 1 }}>
         <Text style={[styles.activityText, { color: seamText.primary }]}>{copy.text}</Text>
         <Text style={[styles.activityTime, { color: seamText.secondary }]}>{new Date(item.createdAt).toLocaleString()}</Text>
       </View>
-    </BorderCard>
+    </ThemedCard>
   );
 }
 
 interface NurseryDashboardScreenProps {
   navigation: any;
-  onNavigateTab: (tab: NurseryTabName) => void;
 }
 
-export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDashboardScreenProps) {
+export function NurseryDashboardScreen({ navigation }: NurseryDashboardScreenProps) {
   const insets = useSafeAreaInsets();
   const bottomClearance = useBottomNavClearance();
   const theme = useTimeTheme();
@@ -214,8 +225,6 @@ export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDas
   const { data: profile } = useNurseryProfile();
   const { data: stats, isLoading } = useNurseryStats();
   const { data: pendingReservations = [] } = useNurseryReservations('pending');
-  const { data: confirmedOrders = [] } = useNurseryOrders('confirmed');
-  const { data: packedOrders = [] } = useNurseryOrders('packed');
   const { data: today } = useNurseryDashboardToday();
   const blurTargetRef = useRef<View>(null);
 
@@ -239,33 +248,24 @@ export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDas
     blurTarget: blurTargetRef,
   };
 
-  // Top row: the daily-use actions (inventory, incoming requests, engagement). Bottom row:
-  // reference/reporting (analytics, editing the public profile, and previewing that profile —
-  // "View on Map" is a nursery's only way to see the pin planters actually browse, which nothing
-  // in the nursery role linked to before, even though the map already renders nursery markers).
+  // Orders now has its own bottom tab and Edit Profile lives on the nursery's own profile screen
+  // (tap the avatar above — same place individual users reach their profile, with Settings
+  // alongside it) — neither needs a dock slot too. 12 remaining actions, 3 per row, 4 rows.
   // Circle colors picked to contrast with each emoji's own dominant color, not just to look
   // varied — 📦's tan/brown box on a golden circle, and 🔥's orange/red on the streakFire-orange
   // circle, both camouflaged the icon against its own background.
   const dockActions: DockActionSpec[] = [
     { key: 'stock', emoji: '📦', color: COLORS.xpBlue, title: 'Manage inventory', onPress: () => navigation.navigate('NurseryStock') },
-    {
-      key: 'orders',
-      emoji: '🚚',
-      color: COLORS.amber,
-      title: 'Orders',
-      badge: confirmedOrders.length + packedOrders.length,
-      onPress: () => navigation.navigate('NurseryOrders'),
-    },
     { key: 'reservations', emoji: '🤝', color: COLORS.forest, title: 'Reservations', badge: pendingReservations.length, onPress: () => navigation.navigate('NurseryReservations') },
     { key: 'reviews', emoji: '⭐', color: COLORS.coral, title: 'Reviews', onPress: () => navigation.navigate('NurseryReviews') },
     { key: 'post', emoji: '📝', color: COLORS.sageDark, title: 'Post an update', onPress: () => navigation.navigate('NurseryPostUpdate') },
     { key: 'followers', emoji: '👥', color: COLORS.xpBlue, title: 'Followers', onPress: () => navigation.navigate('NurseryFollowers') },
     { key: 'streak', emoji: '🔥', color: COLORS.sage, title: 'Streak & Badges', onPress: () => navigation.navigate('NurseryStreakBadges') },
     { key: 'analytics', emoji: '📊', color: COLORS.golden, title: 'Stock Analytics', onPress: () => navigation.navigate('NurseryStockAnalytics') },
-    { key: 'editProfile', emoji: '⚙️', color: COLORS.earth, title: 'Edit nursery profile', onPress: () => navigation.navigate('EditNurseryProfile') },
     { key: 'viewProfile', emoji: '🌿', color: COLORS.forest, title: 'View public profile', onPress: () => navigation.navigate('NurseryProfile') },
     { key: 'map', emoji: '🗺️', color: COLORS.coral, title: 'View on Map', onPress: () => navigation.navigate('NurseryMap') },
     { key: 'pickupDelivery', emoji: '🚴', color: COLORS.xpBlue, title: 'Pickup & Delivery', onPress: () => navigation.navigate('NurseryPickupDeliveryConfig') },
+    { key: 'deliveryPartners', emoji: '🛵', color: COLORS.sageDark, title: 'Delivery Partners', onPress: () => navigation.navigate('NurseryDeliveryPartners') },
     {
       key: 'bulkRequirements',
       emoji: '🤝',
@@ -317,9 +317,9 @@ export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDas
               <Text style={[styles.orgName, { color: theme.textOnSky }]}>{profile?.nurseryName ?? user?.name ?? 'Your nursery'}</Text>
             </View>
             <View style={styles.headerRight}>
-              <MuteButton />
+              <MuteButton glass />
               <NotificationBell onPress={() => navigation.navigate('Notifications')} />
-              <TouchableOpacity style={styles.avatarButton} onPress={() => onNavigateTab('Settings')}>
+              <TouchableOpacity style={styles.avatarButton} onPress={() => navigation.navigate('NurseryProfile')}>
                 <LinearGradient colors={[COLORS.sageLight, COLORS.forest]} style={styles.avatar}>
                   <Text style={styles.avatarText}>{user?.avatarEmoji ?? '🌿'}</Text>
                 </LinearGradient>
@@ -402,7 +402,7 @@ export function NurseryDashboardScreen({ navigation, onNavigateTab }: NurseryDas
             ) : (
               <View style={styles.activityList}>
                 {today.activity.slice(0, 10).map((item) => (
-                  <ActivityRow key={item.id} item={item} seamText={seamText} />
+                  <ActivityRow key={item.id} item={item} seamText={seamText} theme={theme} blurTarget={blurTargetRef} />
                 ))}
               </View>
             )}
@@ -449,8 +449,18 @@ const styles = StyleSheet.create({
   greeting: { fontSize: 13, fontWeight: '500', letterSpacing: 0.3, textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
   orgName: { fontFamily: FONTS.displayBold, fontSize: 24, lineHeight: 32, letterSpacing: -0.3, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 5 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  bellButton: { width: 44, height: 44, borderRadius: 22 },
-  bellBlur: { flex: 1, borderRadius: 22, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  bellButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  bellBlur: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.18)' },
   bellIcon: { fontSize: 18 },
   bellBadge: { position: 'absolute', top: -3, right: -3, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: COLORS.coral, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 1.5, borderColor: COLORS.cream },
   bellBadgeText: { fontSize: 9, fontWeight: '700', color: COLORS.white },

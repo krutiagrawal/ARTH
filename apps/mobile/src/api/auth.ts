@@ -4,7 +4,7 @@ import { setAccessToken, setRefreshToken, clearTokens, getRefreshToken } from '.
 
 export interface ApiUser {
   id: string;
-  role: 'user' | 'ngo' | 'group' | 'nursery' | 'corporate' | 'admin';
+  role: 'user' | 'ngo' | 'group' | 'nursery' | 'corporate' | 'admin' | 'delivery_partner';
   email: string;
   name: string;
   handle: string;

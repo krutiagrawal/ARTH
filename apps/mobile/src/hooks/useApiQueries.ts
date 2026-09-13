@@ -175,6 +175,15 @@ import {
   RespondToBulkRequirementInput,
 } from '../api/nursery';
 import {
+  fetchDeliveryPartners,
+  createDeliveryPartner,
+  updateDeliveryPartner,
+  deactivateDeliveryPartner,
+  CreateDeliveryPartnerInput,
+  UpdateDeliveryPartnerInput as UpdateDeliveryPartnerProfileInput,
+} from '../api/deliveryPartners';
+import { fetchMyPartnerProfile, fetchMyDeliveryQueue, reportMyLocation, completeDelivery } from '../api/deliveryPartnerApp';
+import {
   fetchNgoBulkRequirements,
   fetchNgoBulkRequirement,
   createNgoBulkRequirement,
@@ -1931,8 +1940,7 @@ export function usePackOrder() {
 export function useDispatchOrder() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, riderName, riderPhone }: { id: string; riderName?: string; riderPhone?: string }) =>
-      dispatchOrder(id, riderName, riderPhone),
+    mutationFn: ({ id, deliveryPartnerId }: { id: string; deliveryPartnerId: string }) => dispatchOrder(id, deliveryPartnerId),
     onSuccess: () => invalidateNurseryOrders(queryClient),
   });
 }
@@ -1966,6 +1974,76 @@ export function useCancelNurseryOrder() {
   return useMutation({
     mutationFn: (id: string) => cancelNurseryOrder(id),
     onSuccess: () => invalidateNurseryOrders(queryClient),
+  });
+}
+
+// ---------- Delivery partners (Nursery-side roster management) ----------
+
+export function useDeliveryPartners() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nursery', 'deliveryPartners'],
+    queryFn: fetchDeliveryPartners,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useCreateDeliveryPartner() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateDeliveryPartnerInput) => createDeliveryPartner(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['nursery', 'deliveryPartners'] }),
+  });
+}
+
+export function useUpdateDeliveryPartner() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...input }: { id: string } & UpdateDeliveryPartnerProfileInput) => updateDeliveryPartner(id, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['nursery', 'deliveryPartners'] }),
+  });
+}
+
+export function useDeactivateDeliveryPartner() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deactivateDeliveryPartner(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['nursery', 'deliveryPartners'] }),
+  });
+}
+
+// ---------- Delivery partner's own app (queue, location reporting) ----------
+
+export function useMyPartnerProfile() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['deliveryPartner', 'profile'],
+    queryFn: fetchMyPartnerProfile,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useMyDeliveryQueue() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['deliveryPartner', 'queue'],
+    queryFn: fetchMyDeliveryQueue,
+    enabled: isAuthenticated,
+    refetchInterval: 15000,
+  });
+}
+
+export function useReportDeliveryLocation() {
+  return useMutation({
+    mutationFn: ({ lat, lng }: { lat: number; lng: number }) => reportMyLocation(lat, lng),
+  });
+}
+
+export function useCompleteDelivery() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, code }: { orderId: string; code: string }) => completeDelivery(orderId, code),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['deliveryPartner', 'queue'] }),
   });
 }
 

@@ -11,6 +11,7 @@ import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { StatusModal } from '../components/common/StatusModal';
 import { SaplingQrCode } from '../components/common/SaplingQrCode';
+import { Sheet } from '../components/common/Sheet';
 import { useHaptics } from '../hooks/useHaptics';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import {
@@ -22,6 +23,7 @@ import {
   usePickedUpOrder,
   useCancelNurseryOrder,
   useNurseryProfile,
+  useDeliveryPartners,
 } from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import { ApiError } from '../api/client';
@@ -42,11 +44,11 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
   const readyForPickupMutation = useReadyForPickupOrder();
   const pickedUpMutation = usePickedUpOrder();
   const cancelMutation = useCancelNurseryOrder();
+  const { data: deliveryPartners } = useDeliveryPartners();
 
-  const [riderName, setRiderName] = useState('');
-  const [riderPhone, setRiderPhone] = useState('');
   const [code, setCode] = useState('');
   const [actionError, setActionError] = useState('');
+  const [pickerVisible, setPickerVisible] = useState(false);
   const { data: profile } = useNurseryProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
 
@@ -176,20 +178,14 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
           )}
 
           {order.status === 'packed' && !isPickup && (
-            <>
-              <Text style={styles.fieldLabel}>Rider name</Text>
-              <TextInput style={styles.input} value={riderName} onChangeText={setRiderName} placeholder="Who's delivering this?" placeholderTextColor={COLORS.textMuted} />
-              <Text style={styles.fieldLabel}>Rider phone</Text>
-              <TextInput style={styles.input} value={riderPhone} onChangeText={setRiderPhone} placeholder="Contact number" placeholderTextColor={COLORS.textMuted} keyboardType="phone-pad" />
-              <AnimatedButton
-                label={dispatchMutation.isPending ? 'Dispatching…' : 'Dispatch order'}
-                onPress={guard(() => run(() => dispatchMutation.mutateAsync({ id: orderId, riderName: riderName.trim() || undefined, riderPhone: riderPhone.trim() || undefined })))}
-                disabled={dispatchMutation.isPending}
-                variant="primary"
-                size="lg"
-                fullWidth
-              />
-            </>
+            <AnimatedButton
+              label={dispatchMutation.isPending ? 'Dispatching…' : 'Assign a delivery partner'}
+              onPress={guard(() => setPickerVisible(true))}
+              disabled={dispatchMutation.isPending}
+              variant="primary"
+              size="lg"
+              fullWidth
+            />
           )}
 
           {order.status === 'out_for_delivery' && !isPickup && (
@@ -241,6 +237,34 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
         </ScrollView>
       )}
 
+      <Sheet visible={pickerVisible} onClose={() => setPickerVisible(false)} title="Assign a delivery partner" scrollable>
+        {(deliveryPartners ?? []).filter((p) => p.isActive).length === 0 ? (
+          <Text style={styles.emptyPartnersText}>No active delivery partners yet — add one from the Delivery Partners screen first.</Text>
+        ) : (
+          (deliveryPartners ?? [])
+            .filter((p) => p.isActive)
+            .map((partner) => (
+              <TouchableOpacity
+                key={partner.id}
+                style={styles.partnerRow}
+                disabled={dispatchMutation.isPending}
+                onPress={() => {
+                  setPickerVisible(false);
+                  run(() => dispatchMutation.mutateAsync({ id: orderId, deliveryPartnerId: partner.id }));
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.partnerName}>{partner.name}</Text>
+                  <Text style={styles.partnerPhone}>{partner.phone}</Text>
+                </View>
+                <View style={styles.partnerQueueBadge}>
+                  <Text style={styles.partnerQueueBadgeText}>{partner.activeOrderCount} active</Text>
+                </View>
+              </TouchableOpacity>
+            ))
+        )}
+      </Sheet>
+
       <StatusModal {...statusModalProps} />
     </View>
   );
@@ -285,4 +309,17 @@ const styles = StyleSheet.create({
   doneText: { fontSize: 14, color: COLORS.forest, fontWeight: '700', textAlign: 'center' },
   cancelledBanner: { backgroundColor: COLORS.dangerLight, borderRadius: RADIUS.lg, padding: 16 },
   cancelledText: { fontSize: 13, color: COLORS.dangerDark, fontWeight: '600', textAlign: 'center' },
+  emptyPartnersText: { fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', paddingVertical: 20 },
+  partnerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(94,133,80,0.12)',
+  },
+  partnerName: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
+  partnerPhone: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+  partnerQueueBadge: { backgroundColor: 'rgba(94,133,80,0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  partnerQueueBadgeText: { fontSize: 11, fontWeight: '700', color: COLORS.forest },
 });

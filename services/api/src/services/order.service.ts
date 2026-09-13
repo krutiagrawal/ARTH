@@ -37,8 +37,11 @@ function serializeOrder(order: any) {
     ? { lat: Number(order.nursery.lat), lng: Number(order.nursery.lng) }
     : null;
 
+  const tracked = order.tracking?.lat != null && order.tracking?.lng != null
+    ? { lat: Number(order.tracking.lat), lng: Number(order.tracking.lng) }
+    : null;
   const live = order.tracking
-    ? getLiveLocation(order.tracking.provider, origin, destination, order.outForDeliveryAt)
+    ? getLiveLocation(order.tracking.provider, origin, destination, order.outForDeliveryAt, tracked)
     : null;
 
   const saplingUnits = (order.items ?? []).flatMap((i: any) =>
@@ -72,6 +75,7 @@ function serializeOrder(order: any) {
     nursery: { id: order.nursery.id, nurseryName: order.nursery.nurseryName, logoUrl: order.nursery.logoUrl, contactPhone: order.nursery.contactPhone },
     tracking: order.tracking
       ? {
+          deliveryPartnerId: order.tracking.deliveryPartnerId,
           riderName: order.tracking.riderName,
           riderPhone: order.tracking.riderPhone,
           lat: live?.lat ?? null,
@@ -362,7 +366,7 @@ export async function submitOrderReview(
   orderId: string,
   input: { nurseryRating: number; deliveryRating?: number; comment?: string },
 ) {
-  const order = await prisma.order.findFirst({ where: { id: orderId, userId } });
+  const order = await prisma.order.findFirst({ where: { id: orderId, userId }, include: { tracking: true } });
   if (!order) throw new NotFoundError('Order not found');
   // A review is about "did you get your saplings", which for a pickup order means picked_up
   // (there's no separate 'delivered' state on that branch) — allow either terminal handoff
@@ -374,9 +378,13 @@ export async function submitOrderReview(
   const existing = await prisma.orderReview.findUnique({ where: { orderId } });
   if (existing) throw new ForbiddenError('You already reviewed this order');
 
+  // Denormalized the same way nurseryId is, so the partner's rating aggregate below never has to
+  // join through Order -> DeliveryTracking. Only set when there's actually a rating for them.
+  const deliveryPartnerId = input.deliveryRating != null ? order.tracking?.deliveryPartnerId ?? undefined : undefined;
+
   return prisma.$transaction(async (tx) => {
     const review = await tx.orderReview.create({
-      data: { orderId, userId, nurseryId: order.nurseryId, ...input },
+      data: { orderId, userId, nurseryId: order.nurseryId, deliveryPartnerId, ...input },
     });
 
     const agg = await tx.orderReview.aggregate({ where: { nurseryId: order.nurseryId }, _avg: { nurseryRating: true }, _count: true });
@@ -384,6 +392,18 @@ export async function submitOrderReview(
       where: { id: order.nurseryId },
       data: { avgRating: agg._avg.nurseryRating, reviewCount: agg._count },
     });
+
+    if (deliveryPartnerId) {
+      const partnerAgg = await tx.orderReview.aggregate({
+        where: { deliveryPartnerId },
+        _avg: { deliveryRating: true },
+        _count: true,
+      });
+      await tx.deliveryPartnerProfile.update({
+        where: { id: deliveryPartnerId },
+        data: { avgRating: partnerAgg._avg.deliveryRating, reviewCount: partnerAgg._count },
+      });
+    }
 
     return review;
   });
@@ -484,20 +504,30 @@ export async function markOrderPickedUp(prisma: PrismaClient, nurseryId: string,
   return prisma.order.findUniqueOrThrow({ where: { id: orderId } });
 }
 
-export async function markOrderOutForDelivery(
-  prisma: PrismaClient,
-  nurseryId: string,
-  orderId: string,
-  rider?: { name?: string; phone?: string },
-) {
+export async function markOrderOutForDelivery(prisma: PrismaClient, nurseryId: string, orderId: string, deliveryPartnerId: string) {
   const order = await findNurseryOrderOrThrow(prisma, nurseryId, orderId);
   if (order.status !== 'packed') throw new BadRequestError('Only a packed order can be dispatched');
 
+  const partner = await prisma.deliveryPartnerProfile.findFirst({
+    where: { id: deliveryPartnerId, nurseryId },
+    include: { user: true },
+  });
+  if (!partner) throw new NotFoundError('Delivery partner not found');
+  if (!partner.isActive) throw new BadRequestError('This delivery partner is deactivated');
+
   const updated = await prisma.$transaction(async (tx) => {
     const o = await tx.order.update({ where: { id: orderId }, data: { status: 'out_for_delivery', outForDeliveryAt: new Date() } });
+    // Snapshotted from the partner at dispatch time (same convention as OrderItem's
+    // species/unitPriceCents snapshot) so serializeOrder()'s per-poll read never needs a join.
     await tx.deliveryTracking.update({
       where: { orderId },
-      data: { riderName: rider?.name, riderPhone: rider?.phone, updatedAt: new Date() },
+      data: {
+        deliveryPartnerId: partner.id,
+        riderName: partner.user.name,
+        riderPhone: partner.phone,
+        provider: 'nursery_staff',
+        updatedAt: new Date(),
+      },
     });
     return o;
   });
@@ -513,6 +543,39 @@ export async function markOrderOutForDelivery(
 
 export async function markOrderDelivered(prisma: PrismaClient, nurseryId: string, orderId: string, code?: string) {
   const order = await findNurseryOrderOrThrow(prisma, nurseryId, orderId);
+  if (order.status !== 'out_for_delivery') throw new BadRequestError('Only a dispatched order can be marked delivered');
+  if (order.handoffCode && code !== order.handoffCode) throw new BadRequestError('Incorrect handoff code');
+
+  await prisma.$transaction(async (tx) => {
+    await tx.order.update({ where: { id: orderId }, data: { status: 'delivered', deliveredAt: new Date() } });
+    await tx.arthSaplingUnit.updateMany({
+      where: { orderItem: { orderId } },
+      data: { status: 'collected', collectedAt: new Date() },
+    });
+  });
+
+  await notify(prisma, {
+    userId: order.userId,
+    type: 'order_delivered',
+    data: { orderId },
+    push: { title: '🎉 Delivered!', body: 'Your saplings have arrived. Time to get your hands dirty.' },
+  });
+  return prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+}
+
+// Partner-scoped variant of markOrderDelivered above — looked up by the delivery partner's own
+// assignment (tracking.deliveryPartnerId) rather than by nurseryId, since the caller here is the
+// partner, not the nursery. Duplicates the small delivered-transaction body rather than bolting an
+// optional partner id onto markOrderDelivered's nursery-scoped lookup.
+export async function markOrderDeliveredByPartner(prisma: PrismaClient, partnerUserId: string, orderId: string, code: string) {
+  const partner = await prisma.deliveryPartnerProfile.findUnique({ where: { userId: partnerUserId } });
+  if (!partner) throw new NotFoundError('Delivery partner profile not found');
+
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, tracking: { deliveryPartnerId: partner.id } },
+    include: { nursery: { select: { nurseryName: true } } },
+  });
+  if (!order) throw new NotFoundError('Order not found');
   if (order.status !== 'out_for_delivery') throw new BadRequestError('Only a dispatched order can be marked delivered');
   if (order.handoffCode && code !== order.handoffCode) throw new BadRequestError('Incorrect handoff code');
 

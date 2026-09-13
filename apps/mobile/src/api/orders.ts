@@ -21,6 +21,7 @@ export interface ApiOrderItem {
 }
 
 export interface ApiOrderTracking {
+  deliveryPartnerId: string | null;
   riderName: string | null;
   riderPhone: string | null;
   lat: number | null;
