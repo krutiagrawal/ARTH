@@ -3,7 +3,6 @@ import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } fro
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
@@ -13,6 +12,7 @@ import { EmptyState } from '../components/common/EmptyState';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { MapErrorBoundary } from '../components/common/MapErrorBoundary';
 import { Sheet } from '../components/common/Sheet';
+import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useHaptics } from '../hooks/useHaptics';
 import { useMyDeliveryQueue, useStartDelivery, useCompleteDelivery } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
@@ -169,7 +169,7 @@ function DeliverSheet({ orderId, onClose }: { orderId: string | null; onClose: (
 }
 
 export function DeliveryPartnerQueueScreen() {
-  const insets = useSafeAreaInsets();
+  const bottomNavClearance = useBottomNavClearance();
   const { data: queue = [], isLoading } = useMyDeliveryQueue();
   const startMutation = useStartDelivery();
   const [startingOrderId, setStartingOrderId] = useState<string | null>(null);
@@ -205,7 +205,7 @@ export function DeliveryPartnerQueueScreen() {
       ) : queue.length === 0 ? (
         <EmptyState icon="🛵" title="No deliveries yet" body="Once a nursery assigns you an order, it'll show up here." />
       ) : (
-        <ScrollView contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.list, { paddingBottom: bottomNavClearance }]} showsVerticalScrollIndicator={false}>
           {queue.map((item) => (
             <QueueCard
               key={item.orderId}

@@ -3,17 +3,17 @@ import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/colors';
 import { SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
+import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useMyPartnerProfile } from '../hooks/useApiQueries';
 import { useAuth } from '../context/AuthContext';
 
 export function DeliveryPartnerProfileScreen({ navigation }: any) {
-  const insets = useSafeAreaInsets();
+  const bottomNavClearance = useBottomNavClearance();
   const { data: profile, isLoading } = useMyPartnerProfile();
   const { logout } = useAuth();
 
@@ -32,7 +32,7 @@ export function DeliveryPartnerProfileScreen({ navigation }: any) {
       {isLoading || !profile ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
-        <View style={[styles.content, { paddingBottom: insets.bottom + 32 }]}>
+        <View style={[styles.content, { paddingBottom: bottomNavClearance }]}>
           <BorderCard style={styles.card}>
             <Text style={styles.name}>{profile.name}</Text>
             <Text style={styles.handle}>@{profile.handle}</Text>

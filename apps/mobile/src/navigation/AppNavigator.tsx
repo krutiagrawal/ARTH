@@ -157,6 +157,12 @@ const DELIVERY_PARTNER_TABS: TabItem[] = [
   { name: 'Profile', icon: '👤', label: 'Profile' },
 ];
 
+// Both of this role's screens paint the same fixed cream→beigeLight gradient regardless of time
+// of day (unlike Home/Nursery, which are driven by useTimeTheme) — so the nav needs an explicit
+// `surface`, not `theme`, or it retints itself to a time-of-day palette that doesn't match what's
+// actually behind it (e.g. a dark "night" bar floating over a still-bright cream page).
+const DELIVERY_PARTNER_NAV_SURFACE: NavSurface = { background: COLORS.beigeLight, tint: 'light' };
+
 export type CorporateTabName = 'Home' | 'Sponsorships' | 'Settings';
 
 const CORPORATE_TABS: TabItem[] = [
@@ -605,7 +611,6 @@ function NurseryMainApp({ navigation }: any) {
 
 function DeliveryPartnerMainApp({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<DeliveryPartnerTabName>('Queue');
-  const dashboardTheme = useTimeTheme();
   // Mounted once here (not per-tab) so foreground GPS reporting keeps running while the partner
   // is on the Profile tab too, and stops the moment this whole role-app unmounts (e.g. logout).
   useDeliveryLocationReporting();
@@ -628,7 +633,7 @@ function DeliveryPartnerMainApp({ navigation }: any) {
         tabs={DELIVERY_PARTNER_TABS}
         activeTab={activeTab}
         onTabPress={setActiveTab as (t: TabName) => void}
-        theme={activeTab === 'Queue' ? dashboardTheme : null}
+        surface={DELIVERY_PARTNER_NAV_SURFACE}
       />
     </View>
   );
