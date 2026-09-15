@@ -231,6 +231,7 @@ import {
   AdminActionLogsParams,
   NgoApprovalStatus,
   fetchAdminNurseries,
+  fetchAdminNursery,
   setAdminNurseryStatus,
   fetchAdminCorporates,
   setAdminCorporateStatus,
@@ -1373,13 +1374,23 @@ export function useAdminNurseries(filter: AdminOrgFilter = {}) {
   });
 }
 
+export function useAdminNursery(id: string) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['admin', 'nurseries', id],
+    queryFn: () => fetchAdminNursery(id),
+    enabled: isAuthenticated && !!id,
+  });
+}
+
 export function useSetAdminNurseryStatus() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, status, rejectionReason }: { id: string; status: NgoApprovalStatus; rejectionReason?: string }) =>
       setAdminNurseryStatus(id, { status, rejectionReason }),
-    onSuccess: () => {
+    onSuccess: (_data, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'nurseries'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'nurseries', id] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] });
     },
   });

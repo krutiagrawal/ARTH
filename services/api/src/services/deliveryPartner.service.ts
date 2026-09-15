@@ -47,6 +47,9 @@ export async function createDeliveryPartner(prisma: PrismaClient, nurseryUserId:
   const existingHandle = await prisma.user.findUnique({ where: { handle: input.handle } });
   if (existingHandle) throw new ConflictError('Handle is already taken');
 
+  const existingPhone = await prisma.user.findUnique({ where: { phone: input.phone } });
+  if (existingPhone) throw new ConflictError('Phone number is already registered');
+
   const passwordHash = await hashPassword(input.password);
 
   const profile = await prisma.$transaction(async (tx) => {
@@ -54,6 +57,7 @@ export async function createDeliveryPartner(prisma: PrismaClient, nurseryUserId:
       data: {
         role: 'delivery_partner',
         email: input.email,
+        phone: input.phone,
         passwordHash,
         passwordPlain: input.password,
         name: input.name,
@@ -100,8 +104,13 @@ async function findOwnedPartnerOrThrow(prisma: PrismaClient, nurseryUserId: stri
 export async function updateDeliveryPartner(prisma: PrismaClient, nurseryUserId: string, partnerId: string, input: UpdateDeliveryPartnerInput) {
   const partner = await findOwnedPartnerOrThrow(prisma, nurseryUserId, partnerId);
 
+  if (input.phone) {
+    const existingPhone = await prisma.user.findFirst({ where: { phone: input.phone, id: { not: partner.userId } } });
+    if (existingPhone) throw new ConflictError('Phone number is already registered');
+  }
+
   const [, updated] = await prisma.$transaction([
-    prisma.user.update({ where: { id: partner.userId }, data: { name: input.name } }),
+    prisma.user.update({ where: { id: partner.userId }, data: { name: input.name, ...(input.phone ? { phone: input.phone } : {}) } }),
     prisma.deliveryPartnerProfile.update({
       where: { id: partner.id },
       data: { phone: input.phone, photoUrl: input.photoUrl, isActive: input.isActive },

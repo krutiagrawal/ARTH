@@ -11,7 +11,9 @@ import { PasswordInput } from '../components/common/PasswordInput';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useAuth } from '../context/AuthContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useAvailabilityCheck } from '../hooks/useAvailabilityCheck';
 import { ApiError } from '../api/client';
+import { isValidEmail } from '../utils/validation';
 
 function slugifyHandle(name: string): string {
   return name
@@ -26,15 +28,33 @@ export function RegisterScreen({ navigation }: any) {
   const { register } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [emailTouched, setEmailTouched] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { refreshing, onRefresh } = usePullToRefresh();
 
+  const emailValid = isValidEmail(email);
+  const emailAvailability = useAvailabilityCheck('email', email.trim().toLowerCase(), emailValid);
+  const emailError = emailTouched && email.trim() && !emailValid
+    ? 'Enter a valid email address'
+    : emailAvailability.taken
+      ? 'This email is already registered'
+      : null;
+
   const handleRegister = useCallback(async () => {
     setError(null);
     if (!name.trim() || !email.trim() || !password) {
       setError('Fill in all fields to continue');
+      return;
+    }
+    if (!emailValid) {
+      setEmailTouched(true);
+      setError('Enter a valid email address');
+      return;
+    }
+    if (emailAvailability.taken) {
+      setError('This email is already registered');
       return;
     }
     if (password.length < 8) {
@@ -55,7 +75,7 @@ export function RegisterScreen({ navigation }: any) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [name, email, password, register, navigation]);
+  }, [name, email, emailValid, emailAvailability.taken, password, register, navigation]);
 
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -78,23 +98,29 @@ export function RegisterScreen({ navigation }: any) {
 
           <TextInput
             style={styles.input}
-            placeholder="eg - Name"
+            placeholder="Name"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={name}
             onChangeText={setName}
           />
           <TextInput
             style={styles.input}
-            placeholder="eg - Email"
+            placeholder="Email"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             autoCapitalize="none"
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
+            onBlur={() => setEmailTouched(true)}
           />
+          {emailError ? (
+            <Text style={styles.fieldError}>{emailError}</Text>
+          ) : emailAvailability.checking ? (
+            <Text style={styles.fieldHint}>Checking…</Text>
+          ) : null}
           <PasswordInput
             inputStyle={styles.input}
-            placeholder="eg - Password (min. 8 characters)"
+            placeholder="Password (min. 8 characters)"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={password}
             onChangeText={setPassword}
@@ -182,6 +208,8 @@ const styles = StyleSheet.create({
     color: COLORS.coral,
     marginBottom: SPACING.sm,
   },
+  fieldError: { fontSize: 12, color: COLORS.coral, marginTop: -SPACING.xs, marginBottom: SPACING.sm },
+  fieldHint: { fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: -SPACING.xs, marginBottom: SPACING.sm },
   submitButton: {
     marginTop: SPACING.sm,
     marginBottom: SPACING.md,

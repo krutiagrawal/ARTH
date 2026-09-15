@@ -14,6 +14,9 @@ import { BorderCard } from '../components/common/BorderCard';
 import { PickedPhoto } from '../components/common/PhotoPickerField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
+import { PhoneField } from '../components/common/PhoneField';
+import { AddressSearchField } from '../components/common/AddressSearchField';
+import { isValidPhone } from '../utils/validation';
 import { CityPickerField } from '../components/common/CityPickerField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { Toggle } from '../components/common/Toggle';
@@ -22,6 +25,7 @@ import { useHaptics } from '../hooks/useHaptics';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { ApiError, resolveMediaUrl } from '../api/client';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { reverseGeocode } from '../api/geocode';
 
 const STATUS_COPY: Record<string, { title: string; body: string }> = {
   pending: { title: 'Under review', body: "We're reviewing your nursery. Your stock will go live once approved." },
@@ -37,8 +41,10 @@ export function EditNurseryProfileScreen({ navigation }: any) {
 
   const [nurseryName, setNurseryName] = useState('');
   const [description, setDescription] = useState('');
+  const [line1, setLine1] = useState('');
   const [city, setCity] = useState('Pune');
   const [contactPhone, setContactPhone] = useState('');
+  const [contactPhoneTouched, setContactPhoneTouched] = useState(false);
   const [offersDelivery, setOffersDelivery] = useState(true);
   const [deliveryRadiusKm, setDeliveryRadiusKm] = useState('');
   const [approvalRequired, setApprovalRequired] = useState(false);
@@ -56,6 +62,7 @@ export function EditNurseryProfileScreen({ navigation }: any) {
     if (!profile) return;
     setNurseryName(profile.nurseryName);
     setDescription(profile.description);
+    setLine1(profile.line1 ?? '');
     setCity(profile.city || 'Pune');
     setContactPhone(profile.contactPhone ?? '');
     setOffersDelivery(profile.offersDelivery);
@@ -97,8 +104,17 @@ export function EditNurseryProfileScreen({ navigation }: any) {
         return;
       }
       const position = await Location.getCurrentPositionAsync({});
-      await updateMutation.mutateAsync({ lat: position.coords.latitude, lng: position.coords.longitude });
-      confirm('Location set', 'Your nursery will now appear on the map.');
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      const found = await reverseGeocode(lat, lng).catch(() => null);
+      if (found) setLine1(found.label);
+      await updateMutation.mutateAsync({ lat, lng, line1: found?.label ?? (line1 || undefined) });
+      confirm(
+        'Location set',
+        found
+          ? `Your nursery will now appear on the map. Address filled in as: ${found.label} — edit it above if that's not quite right.`
+          : "Your nursery will now appear on the map. We couldn't match an address for this pin — please type it in above.",
+      );
     } catch (e) {
       confirm('Could not get location', 'Please try again.');
     } finally {
@@ -108,10 +124,16 @@ export function EditNurseryProfileScreen({ navigation }: any) {
 
   const handleSave = async () => {
     setError(null);
+    if (contactPhone && !isValidPhone(contactPhone)) {
+      setContactPhoneTouched(true);
+      setError('Enter a valid 10-digit mobile number');
+      return;
+    }
     try {
       await updateMutation.mutateAsync({
         nurseryName: nurseryName.trim(),
         description: description.trim(),
+        line1: line1.trim() || undefined,
         city: city.trim() || undefined,
         contactPhone: contactPhone.trim() || undefined,
         offersDelivery,
@@ -172,8 +194,21 @@ export function EditNurseryProfileScreen({ navigation }: any) {
 
             <FormField label="Nursery Name" value={nurseryName} onChangeText={setNurseryName} placeholder="eg - Your nursery" />
             <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What does your nursery grow?" />
+            <AddressSearchField
+              label="Address"
+              value={line1}
+              onChangeText={setLine1}
+              placeholder="eg - Street / area / landmark"
+              onSelectSuggestion={(s) => setLine1(s.label)}
+            />
             <CityPickerField value={city} onChange={setCity} />
-            <FormField label="Contact phone" value={contactPhone} onChangeText={setContactPhone} placeholder="eg - Phone" keyboardType="phone-pad" />
+            <PhoneField
+              label="Contact phone"
+              value={contactPhone}
+              onChangeText={setContactPhone}
+              onBlur={() => setContactPhoneTouched(true)}
+              error={contactPhoneTouched && contactPhone && !isValidPhone(contactPhone) ? 'Enter a valid 10-digit mobile number' : null}
+            />
 
             <BorderCard noPadding style={styles.deliveryCard}>
               <View style={styles.deliveryRow}>

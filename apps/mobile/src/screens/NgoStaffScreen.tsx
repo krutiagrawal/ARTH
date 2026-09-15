@@ -12,6 +12,7 @@ import { IconBadge } from '../components/common/IconBadge';
 import { EmptyState } from '../components/common/EmptyState';
 import { PhotoPickerField, PickedPhoto } from '../components/common/PhotoPickerField';
 import { FormField } from '../components/common/FormField';
+import { PhoneField } from '../components/common/PhoneField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { StatusModal } from '../components/common/StatusModal';
 import { useStaff, useCreateStaff, useDeleteStaff, useNgoProfile } from '../hooks/useApiQueries';
@@ -20,6 +21,7 @@ import { ApiError } from '../api/client';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { isValidEmail, isValidPhone } from '../utils/validation';
 
 function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
   const animStyle = useSlideUp(delay, 18);
@@ -57,6 +59,14 @@ export function NgoStaffScreen({ navigation }: any) {
     setError(null);
     if (!name.trim() || !role.trim()) {
       setError('Name and role are required.');
+      return;
+    }
+    if (contactEmail.trim() && !isValidEmail(contactEmail)) {
+      setError('Enter a valid email address');
+      return;
+    }
+    if (contactPhone && !isValidPhone(contactPhone)) {
+      setError('Enter a valid 10-digit mobile number');
       return;
     }
     try {
@@ -120,13 +130,7 @@ export function NgoStaffScreen({ navigation }: any) {
               keyboardType="email-address"
               placeholder="eg - name@example.org"
             />
-            <FormField
-              label="Phone"
-              value={contactPhone}
-              onChangeText={setContactPhone}
-              keyboardType="phone-pad"
-              placeholder="eg - Optional"
-            />
+            <PhoneField label="Phone" value={contactPhone} onChangeText={setContactPhone} />
             {error && <Text style={styles.error}>{error}</Text>}
             <TouchableOpacity style={[styles.submitButton, createMutation.isPending && styles.submitButtonDisabled]} onPress={guard(handleAdd)} disabled={createMutation.isPending}>
               {createMutation.isPending ? <ActivityIndicator size="small" color={COLORS.white} /> : <Text style={styles.submitText}>Add to roster</Text>}

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { phoneSchema } from '../utils/phone';
 
 // Multipart form fields arrive as strings even when the value is logically an array/object
 // (operatingHours, pickupWindows, suitableEnvironments, plantingSeasons) — JSON-encoded
@@ -36,7 +37,7 @@ export const updateNurseryProfileSchema = z.object({
   coverPhotoUrl: z.string().max(500).optional(),
   line1: z.string().max(200).optional(),
   city: z.string().max(100).optional(),
-  contactPhone: z.string().max(30).optional(),
+  contactPhone: phoneSchema.optional(),
   lat: z.coerce.number().min(-90).max(90).optional(),
   lng: z.coerce.number().min(-180).max(180).optional(),
   offersDelivery: z.union([z.literal('true'), z.literal('false'), z.boolean()]).optional(),

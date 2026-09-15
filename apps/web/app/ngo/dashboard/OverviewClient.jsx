@@ -25,9 +25,12 @@ import ImpactPanel from '@/components/dashboard/ImpactPanel'
 import ScheduleCalendar from '@/components/dashboard/ScheduleCalendar'
 import ScheduleTimeline from '@/components/dashboard/ScheduleTimeline'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
+import PhoneInput from '@/components/dashboard/PhoneInput'
 import { Skeleton } from '@/components/ui/skeleton'
 import { proxy } from './proxy'
 import { useNgoProfile } from './NgoProfileContext'
+import { usePhoneField } from '@/lib/usePhoneField'
+import { isValidWebsite } from '@/lib/validation'
 
 function StatusBanner({ profile, onResubmitted }) {
   if (profile.status === 'pending') {
@@ -74,12 +77,29 @@ function RejectedPanel({ profile, onResubmitted }) {
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [phoneTouched, setPhoneTouched] = useState(false)
+  const [websiteTouched, setWebsiteTouched] = useState(false)
+
+  // Format validation only — this resubmits NgoProfile.contactPhone/website (business contact
+  // details), not the User.phone identity field, so no real-time duplicate check here.
+  const phoneField = usePhoneField(form.contactPhone, phoneTouched, { checkAvailability: false })
+  const websiteError = websiteTouched && form.website.trim() && !isValidWebsite(form.website) ? 'Enter a valid website URL' : null
 
   const set = (key) => (e) => setForm((s) => ({ ...s, [key]: e.target.value }))
 
   const resubmit = async (e) => {
     e.preventDefault()
     setError('')
+    setPhoneTouched(true)
+    setWebsiteTouched(true)
+    if (!phoneField.isOk) {
+      setError(phoneField.error || 'Enter a valid phone number.')
+      return
+    }
+    if (form.website.trim() && !isValidWebsite(form.website)) {
+      setError('Enter a valid website URL.')
+      return
+    }
     setSubmitting(true)
     try {
       await proxy('/ngo/profile', { method: 'PATCH', body: { ...form, website: form.website || undefined } })
@@ -115,15 +135,27 @@ function RejectedPanel({ profile, onResubmitted }) {
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="eyebrow">Website (optional)</span>
-            <Input value={form.website} onChange={set('website')} placeholder="https://" className="mt-2 h-11 rounded-full" />
+            <Input
+              value={form.website}
+              onChange={set('website')}
+              onBlur={() => setWebsiteTouched(true)}
+              placeholder="https://"
+              className="mt-2 h-11 rounded-full"
+            />
+            {websiteError && <p className="mt-1 text-xs text-destructive">{websiteError}</p>}
           </label>
           <label className="block">
             <span className="eyebrow">Phone (optional)</span>
-            <Input value={form.contactPhone} onChange={set('contactPhone')} className="mt-2 h-11 rounded-full" />
+            <PhoneInput
+              value={form.contactPhone}
+              onChange={(digits) => setForm((s) => ({ ...s, contactPhone: digits }))}
+              onBlur={() => setPhoneTouched(true)}
+            />
+            {phoneField.error && <p className="mt-1 text-xs text-destructive">{phoneField.error}</p>}
           </label>
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button disabled={submitting} type="submit" className="rounded-full h-11">
+        <Button disabled={submitting || (form.contactPhone && !phoneField.isOk) || Boolean(websiteError)} type="submit" className="rounded-full h-11">
           {submitting ? 'Resubmitting…' : 'Resubmit for review'}
         </Button>
       </form>

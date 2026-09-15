@@ -8,6 +8,12 @@ import DrawerFormShell, { FormSection, FieldLabel, fieldInputClassName, fieldTex
 import { Button } from '@/components/ui/button'
 import PhotoUploadField from './PhotoUploadField'
 import CitySelect from './CitySelect'
+import { sanitizePhoneDigits } from '@/lib/validation'
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+// Bare 10-digit Indian mobile number — the +91 prefix rendered by the 'phone' field type is
+// never part of this value, matching what services/api's phoneSchema expects.
+const PHONE_REGEX = /^[6-9]\d{9}$/
 
 function schemaFor(field) {
   if (field.type === 'number') {
@@ -18,6 +24,14 @@ function schemaFor(field) {
         : z.number().optional()
     )
     return num
+  }
+  if (field.type === 'email') {
+    const email = z.string().regex(EMAIL_REGEX, 'Enter a valid email address')
+    return field.required ? email : z.union([z.literal(''), email])
+  }
+  if (field.type === 'phone') {
+    const phone = z.string().regex(PHONE_REGEX, 'Enter a valid 10-digit mobile number')
+    return field.required ? phone : z.union([z.literal(''), phone])
   }
   return field.required ? z.string().min(1, `${field.label} is required`) : z.string().optional()
 }
@@ -102,8 +116,22 @@ function FieldInput({ form, field: f }) {
                 </option>
               ))}
             </select>
+          ) : f.type === 'phone' ? (
+            <div className="mt-1 flex h-8 items-center rounded-[8px] border border-border/70 bg-background px-2.5 text-[13px] transition focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/15">
+              <span className="shrink-0 font-medium text-muted-foreground">+91</span>
+              <span className="mx-2 h-3.5 w-px shrink-0 bg-border" />
+              <input
+                value={field.value ?? ''}
+                onChange={(e) => field.onChange(sanitizePhoneDigits(e.target.value))}
+                onBlur={field.onBlur}
+                placeholder={f.placeholder || '98765 43210'}
+                inputMode="numeric"
+                maxLength={10}
+                className="w-full min-w-0 flex-1 bg-transparent outline-none"
+              />
+            </div>
           ) : (
-            <input {...field} value={field.value ?? ''} type={f.type || 'text'} placeholder={f.placeholder} className={fieldInputClassName} />
+            <input {...field} value={field.value ?? ''} type={f.type === 'email' ? 'email' : (f.type || 'text')} placeholder={f.placeholder} className={fieldInputClassName} />
           )}
           {fieldState.error && <p className="mt-1 text-xs text-destructive">{fieldState.error.message}</p>}
         </label>

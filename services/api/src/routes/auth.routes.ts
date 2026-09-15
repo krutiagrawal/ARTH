@@ -9,11 +9,25 @@ import {
   refreshSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  checkAvailabilitySchema,
 } from '../schemas/auth.schema';
 import * as authService from '../services/auth.service';
 import { BadRequestError } from '../utils/errors';
+import { saveNurseryVerificationPhoto } from '../services/upload.service';
+import { splitMultipartBody } from '../utils/multipart';
 
 export default async function authRoutes(fastify: FastifyInstance) {
+  // Public and unauthenticated on purpose — every registration form (including the pre-signup
+  // nursery wizard) needs to flag "already taken" while the user is still typing, not just on submit.
+  fastify.get<{ Querystring: { email?: string; phone?: string; handle?: string } }>(
+    '/check-availability',
+    async (request, reply) => {
+      const parsed = checkAvailabilitySchema.safeParse(request.query);
+      if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+      reply.send(await authService.checkAvailability(fastify.prisma, parsed.data));
+    },
+  );
+
   fastify.post('/register', async (request, reply) => {
     const parsed = registerSchema.safeParse(request.body);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
@@ -54,13 +68,33 @@ export default async function authRoutes(fastify: FastifyInstance) {
   });
 
   fastify.post('/register-nursery', async (request, reply) => {
-    const parsed = registerNurserySchema.safeParse(request.body);
+    // The mobile signup wizard sends multipart with a mandatory verification photo; the older web
+    // registration form still posts plain JSON with no photo — both are accepted here, but only
+    // the multipart path can supply (and is required to supply) a photo.
+    const isMultipart = (request.headers['content-type'] ?? '').includes('multipart/form-data');
+    const { fields, file } = isMultipart
+      ? splitMultipartBody(request.body as any, 'verificationPhoto')
+      : { fields: (request.body ?? {}) as Record<string, string>, file: undefined };
+
+    const parsed = registerNurserySchema.safeParse(fields);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    let verificationPhotoUrl: string | undefined;
+    if (isMultipart) {
+      if (!file) throw new BadRequestError('A photo of your nursery name board is required');
+      const buffer = await file.toBuffer();
+      verificationPhotoUrl = await saveNurseryVerificationPhoto({
+        filename: file.filename,
+        mimetype: file.mimetype,
+        buffer,
+      });
+    }
 
     const result = await authService.registerNursery(fastify.prisma, {
       ...parsed.data,
       email: parsed.data.email.toLowerCase(),
       handle: parsed.data.handle.toLowerCase(),
+      verificationPhotoUrl,
     });
 
     reply.status(201).send(result);

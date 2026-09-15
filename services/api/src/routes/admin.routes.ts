@@ -52,6 +52,42 @@ function serializeNursery(profile: any) {
   };
 }
 
+// Everything the nursery filled in at signup, for the approvals detail view — a superset of
+// serializeNursery's table-row summary. Kept separate rather than widening serializeNursery
+// itself, since the list endpoint's payload size matters (it returns up to 50 rows at once) and
+// most of these fields are only ever looked at one nursery at a time.
+function serializeNurseryDetail(profile: any) {
+  return {
+    ...serializeNursery(profile),
+    logoUrl: profile.logoUrl,
+    coverPhotoUrl: profile.coverPhotoUrl,
+    line1: profile.line1,
+    lat: profile.lat,
+    lng: profile.lng,
+    yearEstablished: profile.yearEstablished,
+    nurseryType: profile.nurseryType,
+    websiteUrl: profile.websiteUrl,
+    responsiblePersonName: profile.responsiblePersonName,
+    responsiblePersonRole: profile.responsiblePersonRole,
+    responsiblePersonPhone: profile.responsiblePersonPhone,
+    plantCategories: profile.plantCategories,
+    approxPlantCount: profile.approxPlantCount,
+    seasonalAvailability: profile.seasonalAvailability,
+    bulkSupply: profile.bulkSupply,
+    gstin: profile.gstin,
+    businessRegistrationNumber: profile.businessRegistrationNumber,
+    tradeLicenseNumber: profile.tradeLicenseNumber,
+    ngoRegistrationNumber: profile.ngoRegistrationNumber,
+    governmentNurseryId: profile.governmentNurseryId,
+    verificationPhotoUrl: profile.verificationPhotoUrl,
+    offersDelivery: profile.offersDelivery,
+    offersPickup: profile.offersPickup,
+    deliveryRadiusKm: profile.deliveryRadiusKm,
+    approvedAt: profile.approvedAt,
+    ownerCreatedAt: profile.user?.createdAt,
+  };
+}
+
 function serializeCorporate(profile: any) {
   return {
     id: profile.id,
@@ -173,6 +209,11 @@ export default async function adminRoutes(fastify: FastifyInstance) {
     reply.send({ total, nurseries: nurseries.map(serializeNursery) });
   });
 
+  fastify.get<{ Params: { id: string } }>('/nurseries/:id', async (request, reply) => {
+    const profile = await adminService.getNurseryDetail(fastify.prisma, request.params.id);
+    reply.send(serializeNurseryDetail(profile));
+  });
+
   fastify.patch<{ Params: { id: string } }>('/nurseries/:id/status', async (request, reply) => {
     const parsed = setStatusSchema.safeParse(request.body);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
@@ -183,7 +224,7 @@ export default async function adminRoutes(fastify: FastifyInstance) {
       adminUserId: request.user!.id,
     });
 
-    reply.send(serializeNursery(profile));
+    reply.send(serializeNurseryDetail(profile));
   });
 
   fastify.get('/corporates', async (request, reply) => {

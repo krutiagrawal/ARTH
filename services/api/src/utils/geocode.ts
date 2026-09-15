@@ -4,6 +4,7 @@
 // burst of concurrent geocodes (or a user typing into a search box) has to be serialized here rather
 // than left to each call site.
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
+const NOMINATIM_REVERSE_URL = 'https://nominatim.openstreetmap.org/reverse';
 const TIMEOUT_MS = 4000;
 const MIN_INTERVAL_MS = 1100;
 const USER_AGENT = 'PLANT-App/1.0 (tree planting platform; contact: support@plant.app)';
@@ -91,4 +92,31 @@ export async function searchAddress(query: string): Promise<AddressSuggestion[]>
     suggestions.push({ label: r.display_name, lat, lng, city: a.city ?? a.town ?? a.village ?? a.suburb ?? null });
   }
   return suggestions;
+}
+
+/** lat/lng -> human-readable address, for "use current location" buttons that should fill an
+ * address text field rather than leave it blank next to a silently-captured GPS pin. Never
+ * throws — a failed/slow lookup just means the field stays as the user left it. */
+export async function reverseGeocode(lat: number, lng: number): Promise<AddressSuggestion | null> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+  const url = `${NOMINATIM_REVERSE_URL}?format=json&addressdetails=1&lat=${lat}&lon=${lng}`;
+  const response = await throttledFetch(url);
+  if (!response) return null;
+
+  const r = (await response.json()) as {
+    lat?: string;
+    lon?: string;
+    display_name?: string;
+    address?: { city?: string; town?: string; village?: string; suburb?: string };
+  };
+  if (!r.display_name) return null;
+
+  const a = r.address ?? {};
+  return {
+    label: r.display_name,
+    lat: Number(r.lat) || lat,
+    lng: Number(r.lon) || lng,
+    city: a.city ?? a.town ?? a.village ?? a.suburb ?? null,
+  };
 }

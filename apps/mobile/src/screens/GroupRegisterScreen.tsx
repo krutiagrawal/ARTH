@@ -12,6 +12,7 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useEmailField } from '../hooks/useEmailField';
 
 const GROUP_TYPES: { value: 'family' | 'school' | 'club' | 'other'; label: string }[] = [
   { value: 'family', label: 'Family' },
@@ -35,7 +36,7 @@ export function GroupRegisterScreen({ navigation }: any) {
   const [groupType, setGroupType] = useState<'family' | 'school' | 'club' | 'other'>('other');
   const [description, setDescription] = useState('');
   const [ownerName, setOwnerName] = useState('');
-  const [email, setEmail] = useState('');
+  const email = useEmailField();
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,8 +44,17 @@ export function GroupRegisterScreen({ navigation }: any) {
 
   const handleRegister = useCallback(async () => {
     setError(null);
-    if (!groupName.trim() || !description.trim() || !ownerName.trim() || !email.trim() || !password) {
+    if (!groupName.trim() || !description.trim() || !ownerName.trim() || !email.value.trim() || !password) {
       setError('Fill in all required fields to continue');
+      return;
+    }
+    if (!email.valid) {
+      email.setTouched(true);
+      setError('Enter a valid email address');
+      return;
+    }
+    if (email.taken) {
+      setError('This email is already registered');
       return;
     }
     if (password.length < 8) {
@@ -55,7 +65,7 @@ export function GroupRegisterScreen({ navigation }: any) {
     try {
       await registerGroup({
         name: ownerName.trim(),
-        email: email.trim().toLowerCase(),
+        email: email.value.trim().toLowerCase(),
         password,
         handle: slugifyHandle(groupName),
         groupName: groupName.trim(),
@@ -93,7 +103,7 @@ export function GroupRegisterScreen({ navigation }: any) {
           <Text style={styles.sectionLabel}>Group</Text>
           <TextInput
             style={styles.input}
-            placeholder="eg - Group name"
+            placeholder="Group name"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={groupName}
             onChangeText={setGroupName}
@@ -111,7 +121,7 @@ export function GroupRegisterScreen({ navigation }: any) {
           </View>
           <TextInput
             style={[styles.input, styles.multiline]}
-            placeholder="eg - What's your group about?"
+            placeholder="What's your group about?"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={description}
             onChangeText={setDescription}
@@ -121,23 +131,29 @@ export function GroupRegisterScreen({ navigation }: any) {
           <Text style={styles.sectionLabel}>Your account</Text>
           <TextInput
             style={styles.input}
-            placeholder="eg - Your name"
+            placeholder="Your name"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={ownerName}
             onChangeText={setOwnerName}
           />
           <TextInput
             style={styles.input}
-            placeholder="eg - Email"
+            placeholder="Email"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             autoCapitalize="none"
             keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
+            value={email.value}
+            onChangeText={email.setValue}
+            onBlur={() => email.setTouched(true)}
           />
+          {email.error ? (
+            <Text style={styles.fieldError}>{email.error}</Text>
+          ) : email.checking ? (
+            <Text style={styles.fieldHint}>Checking…</Text>
+          ) : null}
           <PasswordInput
             inputStyle={styles.input}
-            placeholder="eg - Password (min. 8 characters)"
+            placeholder="Password (min. 8 characters)"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={password}
             onChangeText={setPassword}
@@ -265,6 +281,8 @@ const styles = StyleSheet.create({
     color: COLORS.coral,
     marginBottom: SPACING.sm,
   },
+  fieldError: { fontSize: 12, color: COLORS.coral, marginTop: -SPACING.xs, marginBottom: SPACING.sm },
+  fieldHint: { fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: -SPACING.xs, marginBottom: SPACING.sm },
   submitButton: {
     marginTop: SPACING.sm,
     marginBottom: SPACING.md,

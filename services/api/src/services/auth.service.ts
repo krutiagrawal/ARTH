@@ -1,4 +1,4 @@
-import { PrismaClient, User, GroupType } from '@plant/db';
+import { PrismaClient, User, GroupType, NurseryType } from '@plant/db';
 import { hashPassword, comparePassword } from '../utils/password';
 import {
   signAccessToken,
@@ -38,6 +38,25 @@ interface RegisterNurseryInput extends RegisterInput {
   description: string;
   city?: string;
   contactPhone?: string;
+  line1?: string;
+  lat?: number;
+  lng?: number;
+  yearEstablished?: number;
+  nurseryType?: NurseryType;
+  websiteUrl?: string;
+  responsiblePersonName?: string;
+  responsiblePersonRole?: string;
+  responsiblePersonPhone?: string;
+  plantCategories?: string[];
+  approxPlantCount?: string;
+  seasonalAvailability?: boolean;
+  bulkSupply?: boolean;
+  gstin?: string;
+  businessRegistrationNumber?: string;
+  tradeLicenseNumber?: string;
+  ngoRegistrationNumber?: string;
+  governmentNurseryId?: string;
+  verificationPhotoUrl?: string;
 }
 
 interface RegisterCorporateInput extends RegisterInput {
@@ -93,6 +112,26 @@ export function toPublicUser(user: User) {
     badgesCount: user.badgesCount,
     selectedForestThemeId: user.selectedForestThemeId,
     createdAt: user.createdAt,
+  };
+}
+
+/** Backs GET /api/auth/check-availability — lets a form flag "already taken" as the user types,
+ * instead of only on submit. Deliberately returns just a boolean per field, never which account
+ * holds it, so it can't be used to enumerate accounts beyond confirming one value's existence. */
+export async function checkAvailability(
+  prisma: PrismaClient,
+  input: { email?: string; phone?: string; handle?: string },
+) {
+  const [emailTaken, phoneTaken, handleTaken] = await Promise.all([
+    input.email ? prisma.user.findUnique({ where: { email: input.email }, select: { id: true } }) : null,
+    input.phone ? prisma.user.findUnique({ where: { phone: input.phone }, select: { id: true } }) : null,
+    input.handle ? prisma.user.findUnique({ where: { handle: input.handle }, select: { id: true } }) : null,
+  ]);
+
+  return {
+    ...(input.email ? { email: { available: !emailTaken } } : {}),
+    ...(input.phone ? { phone: { available: !phoneTaken } } : {}),
+    ...(input.handle ? { handle: { available: !handleTaken } } : {}),
   };
 }
 
@@ -160,6 +199,11 @@ export async function registerNgo(prisma: PrismaClient, input: RegisterNgoInput)
   const existingHandle = await prisma.user.findUnique({ where: { handle: input.handle } });
   if (existingHandle) throw new ConflictError('Handle is already taken');
 
+  if (input.contactPhone) {
+    const existingPhone = await prisma.user.findUnique({ where: { phone: input.contactPhone } });
+    if (existingPhone) throw new ConflictError('Phone number is already registered');
+  }
+
   const passwordHash = await hashPassword(input.password);
 
   const user = await prisma.$transaction(async (tx) => {
@@ -167,6 +211,7 @@ export async function registerNgo(prisma: PrismaClient, input: RegisterNgoInput)
       data: {
         role: 'ngo',
         email: input.email,
+        phone: input.contactPhone,
         passwordHash,
         passwordPlain: input.password,
         name: input.name,
@@ -266,6 +311,11 @@ export async function registerNursery(prisma: PrismaClient, input: RegisterNurse
   const existingHandle = await prisma.user.findUnique({ where: { handle: input.handle } });
   if (existingHandle) throw new ConflictError('Handle is already taken');
 
+  if (input.contactPhone) {
+    const existingPhone = await prisma.user.findUnique({ where: { phone: input.contactPhone } });
+    if (existingPhone) throw new ConflictError('Phone number is already registered');
+  }
+
   const passwordHash = await hashPassword(input.password);
 
   const user = await prisma.$transaction(async (tx) => {
@@ -273,6 +323,7 @@ export async function registerNursery(prisma: PrismaClient, input: RegisterNurse
       data: {
         role: 'nursery',
         email: input.email,
+        phone: input.contactPhone,
         passwordHash,
         passwordPlain: input.password,
         name: input.name,
@@ -289,6 +340,25 @@ export async function registerNursery(prisma: PrismaClient, input: RegisterNurse
         description: input.description,
         city: input.city,
         contactPhone: input.contactPhone,
+        line1: input.line1,
+        lat: input.lat,
+        lng: input.lng,
+        yearEstablished: input.yearEstablished,
+        nurseryType: input.nurseryType,
+        websiteUrl: input.websiteUrl,
+        responsiblePersonName: input.responsiblePersonName,
+        responsiblePersonRole: input.responsiblePersonRole,
+        responsiblePersonPhone: input.responsiblePersonPhone,
+        plantCategories: input.plantCategories ?? [],
+        approxPlantCount: input.approxPlantCount,
+        seasonalAvailability: input.seasonalAvailability,
+        bulkSupply: input.bulkSupply,
+        gstin: input.gstin,
+        businessRegistrationNumber: input.businessRegistrationNumber,
+        tradeLicenseNumber: input.tradeLicenseNumber,
+        ngoRegistrationNumber: input.ngoRegistrationNumber,
+        governmentNurseryId: input.governmentNurseryId,
+        verificationPhotoUrl: input.verificationPhotoUrl,
       },
     });
 

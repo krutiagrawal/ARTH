@@ -9,15 +9,26 @@ import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import PhotoUploadField from '@/components/dashboard/PhotoUploadField'
 import CitySelect from '@/components/dashboard/CitySelect'
+import PhoneInput from '@/components/dashboard/PhoneInput'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import { useNgoProfile } from '../NgoProfileContext'
 import { proxy } from '../proxy'
+import { usePhoneField } from '@/lib/usePhoneField'
+import { isValidWebsite } from '@/lib/validation'
 
 export default function SettingsClient() {
   const { profile, loading, setProfile } = useNgoProfile()
   const [form, setForm] = useState(null)
   const [logoFile, setLogoFile] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [phoneTouched, setPhoneTouched] = useState(false)
+  const [websiteTouched, setWebsiteTouched] = useState(false)
+
+  // Format validation only, no real-time duplicate check — this edits NgoProfile.contactPhone (a
+  // business contact number), not the User.phone identity field, so it isn't subject to the
+  // registration-time "already registered" rule.
+  const phoneField = usePhoneField(form?.contactPhone ?? '', phoneTouched, { checkAvailability: false })
+  const websiteError = websiteTouched && form?.website?.trim() && !isValidWebsite(form.website) ? 'Enter a valid website URL' : null
 
   useEffect(() => {
     if (profile) {
@@ -43,6 +54,16 @@ export default function SettingsClient() {
 
   const submit = async (e) => {
     e.preventDefault()
+    setPhoneTouched(true)
+    setWebsiteTouched(true)
+    if (!phoneField.isOk) {
+      toast.error(phoneField.error || 'Enter a valid phone number.')
+      return
+    }
+    if (form.website.trim() && !isValidWebsite(form.website)) {
+      toast.error('Enter a valid website URL.')
+      return
+    }
     setSubmitting(true)
     try {
       const cleanAwards = form.awards
@@ -119,11 +140,23 @@ export default function SettingsClient() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="block">
             <span className="eyebrow">Website (optional)</span>
-            <Input value={form.website} onChange={set('website')} placeholder="https://" className="mt-2 h-11 rounded-full" />
+            <Input
+              value={form.website}
+              onChange={set('website')}
+              onBlur={() => setWebsiteTouched(true)}
+              placeholder="https://"
+              className="mt-2 h-11 rounded-full"
+            />
+            {websiteError && <p className="mt-1 text-xs text-destructive">{websiteError}</p>}
           </label>
           <label className="block">
             <span className="eyebrow">Phone (optional)</span>
-            <Input value={form.contactPhone} onChange={set('contactPhone')} className="mt-2 h-11 rounded-full" />
+            <PhoneInput
+              value={form.contactPhone}
+              onChange={(digits) => setForm((s) => ({ ...s, contactPhone: digits }))}
+              onBlur={() => setPhoneTouched(true)}
+            />
+            {phoneField.error && <p className="mt-1 text-xs text-destructive">{phoneField.error}</p>}
           </label>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -181,7 +214,7 @@ export default function SettingsClient() {
           </div>
         </div>
 
-        <Button disabled={submitting} type="submit" className="rounded-full h-11">
+        <Button disabled={submitting || (form.contactPhone && !phoneField.isOk) || Boolean(websiteError)} type="submit" className="rounded-full h-11">
           {submitting ? 'Saving…' : 'Save changes'}
         </Button>
       </form>

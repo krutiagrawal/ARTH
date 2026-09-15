@@ -8,9 +8,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import PhotoUploadField from '@/components/dashboard/PhotoUploadField'
 import CitySelect from '@/components/dashboard/CitySelect'
+import PhoneInput from '@/components/dashboard/PhoneInput'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import { useNurseryProfile } from '../NurseryProfileContext'
 import { proxy } from '../proxy'
+import { usePhoneField } from '@/lib/usePhoneField'
 
 export default function SettingsClient() {
   const { profile, loading, setProfile } = useNurseryProfile()
@@ -18,6 +20,11 @@ export default function SettingsClient() {
   const [logoFile, setLogoFile] = useState(null)
   const [coverFile, setCoverFile] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [phoneTouched, setPhoneTouched] = useState(false)
+
+  // Format validation only, no real-time duplicate check — this edits NurseryProfile.contactPhone
+  // (a business contact number), not the User.phone identity field.
+  const phoneField = usePhoneField(form?.contactPhone ?? '', phoneTouched, { checkAvailability: false })
 
   useEffect(() => {
     if (profile) {
@@ -35,6 +42,11 @@ export default function SettingsClient() {
 
   const submit = async (e) => {
     e.preventDefault()
+    setPhoneTouched(true)
+    if (!phoneField.isOk) {
+      toast.error(phoneField.error || 'Enter a valid phone number.')
+      return
+    }
     setSubmitting(true)
     try {
       const payload = {
@@ -109,7 +121,12 @@ export default function SettingsClient() {
           </label>
           <label className="block">
             <span className="eyebrow">Phone (optional)</span>
-            <Input value={form.contactPhone} onChange={set('contactPhone')} className="mt-2 h-11 rounded-full" />
+            <PhoneInput
+              value={form.contactPhone}
+              onChange={(digits) => setForm((s) => ({ ...s, contactPhone: digits }))}
+              onBlur={() => setPhoneTouched(true)}
+            />
+            {phoneField.error && <p className="mt-1 text-xs text-destructive">{phoneField.error}</p>}
           </label>
         </div>
 
@@ -132,7 +149,7 @@ export default function SettingsClient() {
           </div>
         </div>
 
-        <Button disabled={submitting} type="submit" className="rounded-full h-11">
+        <Button disabled={submitting || (form.contactPhone && !phoneField.isOk)} type="submit" className="rounded-full h-11">
           {submitting ? 'Saving…' : 'Save changes'}
         </Button>
       </form>

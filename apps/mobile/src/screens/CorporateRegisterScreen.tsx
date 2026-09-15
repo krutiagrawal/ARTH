@@ -13,6 +13,7 @@ import { CityPickerField } from '../components/common/CityPickerField';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useEmailField } from '../hooks/useEmailField';
 
 function slugifyHandle(name: string): string {
   return name
@@ -30,7 +31,7 @@ export function CorporateRegisterScreen({ navigation }: any) {
   const [industry, setIndustry] = useState('');
   const [city, setCity] = useState('Pune');
   const [contactName, setContactName] = useState('');
-  const [email, setEmail] = useState('');
+  const email = useEmailField();
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,8 +39,17 @@ export function CorporateRegisterScreen({ navigation }: any) {
 
   const handleRegister = useCallback(async () => {
     setError(null);
-    if (!companyName.trim() || !description.trim() || !contactName.trim() || !email.trim() || !password) {
+    if (!companyName.trim() || !description.trim() || !contactName.trim() || !email.value.trim() || !password) {
       setError('Fill in all required fields to continue');
+      return;
+    }
+    if (!email.valid) {
+      email.setTouched(true);
+      setError('Enter a valid email address');
+      return;
+    }
+    if (email.taken) {
+      setError('This email is already registered');
       return;
     }
     if (password.length < 8) {
@@ -50,7 +60,7 @@ export function CorporateRegisterScreen({ navigation }: any) {
     try {
       await registerCorporate({
         name: contactName.trim(),
-        email: email.trim().toLowerCase(),
+        email: email.value.trim().toLowerCase(),
         password,
         handle: slugifyHandle(companyName),
         companyName: companyName.trim(),
@@ -91,14 +101,14 @@ export function CorporateRegisterScreen({ navigation }: any) {
           <Text style={styles.sectionLabel}>Company</Text>
           <TextInput
             style={styles.input}
-            placeholder="eg - Company name"
+            placeholder="Company name"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={companyName}
             onChangeText={setCompanyName}
           />
           <TextInput
             style={[styles.input, styles.multiline]}
-            placeholder="eg - What does your company do?"
+            placeholder="What does your company do?"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={description}
             onChangeText={setDescription}
@@ -106,7 +116,7 @@ export function CorporateRegisterScreen({ navigation }: any) {
           />
           <TextInput
             style={styles.input}
-            placeholder="eg - Industry (optional)"
+            placeholder="Industry (optional)"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={industry}
             onChangeText={setIndustry}
@@ -116,23 +126,29 @@ export function CorporateRegisterScreen({ navigation }: any) {
           <Text style={styles.sectionLabel}>Your account</Text>
           <TextInput
             style={styles.input}
-            placeholder="eg - Your name"
+            placeholder="Your name"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={contactName}
             onChangeText={setContactName}
           />
           <TextInput
             style={styles.input}
-            placeholder="eg - Email"
+            placeholder="Email"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             autoCapitalize="none"
             keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
+            value={email.value}
+            onChangeText={email.setValue}
+            onBlur={() => email.setTouched(true)}
           />
+          {email.error ? (
+            <Text style={styles.fieldError}>{email.error}</Text>
+          ) : email.checking ? (
+            <Text style={styles.fieldHint}>Checking…</Text>
+          ) : null}
           <PasswordInput
             inputStyle={styles.input}
-            placeholder="eg - Password (min. 8 characters)"
+            placeholder="Password (min. 8 characters)"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={password}
             onChangeText={setPassword}
@@ -234,6 +250,8 @@ const styles = StyleSheet.create({
     color: COLORS.coral,
     marginBottom: SPACING.sm,
   },
+  fieldError: { fontSize: 12, color: COLORS.coral, marginTop: -SPACING.xs, marginBottom: SPACING.sm },
+  fieldHint: { fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: -SPACING.xs, marginBottom: SPACING.sm },
   submitButton: {
     marginTop: SPACING.sm,
     marginBottom: SPACING.md,

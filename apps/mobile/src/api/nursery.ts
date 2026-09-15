@@ -29,6 +29,23 @@ export interface ApiNurseryProfile {
   operatingHours?: OperatingHourRow[];
   pickupWindows?: PickupWindowRow[];
   pickupInstructions?: string | null;
+  // ---- Signup-time identity/verification details (set once at registration) ----
+  yearEstablished?: number | null;
+  nurseryType?: string | null;
+  websiteUrl?: string | null;
+  responsiblePersonName?: string | null;
+  responsiblePersonRole?: string | null;
+  responsiblePersonPhone?: string | null;
+  plantCategories?: string[];
+  approxPlantCount?: string | null;
+  seasonalAvailability?: boolean | null;
+  bulkSupply?: boolean | null;
+  gstin?: string | null;
+  businessRegistrationNumber?: string | null;
+  tradeLicenseNumber?: string | null;
+  ngoRegistrationNumber?: string | null;
+  governmentNurseryId?: string | null;
+  verificationPhotoUrl?: string | null;
 }
 
 export interface OperatingHourRow {

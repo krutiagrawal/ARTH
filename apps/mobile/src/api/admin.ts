@@ -85,6 +85,36 @@ export interface ApiAdminNursery {
   owner?: { id: string; email: string; name: string; handle: string };
 }
 
+// Everything the nursery filled in at signup — returned by the detail route, a superset of
+// ApiAdminNursery's approvals-table summary shape.
+export interface ApiAdminNurseryDetail extends ApiAdminNursery {
+  logoUrl: string | null;
+  coverPhotoUrl: string | null;
+  line1: string | null;
+  lat: number | string | null;
+  lng: number | string | null;
+  yearEstablished: number | null;
+  nurseryType: string | null;
+  websiteUrl: string | null;
+  responsiblePersonName: string | null;
+  responsiblePersonRole: string | null;
+  responsiblePersonPhone: string | null;
+  plantCategories: string[];
+  approxPlantCount: string | null;
+  seasonalAvailability: boolean | null;
+  bulkSupply: boolean | null;
+  gstin: string | null;
+  businessRegistrationNumber: string | null;
+  tradeLicenseNumber: string | null;
+  ngoRegistrationNumber: string | null;
+  governmentNurseryId: string | null;
+  verificationPhotoUrl: string | null;
+  offersDelivery: boolean;
+  offersPickup: boolean;
+  deliveryRadiusKm: number | null;
+  approvedAt: string | null;
+}
+
 export interface ApiAdminCorporate {
   id: string;
   companyName: string;
@@ -117,11 +147,15 @@ export async function fetchAdminNurseries(filter: AdminOrgFilter = {}): Promise<
   return apiFetch(`/api/admin/nurseries${toQueryString(filter)}`);
 }
 
+export async function fetchAdminNursery(id: string): Promise<ApiAdminNurseryDetail> {
+  return apiFetch<ApiAdminNurseryDetail>(`/api/admin/nurseries/${id}`);
+}
+
 export async function setAdminNurseryStatus(
   id: string,
   input: { status: NgoApprovalStatus; rejectionReason?: string }
-): Promise<ApiAdminNursery> {
-  return apiFetch<ApiAdminNursery>(`/api/admin/nurseries/${id}/status`, { method: 'PATCH', body: input });
+): Promise<ApiAdminNurseryDetail> {
+  return apiFetch<ApiAdminNurseryDetail>(`/api/admin/nurseries/${id}/status`, { method: 'PATCH', body: input });
 }
 
 export async function fetchAdminCorporates(filter: AdminOrgFilter = {}): Promise<{ total: number; corporates: ApiAdminCorporate[] }> {

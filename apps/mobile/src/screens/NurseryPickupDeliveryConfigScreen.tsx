@@ -17,6 +17,7 @@ import { StatusModal } from '../components/common/StatusModal';
 import { useNurseryProfile, useUpdateNurseryProfile } from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import { ApiError } from '../api/client';
+import { reverseGeocode } from '../api/geocode';
 import type { OperatingHourRow, PickupWindowRow } from '../api/nursery';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
@@ -45,6 +46,7 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
   const [pickupWindows, setPickupWindows] = useState<PickupWindowRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [locationNotice, setLocationNotice] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     if (!profile) return;
@@ -67,11 +69,21 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
   const useCurrentLocation = async () => {
     setLocating(true);
     setError(null);
+    setLocationNotice(null);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+        const lat = loc.coords.latitude;
+        const lng = loc.coords.longitude;
+        setCoords({ lat, lng });
+        const found = await reverseGeocode(lat, lng).catch(() => null);
+        if (found) {
+          setLine1(found.label);
+          setLocationNotice({ ok: true, text: '✓ Matched from GPS — check the address above is correct' });
+        } else {
+          setLocationNotice({ ok: false, text: "Pin captured, but we couldn't find an address for it — please type it above" });
+        }
       } else {
         setError('Location permission is needed so customers and delivery partners can track deliveries.');
       }
@@ -159,11 +171,15 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
             <AddressSearchField
               label="Nursery address"
               value={line1}
-              onChangeText={setLine1}
+              onChangeText={(text) => {
+                setLine1(text);
+                setLocationNotice(null);
+              }}
               placeholder="eg - 12 Baner Road, near City Mall"
               onSelectSuggestion={(s) => {
                 setLine1(s.label);
                 setCoords({ lat: s.lat, lng: s.lng });
+                setLocationNotice(null);
               }}
             />
             <View style={styles.locationRow}>
@@ -171,11 +187,14 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
                 {hasLocation ? '📍 Location set' : '📍 No location set — required to offer delivery'}
               </Text>
               <TouchableOpacity onPress={useCurrentLocation} disabled={locating} style={styles.locationButton}>
-                <Text style={styles.locationButtonText}>
-                  {locating ? 'Locating…' : coords ? 'Location captured ✓' : 'Use current location'}
-                </Text>
+                <Text style={styles.locationButtonText}>{locating ? 'Locating…' : 'Use current location'}</Text>
               </TouchableOpacity>
             </View>
+            {locationNotice && (
+              <Text style={[styles.locationNoticeText, locationNotice.ok ? styles.locationNoticeOk : styles.locationNoticeWarn]}>
+                {locationNotice.text}
+              </Text>
+            )}
 
             <View style={styles.inlineRow}>
               <View style={styles.inlineField}>
@@ -298,6 +317,9 @@ const styles = StyleSheet.create({
   locationStatus: { fontSize: 12, color: COLORS.textSecondary, flex: 1, marginRight: 8 },
   locationButton: { paddingVertical: 4 },
   locationButtonText: { fontSize: 12, fontWeight: '700', color: COLORS.forest },
+  locationNoticeText: { fontSize: 12, lineHeight: 16, marginBottom: 8 },
+  locationNoticeOk: { color: COLORS.forest },
+  locationNoticeWarn: { color: COLORS.golden },
   inlineRow: { flexDirection: 'row', gap: 12 },
   inlineField: { flex: 1 },
   listHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20 },

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { User, Users, Sprout, ArrowRight } from 'lucide-react'
 import { useAuth } from '@/components/site/AuthProvider'
+import { useEmailField } from '@/lib/useEmailField'
 
 const REGISTER_IMAGE = 'https://images.pexels.com/photos/8060360/pexels-photo-8060360.jpeg'
 
@@ -24,10 +25,12 @@ function App() {
   const [name, setName] = useState('')
   const [handle, setHandle] = useState('')
   const [email, setEmail] = useState('')
+  const [emailTouched, setEmailTouched] = useState(false)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const emailField = useEmailField(email, emailTouched)
   // NGO gets a separate, admin-reviewed doorway; Group is also its own doorway
   // (its own registration form/fields) but self-serve — no approval wait.
   const needsNgoDoorway = accountType === 'ngo'
@@ -37,6 +40,11 @@ function App() {
   const submit = async (e) => {
     e.preventDefault()
     setError('')
+    setEmailTouched(true)
+    if (!emailField.isOk) {
+      setError(emailField.error || 'Enter a valid email address.')
+      return
+    }
     if (password !== confirmPassword) {
       setError('Passwords do not match.')
       return
@@ -126,7 +134,17 @@ function App() {
               </label>
               <label className="block">
                 <span className="eyebrow">Email</span>
-                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@earth.org" className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  onBlur={() => setEmailTouched(true)}
+                  placeholder="you@earth.org"
+                  className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40"
+                />
+                {emailField.checking && <p className="mt-1 text-xs text-muted-foreground">Checking…</p>}
+                {emailField.error && <p className="mt-1 text-xs text-destructive">{emailField.error}</p>}
               </label>
               <label className="block">
                 <span className="eyebrow">Password</span>
@@ -137,7 +155,7 @@ function App() {
                 <input type="password" required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••" className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
               </label>
               {error && <p className="text-sm text-destructive">{error}</p>}
-              <button disabled={submitting} className="w-full h-12 rounded-full bg-foreground text-background text-sm inline-flex items-center justify-center gap-2 hover:opacity-90 transition disabled:opacity-60" type="submit">
+              <button disabled={submitting || (email.trim() && !emailField.isOk)} className="w-full h-12 rounded-full bg-foreground text-background text-sm inline-flex items-center justify-center gap-2 hover:opacity-90 transition disabled:opacity-60" type="submit">
                 {submitting ? 'Creating account…' : `Enter as ${ACCOUNTS.find(a => a.id === accountType).label}`}
                 <ArrowRight className="h-4 w-4" />
               </button>

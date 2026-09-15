@@ -12,7 +12,7 @@ import { RADIUS } from '../../constants/theme';
  */
 interface FormFieldProps extends Pick<
   TextInputProps,
-  'value' | 'onChangeText' | 'placeholder' | 'keyboardType' | 'autoCapitalize' | 'editable' | 'multiline' | 'secureTextEntry'
+  'value' | 'onChangeText' | 'onBlur' | 'placeholder' | 'keyboardType' | 'autoCapitalize' | 'editable' | 'multiline' | 'secureTextEntry' | 'maxLength'
 > {
   label: string;
   /** Rendered at the right edge of the box — e.g. a dropdown chevron. */

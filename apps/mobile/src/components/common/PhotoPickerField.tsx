@@ -23,6 +23,8 @@ interface PhotoPickerFieldProps {
   /** Emoji shown above the label in the empty state. Defaults by `mode`. */
   icon?: string;
   aspect?: [number, number];
+  /** Translucent-white chrome for night-gradient screens (signup wizards), matching FormField's dark variant. */
+  dark?: boolean;
 }
 
 function assetToPhoto(asset: ImagePicker.ImagePickerAsset): PickedPhoto {
@@ -40,7 +42,7 @@ function assetToPhoto(asset: ImagePicker.ImagePickerAsset): PickedPhoto {
  * from the gallery. `mode="gallery"`/`"both"` are for cover-photo-style
  * pickers where a curated gallery image is appropriate.
  */
-export function PhotoPickerField({ photo, onChange, mode = 'gallery', label, hint, icon, aspect = [1, 1] }: PhotoPickerFieldProps) {
+export function PhotoPickerField({ photo, onChange, mode = 'gallery', label, hint, icon, aspect = [1, 1], dark }: PhotoPickerFieldProps) {
   const { medium } = useHaptics();
   const glyph = icon ?? (mode === 'camera' ? '📸' : '🖼️');
 
@@ -65,10 +67,14 @@ export function PhotoPickerField({ photo, onChange, mode = 'gallery', label, hin
     if (!result.canceled && result.assets[0]) onChange(assetToPhoto(result.assets[0]));
   }, [medium, onChange, aspect]);
 
+  const emptyStyle = dark ? styles.pickerEmptyDark : styles.pickerEmpty;
+  const textStyle = dark ? styles.pickerTextDark : styles.pickerText;
+  const hintStyle = dark ? styles.pickerHintDark : styles.pickerHint;
+
   if (mode === 'both') {
     return (
       <TouchableOpacity
-        style={[styles.picker, photo ? styles.pickerFilled : styles.pickerEmpty]}
+        style={[styles.picker, photo ? styles.pickerFilled : emptyStyle]}
         onPress={pickFromGallery}
         onLongPress={captureFromCamera}
       >
@@ -77,8 +83,8 @@ export function PhotoPickerField({ photo, onChange, mode = 'gallery', label, hin
         ) : (
           <>
             <Text style={styles.pickerIcon}>{glyph}</Text>
-            <Text style={styles.pickerText}>{label ?? 'Add Photo'}</Text>
-            <Text style={styles.pickerHint}>{hint ?? 'Tap for gallery, hold for camera'}</Text>
+            <Text style={textStyle}>{label ?? 'Add Photo'}</Text>
+            <Text style={hintStyle}>{hint ?? 'Tap for gallery, hold for camera'}</Text>
           </>
         )}
       </TouchableOpacity>
@@ -89,7 +95,7 @@ export function PhotoPickerField({ photo, onChange, mode = 'gallery', label, hin
 
   return (
     <TouchableOpacity
-      style={[styles.picker, photo ? styles.pickerFilled : styles.pickerEmpty]}
+      style={[styles.picker, photo ? styles.pickerFilled : emptyStyle]}
       onPress={onPress}
     >
       {photo ? (
@@ -97,8 +103,8 @@ export function PhotoPickerField({ photo, onChange, mode = 'gallery', label, hin
       ) : (
         <>
           <Text style={styles.pickerIcon}>{glyph}</Text>
-          <Text style={styles.pickerText}>{label ?? 'Add Photo'}</Text>
-          {hint ? <Text style={styles.pickerHint}>{hint}</Text> : null}
+          <Text style={textStyle}>{label ?? 'Add Photo'}</Text>
+          {hint ? <Text style={hintStyle}>{hint}</Text> : null}
         </>
       )}
     </TouchableOpacity>
@@ -125,9 +131,17 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: 'rgba(139, 107, 71, 0.35)',
   },
+  pickerEmptyDark: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
   pickerFilled: { backgroundColor: 'transparent' },
   preview: { width: '100%', height: '100%' },
   pickerIcon: { fontSize: 26 },
   pickerText: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '700' },
   pickerHint: { color: COLORS.textMuted, fontSize: 12 },
+  pickerTextDark: { color: COLORS.white, fontSize: 15, fontWeight: '700' },
+  pickerHintDark: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
 });

@@ -13,19 +13,28 @@ import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
 import { ROLE_ROUTES } from '../constants/roleRoutes';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { isValidEmail } from '../utils/validation';
 
 export function LoginScreen({ navigation }: any) {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [emailTouched, setEmailTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { refreshing, onRefresh } = usePullToRefresh();
+
+  const emailError = emailTouched && email.trim() && !isValidEmail(email) ? 'Enter a valid email address' : null;
 
   const handleLogin = useCallback(async () => {
     setError(null);
     if (!email.trim() || !password) {
       setError('Enter your email and password');
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setEmailTouched(true);
+      setError('Enter a valid email address');
       return;
     }
     setIsSubmitting(true);
@@ -61,16 +70,18 @@ export function LoginScreen({ navigation }: any) {
 
           <TextInput
             style={styles.input}
-            placeholder="eg - Email"
+            placeholder="Email"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             autoCapitalize="none"
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
+            onBlur={() => setEmailTouched(true)}
           />
+          {emailError && <Text style={styles.fieldError}>{emailError}</Text>}
           <PasswordInput
             inputStyle={styles.input}
-            placeholder="eg - Password"
+            placeholder="Password"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={password}
             onChangeText={setPassword}
@@ -151,6 +162,12 @@ const styles = StyleSheet.create({
   error: {
     ...TYPOGRAPHY.bodySmall,
     color: COLORS.coral,
+    marginBottom: SPACING.sm,
+  },
+  fieldError: {
+    fontSize: 12,
+    color: COLORS.coral,
+    marginTop: -SPACING.xs,
     marginBottom: SPACING.sm,
   },
   submitButton: {

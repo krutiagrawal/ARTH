@@ -12,7 +12,9 @@ import { useNgoProfile, useUpdateNgoProfile } from '../hooks/useApiQueries';
 import { PickedPhoto } from '../components/common/PhotoPickerField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
+import { PhoneField } from '../components/common/PhoneField';
 import { CityPickerField } from '../components/common/CityPickerField';
+import { isValidPhone, isValidWebsite } from '../utils/validation';
 import { Toggle } from '../components/common/Toggle';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { useSlideUp } from '../hooks/useAnimations';
@@ -32,7 +34,9 @@ export function NgoSettingsScreen({ navigation }: any) {
   const [orgName, setOrgName] = useState('');
   const [description, setDescription] = useState('');
   const [website, setWebsite] = useState('');
+  const [websiteTouched, setWebsiteTouched] = useState(false);
   const [contactPhone, setContactPhone] = useState('');
+  const [contactPhoneTouched, setContactPhoneTouched] = useState(false);
   const [city, setCity] = useState('');
   const [foundedYear, setFoundedYear] = useState('');
   const [volunteerCountEstimate, setVolunteerCountEstimate] = useState('');
@@ -91,6 +95,16 @@ export function NgoSettingsScreen({ navigation }: any) {
 
   const handleSave = async () => {
     setError(null);
+    if (website.trim() && !isValidWebsite(website)) {
+      setWebsiteTouched(true);
+      setError('Enter a valid website URL');
+      return;
+    }
+    if (contactPhone && !isValidPhone(contactPhone)) {
+      setContactPhoneTouched(true);
+      setError('Enter a valid 10-digit mobile number');
+      return;
+    }
     try {
       await updateMutation.mutateAsync({
         orgName: orgName.trim(),
@@ -166,8 +180,25 @@ export function NgoSettingsScreen({ navigation }: any) {
 
             <FormField label="Organization Name" value={orgName} onChangeText={setOrgName} placeholder="eg - Your organization" />
             <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - We plant. We protect. We inspire." />
-            <FormField label="Website" value={website} onChangeText={setWebsite} autoCapitalize="none" keyboardType="url" placeholder="eg - https://" />
-            <FormField label="Contact Phone" value={contactPhone} onChangeText={setContactPhone} keyboardType="phone-pad" placeholder="eg - Phone number" />
+            <FormField
+              label="Website"
+              value={website}
+              onChangeText={setWebsite}
+              onBlur={() => setWebsiteTouched(true)}
+              autoCapitalize="none"
+              keyboardType="url"
+              placeholder="eg - https://"
+            />
+            {websiteTouched && website.trim() && !isValidWebsite(website) && (
+              <Text style={styles.fieldError}>Enter a valid website URL</Text>
+            )}
+            <PhoneField
+              label="Contact Phone"
+              value={contactPhone}
+              onChangeText={setContactPhone}
+              onBlur={() => setContactPhoneTouched(true)}
+              error={contactPhoneTouched && contactPhone && !isValidPhone(contactPhone) ? 'Enter a valid 10-digit mobile number' : null}
+            />
             <CityPickerField value={city} onChange={setCity} />
             <FormField
               label="Founded Year"
@@ -291,6 +322,7 @@ const styles = StyleSheet.create({
   addButton: { alignSelf: 'flex-start', marginTop: 4 },
   addButtonText: { fontSize: 13, color: COLORS.sage, fontWeight: '700' },
   error: { fontSize: 13, color: COLORS.coral, marginTop: 12 },
+  fieldError: { fontSize: 12, color: COLORS.coral, marginTop: -4, marginBottom: 8 },
   submitButton: { marginTop: 20 },
   staffLink: { alignSelf: 'center', marginTop: 16, padding: 8 },
   staffLinkText: { fontSize: 13, color: COLORS.forest, fontWeight: '700' },

@@ -64,6 +64,10 @@ export function saveNurseryCoverPhoto(photo: PhotoInput): Promise<string> {
   return saveImage(photo, 'nursery-covers');
 }
 
+export function saveNurseryVerificationPhoto(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'nursery-verification');
+}
+
 export function saveStockPhoto(photo: PhotoInput): Promise<string> {
   return saveImage(photo, 'stock');
 }

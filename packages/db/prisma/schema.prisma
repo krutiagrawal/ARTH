@@ -284,6 +284,19 @@ enum FollowPolicy {
   approval
 }
 
+// Chosen at nursery signup — drives which business-verification documents (see NurseryProfile)
+// are presented as relevant, since e.g. a government nursery has no GSTIN and an NGO nursery has
+// no trade license.
+enum NurseryType {
+  retail
+  wholesale
+  native_plant
+  government
+  ngo_community
+  landscaping
+  other
+}
+
 enum FollowStatus {
   pending
   accepted
@@ -372,6 +385,10 @@ model User {
   id                     String    @id @default(uuid())
   role                   UserRole  @default(user)
   email                  String    @unique
+  // Bare 10-digit Indian mobile number, no country code (the +91 is a fixed UI prefix, not stored)
+  // — nullable because existing accounts predate this field, but unique wherever set so the same
+  // number can't back two accounts.
+  phone                  String?   @unique
   passwordHash           String    @map("password_hash")
   // DEV-ONLY: plaintext mirror of the current password, for local debugging via pgAdmin only.
   // Never read by the API/frontend, never exposed in any response — strip before production.
@@ -731,47 +748,69 @@ model GroupChallengeParticipant {
 // A Nursery sells/donates sapling stock — approval-gated like NgoProfile, since an
 // inventory claim is a real-world commitment worth an admin vetting before it goes live.
 model NurseryProfile {
-  id                    String            @id @default(uuid())
-  userId                String            @unique @map("user_id")
-  nurseryName           String            @map("nursery_name")
-  description           String
-  logoUrl               String?           @map("logo_url")
+  id                         String            @id @default(uuid())
+  userId                     String            @unique @map("user_id")
+  nurseryName                String            @map("nursery_name")
+  description                String
+  logoUrl                    String?           @map("logo_url")
   // Free-text street address, optional — used only to derive lat/lng via geocoding when the
   // nursery types an address instead of tapping "use current location" (see nursery.service.ts's
   // updateOwnProfile). Not shown anywhere as a formatted mailing address; `city` remains the only
   // structured location field.
-  line1                 String?
-  city                  String?
-  contactPhone          String?           @map("contact_phone")
-  lat                   Decimal?          @db.Decimal(9, 6)
-  lng                   Decimal?          @db.Decimal(9, 6)
-  status                NgoApprovalStatus @default(pending)
-  rejectionReason       String?           @map("rejection_reason")
-  approvedAt            DateTime?         @map("approved_at")
-  approvedByUserId      String?           @map("approved_by_user_id")
-  streakCurrent         Int               @default(0) @map("streak_current")
-  streakMax             Int               @default(0) @map("streak_max")
-  badgesCount           Int               @default(0) @map("badges_count")
+  line1                      String?
+  city                       String?
+  contactPhone               String?           @map("contact_phone")
+  lat                        Decimal?          @db.Decimal(9, 6)
+  lng                        Decimal?          @db.Decimal(9, 6)
+  // Signup-time identity/verification details, collected once during registration so admin
+  // approval has enough context to judge credibility. All optional at the DB level because
+  // conditional-by-type fields (e.g. GSTIN vs. government ID) can never all be required together.
+  yearEstablished            Int?              @map("year_established")
+  nurseryType                NurseryType?      @map("nursery_type")
+  websiteUrl                 String?           @map("website_url")
+  responsiblePersonName      String?           @map("responsible_person_name")
+  responsiblePersonRole      String?           @map("responsible_person_role")
+  responsiblePersonPhone     String?           @map("responsible_person_phone")
+  plantCategories            String[]          @map("plant_categories")
+  approxPlantCount           String?           @map("approx_plant_count")
+  seasonalAvailability       Boolean?          @map("seasonal_availability")
+  bulkSupply                 Boolean?          @map("bulk_supply")
+  gstin                      String?
+  businessRegistrationNumber String?           @map("business_registration_number")
+  tradeLicenseNumber         String?           @map("trade_license_number")
+  ngoRegistrationNumber      String?           @map("ngo_registration_number")
+  governmentNurseryId        String?           @map("government_nursery_id")
+  // Real-time camera capture of the nursery's name board with stock visible behind it — the one
+  // mandatory photo at signup, deliberately separate from the optional logoUrl/coverPhotoUrl a
+  // nursery can add later from its profile editor.
+  verificationPhotoUrl       String?           @map("verification_photo_url")
+  status                     NgoApprovalStatus @default(pending)
+  rejectionReason            String?           @map("rejection_reason")
+  approvedAt                 DateTime?         @map("approved_at")
+  approvedByUserId           String?           @map("approved_by_user_id")
+  streakCurrent              Int               @default(0) @map("streak_current")
+  streakMax                  Int               @default(0) @map("streak_max")
+  badgesCount                Int               @default(0) @map("badges_count")
   // Denormalized from OrderReview so the directory/profile list never needs a per-row aggregate
   // query, same pattern as Post.likeCount. Recomputed in the same transaction as each new review.
-  avgRating             Decimal?          @map("avg_rating") @db.Decimal(3, 2)
-  reviewCount           Int               @default(0) @map("review_count")
-  offersDelivery        Boolean           @default(true) @map("offers_delivery")
-  deliveryRadiusKm      Int?              @map("delivery_radius_km")
-  coverPhotoUrl         String?           @map("cover_photo_url")
-  followPolicy          FollowPolicy      @default(open) @map("follow_policy")
+  avgRating                  Decimal?          @map("avg_rating") @db.Decimal(3, 2)
+  reviewCount                Int               @default(0) @map("review_count")
+  offersDelivery             Boolean           @default(true) @map("offers_delivery")
+  deliveryRadiusKm           Int?              @map("delivery_radius_km")
+  coverPhotoUrl              String?           @map("cover_photo_url")
+  followPolicy               FollowPolicy      @default(open) @map("follow_policy")
   // Pickup/delivery configuration (section 4) — delivery must remain optional, so the service
   // layer rejects a profile update that would leave both offersPickup and offersDelivery false.
-  offersPickup          Boolean           @default(true) @map("offers_pickup")
-  deliveryFeeCents      Int?              @map("delivery_fee_cents")
-  minDeliveryOrderCents Int?              @map("min_delivery_order_cents")
+  offersPickup               Boolean           @default(true) @map("offers_pickup")
+  deliveryFeeCents           Int?              @map("delivery_fee_cents")
+  minDeliveryOrderCents      Int?              @map("min_delivery_order_cents")
   // Free-shape JSON, app-owned/Zod-validated (mirrors NgoProfile.awards' convention) — a
   // handful of labeled slots, deliberately not a recurring-calendar scheduling system.
-  operatingHours        Json?             @map("operating_hours")
-  pickupWindows         Json?             @map("pickup_windows")
-  pickupInstructions    String?           @map("pickup_instructions")
-  createdAt             DateTime          @default(now()) @map("created_at")
-  updatedAt             DateTime          @updatedAt @map("updated_at")
+  operatingHours             Json?             @map("operating_hours")
+  pickupWindows              Json?             @map("pickup_windows")
+  pickupInstructions         String?           @map("pickup_instructions")
+  createdAt                  DateTime          @default(now()) @map("created_at")
+  updatedAt                  DateTime          @updatedAt @map("updated_at")
 
   user                     User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
   saplingStock             SaplingStock[]

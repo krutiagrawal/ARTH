@@ -37,8 +37,8 @@ export const campaignFields = [
 export const staffFields = [
   { name: 'name', label: 'Name', required: true, section: 'Details' },
   { name: 'role', label: 'Role / title', required: true, section: 'Details' },
-  { name: 'contactEmail', label: 'Email (optional)', section: 'Contact' },
-  { name: 'contactPhone', label: 'Phone (optional)', section: 'Contact' },
+  { name: 'contactEmail', label: 'Email (optional)', type: 'email', section: 'Contact' },
+  { name: 'contactPhone', label: 'Phone (optional)', type: 'phone', section: 'Contact' },
 ]
 
 export const updateFields = [

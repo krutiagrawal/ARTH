@@ -89,12 +89,27 @@ export async function getPublicNurseryProfile(prisma: PrismaClient, nurseryId: s
   return assembleNurseryProfile(prisma, nursery, viewerUserId);
 }
 
-// Same assembly as getPublicNurseryProfile but for a pre-fetched profile row
-// that hasn't been gated on status — admin needs to view pending/suspended nurseries too.
+// Same assembly as getPublicNurseryProfile but for a pre-fetched profile row that hasn't been
+// gated on status — admin needs to view pending/suspended nurseries too. Also surfaces the
+// signup-time verification details (registration numbers, responsible person, ID photo) that
+// `assembleNurseryProfile` otherwise omits, since those exist purely to help admin judge
+// credibility and must never leak into the public profile response.
 export async function getAdminNurseryProfile(prisma: PrismaClient, nurseryId: string) {
   const nursery = await prisma.nurseryProfile.findUnique({ where: { id: nurseryId } });
   if (!nursery) throw new NotFoundError('Nursery not found');
-  return assembleNurseryProfile(prisma, nursery);
+  const profile = await assembleNurseryProfile(prisma, nursery);
+  return {
+    ...profile,
+    responsiblePersonName: nursery.responsiblePersonName,
+    responsiblePersonRole: nursery.responsiblePersonRole,
+    responsiblePersonPhone: nursery.responsiblePersonPhone,
+    gstin: nursery.gstin,
+    businessRegistrationNumber: nursery.businessRegistrationNumber,
+    tradeLicenseNumber: nursery.tradeLicenseNumber,
+    ngoRegistrationNumber: nursery.ngoRegistrationNumber,
+    governmentNurseryId: nursery.governmentNurseryId,
+    verificationPhotoUrl: nursery.verificationPhotoUrl,
+  };
 }
 
 async function assembleNurseryProfile(prisma: PrismaClient, nursery: { id: string } & Record<string, any>, viewerUserId?: string) {
@@ -122,9 +137,17 @@ async function assembleNurseryProfile(prisma: PrismaClient, nursery: { id: strin
     logoUrl: nursery.logoUrl,
     coverPhotoUrl: nursery.coverPhotoUrl,
     city: nursery.city,
+    line1: nursery.line1,
     contactPhone: nursery.contactPhone,
     lat: nursery.lat,
     lng: nursery.lng,
+    yearEstablished: nursery.yearEstablished,
+    nurseryType: nursery.nurseryType,
+    websiteUrl: nursery.websiteUrl,
+    plantCategories: nursery.plantCategories,
+    approxPlantCount: nursery.approxPlantCount,
+    seasonalAvailability: nursery.seasonalAvailability,
+    bulkSupply: nursery.bulkSupply,
     avgRating: nursery.avgRating,
     reviewCount: nursery.reviewCount,
     offersDelivery: nursery.offersDelivery,

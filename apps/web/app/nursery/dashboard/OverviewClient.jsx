@@ -23,8 +23,10 @@ import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import CitySelect from '@/components/dashboard/CitySelect'
+import PhoneInput from '@/components/dashboard/PhoneInput'
 import { proxy } from './proxy'
 import { useNurseryProfile } from './NurseryProfileContext'
+import { usePhoneField } from '@/lib/usePhoneField'
 
 function StatusBanner({ profile, onResubmitted }) {
   if (profile.status === 'pending') {
@@ -71,12 +73,22 @@ function RejectedPanel({ profile, onResubmitted }) {
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [phoneTouched, setPhoneTouched] = useState(false)
+
+  // Format validation only — resubmits NurseryProfile.contactPhone (a business contact number),
+  // not the User.phone identity field, so no real-time duplicate check here.
+  const phoneField = usePhoneField(form.contactPhone, phoneTouched, { checkAvailability: false })
 
   const set = (key) => (e) => setForm((s) => ({ ...s, [key]: e.target.value }))
 
   const resubmit = async (e) => {
     e.preventDefault()
     setError('')
+    setPhoneTouched(true)
+    if (!phoneField.isOk) {
+      setError(phoneField.error || 'Enter a valid phone number.')
+      return
+    }
     setSubmitting(true)
     try {
       await proxy('/nursery/profile', { method: 'PATCH', body: form })
@@ -115,11 +127,16 @@ function RejectedPanel({ profile, onResubmitted }) {
           </label>
           <label className="block">
             <span className="eyebrow">Phone (optional)</span>
-            <Input value={form.contactPhone} onChange={set('contactPhone')} className="mt-2 h-11 rounded-full" />
+            <PhoneInput
+              value={form.contactPhone}
+              onChange={(digits) => setForm((s) => ({ ...s, contactPhone: digits }))}
+              onBlur={() => setPhoneTouched(true)}
+            />
+            {phoneField.error && <p className="mt-1 text-xs text-destructive">{phoneField.error}</p>}
           </label>
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button disabled={submitting} type="submit" className="rounded-full h-11">
+        <Button disabled={submitting || (form.contactPhone && !phoneField.isOk)} type="submit" className="rounded-full h-11">
           {submitting ? 'Resubmitting…' : 'Resubmit for review'}
         </Button>
       </form>

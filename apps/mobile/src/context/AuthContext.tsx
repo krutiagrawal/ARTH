@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { getAccessToken, getRefreshToken, clearTokens } from '../api/tokenStorage';
 import { ApiError, setAccountBlockedHandler, setUnauthorizedHandler } from '../api/client';
 import * as authApi from '../api/auth';
-import type { ApiUser } from '../api/auth';
+import type { ApiUser, RegisterNurseryInput } from '../api/auth';
 
 interface AuthContextValue {
   user: ApiUser | null;
@@ -30,16 +30,7 @@ interface AuthContextValue {
     groupType: 'family' | 'school' | 'club' | 'other';
     description: string;
   }) => Promise<void>;
-  registerNursery: (input: {
-    email: string;
-    password: string;
-    name: string;
-    handle: string;
-    nurseryName: string;
-    description: string;
-    city?: string;
-    contactPhone?: string;
-  }) => Promise<void>;
+  registerNursery: (input: RegisterNurseryInput) => Promise<void>;
   registerCorporate: (input: {
     email: string;
     password: string;
@@ -183,16 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const registerNursery = useCallback(
-    async (input: {
-      email: string;
-      password: string;
-      name: string;
-      handle: string;
-      nurseryName: string;
-      description: string;
-      city?: string;
-      contactPhone?: string;
-    }) => {
+    async (input: RegisterNurseryInput) => {
       const registeredUser = await authApi.registerNursery(input);
       queryClient.clear();
       setUser(registeredUser);

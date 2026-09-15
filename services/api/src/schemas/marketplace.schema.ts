@@ -5,7 +5,7 @@ export const upsertAddressSchema = z.object({
   line1: z.string().min(1).max(200),
   line2: z.string().max(200).optional(),
   landmark: z.string().max(200).optional(),
-  pincode: z.string().min(4).max(12),
+  pincode: z.string().regex(/^\d{6}$/, 'Enter a valid 6-digit pincode'),
   // Required on create (this schema's own base shape) — delivery tracking (both the customer's
   // live map and the delivery partner's own) needs real coordinates, not just a text address.
   // The route's PATCH uses `.partial()` over this same schema, so editing an existing address

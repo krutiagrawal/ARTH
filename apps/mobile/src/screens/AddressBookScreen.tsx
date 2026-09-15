@@ -13,6 +13,8 @@ import { EmptyState } from '../components/common/EmptyState';
 import { AddressSearchField } from '../components/common/AddressSearchField';
 import { useAddresses, useCreateAddress, useUpdateAddress, useDeleteAddress } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { reverseGeocode } from '../api/geocode';
+import { isValidPincode } from '../utils/validation';
 import type { ApiAddress } from '../api/addresses';
 
 function AddressCard({ address }: { address: ApiAddress }) {
@@ -56,15 +58,26 @@ export function AddressBookScreen({ navigation }: any) {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [locationNotice, setLocationNotice] = useState<{ ok: boolean; text: string } | null>(null);
 
   const useCurrentLocation = async () => {
     setLocating(true);
     setError(null);
+    setLocationNotice(null);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+        const lat = loc.coords.latitude;
+        const lng = loc.coords.longitude;
+        setCoords({ lat, lng });
+        const found = await reverseGeocode(lat, lng).catch(() => null);
+        if (found) {
+          setLine1(found.label);
+          setLocationNotice({ ok: true, text: '✓ Matched from GPS — check the address above is correct' });
+        } else {
+          setLocationNotice({ ok: false, text: "Pin captured, but we couldn't find an address for it — please type it above" });
+        }
       } else {
         setError('Location permission is needed so deliveries can be tracked to this address.');
       }
@@ -74,9 +87,18 @@ export function AddressBookScreen({ navigation }: any) {
     setLocating(false);
   };
 
+  const handleLine1Change = (text: string) => {
+    setLine1(text);
+    setLocationNotice(null);
+  };
+
   const handleAdd = async () => {
     setError(null);
     if (!line1.trim() || !pincode.trim()) return;
+    if (!isValidPincode(pincode)) {
+      setError('Enter a valid 6-digit pincode');
+      return;
+    }
     if (!coords) {
       setError('Tap "Use current location" so deliveries can be tracked to this address.');
       return;
@@ -123,19 +145,36 @@ export function AddressBookScreen({ navigation }: any) {
                 label="Address"
                 value={line1}
                 onChangeText={(text) => {
-                  setLine1(text);
+                  handleLine1Change(text);
                   setCoords(null);
                 }}
                 placeholder="eg - Flat / street / society"
                 onSelectSuggestion={(s) => {
                   setLine1(s.label);
                   setCoords({ lat: s.lat, lng: s.lng });
+                  setLocationNotice(null);
                 }}
               />
-              <TextInput style={styles.input} placeholder="eg - Pincode" placeholderTextColor={COLORS.textLight} value={pincode} onChangeText={setPincode} keyboardType="number-pad" />
+              <TextInput
+                style={styles.input}
+                placeholder="eg - Pincode"
+                placeholderTextColor={COLORS.textLight}
+                value={pincode}
+                onChangeText={(t) => setPincode(t.replace(/\D/g, '').slice(0, 6))}
+                keyboardType="number-pad"
+                maxLength={6}
+              />
+              {pincode.length > 0 && !isValidPincode(pincode) && (
+                <Text style={styles.errorText}>Pincode must be 6 digits</Text>
+              )}
               <TouchableOpacity style={styles.locationButton} onPress={useCurrentLocation} disabled={locating}>
-                <Text style={styles.locationButtonText}>{locating ? 'Locating…' : coords ? '📍 Location captured' : '📍 Or use current location'}</Text>
+                <Text style={styles.locationButtonText}>{locating ? 'Locating…' : '📍 Or use current location'}</Text>
               </TouchableOpacity>
+              {locationNotice && (
+                <Text style={[styles.locationNoticeText, locationNotice.ok ? styles.locationNoticeOk : styles.locationNoticeWarn]}>
+                  {locationNotice.text}
+                </Text>
+              )}
               {error && <Text style={styles.errorText}>{error}</Text>}
               <AnimatedButton label="Save address" onPress={handleAdd} variant="primary" size="md" fullWidth disabled={createMutation.isPending || !coords} />
             </BorderCard>
@@ -179,8 +218,11 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     marginBottom: 10,
   },
-  locationButton: { paddingVertical: 10, marginBottom: 10 },
+  locationButton: { paddingVertical: 10, marginBottom: 4 },
   locationButtonText: { fontSize: 13, fontWeight: '600', color: COLORS.forest },
+  locationNoticeText: { fontSize: 12, lineHeight: 16, marginBottom: 10 },
+  locationNoticeOk: { color: COLORS.forest },
+  locationNoticeWarn: { color: COLORS.golden },
   errorText: { fontSize: 12, color: COLORS.dangerDark, marginBottom: 10 },
   addAddressButton: { paddingVertical: 12, alignItems: 'center' },
   addAddressText: { fontSize: 14, fontWeight: '700', color: COLORS.forest },

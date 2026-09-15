@@ -13,14 +13,76 @@ import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
 import { proxy } from '@/lib/adminProxyClient'
+import { resolveMediaUrl } from '@/lib/media'
 
 const STATUS_VARIANT = { pending: 'outline', approved: 'default', rejected: 'destructive', suspended: 'secondary' }
 const FILTERS = ['pending', 'approved', 'rejected', 'suspended']
+
+const NURSERY_TYPE_LABELS = {
+  retail: 'Retail nursery',
+  wholesale: 'Wholesale nursery',
+  native_plant: 'Native plant nursery',
+  government: 'Government nursery',
+  ngo_community: 'NGO / community nursery',
+  landscaping: 'Landscaping nursery',
+  other: 'Other',
+}
+
+const PLANT_CATEGORY_LABELS = {
+  native: 'Native species',
+  fruit: 'Fruit trees',
+  ornamental: 'Ornamental plants',
+  medicinal: 'Medicinal plants',
+  large_trees: 'Large trees / saplings',
+}
+
+function Section({ title, children }) {
+  return (
+    <div className="space-y-2">
+      <p className="eyebrow text-muted-foreground">{title}</p>
+      <div className="space-y-2">{children}</div>
+    </div>
+  )
+}
+
+function Field({ label, value }) {
+  if (value === null || value === undefined || value === '') return null
+  return (
+    <div className="flex items-baseline justify-between gap-4 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-right font-medium">{value}</span>
+    </div>
+  )
+}
 
 function NurseryDetailSheet({ nursery, onOpenChange, onAction }) {
   const [confirm, setConfirm] = useState(null)
   const [reason, setReason] = useState('')
   const [working, setWorking] = useState(false)
+  const [detail, setDetail] = useState(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
+
+  useEffect(() => {
+    if (!nursery) {
+      setDetail(null)
+      return
+    }
+    let cancelled = false
+    setLoadingDetail(true)
+    proxy(`/admin/nurseries/${nursery.id}`)
+      .then((data) => {
+        if (!cancelled) setDetail(data)
+      })
+      .catch((err) => {
+        if (!cancelled) toast.error(err.message || "Couldn't load this nursery's details.")
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingDetail(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [nursery])
 
   const confirmCopy = {
     approve: { title: 'Approve this nursery?', confirmLabel: 'Approve', body: 'They can immediately start listing stock and taking orders.', status: 'approved' },
@@ -47,32 +109,106 @@ function NurseryDetailSheet({ nursery, onOpenChange, onAction }) {
   }
 
   if (!nursery) return null
+  const d = detail || nursery
 
   return (
     <>
       <Sheet open={Boolean(nursery)} onOpenChange={onOpenChange}>
-        <SheetContent className="overflow-y-auto">
+        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
           <SheetHeader>
-            <SheetTitle className="font-serif">{nursery.nurseryName}</SheetTitle>
+            <SheetTitle className="font-serif">{d.nurseryName}</SheetTitle>
             <SheetDescription>
-              {nursery.owner?.name} · {nursery.owner?.email}
+              {d.owner?.name} · {d.owner?.email}
             </SheetDescription>
           </SheetHeader>
 
           <div className="mt-6 space-y-6">
             <div>
-              <Badge variant={STATUS_VARIANT[nursery.status]} className="capitalize">
-                {nursery.status}
+              <Badge variant={STATUS_VARIANT[d.status]} className="capitalize">
+                {d.status}
               </Badge>
-              {nursery.rejectionReason && <p className="mt-2 text-sm text-muted-foreground">Reason on file: &ldquo;{nursery.rejectionReason}&rdquo;</p>}
+              {d.rejectionReason && <p className="mt-2 text-sm text-muted-foreground">Reason on file: &ldquo;{d.rejectionReason}&rdquo;</p>}
             </div>
 
-            <p className="text-sm text-muted-foreground">{nursery.description}</p>
-            {nursery.city && <p className="text-sm">{nursery.city}</p>}
-            {nursery.contactPhone && <p className="text-sm text-muted-foreground">{nursery.contactPhone}</p>}
+            {loadingDetail && !detail ? (
+              <p className="text-sm text-muted-foreground">Loading full application…</p>
+            ) : (
+              <>
+                {d.verificationPhotoUrl && (
+                  <Section title="Verification photo">
+                    <img
+                      src={resolveMediaUrl(d.verificationPhotoUrl)}
+                      alt="Nursery name board with stock"
+                      className="max-h-72 w-full rounded-lg border border-border/70 object-cover"
+                    />
+                  </Section>
+                )}
+
+                <Section title="Identity">
+                  <p className="text-sm text-muted-foreground">{d.description}</p>
+                  <Field label="Nursery type" value={NURSERY_TYPE_LABELS[d.nurseryType] || d.nurseryType} />
+                  <Field label="Year established" value={d.yearEstablished} />
+                  <Field
+                    label="Website"
+                    value={
+                      d.websiteUrl ? (
+                        <a href={d.websiteUrl} target="_blank" rel="noreferrer" className="text-primary underline">
+                          {d.websiteUrl}
+                        </a>
+                      ) : null
+                    }
+                  />
+                </Section>
+
+                <Section title="Location & contact">
+                  <Field label="Address" value={d.line1} />
+                  <Field label="City" value={d.city} />
+                  <Field label="Coordinates" value={d.lat != null && d.lng != null ? `${d.lat}, ${d.lng}` : null} />
+                  <Field label="Contact phone" value={d.contactPhone ? `+91 ${d.contactPhone}` : null} />
+                </Section>
+
+                {(d.responsiblePersonName || d.responsiblePersonPhone) && (
+                  <Section title="Responsible person">
+                    <Field label="Name" value={d.responsiblePersonName} />
+                    <Field label="Role" value={d.responsiblePersonRole} />
+                    <Field label="Phone" value={d.responsiblePersonPhone ? `+91 ${d.responsiblePersonPhone}` : null} />
+                  </Section>
+                )}
+
+                <Section title="Stock">
+                  {d.plantCategories?.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {d.plantCategories.map((c) => (
+                        <Badge key={c} variant="secondary" className="font-normal">
+                          {PLANT_CATEGORY_LABELS[c] || c}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  <Field label="Approx. quantity available" value={d.approxPlantCount} />
+                  <Field label="Seasonal availability" value={d.seasonalAvailability == null ? null : d.seasonalAvailability ? 'Yes' : 'No'} />
+                  <Field label="Can supply bulk quantities" value={d.bulkSupply == null ? null : d.bulkSupply ? 'Yes' : 'No'} />
+                </Section>
+
+                {(d.gstin || d.businessRegistrationNumber || d.tradeLicenseNumber || d.ngoRegistrationNumber || d.governmentNurseryId) && (
+                  <Section title="Business verification">
+                    <Field label="GSTIN" value={d.gstin} />
+                    <Field label="Business registration" value={d.businessRegistrationNumber} />
+                    <Field label="Trade license" value={d.tradeLicenseNumber} />
+                    <Field label="NGO registration" value={d.ngoRegistrationNumber} />
+                    <Field label="Government nursery ID" value={d.governmentNurseryId} />
+                  </Section>
+                )}
+
+                <Section title="Account">
+                  <Field label="Handle" value={d.owner?.handle ? `@${d.owner.handle}` : null} />
+                  <Field label="Applied" value={new Date(d.createdAt).toLocaleString()} />
+                </Section>
+              </>
+            )}
 
             <div className="flex flex-wrap gap-2">
-              {nursery.status === 'pending' && (
+              {d.status === 'pending' && (
                 <>
                   <Button className="rounded-full" onClick={() => setConfirm('approve')}>
                     <ShieldCheck className="h-4 w-4" /> Approve
@@ -82,17 +218,17 @@ function NurseryDetailSheet({ nursery, onOpenChange, onAction }) {
                   </Button>
                 </>
               )}
-              {nursery.status === 'approved' && (
+              {d.status === 'approved' && (
                 <Button variant="outline" className="rounded-full" onClick={() => setConfirm('suspend')}>
                   <ShieldAlert className="h-4 w-4" /> Suspend
                 </Button>
               )}
-              {nursery.status === 'suspended' && (
+              {d.status === 'suspended' && (
                 <Button className="rounded-full" onClick={() => setConfirm('reinstate')}>
                   <ShieldQuestion className="h-4 w-4" /> Reinstate
                 </Button>
               )}
-              {nursery.status === 'rejected' && (
+              {d.status === 'rejected' && (
                 <Button className="rounded-full" onClick={() => setConfirm('approve')}>
                   <ShieldCheck className="h-4 w-4" /> Approve
                 </Button>

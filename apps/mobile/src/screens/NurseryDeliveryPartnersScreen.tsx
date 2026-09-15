@@ -10,6 +10,7 @@ import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { FormField } from '../components/common/FormField';
+import { PhoneField } from '../components/common/PhoneField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { Sheet } from '../components/common/Sheet';
 import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
@@ -23,6 +24,8 @@ import {
 import { ApiError } from '../api/client';
 import type { ApiDeliveryPartner } from '../api/deliveryPartners';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useEmailField } from '../hooks/useEmailField';
+import { usePhoneField } from '../hooks/usePhoneField';
 
 function PartnerRow({ partner, onToggle }: { partner: ApiDeliveryPartner; onToggle: () => void }) {
   return (
@@ -61,29 +64,47 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState('');
   const [handle, setHandle] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const email = useEmailField();
+  const phone = usePhoneField('', true);
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const handleCreate = async () => {
     setError(null);
-    if (!name.trim() || !handle.trim() || !email.trim() || !phone.trim() || password.length < 8) {
+    if (!name.trim() || !handle.trim() || !email.value.trim() || !phone.value || password.length < 8) {
       setError('Fill in every field — the temp password needs at least 8 characters.');
+      return;
+    }
+    if (!email.valid) {
+      email.setTouched(true);
+      setError('Enter a valid email address');
+      return;
+    }
+    if (email.taken) {
+      setError('This email is already registered');
+      return;
+    }
+    if (!phone.valid) {
+      phone.setTouched(true);
+      setError('Enter a valid 10-digit mobile number');
+      return;
+    }
+    if (phone.taken) {
+      setError('This phone number is already registered');
       return;
     }
     try {
       await createMutation.mutateAsync({
         name: name.trim(),
         handle: handle.trim().toLowerCase(),
-        email: email.trim().toLowerCase(),
-        phone: phone.trim(),
+        email: email.value.trim().toLowerCase(),
+        phone: phone.value,
         password,
       });
       setName('');
       setHandle('');
-      setEmail('');
-      setPhone('');
+      email.setValue('');
+      phone.setValue('');
       setPassword('');
       setShowCreate(false);
     } catch (e) {
@@ -144,8 +165,29 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
         <View style={{ gap: 4 }}>
           <FormField dark={isNightMode} label="Name" value={name} onChangeText={setName} placeholder="eg - Rider's full name" />
           <FormField dark={isNightMode} label="Handle" value={handle} onChangeText={setHandle} placeholder="eg - ravi_delivers" autoCapitalize="none" />
-          <FormField dark={isNightMode} label="Email" value={email} onChangeText={setEmail} placeholder="eg - rider@example.com" keyboardType="email-address" autoCapitalize="none" />
-          <FormField dark={isNightMode} label="Phone" value={phone} onChangeText={setPhone} placeholder="eg - Contact number" keyboardType="phone-pad" />
+          <FormField
+            dark={isNightMode}
+            label="Email"
+            value={email.value}
+            onChangeText={email.setValue}
+            onBlur={() => email.setTouched(true)}
+            placeholder="eg - rider@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          {email.error ? (
+            <Text style={[styles.errorText, { textAlign: 'left' }]}>{email.error}</Text>
+          ) : email.checking ? (
+            <Text style={[styles.hint, isNightMode && styles.hintDark]}>Checking…</Text>
+          ) : null}
+          <PhoneField
+            dark={isNightMode}
+            label="Phone"
+            value={phone.value}
+            onChangeText={phone.setValue}
+            onBlur={() => phone.setTouched(true)}
+            error={phone.touched ? phone.error : phone.checking ? 'Checking…' : null}
+          />
           <FormField dark={isNightMode} label="Temporary password" value={password} onChangeText={setPassword} placeholder="eg - At least 8 characters" secureTextEntry />
           {error && <Text style={styles.errorText}>{error}</Text>}
           <Text style={[styles.hint, isNightMode && styles.hintDark]}>

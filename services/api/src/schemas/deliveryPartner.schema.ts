@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { phoneSchema } from '../utils/phone';
 
 // Same handle regex as auth.schema.ts's registerNurserySchema — kept in sync manually since
 // there's no shared handle-validator module.
@@ -9,13 +10,13 @@ export const createDeliveryPartnerSchema = z.object({
   password: z.string().min(8).max(72),
   name: z.string().min(1).max(80),
   handle: handleSchema,
-  phone: z.string().min(6).max(30),
+  phone: phoneSchema,
   photoUrl: z.string().max(500).optional(),
 });
 
 export const updateDeliveryPartnerSchema = z.object({
   name: z.string().min(1).max(80).optional(),
-  phone: z.string().min(6).max(30).optional(),
+  phone: phoneSchema.optional(),
   photoUrl: z.string().max(500).optional(),
   isActive: z.union([z.literal('true'), z.literal('false'), z.boolean()]).optional(),
 });

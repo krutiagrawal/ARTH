@@ -12,6 +12,10 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useEmailField } from '../hooks/useEmailField';
+import { usePhoneField } from '../hooks/usePhoneField';
+import { PhoneField } from '../components/common/PhoneField';
+import { isValidWebsite } from '../utils/validation';
 
 function slugifyHandle(name: string): string {
   return name
@@ -27,18 +31,40 @@ export function NgoRegisterScreen({ navigation }: any) {
   const [orgName, setOrgName] = useState('');
   const [description, setDescription] = useState('');
   const [website, setWebsite] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
+  const [websiteTouched, setWebsiteTouched] = useState(false);
+  const phone = usePhoneField('', false);
   const [adminName, setAdminName] = useState('');
-  const [email, setEmail] = useState('');
+  const email = useEmailField();
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { refreshing, onRefresh } = usePullToRefresh();
 
+  const websiteError = websiteTouched && website.trim() && !isValidWebsite(website) ? 'Enter a valid website URL' : null;
+
   const handleRegister = useCallback(async () => {
     setError(null);
-    if (!orgName.trim() || !description.trim() || !adminName.trim() || !email.trim() || !password) {
+    if (!orgName.trim() || !description.trim() || !adminName.trim() || !email.value.trim() || !password) {
       setError('Fill in all required fields to continue');
+      return;
+    }
+    if (!email.valid) {
+      email.setTouched(true);
+      setError('Enter a valid email address');
+      return;
+    }
+    if (email.taken) {
+      setError('This email is already registered');
+      return;
+    }
+    if (website.trim() && !isValidWebsite(website)) {
+      setWebsiteTouched(true);
+      setError('Enter a valid website URL');
+      return;
+    }
+    if (!phone.isOk) {
+      phone.setTouched(true);
+      setError(phone.taken ? 'This phone number is already registered' : 'Enter a valid 10-digit mobile number');
       return;
     }
     if (password.length < 8) {
@@ -49,13 +75,13 @@ export function NgoRegisterScreen({ navigation }: any) {
     try {
       await registerNgo({
         name: adminName.trim(),
-        email: email.trim().toLowerCase(),
+        email: email.value.trim().toLowerCase(),
         password,
         handle: slugifyHandle(orgName),
         orgName: orgName.trim(),
         description: description.trim(),
         website: website.trim() || undefined,
-        contactPhone: contactPhone.trim() || undefined,
+        contactPhone: phone.value || undefined,
       });
       navigation.reset({ index: 0, routes: [{ name: 'NgoMain' }] });
     } catch (e) {
@@ -63,7 +89,7 @@ export function NgoRegisterScreen({ navigation }: any) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [orgName, description, website, contactPhone, adminName, email, password, registerNgo, navigation]);
+  }, [orgName, description, website, phone, adminName, email, password, registerNgo, navigation]);
 
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -90,14 +116,14 @@ export function NgoRegisterScreen({ navigation }: any) {
           <Text style={styles.sectionLabel}>Organization</Text>
           <TextInput
             style={styles.input}
-            placeholder="eg - Organization name"
+            placeholder="Organization name"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={orgName}
             onChangeText={setOrgName}
           />
           <TextInput
             style={[styles.input, styles.multiline]}
-            placeholder="eg - What does your organization do?"
+            placeholder="What does your organization do?"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={description}
             onChangeText={setDescription}
@@ -105,42 +131,50 @@ export function NgoRegisterScreen({ navigation }: any) {
           />
           <TextInput
             style={styles.input}
-            placeholder="eg - Website (optional)"
+            placeholder="Website (optional)"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             autoCapitalize="none"
             keyboardType="url"
             value={website}
             onChangeText={setWebsite}
+            onBlur={() => setWebsiteTouched(true)}
           />
-          <TextInput
-            style={styles.input}
-            placeholder="eg - Contact phone (optional)"
-            placeholderTextColor={ON_DARK_SURFACE.muted}
-            keyboardType="phone-pad"
-            value={contactPhone}
-            onChangeText={setContactPhone}
+          {websiteError && <Text style={styles.fieldError}>{websiteError}</Text>}
+          <PhoneField
+            dark
+            label="Contact phone (optional)"
+            value={phone.value}
+            onChangeText={phone.setValue}
+            onBlur={() => phone.setTouched(true)}
+            error={phone.touched ? phone.error : phone.checking ? 'Checking…' : null}
           />
 
           <Text style={styles.sectionLabel}>Your account</Text>
           <TextInput
             style={styles.input}
-            placeholder="eg - Your name"
+            placeholder="Your name"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={adminName}
             onChangeText={setAdminName}
           />
           <TextInput
             style={styles.input}
-            placeholder="eg - Email"
+            placeholder="Email"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             autoCapitalize="none"
             keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
+            value={email.value}
+            onChangeText={email.setValue}
+            onBlur={() => email.setTouched(true)}
           />
+          {email.error ? (
+            <Text style={styles.fieldError}>{email.error}</Text>
+          ) : email.checking ? (
+            <Text style={styles.fieldHint}>Checking…</Text>
+          ) : null}
           <PasswordInput
             inputStyle={styles.input}
-            placeholder="eg - Password (min. 8 characters)"
+            placeholder="Password (min. 8 characters)"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={password}
             onChangeText={setPassword}
@@ -242,6 +276,8 @@ const styles = StyleSheet.create({
     color: COLORS.coral,
     marginBottom: SPACING.sm,
   },
+  fieldError: { fontSize: 12, color: COLORS.coral, marginTop: -SPACING.xs, marginBottom: SPACING.sm },
+  fieldHint: { fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: -SPACING.xs, marginBottom: SPACING.sm },
   submitButton: {
     marginTop: SPACING.sm,
     marginBottom: SPACING.md,

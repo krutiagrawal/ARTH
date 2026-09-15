@@ -140,6 +140,19 @@ export async function listNurseries(prisma: PrismaClient, filter: ListOrgFilter 
   return { nurseries, total };
 }
 
+// Full row (every signup-time field, not just the approvals-table summary) for the admin
+// nursery-detail drawer/screen — a nursery under review has no public profile yet, so this can't
+// reuse getAdminNurseryProfile's follower/stock/recentPosts assembly, which assumes an approved,
+// browsable profile.
+export async function getNurseryDetail(prisma: PrismaClient, nurseryId: string) {
+  const profile = await prisma.nurseryProfile.findUnique({
+    where: { id: nurseryId },
+    include: { user: { select: { id: true, email: true, name: true, handle: true, createdAt: true } } },
+  });
+  if (!profile) throw new NotFoundError('Nursery not found');
+  return profile;
+}
+
 export async function setNurseryStatus(prisma: PrismaClient, nurseryId: string, input: SetStatusInput) {
   const profile = await prisma.nurseryProfile.findUnique({ where: { id: nurseryId } });
   if (!profile) throw new NotFoundError('Nursery not found');

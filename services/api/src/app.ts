@@ -104,6 +104,9 @@ export async function buildApp() {
   await app.register(ngosPublicRoutes, { prefix: '/api/ngos' });
   await app.register(nurseriesPublicRoutes, { prefix: '/api/nurseries' });
   await app.register(competitionsPublicRoutes, { prefix: '/api/competitions' });
+  // No user identity needed to geocode — and it must work pre-signup, since the nursery
+  // registration wizard's address field/current-location button run before any account exists.
+  await app.register(geocodeRoutes, { prefix: '/api/geocode' });
 
   // Protected routes (JWT required)
   await app.register(async (instance) => {
@@ -149,7 +152,6 @@ export async function buildApp() {
     await instance.register(plantedTreesRoutes, { prefix: '/api/ngo/planted-trees' });
     await instance.register(competitionsRoutes, { prefix: '/api/competitions' });
     await instance.register(addressesRoutes, { prefix: '/api/addresses' });
-    await instance.register(geocodeRoutes, { prefix: '/api/geocode' });
     await instance.register(cartRoutes, { prefix: '/api/cart' });
     await instance.register(ordersRoutes, { prefix: '/api/orders' });
     await instance.register(wishlistRoutes, { prefix: '/api/wishlist' });

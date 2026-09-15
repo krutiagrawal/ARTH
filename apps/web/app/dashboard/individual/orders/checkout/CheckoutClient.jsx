@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import AddressAutocompleteInput from '@/components/dashboard/AddressAutocompleteInput'
 import { proxy } from '@/lib/memberProxy'
+import { isValidPincode, sanitizePincodeDigits } from '@/lib/validation'
 
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
@@ -62,6 +63,7 @@ export default function CheckoutClient() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [line1, setLine1] = useState('')
   const [pincode, setPincode] = useState('')
+  const [pincodeTouched, setPincodeTouched] = useState(false)
   const [coords, setCoords] = useState(null)
   const [locating, setLocating] = useState(false)
   const [addAddressError, setAddAddressError] = useState('')
@@ -102,7 +104,12 @@ export default function CheckoutClient() {
 
   const handleAddAddress = async () => {
     setAddAddressError('')
+    setPincodeTouched(true)
     if (!line1.trim() || !pincode.trim()) return
+    if (!isValidPincode(pincode)) {
+      setAddAddressError('Enter a valid 6-digit pincode.')
+      return
+    }
     if (!coords) {
       setAddAddressError('Use your current location so deliveries can be tracked to this address.')
       return
@@ -114,6 +121,7 @@ export default function CheckoutClient() {
       setShowAddForm(false)
       setLine1('')
       setPincode('')
+      setPincodeTouched(false)
       setCoords(null)
     } catch (err) {
       toast.error(err.message || 'Could not save this address.')
@@ -188,12 +196,22 @@ export default function CheckoutClient() {
                   proxy={proxy}
                   className="h-9 rounded-md border-input bg-transparent px-3 py-1 text-base shadow-sm md:text-sm"
                 />
-                <Input placeholder="Pincode" value={pincode} onChange={(e) => setPincode(e.target.value)} />
+                <Input
+                  placeholder="Pincode"
+                  value={pincode}
+                  onChange={(e) => setPincode(sanitizePincodeDigits(e.target.value))}
+                  onBlur={() => setPincodeTouched(true)}
+                  inputMode="numeric"
+                  maxLength={6}
+                />
+                {pincodeTouched && pincode && !isValidPincode(pincode) && (
+                  <p className="text-sm text-destructive">Enter a valid 6-digit pincode.</p>
+                )}
                 <button type="button" className="text-sm text-primary hover:underline" onClick={useCurrentLocation} disabled={locating}>
                   {locating ? 'Locating…' : coords ? '📍 Location captured' : '📍 Use current location (required)'}
                 </button>
                 {addAddressError && <p className="text-sm text-destructive">{addAddressError}</p>}
-                <Button variant="outline" className="rounded-full" onClick={handleAddAddress} disabled={!coords}>
+                <Button variant="outline" className="rounded-full" onClick={handleAddAddress} disabled={!coords || !isValidPincode(pincode)}>
                   Save address
                 </Button>
               </div>

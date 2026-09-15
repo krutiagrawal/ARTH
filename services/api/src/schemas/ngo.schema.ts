@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { websiteUrlSchema } from '../utils/websiteUrl';
+import { phoneSchema } from '../utils/phone';
 
 // Multipart form fields arrive as strings even when the value is logically an
 // array/object (awards) — JSON-encoded client-side. A JSON body (no photo)
@@ -26,7 +27,7 @@ export const updateProfileSchema = z.object({
   orgName: z.string().min(1).max(120).optional(),
   description: z.string().min(1).max(2000).optional(),
   website: websiteUrlSchema.optional(),
-  contactPhone: z.string().max(30).optional(),
+  contactPhone: phoneSchema.optional(),
   logoUrl: z.string().max(500).optional(),
   city: z.string().max(100).optional(),
   foundedYear: z.coerce.number().int().min(1800).max(2200).optional(),
