@@ -36,6 +36,22 @@ const PLANT_CATEGORY_LABELS = {
   large_trees: 'Large trees / saplings',
 }
 
+// Mirrors apps/mobile's GrowthLevelBadge / apps/web's nursery ReputationClient — same tiers,
+// admin-panel-local copy since this file has its own light Field/Section rendering style.
+const GROWTH_LEVEL_LABELS = {
+  seedling: '🌱 Seedling',
+  growing: '🪴 Growing',
+  established: '🌳 Established',
+  evergreen: '🌲 Evergreen',
+}
+
+const TRUST_FACTOR_LABELS = {
+  fulfilment: 'Order fulfilment',
+  rating: 'Buyer ratings',
+  inventoryFreshness: 'Inventory freshness',
+  responsiveness: 'Responsiveness',
+}
+
 function Section({ title, children }) {
   return (
     <div className="space-y-2">
@@ -197,6 +213,21 @@ function NurseryDetailSheet({ nursery, onOpenChange, onAction }) {
                     <Field label="Trade license" value={d.tradeLicenseNumber} />
                     <Field label="NGO registration" value={d.ngoRegistrationNumber} />
                     <Field label="Government nursery ID" value={d.governmentNurseryId} />
+                  </Section>
+                )}
+
+                {d.reputation && (
+                  <Section title="Reputation">
+                    <Field
+                      label="ARTH Trust Score"
+                      value={d.reputation.trustScore == null ? 'Not yet verified' : d.reputation.trustScore}
+                    />
+                    {d.reputation.trustScoreFactors &&
+                      Object.entries(d.reputation.trustScoreFactors).map(([key, value]) => (
+                        <Field key={key} label={TRUST_FACTOR_LABELS[key] || key} value={value} />
+                      ))}
+                    <Field label="Growth Level" value={GROWTH_LEVEL_LABELS[d.reputation.growthLevel] || d.reputation.growthLevel} />
+                    <Field label="Fulfilment streak" value={`${d.reputation.fulfilmentStreak.current} current · ${d.reputation.fulfilmentStreak.max} best`} />
                   </Section>
                 )}
 

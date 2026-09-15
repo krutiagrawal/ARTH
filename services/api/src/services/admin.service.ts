@@ -5,6 +5,7 @@ import { getAdminNgoProfile } from './ngoPublic.service';
 import { getAdminNurseryProfile } from './nurseryPublic.service';
 import { serializePost, viewerInclude } from './post.service';
 import { evaluateNurseryAchievements } from './nurseryAchievement.service';
+import { getReputationSummary } from './nurseryReputation.service';
 import { maybeMarkOrderPlantationVerified } from './order.service';
 import { notify } from './notification.service';
 
@@ -150,7 +151,10 @@ export async function getNurseryDetail(prisma: PrismaClient, nurseryId: string) 
     include: { user: { select: { id: true, email: true, name: true, handle: true, createdAt: true } } },
   });
   if (!profile) throw new NotFoundError('Nursery not found');
-  return profile;
+  // Reputation (Trust Score factor breakdown + Growth Level progress + streaks) so an admin
+  // reviewing/verifying a nursery can see its track record without leaving the panel.
+  const reputation = await getReputationSummary(prisma, profile.id, 8);
+  return { ...profile, reputation };
 }
 
 export async function setNurseryStatus(prisma: PrismaClient, nurseryId: string, input: SetStatusInput) {

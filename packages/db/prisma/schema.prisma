@@ -221,6 +221,7 @@ enum StockLedgerReason {
   reservation_fulfilled
   order_placed
   order_cancelled
+  bulk_requirement_fulfilled
 }
 
 enum OrderStatus {
@@ -788,9 +789,18 @@ model NurseryProfile {
   rejectionReason            String?           @map("rejection_reason")
   approvedAt                 DateTime?         @map("approved_at")
   approvedByUserId           String?           @map("approved_by_user_id")
-  streakCurrent              Int               @default(0) @map("streak_current")
-  streakMax                  Int               @default(0) @map("streak_max")
   badgesCount                Int               @default(0) @map("badges_count")
+  // Reputation (see NurseryContributionStreak for the underlying weekly activity history) —
+  // trustScore/growthLevel are denormalized, recomputed by nurseryReputation.service.ts both
+  // inline at activity hooks and by the weekly nurseryReputation.job.ts catch-up pass. Null
+  // trustScore means "not yet computed" (should only happen pre-approval — see getTrustScore).
+  trustScore                 Int?              @map("trust_score")
+  growthLevel                NurseryGrowthLevel @default(seedling) @map("growth_level")
+  // "Successfully fulfilling consecutive orders without cancellations" — event-driven (not
+  // calendar-based), updated at order pickup/delivery/cancellation. Current value is derived live
+  // (see nurseryReputation.service.ts's getFulfilmentStreak, extracted from the pre-existing
+  // cancellation_free_order_streak achievement query); only the running max is persisted here.
+  fulfilmentStreakMax         Int              @default(0) @map("fulfilment_streak_max")
   // Denormalized from OrderReview so the directory/profile list never needs a per-row aggregate
   // query, same pattern as Post.likeCount. Recomputed in the same transaction as each new review.
   avgRating                  Decimal?          @map("avg_rating") @db.Decimal(3, 2)
@@ -816,7 +826,7 @@ model NurseryProfile {
   saplingStock             SaplingStock[]
   reservations             SaplingReservation[]
   stockLedger              SaplingStockLedger[]
-  streakHistory            NurseryStreakHistory[]
+  contributionStreaks      NurseryContributionStreak[]
   achievementUnlocks       NurseryAchievementUnlock[]
   cartItems                CartItem[]
   orders                   Order[]
@@ -945,18 +955,40 @@ model SaplingStockLedger {
 
 // Daily analog of StreakHistory/GroupStreakHistory — a nursery's streak reflects "was there any
 // stock/reservation activity today" (added stock or fulfilled a request).
-model NurseryStreakHistory {
-  id           String   @id @default(uuid())
-  nurseryId    String   @map("nursery_id")
-  activityDate DateTime @map("activity_date") @db.Date
-  planted      Boolean  @default(false)
-  createdAt    DateTime @default(now()) @map("created_at")
+enum NurseryGrowthLevel {
+  seedling
+  growing
+  established
+  evergreen
+}
+
+// Which weekly contribution streak a NurseryContributionStreak row belongs to — replaces the old
+// single daily NurseryStreakHistory. "Fulfilment" isn't here: it's event-driven (consecutive
+// orders, not calendar weeks), computed live rather than stored per-period — see
+// nurseryReputation.service.ts.
+enum NurseryStreakType {
+  supply
+  inventory_freshness
+  arth_contribution
+}
+
+// One row per (nursery, streak type, week) — Monday-anchored, same shape as NgoStreakHistory's
+// weekly cadence. `metCriteria` is written true by nurseryReputation.service.ts's
+// recordNurseryContribution whenever a qualifying activity happens; current/longest streak length
+// is derived by walking these rows backward, never stored redundantly.
+model NurseryContributionStreak {
+  id           String            @id @default(uuid())
+  nurseryId    String            @map("nursery_id")
+  streakType   NurseryStreakType @map("streak_type")
+  periodStart  DateTime          @map("period_start") @db.Date
+  metCriteria  Boolean           @default(false) @map("met_criteria")
+  createdAt    DateTime          @default(now()) @map("created_at")
 
   nursery NurseryProfile @relation(fields: [nurseryId], references: [id], onDelete: Cascade)
 
-  @@unique([nurseryId, activityDate])
-  @@index([nurseryId, activityDate(sort: Desc)])
-  @@map("nursery_streak_history")
+  @@unique([nurseryId, streakType, periodStart])
+  @@index([nurseryId, streakType, periodStart(sort: Desc)])
+  @@map("nursery_contribution_streaks")
 }
 
 // Definition table, mirrors GroupAchievement — fixed, seeded list of nursery milestones.

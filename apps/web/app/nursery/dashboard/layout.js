@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Home, Boxes, PackageSearch, Truck, ClipboardList, Leaf, Settings as SettingsIcon, LogOut, ChevronDown, Star, Users, WifiOff, Sprout } from 'lucide-react'
+import { Home, Boxes, PackageSearch, Truck, ClipboardList, Leaf, Settings as SettingsIcon, LogOut, ChevronDown, Star, Users, WifiOff, Sprout, ShieldCheck } from 'lucide-react'
 import AppSidebar from '@/components/dashboard/AppSidebar'
 import SidebarScenery from '@/components/dashboard/SidebarScenery'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,7 @@ const SECTIONS = [
       { label: 'Pickup & Delivery', href: '/nursery/dashboard/pickup-delivery', icon: Truck },
       { label: 'Bulk Requirements', href: '/nursery/dashboard/requirements', icon: ClipboardList },
       { label: 'Impact', href: '/nursery/dashboard/impact', icon: Leaf },
+      { label: 'Growth & Trust', href: '/nursery/dashboard/reputation', icon: ShieldCheck },
       { label: 'Reviews', href: '/nursery/dashboard/reviews', icon: Star },
       { label: 'Followers', href: '/nursery/dashboard/followers', icon: Users },
       { label: 'Settings', href: '/nursery/dashboard/settings', icon: SettingsIcon },

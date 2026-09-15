@@ -1,5 +1,7 @@
 import { apiFetch, toFormFile } from './client';
 
+export type NurseryGrowthLevel = 'seedling' | 'growing' | 'established' | 'evergreen';
+
 export interface ApiNurseryProfile {
   id: string;
   nurseryName: string;
@@ -13,8 +15,8 @@ export interface ApiNurseryProfile {
   lng: number | string | null;
   status: 'pending' | 'approved' | 'rejected' | 'suspended';
   rejectionReason: string | null;
-  streakCurrent: number;
-  streakMax: number;
+  trustScore: number | null;
+  growthLevel: NurseryGrowthLevel;
   badgesCount: number;
   avgRating: number | string | null;
   reviewCount: number;
@@ -121,8 +123,8 @@ export interface ApiNurseryStats {
   speciesCount: number;
   totalQuantity: number;
   freeSpeciesCount: number;
-  streakCurrent: number;
-  streakMax: number;
+  trustScore: number | null;
+  growthLevel: NurseryGrowthLevel;
   badgesCount: number;
 }
 
@@ -172,6 +174,8 @@ export interface ApiNurseryDashboardToday {
   newPending: number;
   readyForPickup: number;
   deliveriesPending: number;
+  trustScore: number | null;
+  growthLevel: NurseryGrowthLevel;
   lowStockSpecies: ApiNurseryLowStockSpecies[];
   saplingsSuppliedLifetime: number;
   verifiedPlantations: number;

@@ -193,7 +193,7 @@ import {
   declineNgoBulkResponse,
   CreateNgoBulkRequirementInput,
 } from '../api/ngoBulkRequirements';
-import { fetchNurseryStreakCalendar } from '../api/nurseryStreaks';
+import { fetchNurseryReputation } from '../api/nurseryReputation';
 import {
   browseNurseries,
   fetchNurseryPublicProfile,
@@ -1846,6 +1846,7 @@ export function useCreateSaplingStock() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['nursery', 'stock'] });
       queryClient.invalidateQueries({ queryKey: ['nursery', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['nursery', 'badges'] });
     },
   });
 }
@@ -1857,6 +1858,7 @@ export function useUpdateSaplingStock() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['nursery', 'stock'] });
       queryClient.invalidateQueries({ queryKey: ['nursery', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['nursery', 'badges'] });
     },
   });
 }
@@ -1872,11 +1874,11 @@ export function useDeleteSaplingStock() {
   });
 }
 
-export function useNurseryStreakCalendar(weeks = 6) {
+export function useNurseryReputation(weeks = 12) {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: ['nursery', 'streaks', 'calendar', weeks],
-    queryFn: () => fetchNurseryStreakCalendar(weeks),
+    queryKey: ['nursery', 'reputation', weeks],
+    queryFn: () => fetchNurseryReputation(weeks),
     enabled: isAuthenticated,
   });
 }

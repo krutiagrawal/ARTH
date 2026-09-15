@@ -2,6 +2,7 @@ import { PrismaClient } from '@plant/db';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
 import { notify } from './notification.service';
 import { evaluateNurseryAchievements } from './nurseryAchievement.service';
+import { recordNurseryContribution, recomputeReputation } from './nurseryReputation.service';
 import { haversineDistanceKm } from '../utils/geo';
 
 const NEARBY_FANOUT_RADIUS_KM = 25;
@@ -263,6 +264,32 @@ export async function markResponseFulfilled(prisma: PrismaClient, nurseryUserId:
       },
     });
 
+    // The supplied saplings physically leave the nursery's own shelf too — deduct them from a
+    // matching listed stock item (same species) if one exists, same as a marketplace order or a
+    // reservation does. BulkRequirementResponse has no stockId of its own (a nursery can fulfil a
+    // requirement out of growing capacity it hasn't listed publicly at all), so this is a
+    // best-effort match by species, not a hard link; nothing to deduct just means the supply came
+    // from stock never listed in the inventory screen.
+    if (response.requirement.speciesId) {
+      const matchingStock = await tx.saplingStock.findFirst({
+        where: { nurseryId: nursery.id, speciesId: response.requirement.speciesId },
+        orderBy: { quantity: 'desc' },
+      });
+      if (matchingStock && matchingStock.quantity > 0) {
+        const deducted = Math.min(matchingStock.quantity, response.quantityOffered);
+        await tx.saplingStock.update({ where: { id: matchingStock.id }, data: { quantity: { decrement: deducted } } });
+        await tx.saplingStockLedger.create({
+          data: {
+            nurseryId: nursery.id,
+            stockId: matchingStock.id,
+            species: matchingStock.species,
+            delta: -deducted,
+            reason: 'bulk_requirement_fulfilled',
+          },
+        });
+      }
+    }
+
     const speciesNameSnapshot = response.requirement.species?.commonName ?? response.requirement.speciesNote ?? 'Sapling';
     const units = Array.from({ length: response.quantityOffered }, () => ({
       bulkRequirementResponseId: response.id,
@@ -272,7 +299,9 @@ export async function markResponseFulfilled(prisma: PrismaClient, nurseryUserId:
     }));
     if (units.length > 0) await tx.arthSaplingUnit.createMany({ data: units });
 
+    await recordNurseryContribution(tx, nursery.id, ['arth_contribution']);
     await evaluateNurseryAchievements(tx, nursery.id);
+    await recomputeReputation(tx, nursery.id);
   });
 
   return prisma.bulkRequirementResponse.findUniqueOrThrow({ where: { id: responseId } });

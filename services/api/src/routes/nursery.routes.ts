@@ -46,8 +46,8 @@ function serializeProfile(profile: any) {
     verificationPhotoUrl: profile.verificationPhotoUrl,
     status: profile.status,
     rejectionReason: profile.rejectionReason,
-    streakCurrent: profile.streakCurrent,
-    streakMax: profile.streakMax,
+    trustScore: profile.trustScore,
+    growthLevel: profile.growthLevel,
     badgesCount: profile.badgesCount,
     avgRating: profile.avgRating,
     reviewCount: profile.reviewCount,
@@ -203,10 +203,11 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
     reply.status(204).send();
   });
 
-  // Daily grid, same shape as GET /api/streaks/calendar — StreakCalendar.tsx renders both.
-  fastify.get<{ Querystring: { weeks?: string } }>('/streaks/calendar', async (request, reply) => {
-    const weeksCount = Math.min(Math.max(Number(request.query.weeks) || 4, 1), 12);
-    reply.send(await nurseryService.getStreakCalendar(fastify.prisma, request.user!.id, weeksCount));
+  // Contribution streaks (Supply / Inventory Freshness / ARTH Contribution + event-driven
+  // Fulfilment), Growth Level, and ARTH Trust Score — replaces the old daily streak calendar.
+  fastify.get<{ Querystring: { weeks?: string } }>('/reputation', async (request, reply) => {
+    const weeksCount = Math.min(Math.max(Number(request.query.weeks) || 12, 1), 26);
+    reply.send(await nurseryService.getOwnReputationSummary(fastify.prisma, request.user!.id, weeksCount));
   });
 
   fastify.get('/badges', async (request, reply) => {

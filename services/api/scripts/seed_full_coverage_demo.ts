@@ -28,6 +28,18 @@ function img(seed: string, w = 800, h = 600) {
 function daysAgo(n: number) {
   return new Date(Date.now() - n * 24 * 60 * 60 * 1000);
 }
+// Mirrors nurseryReputation.service.ts's mondayOf — contribution-streak periodStart rows must
+// land on the exact same Monday-aligned dates the live streak-summary walk expects, or a seeded
+// week silently never shows as "met".
+function mondayOf(date: Date): Date {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = d.getUTCDay();
+  d.setUTCDate(d.getUTCDate() + (day === 0 ? -6 : 1 - day));
+  return d;
+}
+function weeksAgo(n: number) {
+  return new Date(mondayOf(new Date()).getTime() - n * 7 * 24 * 60 * 60 * 1000);
+}
 function daysFromNow(n: number) {
   return new Date(Date.now() + n * 24 * 60 * 60 * 1000);
 }
@@ -556,8 +568,15 @@ async function main() {
 
   for (let ni = 0; ni < nurseries.length; ni++) {
     const nursery = nurseries[ni];
-    for (let d = 0; d < 2; d++) {
-      await prisma.nurseryStreakHistory.create({ data: { nurseryId: nursery.id, activityDate: daysAgo(ni + d), planted: true } }).catch(() => undefined);
+    for (let w = 0; w < 2; w++) {
+      for (const streakType of ['supply', 'inventory_freshness', 'arth_contribution'] as const) {
+        const periodStart = weeksAgo(w);
+        await prisma.nurseryContributionStreak.upsert({
+          where: { nurseryId_streakType_periodStart: { nurseryId: nursery.id, streakType, periodStart } },
+          update: { metCriteria: true },
+          create: { nurseryId: nursery.id, streakType, periodStart, metCriteria: true },
+        });
+      }
     }
     const achievement = pick(nurseryAchievements, ni);
     await prisma.nurseryAchievementUnlock

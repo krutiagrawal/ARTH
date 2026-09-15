@@ -5,25 +5,23 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { RADIUS, SHADOWS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { Mascot } from '../components/common/Mascot';
-import { StreakCalendar } from '../components/common/StreakCalendar';
+import { TrustScoreGauge } from '../components/common/TrustScoreGauge';
+import { GrowthLevelBadge, GROWTH_LEVEL_META } from '../components/common/GrowthLevelBadge';
+import { ContributionStreakCard } from '../components/common/ContributionStreakCard';
 import { AchievementGrid, AchievementDetailModal } from '../components/common/AchievementGrid';
-import { useNurseryProfile, useNurseryStreakCalendar, useNurseryBadges } from '../hooks/useApiQueries';
+import { useNurseryReputation, useNurseryBadges } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { ApiAchievement } from '../api/achievements';
 
 export function NurseryStreakBadgesScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: profile, refetch: refetchProfile } = useNurseryProfile();
-  const { data: weeks = [], refetch: refetchWeeks } = useNurseryStreakCalendar(6);
+  const { data: reputation, refetch: refetchReputation } = useNurseryReputation(12);
   const { data: badges = [], refetch: refetchBadges } = useNurseryBadges();
   const [selected, setSelected] = useState<ApiAchievement | null>(null);
-  const { refreshing, onRefresh } = usePullToRefresh([refetchProfile, refetchWeeks, refetchBadges]);
+  const { refreshing, onRefresh } = usePullToRefresh([refetchReputation, refetchBadges]);
 
-  const streakCurrent = profile?.streakCurrent ?? 0;
-  const streakMax = profile?.streakMax ?? 0;
   const achievements: ApiAchievement[] = badges.map((b) => ({
     id: b.id,
     title: b.title,
@@ -34,6 +32,9 @@ export function NurseryStreakBadgesScreen({ navigation }: any) {
     progress: b.progress,
     total: b.criteriaTarget ?? undefined,
   }));
+
+  const growthLevel = reputation?.growthLevel ?? 'seedling';
+  const nextMeta = reputation?.growthProgress.nextLevel ? GROWTH_LEVEL_META[reputation.growthProgress.nextLevel] : null;
 
   return (
     <View style={styles.container}>
@@ -57,45 +58,72 @@ export function NurseryStreakBadgesScreen({ navigation }: any) {
         </View>
 
         <View style={styles.mascotSection}>
-          <Mascot size={90} mood={streakCurrent > 0 ? 'encouraging' : 'calm'} animate />
+          <Mascot size={90} mood={growthLevel === 'seedling' ? 'calm' : 'encouraging'} animate />
         </View>
 
-        <Text style={styles.title}>Streak & Badges</Text>
+        <Text style={styles.title}>Growth & Trust</Text>
         <Text style={styles.subtitle}>
-          Stays alive as long as you add or give out stock each day.
+          Built from real ARTH activity — orders fulfilled, inventory kept fresh, and NGO partnerships — not a daily check-in.
         </Text>
 
-        <View style={styles.streakCountContainer}>
-          <LinearGradient
-            colors={['#FF6B35', '#FFD700', '#FF9500']}
-            style={styles.streakCountGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Text style={styles.heartEmoji}>🔥</Text>
-            <View style={styles.streakCountContent}>
-              <Text style={styles.streakCountNum}>{streakCurrent}</Text>
-              <Text style={styles.streakCountLabel}>Day Streak</Text>
-            </View>
-          </LinearGradient>
-        </View>
-
-        <BorderCard style={styles.recordCard}>
-          <Text style={styles.recordIcon}>🏆</Text>
-          <View>
-            <Text style={styles.recordTitle}>Nursery's Best Streak</Text>
-            <Text style={styles.recordValue}>{streakMax} days</Text>
+        <BorderCard style={styles.card}>
+          <View style={styles.growthRow}>
+            <GrowthLevelBadge level={growthLevel} />
+            {nextMeta && reputation && (
+              <Text style={styles.growthProgressText}>
+                {(reputation.growthProgress.suppliedToNext ?? 0) > 0
+                  ? `${reputation.growthProgress.suppliedToNext} more saplings supplied`
+                  : ''}
+                {reputation.growthProgress.monthsToNext ? ` · ${reputation.growthProgress.monthsToNext} mo` : ''} to {nextMeta.label}
+              </Text>
+            )}
           </View>
         </BorderCard>
 
-        {weeks.length > 0 && (
-          <View style={styles.calendarWrap}>
-            <StreakCalendar streakCurrent={streakCurrent} weeks={weeks} />
+        <BorderCard style={styles.card}>
+          <TrustScoreGauge score={reputation?.trustScore ?? null} factors={reputation?.trustScoreFactors} />
+        </BorderCard>
+
+        {reputation && (
+          <View style={styles.streaksWrap}>
+            <ContributionStreakCard
+              icon="📦"
+              title="Supply Streak"
+              subtitle="Fulfilled an ARTH order this week"
+              current={reputation.streaks.supply.current}
+              longest={reputation.streaks.supply.longest}
+              weeks={reputation.streaks.supply.weeks}
+            />
+            <ContributionStreakCard
+              icon="🌿"
+              title="Inventory Freshness Streak"
+              subtitle="Kept stock listings up to date"
+              current={reputation.streaks.inventoryFreshness.current}
+              longest={reputation.streaks.inventoryFreshness.longest}
+              weeks={reputation.streaks.inventoryFreshness.weeks}
+            />
+            <ContributionStreakCard
+              icon="🌍"
+              title="ARTH Contribution Streak"
+              subtitle="Any meaningful activity on ARTH"
+              current={reputation.streaks.arthContribution.current}
+              longest={reputation.streaks.arthContribution.longest}
+              weeks={reputation.streaks.arthContribution.weeks}
+            />
+            <ContributionStreakCard
+              icon="🤝"
+              title="Fulfilment Streak"
+              subtitle="Orders fulfilled with no cancellations"
+              current={reputation.fulfilmentStreak.current}
+              longest={reputation.fulfilmentStreak.max}
+              unit="orders"
+            />
           </View>
         )}
 
         {achievements.length > 0 && (
           <View style={styles.badgesWrap}>
+            <Text style={styles.sectionTitle}>Badges</Text>
             <AchievementGrid achievements={achievements} onSelect={setSelected} />
           </View>
         )}
@@ -115,16 +143,10 @@ const styles = StyleSheet.create({
   mascotSection: { alignItems: 'center', marginTop: 4 },
   title: { fontSize: 26, fontWeight: '800', color: COLORS.white, textAlign: 'center', letterSpacing: -0.5 },
   subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.85)', textAlign: 'center', lineHeight: 20, marginTop: -6 },
-  streakCountContainer: { ...SHADOWS.golden },
-  streakCountGradient: { borderRadius: RADIUS.xxl, padding: 24, flexDirection: 'row', alignItems: 'center', gap: 16 },
-  heartEmoji: { fontSize: 48 },
-  streakCountContent: { flex: 1 },
-  streakCountNum: { fontSize: 52, fontWeight: '900', color: COLORS.white, lineHeight: 58, letterSpacing: -2 },
-  streakCountLabel: { fontSize: 16, fontWeight: '700', color: COLORS.white },
-  recordCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
-  recordIcon: { fontSize: 28 },
-  recordTitle: { fontSize: 13, color: COLORS.white, fontWeight: '500' },
-  recordValue: { fontSize: 15, color: COLORS.white, fontWeight: '700', marginTop: 2 },
-  calendarWrap: { marginTop: 4 },
-  badgesWrap: { marginTop: 8 },
+  card: { gap: 8 },
+  growthRow: { gap: 6 },
+  growthProgressText: { fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: '600' },
+  streaksWrap: { gap: 12 },
+  badgesWrap: { marginTop: 8, gap: 8 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: COLORS.white, marginLeft: 4 },
 });

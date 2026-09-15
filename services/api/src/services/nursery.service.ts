@@ -1,7 +1,7 @@
 import { Prisma, PrismaClient } from '@plant/db';
 import { ForbiddenError, NotFoundError, BadRequestError } from '../utils/errors';
 import { notify } from './notification.service';
-import { recordNurseryActiveToday } from './nurseryStreak.service';
+import { recordNurseryContribution, recomputeReputation, getReputationSummary } from './nurseryReputation.service';
 import { evaluateNurseryAchievements } from './nurseryAchievement.service';
 import { startOfUtcDay, addDays } from './streak.service';
 import { geocodeAddress } from '../utils/geocode';
@@ -203,8 +203,8 @@ export async function getOwnStats(prisma: PrismaClient, userId: string) {
     speciesCount: stock.length,
     totalQuantity: stock.reduce((sum, s) => sum + s.quantity, 0),
     freeSpeciesCount: stock.filter((s) => s.isFree).length,
-    streakCurrent: profile.streakCurrent,
-    streakMax: profile.streakMax,
+    trustScore: profile.trustScore,
+    growthLevel: profile.growthLevel,
     badgesCount: profile.badgesCount,
   };
 }
@@ -264,7 +264,9 @@ export async function createStock(prisma: PrismaClient, userId: string, input: S
         },
       });
     }
-    await recordNurseryActiveToday(tx, profile.id);
+    await recordNurseryContribution(tx, profile.id, ['inventory_freshness', 'arth_contribution']);
+    await evaluateNurseryAchievements(tx, profile.id);
+    await recomputeReputation(tx, profile.id);
     return withAvailability(item);
   });
 }
@@ -293,8 +295,10 @@ export async function updateStock(prisma: PrismaClient, userId: string, stockId:
           reason: 'manual_adjust',
         },
       });
-      await recordNurseryActiveToday(tx, profile.id);
+      await recordNurseryContribution(tx, profile.id, ['inventory_freshness', 'arth_contribution']);
     }
+    await evaluateNurseryAchievements(tx, profile.id);
+    await recomputeReputation(tx, profile.id);
 
     // Back-in-stock: only fires on the 0 -> positive transition, never on every restock bump, so
     // wishlisting a perpetually-low-stock item doesn't spam the wishlister daily. Notifications are
@@ -370,28 +374,11 @@ export async function deleteStock(prisma: PrismaClient, userId: string, stockId:
   if (result.count === 0) throw new NotFoundError('Stock item not found');
 }
 
-// ---------- Streak calendar ----------
+// ---------- Reputation (contribution streaks, Growth Level, ARTH Trust Score) ----------
 
-export async function getStreakCalendar(prisma: PrismaClient, userId: string, weeksCount: number) {
+export async function getOwnReputationSummary(prisma: PrismaClient, userId: string, weeksCount = 12) {
   const profile = await getOwnProfile(prisma, userId);
-  const today = startOfUtcDay(new Date());
-  const startDate = addDays(today, -(weeksCount * 7 - 1));
-
-  const rows = await prisma.nurseryStreakHistory.findMany({
-    where: { nurseryId: profile.id, activityDate: { gte: startDate } },
-  });
-  const plantedDates = new Set(rows.filter((r) => r.planted).map((r) => r.activityDate.toISOString().slice(0, 10)));
-
-  const weeks = [];
-  for (let w = 0; w < weeksCount; w++) {
-    const days: boolean[] = [];
-    for (let d = 0; d < 7; d++) {
-      const date = addDays(startDate, w * 7 + d);
-      days.push(plantedDates.has(date.toISOString().slice(0, 10)));
-    }
-    weeks.push({ week: `Week ${w + 1}`, days });
-  }
-  return weeks;
+  return getReputationSummary(prisma, profile.id, weeksCount);
 }
 
 // ---------- Badges ----------
@@ -463,8 +450,9 @@ export async function fulfillReservation(prisma: PrismaClient, userId: string, r
       data: { status: 'fulfilled', respondedAt: new Date() },
     });
 
-    await recordNurseryActiveToday(tx, profile.id);
+    await recordNurseryContribution(tx, profile.id, ['arth_contribution']);
     await evaluateNurseryAchievements(tx, profile.id);
+    await recomputeReputation(tx, profile.id);
 
     return { ...result, species: reservation.stock.species, quantity: reservation.quantity };
   });
@@ -587,6 +575,8 @@ export async function getDashboardSummary(prisma: PrismaClient, userId: string) 
     newPending,
     readyForPickup: readyForPickupCount,
     deliveriesPending: deliveriesPendingCount,
+    trustScore: profile.trustScore,
+    growthLevel: profile.growthLevel,
     lowStockSpecies: lowStock.map((s) => ({ id: s.id, species: s.species, quantity: s.quantity, availabilityStatus: s.availabilityStatus })),
     saplingsSuppliedLifetime,
     verifiedPlantations,

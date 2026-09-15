@@ -3,7 +3,7 @@ import { getStripeClient } from '../lib/stripe';
 import { getLiveLocation } from '../lib/deliveryProvider';
 import { sendEmail } from './email.service';
 import { notify } from './notification.service';
-import { recordNurseryActiveToday } from './nurseryStreak.service';
+import { recordNurseryContribution, recomputeReputation, refreshFulfilmentStreak } from './nurseryReputation.service';
 import { evaluateNurseryAchievements } from './nurseryAchievement.service';
 import { requireCheckoutableCart } from './cart.service';
 import { BadRequestError, ForbiddenError, NotFoundError, ServiceUnavailableError } from '../utils/errors';
@@ -22,12 +22,89 @@ function generateHandoffCode() {
 }
 
 const orderInclude = {
-  items: { include: { saplingUnits: { select: { id: true, status: true, speciesNameSnapshot: true } } } },
+  items: {
+    include: {
+      saplingUnits: { select: { id: true, status: true, speciesNameSnapshot: true } },
+      // Joined so a delivered/picked-up order can show the planter a per-item planting guide —
+      // both hops are nullable (a nursery can delete a stock listing, or an old row predates the
+      // species catalog link), so serializeOrder below falls back to null rather than assuming it.
+      stock: { select: { suitableEnvironments: true, speciesRef: true } },
+    },
+  },
   address: true,
   nursery: { select: { id: true, nurseryName: true, logoUrl: true, lat: true, lng: true, contactPhone: true } },
   tracking: true,
   review: true,
 } as const;
+
+// A per-item planting guide, surfaced once an order is handed off (see OrderStatus timeline) —
+// species botanical detail plus the nursery's own suitable-environments tagging for that specific
+// stock listing. Null when neither hop resolves (stock deleted, or a pre-catalog free-text row),
+// in which case the UI falls back to the plain species-name snapshot on the item itself.
+function buildPlantingGuide(item: any): Record<string, unknown> | null {
+  const speciesRef = item.stock?.speciesRef;
+  if (!speciesRef && !item.stock?.suitableEnvironments?.length) return null;
+  return {
+    scientificName: speciesRef?.scientificName ?? null,
+    localName: speciesRef?.localName ?? null,
+    isNative: speciesRef?.isNative ?? null,
+    sunlightNeeds: speciesRef?.sunlightNeeds ?? null,
+    waterNeeds: speciesRef?.waterNeeds ?? null,
+    soilNeeds: speciesRef?.soilNeeds ?? null,
+    matureHeightLabel: speciesRef?.matureHeightLabel ?? null,
+    plantingSeasons: speciesRef?.plantingSeasons ?? [],
+    suitableEnvironments: item.stock?.suitableEnvironments ?? [],
+  };
+}
+
+const SUNLIGHT_EMAIL_LABEL: Record<string, string> = { full_sun: 'Full sun', partial_shade: 'Partial shade', shade: 'Shade' };
+
+/**
+ * Best-effort "how to plant this" email, fired once per handoff (pickup/delivery) alongside the
+ * existing in-app notify() call — never awaited by the caller into failure, mirrors notify()'s
+ * own "a side effect must not roll back the real action" stance. Re-fetches the order with the
+ * stock/speciesRef join (the callers' own `order` objects don't carry it) rather than threading
+ * an extra include through every caller.
+ */
+async function sendPlantingGuideEmail(prisma: PrismaClient, orderId: string) {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: { include: { stock: { select: { suitableEnvironments: true, speciesRef: true } } } },
+        user: { select: { email: true, name: true } },
+        nursery: { select: { nurseryName: true } },
+      },
+    });
+    if (!order) return;
+
+    const itemsHtml = order.items
+      .map((item: any) => {
+        const guide = buildPlantingGuide(item);
+        const heading = `<h3 style="margin:16px 0 4px;">${item.species} × ${item.quantity}</h3>`;
+        if (!guide) return heading;
+        const lines: string[] = [];
+        if (guide.scientificName) lines.push(`<em>${guide.scientificName}</em>`);
+        if (guide.isNative != null) lines.push(guide.isNative ? 'Native to your region' : 'Non-native species');
+        if (guide.sunlightNeeds) lines.push(`☀️ ${SUNLIGHT_EMAIL_LABEL[guide.sunlightNeeds as string] ?? guide.sunlightNeeds}`);
+        if (guide.waterNeeds) lines.push(`💧 ${guide.waterNeeds} water needs`);
+        if (guide.soilNeeds) lines.push(`🪴 Soil: ${guide.soilNeeds}`);
+        if (guide.matureHeightLabel) lines.push(`📏 Grows to ${guide.matureHeightLabel}`);
+        if ((guide.plantingSeasons as string[]).length) lines.push(`📅 Best planted: ${(guide.plantingSeasons as string[]).join(', ')}`);
+        if ((guide.suitableEnvironments as string[]).length) lines.push(`📍 Suitable spots: ${(guide.suitableEnvironments as string[]).join(', ')}`);
+        return lines.length ? heading + `<p style="margin:0;color:#444;">${lines.join('<br/>')}</p>` : heading;
+      })
+      .join('');
+
+    await sendEmail({
+      to: order.user.email,
+      subject: `Your planting guide from ${order.nursery.nurseryName}`,
+      html: `<p>Hi ${order.user.name},</p><p>Here's how to give your new saplings from <strong>${order.nursery.nurseryName}</strong> the best start:</p>${itemsHtml}<p>Happy planting! 🌱</p>`,
+    });
+  } catch (error) {
+    console.warn('[order] could not send planting guide email:', error);
+  }
+}
 
 function serializeOrder(order: any) {
   const destination = order.address?.lat != null && order.address?.lng != null
@@ -69,7 +146,12 @@ function serializeOrder(order: any) {
     deliveredAt: order.deliveredAt,
     plantationVerifiedAt: order.plantationVerifiedAt,
     cancelledAt: order.cancelledAt,
-    items: order.items.map((i: any) => ({ species: i.species, quantity: i.quantity, unitPriceCents: i.unitPriceCents })),
+    items: order.items.map((i: any) => ({
+      species: i.species,
+      quantity: i.quantity,
+      unitPriceCents: i.unitPriceCents,
+      plantingGuide: buildPlantingGuide(i),
+    })),
     saplingUnits,
     address: order.address,
     nursery: { id: order.nursery.id, nurseryName: order.nursery.nurseryName, logoUrl: order.nursery.logoUrl, contactPhone: order.nursery.contactPhone },
@@ -233,8 +315,12 @@ async function finalizeConfirmedOrder(prisma: PrismaClient, order: OrderForFinal
 
     await issueArthSaplingUnits(tx, order);
 
-    await recordNurseryActiveToday(tx, order.nurseryId);
+    // Order confirmed = payment settled, not yet "fulfilled" — only counts toward the general
+    // ARTH Contribution streak. Supply Streak / Fulfilment Streak wait for an actual handoff
+    // (see markOrderPickedUp/markOrderDelivered/markOrderDeliveredByPartner below).
+    await recordNurseryContribution(tx, order.nurseryId, ['arth_contribution']);
     await evaluateNurseryAchievements(tx, order.nurseryId);
+    await recomputeReputation(tx, order.nurseryId);
   });
 
   await notify(prisma, {
@@ -494,14 +580,18 @@ export async function markOrderPickedUp(prisma: PrismaClient, nurseryId: string,
       where: { orderItem: { orderId } },
       data: { status: 'collected', collectedAt: new Date() },
     });
+    await recordNurseryContribution(tx, nurseryId, ['supply', 'arth_contribution']);
+    await refreshFulfilmentStreak(tx, nurseryId);
+    await recomputeReputation(tx, nurseryId);
   });
 
   await notify(prisma, {
     userId: order.userId,
     type: 'order_picked_up',
     data: { orderId },
-    push: { title: '🎉 Picked up!', body: 'Your saplings are in your hands. Time to get planting.' },
+    push: { title: '🎉 Picked up!', body: 'Your saplings are in your hands — check the order for your planting guide.' },
   });
+  await sendPlantingGuideEmail(prisma, orderId);
   return prisma.order.findUniqueOrThrow({ where: { id: orderId } });
 }
 
@@ -553,14 +643,18 @@ export async function markOrderDelivered(prisma: PrismaClient, nurseryId: string
       where: { orderItem: { orderId } },
       data: { status: 'collected', collectedAt: new Date() },
     });
+    await recordNurseryContribution(tx, nurseryId, ['supply', 'arth_contribution']);
+    await refreshFulfilmentStreak(tx, nurseryId);
+    await recomputeReputation(tx, nurseryId);
   });
 
   await notify(prisma, {
     userId: order.userId,
     type: 'order_delivered',
     data: { orderId },
-    push: { title: '🎉 Delivered!', body: 'Your saplings have arrived. Time to get your hands dirty.' },
+    push: { title: '🎉 Delivered!', body: 'Your saplings have arrived — check the order for your planting guide.' },
   });
+  await sendPlantingGuideEmail(prisma, orderId);
   return prisma.order.findUniqueOrThrow({ where: { id: orderId } });
 }
 
@@ -586,14 +680,18 @@ export async function markOrderDeliveredByPartner(prisma: PrismaClient, partnerU
       where: { orderItem: { orderId } },
       data: { status: 'collected', collectedAt: new Date() },
     });
+    await recordNurseryContribution(tx, order.nurseryId, ['supply', 'arth_contribution']);
+    await refreshFulfilmentStreak(tx, order.nurseryId);
+    await recomputeReputation(tx, order.nurseryId);
   });
 
   await notify(prisma, {
     userId: order.userId,
     type: 'order_delivered',
     data: { orderId },
-    push: { title: '🎉 Delivered!', body: 'Your saplings have arrived. Time to get your hands dirty.' },
+    push: { title: '🎉 Delivered!', body: 'Your saplings have arrived — check the order for your planting guide.' },
   });
+  await sendPlantingGuideEmail(prisma, orderId);
   return prisma.order.findUniqueOrThrow({ where: { id: orderId } });
 }
 
@@ -611,7 +709,14 @@ export async function nurseryCancelOrder(prisma: PrismaClient, nurseryId: string
   }
   await restockCancelledOrder(prisma, order.id);
 
-  const updated = await prisma.order.update({ where: { id: orderId }, data: { status: 'cancelled', cancelledAt: new Date() } });
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.order.update({ where: { id: orderId }, data: { status: 'cancelled', cancelledAt: new Date() } });
+    // A nursery-initiated cancel breaks the Fulfilment Streak — refresh it (recomputes to 0, since
+    // getFulfilmentStreakCurrent counts orders since the most recent cancellation).
+    await refreshFulfilmentStreak(tx, nurseryId);
+    await recomputeReputation(tx, nurseryId);
+    return result;
+  });
   await notify(prisma, {
     userId: order.userId,
     type: 'order_cancelled',

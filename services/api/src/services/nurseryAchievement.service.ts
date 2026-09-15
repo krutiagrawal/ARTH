@@ -1,4 +1,5 @@
 import { Prisma, NurseryAchievementCriteriaType } from '@plant/db';
+import { getArthContributionStreakCurrent, getFulfilmentStreakCurrent } from './nurseryReputation.service';
 
 // Fulfilment-rate/cancellation-streak criteria only start counting once a nursery has a
 // meaningful sample of orders — otherwise a brand-new nursery could read "100% fulfilment" off
@@ -26,8 +27,9 @@ async function computeNurseryProgress(
       return tx.saplingReservation.count({ where: { nurseryId, status: 'fulfilled' } });
     }
     case 'streak_days': {
-      const nursery = await tx.nurseryProfile.findUniqueOrThrow({ where: { id: nurseryId } });
-      return nursery.streakCurrent;
+      // Repointed from the removed daily NurseryProfile.streakCurrent — now the ARTH Contribution
+      // Streak's current *week* count (see achievement seed data, targets are in weeks not days).
+      return getArthContributionStreakCurrent(tx, nurseryId);
     }
     case 'native_species_listed': {
       return tx.saplingStock.count({ where: { nurseryId, speciesRef: { isNative: true } } });
@@ -52,20 +54,8 @@ async function computeNurseryProgress(
       return Math.round((fulfilled / total) * 100);
     }
     case 'cancellation_free_order_streak': {
-      const total = await tx.order.count({ where: { nurseryId, status: { not: 'pending_payment' } } });
-      if (total < MIN_ORDERS_FOR_RATE_CRITERIA) return 0;
-      const lastCancelled = await tx.order.findFirst({
-        where: { nurseryId, status: 'cancelled' },
-        orderBy: { cancelledAt: 'desc' },
-        select: { cancelledAt: true },
-      });
-      return tx.order.count({
-        where: {
-          nurseryId,
-          status: { notIn: ['pending_payment', 'cancelled'] },
-          ...(lastCancelled?.cancelledAt ? { createdAt: { gt: lastCancelled.cancelledAt } } : {}),
-        },
-      });
+      // Shared with the Fulfilment Streak dashboard tile — see nurseryReputation.service.ts.
+      return getFulfilmentStreakCurrent(tx, nurseryId);
     }
     case 'monsoon_saplings_supplied': {
       const units = await tx.arthSaplingUnit.findMany({

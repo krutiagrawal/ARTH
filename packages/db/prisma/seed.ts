@@ -117,8 +117,11 @@ async function seedNurseryAchievements() {
     { key: 'nursery_generous_grower', title: 'Generous Grower', description: 'Give out 100 saplings to planters', icon: '🎁', rarity: 'rare', criteriaType: 'saplings_given_out', criteriaTarget: 100, sortOrder: 3 },
     { key: 'nursery_community_pillar', title: 'Community Pillar', description: 'Give out 1,000 saplings to planters', icon: '🌳', rarity: 'legendary', criteriaType: 'saplings_given_out', criteriaTarget: 1000, sortOrder: 4 },
     { key: 'nursery_trusted_nursery', title: 'Trusted Nursery', description: 'Fulfil 10 reservation requests', icon: '🤝', rarity: 'rare', criteriaType: 'reservations_fulfilled', criteriaTarget: 10, sortOrder: 5 },
-    { key: 'nursery_week_long_streak', title: 'Week-Long Streak', description: 'Stay active for 7 days in a row', icon: '🔥', rarity: 'common', criteriaType: 'streak_days', criteriaTarget: 7, sortOrder: 6 },
-    { key: 'nursery_century_streak', title: 'Century Streak', description: 'Stay active for 100 days in a row', icon: '⭐', rarity: 'legendary', criteriaType: 'streak_days', criteriaTarget: 100, sortOrder: 7 },
+    // criteriaType 'streak_days' is repointed by nurseryAchievement.service.ts to the ARTH
+    // Contribution Streak's current *week* count (not literal days) since the nursery module
+    // dropped its daily-cadence streak — targets below are in weeks, not days.
+    { key: 'nursery_week_long_streak', title: 'Month-Long Streak', description: 'Stay active on ARTH for 4 weeks in a row', icon: '🔥', rarity: 'common', criteriaType: 'streak_days', criteriaTarget: 4, sortOrder: 6 },
+    { key: 'nursery_century_streak', title: 'Year-Round Partner', description: 'Stay active on ARTH every week for a full year', icon: '⭐', rarity: 'legendary', criteriaType: 'streak_days', criteriaTarget: 52, sortOrder: 7 },
     // Added for the nursery module extension (section 9) — calculated from real ArthSaplingUnit/
     // Order/BulkRequirementResponse activity by nurseryAchievement.service.ts, not manually assigned.
     { key: 'nursery_native_species_champion', title: 'Native Species Champion', description: 'List 8 native species in stock', icon: '🍃', rarity: 'rare', criteriaType: 'native_species_listed', criteriaTarget: 8, sortOrder: 8 },

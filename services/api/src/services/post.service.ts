@@ -4,7 +4,7 @@ import { requireApprovedNgoProfile } from './ngo.service';
 import { requireApprovedNurseryProfile } from './nursery.service';
 import { recordUpdatePostedThisWeek } from './ngoStreak.service';
 import { evaluateNgoAchievements } from './ngoAchievement.service';
-import { recordNurseryActiveToday } from './nurseryStreak.service';
+import { recordNurseryContribution, recomputeReputation } from './nurseryReputation.service';
 import { evaluateNurseryAchievements } from './nurseryAchievement.service';
 import { notify, notifyFollowersOfNewPost, notifyFollowersOfNewNurseryPost } from './notification.service';
 import { BlockedIds, getBlockedIds } from './block.service';
@@ -199,8 +199,9 @@ export async function createPost(prisma: PrismaClient, viewerId: string, input: 
       await evaluateNgoAchievements(tx as unknown as PrismaClient, ngo.id);
     }
     if (nursery) {
-      await recordNurseryActiveToday(tx as unknown as PrismaClient, nursery.id);
+      await recordNurseryContribution(tx as unknown as PrismaClient, nursery.id, ['arth_contribution']);
       await evaluateNurseryAchievements(tx as unknown as PrismaClient, nursery.id);
+      await recomputeReputation(tx as unknown as PrismaClient, nursery.id);
     }
 
     return created;

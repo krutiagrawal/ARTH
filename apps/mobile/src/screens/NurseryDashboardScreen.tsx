@@ -23,6 +23,7 @@ import { useDeviceWeather } from '../hooks/useDeviceWeather';
 import { useAuth } from '../context/AuthContext';
 import { useNurseryProfile, useNurseryStats, useNurseryReservations, useNurseryDashboardToday } from '../hooks/useApiQueries';
 import type { ApiNurseryActivityItem } from '../api/nursery';
+import { GROWTH_LEVEL_META } from '../components/common/GrowthLevelBadge';
 import { useUnreadNotificationCount } from '../hooks/useSocialQueries';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
@@ -260,7 +261,7 @@ export function NurseryDashboardScreen({ navigation }: NurseryDashboardScreenPro
     { key: 'reviews', emoji: '⭐', color: COLORS.coral, title: 'Reviews', onPress: () => navigation.navigate('NurseryReviews') },
     { key: 'post', emoji: '📝', color: COLORS.sageDark, title: 'Post an update', onPress: () => navigation.navigate('NurseryPostUpdate') },
     { key: 'followers', emoji: '👥', color: COLORS.xpBlue, title: 'Followers', onPress: () => navigation.navigate('NurseryFollowers') },
-    { key: 'streak', emoji: '🔥', color: COLORS.sage, title: 'Streak & Badges', onPress: () => navigation.navigate('NurseryStreakBadges') },
+    { key: 'streak', emoji: '🔥', color: COLORS.sage, title: 'Growth & Trust', onPress: () => navigation.navigate('NurseryStreakBadges') },
     { key: 'analytics', emoji: '📊', color: COLORS.golden, title: 'Stock Analytics', onPress: () => navigation.navigate('NurseryStockAnalytics') },
     { key: 'viewProfile', emoji: '🌿', color: COLORS.forest, title: 'View public profile', onPress: () => navigation.navigate('NurseryProfile') },
     { key: 'map', emoji: '🗺️', color: COLORS.coral, title: 'View on Map', onPress: () => navigation.navigate('NurseryMap') },
@@ -334,6 +335,7 @@ export function NurseryDashboardScreen({ navigation }: NurseryDashboardScreenPro
               value={stats?.speciesCount ?? 0}
               label="Species"
               variant="glass"
+              fill
               dark
               color={theme.accentColor}
               cardBackground={theme.cardBackground}
@@ -351,6 +353,7 @@ export function NurseryDashboardScreen({ navigation }: NurseryDashboardScreenPro
               value={stats?.totalQuantity ?? 0}
               label="In stock"
               variant="glass"
+              fill
               dark
               color={theme.accentColor}
               cardBackground={theme.cardBackground}
@@ -361,6 +364,24 @@ export function NurseryDashboardScreen({ navigation }: NurseryDashboardScreenPro
               borderColor={theme.cardBorder}
               delay={200}
               onPress={() => navigation.navigate('NurseryStock')}
+              blurTarget={blurTargetRef}
+            />
+            <EcoWidget
+              icon={GROWTH_LEVEL_META[today?.growthLevel ?? 'seedling'].emoji}
+              value={GROWTH_LEVEL_META[today?.growthLevel ?? 'seedling'].label}
+              label="Growth Level"
+              variant="glass"
+              fill
+              dark
+              color={theme.accentColor}
+              cardBackground={theme.cardBackground}
+              cardBackgroundAlt={theme.cardBackgroundAlt}
+              cardOverlayAlpha={theme.cardOverlayAlpha}
+              textColor={theme.textSecondaryOnCard}
+              subTextColor={theme.textSecondaryOnCard}
+              borderColor={theme.cardBorder}
+              delay={300}
+              onPress={() => navigation.navigate('NurseryStreakBadges')}
               blurTarget={blurTargetRef}
             />
           </View>
@@ -419,6 +440,24 @@ export function NurseryDashboardScreen({ navigation }: NurseryDashboardScreenPro
               <EcoWidget {...tileProps} icon="🌱" value={String(stats.speciesCount)} label="Species listed" delay={0} />
               <EcoWidget {...tileProps} icon="📦" value={String(stats.totalQuantity)} label="Saplings in stock" delay={60} />
               <EcoWidget {...tileProps} icon="🎁" value={String(stats.freeSpeciesCount)} label="Free species" delay={120} />
+            </View>
+            <View style={styles.gridRow}>
+              <EcoWidget
+                {...tileProps}
+                icon="🤝"
+                value={stats.trustScore != null ? String(stats.trustScore) : '—'}
+                label="ARTH Trust Score"
+                delay={180}
+                onPress={() => navigation.navigate('NurseryStreakBadges')}
+              />
+              <EcoWidget
+                {...tileProps}
+                icon={GROWTH_LEVEL_META[stats.growthLevel].emoji}
+                value={GROWTH_LEVEL_META[stats.growthLevel].label}
+                label="Growth Level"
+                delay={240}
+                onPress={() => navigation.navigate('NurseryStreakBadges')}
+              />
             </View>
           </>
         )}

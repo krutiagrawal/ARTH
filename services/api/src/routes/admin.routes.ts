@@ -85,6 +85,7 @@ function serializeNurseryDetail(profile: any) {
     deliveryRadiusKm: profile.deliveryRadiusKm,
     approvedAt: profile.approvedAt,
     ownerCreatedAt: profile.user?.createdAt,
+    reputation: profile.reputation,
   };
 }
 

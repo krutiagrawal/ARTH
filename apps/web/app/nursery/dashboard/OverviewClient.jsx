@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   Quote,
   Leaf,
+  ShieldCheck,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -27,6 +28,7 @@ import PhoneInput from '@/components/dashboard/PhoneInput'
 import { proxy } from './proxy'
 import { useNurseryProfile } from './NurseryProfileContext'
 import { usePhoneField } from '@/lib/usePhoneField'
+import { GROWTH_LEVEL_META } from './reputation/ReputationClient'
 
 function StatusBanner({ profile, onResubmitted }) {
   if (profile.status === 'pending') {
@@ -281,6 +283,27 @@ export default function OverviewClient() {
         <StatTile label="New pending" value={stats?.newPending ?? 0} description="Awaiting confirmation" icon={ClipboardList} tone="sand" href="/nursery/dashboard/orders" loading={statsLoading} />
         <StatTile label="Ready for pickup" value={stats?.readyForPickup ?? 0} description="Waiting for handoff" icon={Boxes} tone="primary" href="/nursery/dashboard/orders" loading={statsLoading} />
         <StatTile label="Deliveries pending" value={stats?.deliveriesPending ?? 0} description="Out or awaiting dispatch" icon={Truck} tone="sand" href="/nursery/dashboard/orders" loading={statsLoading} />
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+        <StatTile
+          label="ARTH Trust Score"
+          value={stats?.trustScore ?? 'Not yet verified'}
+          description="Fulfilment, ratings, freshness, responsiveness"
+          icon={ShieldCheck}
+          tone="primary"
+          href="/nursery/dashboard/reputation"
+          loading={statsLoading}
+        />
+        <StatTile
+          label="Growth Level"
+          value={`${GROWTH_LEVEL_META[stats?.growthLevel || 'seedling'].emoji} ${GROWTH_LEVEL_META[stats?.growthLevel || 'seedling'].label}`}
+          description="Based on tenure & lifetime supply"
+          icon={Sprout}
+          tone="sand"
+          href="/nursery/dashboard/reputation"
+          loading={statsLoading}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">

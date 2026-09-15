@@ -13,11 +13,14 @@ import { ProfileTabBar, type ProfileTabKey } from '../components/profile/Profile
 import { PostGrid } from '../components/profile/PostGrid';
 import { AchievementsTabContent } from '../components/profile/AchievementsTabContent';
 import { NurserySaplingsTabContent } from '../components/profile/NurserySaplingsTabContent';
+import { GrowthLevelBadge, GROWTH_LEVEL_META } from '../components/common/GrowthLevelBadge';
+import { TrustScoreGauge } from '../components/common/TrustScoreGauge';
+import { ContributionStreakCard } from '../components/common/ContributionStreakCard';
 import { useNurseryPosts } from '../hooks/useSocialQueries';
 import {
   useNurseryProfile,
   useNurseryStats,
-  useNurseryStreakCalendar,
+  useNurseryReputation,
   useNurseryBadges,
   useNurseryPublicAchievements,
   useNurseryPublicProfile,
@@ -26,9 +29,15 @@ import {
   useRingStatus,
   useSaplingStock,
 } from '../hooks/useApiQueries';
+import { useAuth } from '../context/AuthContext';
 import { resolveMediaUrl } from '../api/client';
 import type { ApiPost } from '../api/posts';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+
+function formatMemberSince(iso: string | undefined): string | null {
+  if (!iso) return null;
+  return new Date(iso).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+}
 
 function followLabel(status: string | null, followersCount: number): string {
   if (status === 'accepted') return 'Following ✓';
@@ -40,11 +49,12 @@ export function NurseryProfileScreen({ route, navigation }: any) {
   const nurseryId: string | undefined = route?.params?.nurseryId;
   const isOwn = !nurseryId;
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const saplingsScrollRef = useRef<ScrollView>(null);
 
   const ownProfile = useNurseryProfile();
   const ownStats = useNurseryStats();
-  const ownStreak = useNurseryStreakCalendar(6);
+  const ownReputation = useNurseryReputation(8);
   const ownAchievements = useNurseryBadges();
 
   const publicProfile = useNurseryPublicProfile(isOwn ? null : nurseryId ?? null);
@@ -113,7 +123,11 @@ export function NurseryProfileScreen({ route, navigation }: any) {
           isOwn
             ? [
                 { value: ownStats.data?.speciesCount ?? 0, label: 'Species' },
-                { value: ownProfile.data?.streakCurrent ?? 0, label: 'Streak' },
+                {
+                  value: `${GROWTH_LEVEL_META[ownProfile.data?.growthLevel ?? 'seedling'].emoji} ${GROWTH_LEVEL_META[ownProfile.data?.growthLevel ?? 'seedling'].label}`,
+                  label: 'Growth Level',
+                  onPress: () => navigation.navigate('NurseryStreakBadges'),
+                },
                 { value: badgesCount, label: 'Badges', onPress: () => setTab('achievements') },
               ]
             : [
@@ -145,6 +159,48 @@ export function NurseryProfileScreen({ route, navigation }: any) {
             phone={publicProfile.data?.contactPhone}
             hideAddressLine
           />
+        </View>
+      )}
+
+      {isOwn && ownProfile.data && (
+        <View style={styles.aboutCard}>
+          <BorderCard style={styles.aboutCardInner}>
+            <Text style={styles.aboutTitle}>About</Text>
+            {user?.name && (
+              <View style={styles.aboutRow}>
+                <Text style={styles.aboutIcon}>👤</Text>
+                <Text style={styles.aboutText}>{user.name} · Owner</Text>
+              </View>
+            )}
+            {ownProfile.data.contactPhone && (
+              <View style={styles.aboutRow}>
+                <Text style={styles.aboutIcon}>📞</Text>
+                <Text style={styles.aboutText}>{ownProfile.data.contactPhone}</Text>
+              </View>
+            )}
+            <View style={styles.aboutRow}>
+              <Text style={styles.aboutIcon}>⭐</Text>
+              <Text style={styles.aboutText}>
+                {ownProfile.data.avgRating != null
+                  ? `${Number(ownProfile.data.avgRating).toFixed(1)} (${ownProfile.data.reviewCount} review${ownProfile.data.reviewCount === 1 ? '' : 's'})`
+                  : 'No reviews yet'}
+              </Text>
+            </View>
+            <View style={styles.aboutRow}>
+              <Text style={styles.aboutIcon}>🚚</Text>
+              <Text style={styles.aboutText}>
+                {[ownProfile.data.offersPickup !== false ? 'Pickup' : null, ownProfile.data.offersDelivery ? 'Delivery' : null]
+                  .filter(Boolean)
+                  .join(' · ') || 'Not currently fulfilling orders'}
+              </Text>
+            </View>
+            {formatMemberSince(ownProfile.data.createdAt) && (
+              <View style={styles.aboutRow}>
+                <Text style={styles.aboutIcon}>🌱</Text>
+                <Text style={styles.aboutText}>On ARTH since {formatMemberSince(ownProfile.data.createdAt)}</Text>
+              </View>
+            )}
+          </BorderCard>
         </View>
       )}
 
@@ -256,7 +312,49 @@ export function NurseryProfileScreen({ route, navigation }: any) {
               {tab === 'achievements' && (
                 <AchievementsTabContent
                   achievements={achievements}
-                  streak={isOwn && ownStreak.data ? { streakCurrent: ownProfile.data?.streakCurrent ?? 0, weeks: ownStreak.data } : undefined}
+                  customStreak={
+                    isOwn && ownReputation.data ? (
+                      <View style={{ gap: 12 }}>
+                        <BorderCard style={{ gap: 10 }}>
+                          <TrustScoreGauge score={ownReputation.data.trustScore} factors={ownReputation.data.trustScoreFactors} variant="light" />
+                          <GrowthLevelBadge level={ownReputation.data.growthLevel} variant="light" />
+                        </BorderCard>
+                        <ContributionStreakCard
+                          icon="📦"
+                          title="Supply Streak"
+                          subtitle="Fulfilled an ARTH order this week"
+                          current={ownReputation.data.streaks.supply.current}
+                          longest={ownReputation.data.streaks.supply.longest}
+                          variant="light"
+                        />
+                        <ContributionStreakCard
+                          icon="🌿"
+                          title="Inventory Freshness Streak"
+                          subtitle="Kept stock listings up to date"
+                          current={ownReputation.data.streaks.inventoryFreshness.current}
+                          longest={ownReputation.data.streaks.inventoryFreshness.longest}
+                          variant="light"
+                        />
+                        <ContributionStreakCard
+                          icon="🌍"
+                          title="ARTH Contribution Streak"
+                          subtitle="Any meaningful activity on ARTH"
+                          current={ownReputation.data.streaks.arthContribution.current}
+                          longest={ownReputation.data.streaks.arthContribution.longest}
+                          variant="light"
+                        />
+                        <ContributionStreakCard
+                          icon="🤝"
+                          title="Fulfilment Streak"
+                          subtitle="Orders fulfilled with no cancellations"
+                          current={ownReputation.data.fulfilmentStreak.current}
+                          longest={ownReputation.data.fulfilmentStreak.max}
+                          unit="orders"
+                          variant="light"
+                        />
+                      </View>
+                    ) : undefined
+                  }
                 />
               )}
             </>
@@ -287,6 +385,12 @@ const styles = StyleSheet.create({
   iconText: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   topBarTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center', marginHorizontal: 8 },
   publicExtras: { paddingHorizontal: 16, gap: 8, marginBottom: 8 },
+  aboutCard: { paddingHorizontal: 16, marginBottom: 8 },
+  aboutCardInner: { gap: 10 },
+  aboutTitle: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary, textTransform: 'uppercase', letterSpacing: 0.4 },
+  aboutRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  aboutIcon: { fontSize: 14, width: 20 },
+  aboutText: { fontSize: 13, color: COLORS.textSecondary, flex: 1 },
   tabBody: { paddingHorizontal: 16, paddingTop: 16 },
   contributionsCard: { gap: 12 },
   contributionsTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
