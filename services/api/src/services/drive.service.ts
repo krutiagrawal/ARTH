@@ -225,7 +225,7 @@ export async function completeDrive(prisma: PrismaClient, ngoUserId: string, dri
   });
 }
 
-export async function listDrives(prisma: PrismaClient, filter: NearbyFilter) {
+export async function listDrives(prisma: PrismaClient, filter: NearbyFilter, userId?: string) {
   const drives = await prisma.drive.findMany({
     where: { status: 'upcoming', ngo: { status: 'approved' } },
     include: driveInclude,
@@ -233,8 +233,17 @@ export async function listDrives(prisma: PrismaClient, filter: NearbyFilter) {
     take: 500,
   });
 
+  let rsvpedDriveIds = new Set<string>();
+  if (userId && drives.length > 0) {
+    const rsvps = await prisma.driveRsvp.findMany({
+      where: { userId, status: 'confirmed', driveId: { in: drives.map((d) => d.id) } },
+      select: { driveId: true },
+    });
+    rsvpedDriveIds = new Set(rsvps.map((r) => r.driveId));
+  }
+
   let results = drives.map((drive) => ({
-    drive,
+    drive: { ...drive, isRsvped: rsvpedDriveIds.has(drive.id) },
     distanceKm:
       filter.lat !== undefined && filter.lng !== undefined && drive.lat !== null && drive.lng !== null
         ? haversineDistanceKm({ lat: filter.lat, lng: filter.lng }, { lat: Number(drive.lat), lng: Number(drive.lng) })

@@ -1,5 +1,5 @@
 import React, { useRef, type RefObject } from 'react';
-import { View, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,6 +24,7 @@ import { useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { getHeroSeamColor, getHeroSeamTextColors } from '../utils/heroSeam';
 import type { CorporateTabName } from '../navigation/AppNavigator';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const HERO_HEIGHT = SH * 0.5;
@@ -96,8 +97,9 @@ export function CorporateDashboardScreen({ navigation, onNavigateTab }: Corporat
   const { weather } = useDeviceWeather();
   const sceneryMode = getSceneryMode(weather);
   const { user } = useAuth();
-  const { data: profile } = useCorporateProfile();
-  const { data: stats, isLoading } = useCorporateStats();
+  const { data: profile, refetch: refetchProfile } = useCorporateProfile();
+  const { data: stats, isLoading, refetch: refetchStats } = useCorporateStats();
+  const { refreshing, onRefresh } = usePullToRefresh([refetchProfile, refetchStats]);
 
   const pageBackground = getHeroSeamColor(theme);
   const seamText = getHeroSeamTextColors(theme);
@@ -117,6 +119,7 @@ export function CorporateDashboardScreen({ navigation, onNavigateTab }: Corporat
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         <View style={[styles.heroSection, { height: HERO_HEIGHT }]}>
           {theme.heroImage ? (

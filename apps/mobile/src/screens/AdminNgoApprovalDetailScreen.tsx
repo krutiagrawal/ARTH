@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { StatDisplay } from '../components/common/StatDisplay';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { Sheet } from '../components/common/Sheet';
 import { useAdminNgoSummary, useSetAdminNgoStatus } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ApiError } from '../api/client';
 import type { ApiAdminNgo, NgoApprovalStatus } from '../api/admin';
 import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
@@ -33,8 +34,9 @@ export function AdminNgoApprovalDetailScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
   const initialNgo: ApiAdminNgo = route.params.ngo;
   const [ngo, setNgo] = useState(initialNgo);
-  const { data: summary, isLoading: summaryLoading } = useAdminNgoSummary(ngo.id);
+  const { data: summary, isLoading: summaryLoading, refetch } = useAdminNgoSummary(ngo.id);
   const setStatusMutation = useSetAdminNgoStatus();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const [reasonSheet, setReasonSheet] = useState<'rejected' | 'suspended' | null>(null);
   const [reason, setReason] = useState('');
@@ -76,7 +78,11 @@ export function AdminNgoApprovalDetailScreen({ navigation, route }: any) {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         <BorderCard style={styles.card}>
           <View style={[styles.statusChip, { borderColor: statusColor(ngo.status), alignSelf: 'flex-start' }]}>
             <Text style={[styles.statusChipText, { color: statusColor(ngo.status) }]}>{ngo.status}</Text>
@@ -170,8 +176,8 @@ export function AdminNgoApprovalDetailScreen({ navigation, route }: any) {
           style={[styles.sheetInput, isNightMode && styles.sheetInputNight]}
           value={reason}
           onChangeText={setReason}
-          placeholder="Let them know why…"
-          placeholderTextColor={isNightMode ? ON_DARK_SURFACE.muted : COLORS.textMuted}
+          placeholder="eg - Let them know why…"
+          placeholderTextColor={isNightMode ? ON_DARK_SURFACE.muted : COLORS.textLight}
           multiline
         />
         <AnimatedButton

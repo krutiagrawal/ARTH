@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,14 +17,16 @@ import { useMyDrives, useBulkCreatePlantedTrees, useNgoProfile } from '../hooks/
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import { ApiError } from '../api/client';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 export function NgoLogPlantedTreesScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: drives = [] } = useMyDrives();
+  const { data: drives = [], refetch } = useMyDrives();
   const bulkCreateMutation = useBulkCreatePlantedTrees();
   const confirm = useConfirm();
-  const { data: profile } = useNgoProfile();
+  const { data: profile, refetch: refetchProfile } = useNgoProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
+  const { refreshing, onRefresh } = usePullToRefresh([refetch, refetchProfile]);
 
   const [driveId, setDriveId] = useState<string | undefined>(undefined);
   const [speciesName, setSpeciesName] = useState('');
@@ -66,7 +68,11 @@ export function NgoLogPlantedTreesScreen({ navigation }: any) {
         onBack={() => navigation?.goBack?.()}
       />
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         <Animated.View style={cardAnim}>
           <Text style={styles.hint}>Log how many trees were actually planted so you can track their survival over time.</Text>
 
@@ -86,14 +92,14 @@ export function NgoLogPlantedTreesScreen({ navigation }: any) {
             label="Species"
             value={speciesName}
             onChangeText={setSpeciesName}
-            placeholder="Neem"
+            placeholder="eg - Neem"
           />
 
           <FormField
             label="Number of trees"
             value={count}
             onChangeText={(v: string) => setCount(v.replace(/[^0-9]/g, ''))}
-            placeholder="e.g. 100"
+            placeholder="eg - 100"
             keyboardType="number-pad"
           />
 
@@ -101,7 +107,7 @@ export function NgoLogPlantedTreesScreen({ navigation }: any) {
             label="Location (optional)"
             value={locationLabel}
             onChangeText={setLocationLabel}
-            placeholder="Riverside plot"
+            placeholder="eg - Riverside plot"
           />
 
           <PhotoPickerField

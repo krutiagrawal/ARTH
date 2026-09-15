@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useCampaigns } from '../hooks/useApiQueries';
 import { useHaptics } from '../hooks/useHaptics';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function formatRupees(cents: number) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`;
@@ -18,7 +19,8 @@ function formatRupees(cents: number) {
 export function CampaignsListScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { selection } = useHaptics();
-  const { data: campaigns = [], isLoading } = useCampaigns();
+  const { data: campaigns = [], isLoading, refetch } = useCampaigns();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
     <View style={styles.container}>
@@ -35,7 +37,11 @@ export function CampaignsListScreen({ navigation }: any) {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && campaigns.length === 0 && (
           <EmptyState icon="💚" title="No active campaigns yet" body="Verified NGOs will list donation campaigns here." />

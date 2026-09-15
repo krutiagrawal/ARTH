@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,6 +19,7 @@ import { useApprovalGate } from '../hooks/useApprovalGate';
 import { ApiError } from '../api/client';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
   const animStyle = useSlideUp(delay, 18);
@@ -27,12 +28,13 @@ function FadeInRow({ delay, children, style }: { delay: number; children: React.
 
 export function NgoStaffScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: staff = [], isLoading } = useStaff();
+  const { data: staff = [], isLoading, refetch } = useStaff();
   const createMutation = useCreateStaff();
   const deleteMutation = useDeleteStaff();
   const confirm = useConfirm();
   const { data: profile } = useNgoProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
@@ -94,7 +96,11 @@ export function NgoStaffScreen({ navigation }: any) {
         }
       />
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         {showForm && (
           <View style={styles.formCard}>
             <PhotoPickerField
@@ -104,22 +110,22 @@ export function NgoStaffScreen({ navigation }: any) {
               label="Add Photo"
               hint="A friendly headshot works best"
             />
-            <FormField label="Name" value={name} onChangeText={setName} placeholder="Full name" />
-            <FormField label="Role" value={role} onChangeText={setRole} placeholder="Field Coordinator" />
+            <FormField label="Name" value={name} onChangeText={setName} placeholder="eg - Full name" />
+            <FormField label="Role" value={role} onChangeText={setRole} placeholder="eg - Field Coordinator" />
             <FormField
               label="Email"
               value={contactEmail}
               onChangeText={setContactEmail}
               autoCapitalize="none"
               keyboardType="email-address"
-              placeholder="name@example.org"
+              placeholder="eg - name@example.org"
             />
             <FormField
               label="Phone"
               value={contactPhone}
               onChangeText={setContactPhone}
               keyboardType="phone-pad"
-              placeholder="Optional"
+              placeholder="eg - Optional"
             />
             {error && <Text style={styles.error}>{error}</Text>}
             <TouchableOpacity style={[styles.submitButton, createMutation.isPending && styles.submitButtonDisabled]} onPress={guard(handleAdd)} disabled={createMutation.isPending}>

@@ -93,7 +93,7 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
       {reason === 'other' && (
         <TextInput
           style={[styles.details, isNightMode && styles.detailsNight]}
-          placeholder="Tell us a bit more"
+          placeholder="eg - Tell us a bit more"
           placeholderTextColor={isNightMode ? ON_DARK_SURFACE.muted : COLORS.textLight}
           value={details}
           onChangeText={setDetails}

@@ -1,5 +1,5 @@
 import React, { Suspense, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Linking } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Linking, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { MapErrorBoundary } from '../components/common/MapErrorBoundary';
 import { useHaptics } from '../hooks/useHaptics';
 import { useMyOrder, useCancelOrder, useSubmitOrderReview } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ApiError } from '../api/client';
 import type { OrderFulfillmentType, OrderStatus } from '../api/orders';
 
@@ -103,8 +104,8 @@ function ReviewForm({ orderId, showDeliveryRating }: { orderId: string; showDeli
       )}
       <TextInput
         style={styles.input}
-        placeholder="How was the delivery? (optional)"
-        placeholderTextColor={COLORS.textMuted}
+        placeholder="eg - How was the delivery? (optional)"
+        placeholderTextColor={COLORS.textLight}
         value={comment}
         onChangeText={setComment}
         multiline
@@ -132,9 +133,10 @@ export function OrderDetailScreen({ route, navigation }: any) {
   const orderId: string = route?.params?.orderId;
   const insets = useSafeAreaInsets();
   const { success, error: errorHaptic } = useHaptics();
-  const { data: order, isLoading } = useMyOrder(orderId);
+  const { data: order, isLoading, refetch } = useMyOrder(orderId);
   const cancelMutation = useCancelOrder();
   const [actionError, setActionError] = useState('');
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const handleCancel = async () => {
     setActionError('');
@@ -168,7 +170,11 @@ export function OrderDetailScreen({ route, navigation }: any) {
       {isLoading || !order ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           {order.status === 'cancelled' ? (
             <View style={styles.cancelledBanner}>
               <Text style={styles.cancelledText}>This order was cancelled.</Text>

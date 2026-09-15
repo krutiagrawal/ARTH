@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -12,6 +12,7 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
 import { ROLE_ROUTES } from '../constants/roleRoutes';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 export function LoginScreen({ navigation }: any) {
   const { login } = useAuth();
@@ -19,6 +20,7 @@ export function LoginScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   const handleLogin = useCallback(async () => {
     setError(null);
@@ -46,7 +48,11 @@ export function LoginScreen({ navigation }: any) {
         locations={[0, 0.3, 0.7, 1]}
         style={StyleSheet.absoluteFill}
       />
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         <Text style={styles.logo}>ARTH</Text>
         <Text style={styles.tagline}>Leave More Than Footprints</Text>
 
@@ -55,7 +61,7 @@ export function LoginScreen({ navigation }: any) {
 
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder="eg - Email"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             autoCapitalize="none"
             keyboardType="email-address"
@@ -64,7 +70,7 @@ export function LoginScreen({ navigation }: any) {
           />
           <PasswordInput
             inputStyle={styles.input}
-            placeholder="Password"
+            placeholder="eg - Password"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={password}
             onChangeText={setPassword}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { COLORS } from '../constants/colors';
@@ -11,6 +11,7 @@ import { useMyAdoptableTrees, useNgoProfile } from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
   const animStyle = useSlideUp(delay, 18);
@@ -33,13 +34,18 @@ function StatusPill({ label, color }: { label: string; color: string }) {
 
 export function NgoTreesScreen({ navigation }: any) {
   const bottomClearance = useBottomNavClearance();
-  const { data: trees = [], isLoading } = useMyAdoptableTrees();
+  const { data: trees = [], isLoading, refetch } = useMyAdoptableTrees();
   const { data: profile } = useNgoProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && trees.length === 0 && (
           <EmptyState icon="🌳" title="No trees yet" body="List a tree for the community to adopt." actionLabel="New tree" onAction={guard(() => navigation.navigate('NgoCreateAdoptableTree'))} />

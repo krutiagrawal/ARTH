@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,9 +12,11 @@ import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { LocationActions } from '../components/common/LocationActions';
 import { useHaptics } from '../hooks/useHaptics';
-import { useDrive, useJoinDrive, useLeaveDrive, useSponsorPlant } from '../hooks/useApiQueries';
+import { useAuth } from '../context/AuthContext';
+import { useDrive, useDriveAttendees, useJoinDrive, useLeaveDrive, useNgoProfile, useSponsorPlant } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import type { ApiDrivePlant } from '../api/drives';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function formatRupees(cents: number) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`;
@@ -24,12 +26,17 @@ export function DriveDetailScreen({ navigation, route }: any) {
   const { driveId } = route.params as { driveId: string };
   const insets = useSafeAreaInsets();
   const { success, error: errorHaptic } = useHaptics();
-  const { data: drive, isLoading } = useDrive(driveId);
+  const { data: drive, isLoading, refetch } = useDrive(driveId);
+  const { user } = useAuth();
+  const ngoProfile = useNgoProfile();
+  const isOwnDrive = user?.role === 'ngo' && !!drive && ngoProfile.data?.id === drive.ngoId;
+  const attendeesQuery = useDriveAttendees(driveId, isOwnDrive);
   const joinMutation = useJoinDrive();
   const leaveMutation = useLeaveDrive();
   const sponsorMutation = useSponsorPlant();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const queryClient = useQueryClient();
+  const { refreshing, onRefresh } = usePullToRefresh(isOwnDrive ? [refetch, attendeesQuery.refetch] : refetch);
   const [actionError, setActionError] = useState('');
   const [sponsoringId, setSponsoringId] = useState<string | null>(null);
 
@@ -103,7 +110,11 @@ export function DriveDetailScreen({ navigation, route }: any) {
       {isLoading || !drive ? (
         <ActivityIndicator color={COLORS.sage} style={styles.loader} />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           <BorderCard style={styles.card}>
             <Text style={styles.title}>{drive.title}</Text>
             <Text style={styles.ngoName}>Hosted by {drive.ngoName}</Text>
@@ -178,7 +189,26 @@ export function DriveDetailScreen({ navigation, route }: any) {
 
           {actionError ? <Text style={styles.errorText}>{actionError}</Text> : null}
 
-          {isCancelled ? (
+          {isOwnDrive ? (
+            <>
+              <Text style={styles.sectionLabel}>Who's coming ({drive.confirmedCount})</Text>
+              {attendeesQuery.isLoading ? (
+                <ActivityIndicator color={COLORS.sage} style={{ marginVertical: 12 }} />
+              ) : (attendeesQuery.data?.attendees.length ?? 0) === 0 ? (
+                <Text style={styles.infoText}>No RSVPs yet.</Text>
+              ) : (
+                attendeesQuery.data!.attendees.map((a) => (
+                  <View key={a.id} style={styles.attendeeRow}>
+                    <View>
+                      <Text style={styles.attendeeName}>{a.name}</Text>
+                      <Text style={styles.attendeeHandle}>@{a.handle}</Text>
+                    </View>
+                    <Text style={styles.attendeeDate}>{new Date(a.rsvpedAt).toLocaleDateString()}</Text>
+                  </View>
+                ))
+              )}
+            </>
+          ) : isCancelled ? (
             <View style={styles.cancelledBanner}>
               <Text style={styles.cancelledText}>This drive has been cancelled by the organizer.</Text>
             </View>
@@ -244,6 +274,17 @@ const styles = StyleSheet.create({
   sponsorButton: { borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.sage, paddingHorizontal: 14, paddingVertical: 8 },
   sponsorButtonText: { fontSize: 12, fontWeight: '700', color: COLORS.forest },
   errorText: { fontSize: 13, color: COLORS.dangerDark, textAlign: 'center', marginBottom: 12 },
+  attendeeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(94,133,80,0.12)',
+  },
+  attendeeName: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary },
+  attendeeHandle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+  attendeeDate: { fontSize: 12, color: COLORS.textSecondary },
   rsvpButton: { marginTop: 4 },
   cancelledBanner: {
     backgroundColor: COLORS.dangerLight,

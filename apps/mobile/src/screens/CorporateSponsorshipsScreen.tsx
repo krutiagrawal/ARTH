@@ -14,6 +14,7 @@ import { useSponsorships, useCreateSponsorship, useDeleteSponsorship, useCorpora
 import type { ApiCsrSponsorship } from '../api/corporate';
 import { ApiError } from '../api/client';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function SponsorshipRow({ item, onDelete }: { item: ApiCsrSponsorship; onDelete: () => void }) {
   return (
@@ -31,11 +32,12 @@ function SponsorshipRow({ item, onDelete }: { item: ApiCsrSponsorship; onDelete:
 
 export function CorporateSponsorshipsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: profile } = useCorporateProfile();
-  const { data: sponsorships = [], isLoading } = useSponsorships();
+  const { data: profile, refetch: refetchProfile } = useCorporateProfile();
+  const { data: sponsorships = [], isLoading, refetch: refetchSponsorships } = useSponsorships();
   const createMutation = useCreateSponsorship();
   const deleteMutation = useDeleteSponsorship();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh([refetchProfile, refetchSponsorships]);
 
   const [amount, setAmount] = useState('');
   const [driveId, setDriveId] = useState('');
@@ -91,9 +93,9 @@ export function CorporateSponsorshipsScreen({ navigation }: any) {
 
       {isApproved && (
         <View style={styles.addCard}>
-          <FormField label="Amount (₹)" value={amount} onChangeText={setAmount} placeholder="0" keyboardType="number-pad" />
-          <FormField label="Drive ID (optional)" value={driveId} onChangeText={setDriveId} placeholder="Leave blank for a general sponsorship" />
-          <FormField label="Note (optional)" value={note} onChangeText={setNote} placeholder="What is this sponsoring?" />
+          <FormField label="Amount (₹)" value={amount} onChangeText={setAmount} placeholder="eg - 0" keyboardType="number-pad" />
+          <FormField label="Drive ID (optional)" value={driveId} onChangeText={setDriveId} placeholder="eg - Leave blank for a general sponsorship" />
+          <FormField label="Note (optional)" value={note} onChangeText={setNote} placeholder="eg - What is this sponsoring?" />
           {error && <Text style={styles.error}>{error}</Text>}
           <AnimatedButton
             label={createMutation.isPending ? 'Adding…' : '+ Add sponsorship'}
@@ -114,6 +116,8 @@ export function CorporateSponsorshipsScreen({ navigation }: any) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
           renderItem={({ item }) => <SponsorshipRow item={item} onDelete={() => handleDelete(item)} />}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           ListEmptyComponent={
             <EmptyState icon="🤝" title="No sponsorships yet" body="Add your first sponsorship above." />
           }

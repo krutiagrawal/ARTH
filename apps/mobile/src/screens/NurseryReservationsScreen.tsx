@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -14,6 +14,7 @@ import { useNurseryReservations, useFulfillReservation, useDeclineReservation, u
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import type { ApiNurseryReservation } from '../api/nursery';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function ReservationRow({ item, showActions, guard }: { item: ApiNurseryReservation; showActions: boolean; guard: <A extends any[]>(fn: (...a: A) => void) => (...a: A) => void }) {
   const fulfillMutation = useFulfillReservation();
@@ -68,9 +69,10 @@ function ReservationRow({ item, showActions, guard }: { item: ApiNurseryReservat
 
 export function NurseryReservationsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: reservations = [], isLoading } = useNurseryReservations();
+  const { data: reservations = [], isLoading, refetch } = useNurseryReservations();
   const { data: profile } = useNurseryProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const pending = reservations.filter((r) => r.status === 'pending');
   const responded = reservations.filter((r) => r.status !== 'pending');
@@ -91,7 +93,11 @@ export function NurseryReservationsScreen({ navigation }: any) {
       ) : reservations.length === 0 ? (
         <EmptyState icon="🌱" title="No requests yet" body="When planters request saplings from your stock, they'll show up here." />
       ) : (
-        <ScrollView contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           {pending.length > 0 && (
             <>
               <Text style={styles.sectionTitle}>Pending ({pending.length})</Text>

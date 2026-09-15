@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
+import AddressAutocompleteInput from '@/components/dashboard/AddressAutocompleteInput'
 import { proxy } from '@/lib/memberProxy'
 
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
@@ -176,7 +177,17 @@ export default function CheckoutClient() {
 
             {showAddForm ? (
               <div className="mt-3 space-y-2 rounded-2xl border border-border/70 p-4">
-                <Input placeholder="Flat / street / society" value={line1} onChange={(e) => setLine1(e.target.value)} />
+                <AddressAutocompleteInput
+                  placeholder="Flat / street / society"
+                  value={line1}
+                  onChange={setLine1}
+                  onSelectSuggestion={(s) => {
+                    setLine1(s.label)
+                    setCoords({ lat: s.lat, lng: s.lng })
+                  }}
+                  proxy={proxy}
+                  className="h-9 rounded-md border-input bg-transparent px-3 py-1 text-base shadow-sm md:text-sm"
+                />
                 <Input placeholder="Pincode" value={pincode} onChange={(e) => setPincode(e.target.value)} />
                 <button type="button" className="text-sm text-primary hover:underline" onClick={useCurrentLocation} disabled={locating}>
                   {locating ? 'Locating…' : coords ? '📍 Location captured' : '📍 Use current location (required)'}

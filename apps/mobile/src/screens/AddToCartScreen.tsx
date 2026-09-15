@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,16 +10,18 @@ import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useHaptics } from '../hooks/useHaptics';
 import { useNurseryPublicProfile, useAddCartItem, useAddWishlistItem } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ApiError } from '../api/client';
 
 export function AddToCartScreen({ navigation, route }: any) {
   const { nurseryId, stockId } = route.params as { nurseryId: string; stockId: string };
   const insets = useSafeAreaInsets();
   const { success, error: errorHaptic } = useHaptics();
-  const { data: profile, isLoading } = useNurseryPublicProfile(nurseryId);
+  const { data: profile, isLoading, refetch } = useNurseryPublicProfile(nurseryId);
   const stock = profile?.stock.find((s) => s.id === stockId);
   const addCartMutation = useAddCartItem();
   const addWishlistMutation = useAddWishlistItem();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const [quantity, setQuantity] = useState(1);
   const [actionError, setActionError] = useState('');
@@ -66,7 +68,11 @@ export function AddToCartScreen({ navigation, route }: any) {
       {isLoading || !stock ? (
         <ActivityIndicator color={COLORS.sage} style={styles.loader} />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           <BorderCard style={styles.card}>
             <Text style={styles.title}>{stock.species}</Text>
             <Text style={styles.nurseryName}>from {profile?.nurseryName}</Text>

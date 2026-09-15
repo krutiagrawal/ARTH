@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -22,6 +22,7 @@ import {
 } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import type { ApiDeliveryPartner } from '../api/deliveryPartners';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function PartnerRow({ partner, onToggle }: { partner: ApiDeliveryPartner; onToggle: () => void }) {
   return (
@@ -48,11 +49,12 @@ function PartnerRow({ partner, onToggle }: { partner: ApiDeliveryPartner; onTogg
 
 export function NurseryDeliveryPartnersScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: partners = [], isLoading } = useDeliveryPartners();
+  const { data: partners = [], isLoading, refetch } = useDeliveryPartners();
   const createMutation = useCreateDeliveryPartner();
   const updateMutation = useUpdateDeliveryPartner();
   const deactivateMutation = useDeactivateDeliveryPartner();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
   const { period } = useTimeTheme();
   const isNightMode = isNightlikePeriod(period);
 
@@ -127,7 +129,11 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
           onAction={() => setShowCreate(true)}
         />
       ) : (
-        <ScrollView contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           {partners.map((p) => (
             <PartnerRow key={p.id} partner={p} onToggle={() => handleToggle(p)} />
           ))}
@@ -136,11 +142,11 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
 
       <Sheet visible={showCreate} onClose={() => setShowCreate(false)} title="Add a delivery partner" scrollable maxHeight={620}>
         <View style={{ gap: 4 }}>
-          <FormField dark={isNightMode} label="Name" value={name} onChangeText={setName} placeholder="Rider's full name" />
-          <FormField dark={isNightMode} label="Handle" value={handle} onChangeText={setHandle} placeholder="e.g. ravi_delivers" autoCapitalize="none" />
-          <FormField dark={isNightMode} label="Email" value={email} onChangeText={setEmail} placeholder="rider@example.com" keyboardType="email-address" autoCapitalize="none" />
-          <FormField dark={isNightMode} label="Phone" value={phone} onChangeText={setPhone} placeholder="Contact number" keyboardType="phone-pad" />
-          <FormField dark={isNightMode} label="Temporary password" value={password} onChangeText={setPassword} placeholder="At least 8 characters" secureTextEntry />
+          <FormField dark={isNightMode} label="Name" value={name} onChangeText={setName} placeholder="eg - Rider's full name" />
+          <FormField dark={isNightMode} label="Handle" value={handle} onChangeText={setHandle} placeholder="eg - ravi_delivers" autoCapitalize="none" />
+          <FormField dark={isNightMode} label="Email" value={email} onChangeText={setEmail} placeholder="eg - rider@example.com" keyboardType="email-address" autoCapitalize="none" />
+          <FormField dark={isNightMode} label="Phone" value={phone} onChangeText={setPhone} placeholder="eg - Contact number" keyboardType="phone-pad" />
+          <FormField dark={isNightMode} label="Temporary password" value={password} onChangeText={setPassword} placeholder="eg - At least 8 characters" secureTextEntry />
           {error && <Text style={styles.errorText}>{error}</Text>}
           <Text style={[styles.hint, isNightMode && styles.hintDark]}>
             Share this password with your delivery partner directly — they can log in on their own phone with this email and password.

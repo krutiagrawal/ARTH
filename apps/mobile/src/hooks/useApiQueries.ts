@@ -64,6 +64,7 @@ import {
   fetchGroupDrives,
   createDrive,
   CreateDriveInput,
+  fetchDriveAttendees,
 } from '../api/drives';
 import {
   fetchAdoptableTrees,
@@ -217,6 +218,8 @@ import { fetchNgoLeaderboard } from '../api/ngoLeaderboard';
 import { fetchGroupLeaderboard } from '../api/groupLeaderboard';
 import { fetchGroupThemes, selectGroupTheme } from '../api/groupThemes';
 import { browseNgos, fetchNgoPublicProfile } from '../api/ngosPublic';
+import { likePortfolioEntry, unlikePortfolioEntry } from '../api/portfolio';
+import type { ApiPublicNgoProfile } from '../api/ngosPublic';
 import { followNgo, unfollowNgo, fetchFollowedNgos, fetchFollowingFeed } from '../api/follow';
 import {
   fetchAdminOverview,
@@ -787,6 +790,16 @@ export function useDrive(id: string | null) {
   });
 }
 
+/** For the NGO that owns a drive, viewing who has RSVP'd — gate `enabled` to that ownership check. */
+export function useDriveAttendees(id: string | null, enabled: boolean) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['drives', id, 'attendees'],
+    queryFn: () => fetchDriveAttendees(id as string),
+    enabled: isAuthenticated && !!id && enabled,
+  });
+}
+
 export function useJoinDrive() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -1230,6 +1243,34 @@ export function useNgoPublicProfile(id: string | null) {
     queryKey: ['ngos', 'public', id],
     queryFn: () => fetchNgoPublicProfile(id as string),
     enabled: isAuthenticated && !!id,
+  });
+}
+
+/** Likes a "past work" entry shown on an NGO's public profile. Patches that profile's own query
+ * cache directly (portfolio entries aren't fetched anywhere else today) rather than a generic
+ * "patch everywhere" sweep like useToggleLike does for posts. */
+export function useTogglePortfolioLike(ngoId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  const patchEntry = (id: string, patch: (e: any) => any) => {
+    queryClient.setQueryData<ApiPublicNgoProfile | undefined>(['ngos', 'public', ngoId], (old) =>
+      old ? { ...old, portfolio: old.portfolio.map((e) => (e.id === id ? patch(e) : e)) } : old,
+    );
+  };
+
+  return useMutation({
+    mutationFn: ({ id, liked }: { id: string; liked: boolean }) =>
+      liked ? unlikePortfolioEntry(id) : likePortfolioEntry(id),
+    onMutate: async ({ id, liked }) => {
+      await queryClient.cancelQueries({ queryKey: ['ngos', 'public', ngoId] });
+      patchEntry(id, (e) => ({ ...e, likedByMe: !liked, likeCount: Math.max(0, e.likeCount + (liked ? -1 : 1)) }));
+    },
+    onError: (_err, { id, liked }) => {
+      patchEntry(id, (e) => ({ ...e, likedByMe: liked, likeCount: Math.max(0, e.likeCount + (liked ? 1 : -1)) }));
+    },
+    onSuccess: (result, { id }) => {
+      patchEntry(id, (e) => ({ ...e, likedByMe: result.liked, likeCount: result.likeCount }));
+    },
   });
 }
 
@@ -2093,12 +2134,13 @@ export function useNurseryBulkRequirementsCombined() {
   return {
     data: Array.from(byId.values()),
     isLoading: openQuery.isLoading || fulfilledQuery.isLoading,
+    refetch: () => Promise.all([openQuery.refetch(), fulfilledQuery.refetch()]),
   };
 }
 
 export function useNurseryBulkRequirement(id: string | null) {
-  const { data, isLoading } = useNurseryBulkRequirementsCombined();
-  return { data: id ? data.find((r) => r.id === id) : undefined, isLoading };
+  const { data, isLoading, refetch } = useNurseryBulkRequirementsCombined();
+  return { data: id ? data.find((r) => r.id === id) : undefined, isLoading, refetch };
 }
 
 function invalidateNurseryBulkRequirements(queryClient: ReturnType<typeof useQueryClient>) {

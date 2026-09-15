@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, Image, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,14 +11,16 @@ import { EmptyState } from '../components/common/EmptyState';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useAdminTreeReviewQueue, useReviewAdminTree } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { resolveMediaUrl } from '../api/client';
 
 export function AdminTreeReviewScreen() {
   const insets = useSafeAreaInsets();
   const bottomClearance = useBottomNavClearance();
-  const { data, isLoading } = useAdminTreeReviewQueue();
+  const { data, isLoading, refetch } = useAdminTreeReviewQueue();
   const reviewMutation = useReviewAdminTree();
   const trees = data?.trees ?? [];
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
     <View style={styles.container}>
@@ -30,7 +32,11 @@ export function AdminTreeReviewScreen() {
         <Text style={styles.headerSubtitle}>Submissions the AI flagged or couldn&rsquo;t verify – rejected trees earn no XP until approved here.</Text>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         {isLoading && <ActivityIndicator color={COLORS.mint} style={styles.loader} />}
         {!isLoading && trees.length === 0 && <EmptyState icon="🌳" title="Queue is empty" body="No submissions waiting for review." tint="dark" />}
 

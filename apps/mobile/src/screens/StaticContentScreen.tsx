@@ -1,15 +1,17 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 export function StaticContentScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
   const { title, body } = route.params as { title: string; body: string };
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   return (
     <View style={styles.container}>
@@ -34,6 +36,7 @@ export function StaticContentScreen({ navigation, route }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         <Text style={styles.body}>{body}</Text>
       </ScrollView>

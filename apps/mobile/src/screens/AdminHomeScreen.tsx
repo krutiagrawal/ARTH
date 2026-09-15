@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Image, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Image, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Dimensions, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +20,7 @@ import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useAdminOverview } from '../hooks/useApiQueries';
 import { useAuth } from '../context/AuthContext';
 import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const HERO_HEIGHT = SH * 0.4;
@@ -50,8 +51,9 @@ export function AdminHomeScreen({ navigation, onNavigateTab }: any) {
   const { weather } = useDeviceWeather();
   const sceneryMode = getSceneryMode(weather);
   const { user, logout } = useAuth();
-  const { data: overview, isLoading } = useAdminOverview();
+  const { data: overview, isLoading, refetch } = useAdminOverview();
   const statsAnim = useSlideUp(80, 20);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const goTab = (tab: string) => (onNavigateTab ? onNavigateTab(tab) : navigation?.navigate?.(tab));
   const pendingCount = overview?.ngosByStatus?.pending ?? 0;
@@ -67,6 +69,7 @@ export function AdminHomeScreen({ navigation, onNavigateTab }: any) {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         <View style={[styles.heroSection, { height: HERO_HEIGHT }]}>
           {theme.heroImage ? (

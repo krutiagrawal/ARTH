@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,12 +20,14 @@ import { useHaptics } from '../hooks/useHaptics';
 import type { Award } from '../api/ngo';
 import { ApiError, resolveMediaUrl } from '../api/client';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 export function NgoSettingsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: profile, isLoading } = useNgoProfile();
+  const { data: profile, isLoading, refetch } = useNgoProfile();
   const updateMutation = useUpdateNgoProfile();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const [orgName, setOrgName] = useState('');
   const [description, setDescription] = useState('');
@@ -122,7 +124,11 @@ export function NgoSettingsScreen({ navigation }: any) {
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           <Animated.View style={cardAnim}>
             {profile?.status !== 'approved' && (
               <View style={styles.statusBanner}>
@@ -158,24 +164,24 @@ export function NgoSettingsScreen({ navigation }: any) {
               <Toggle value={approvalRequired} onValueChange={handleToggleApprovalRequired} />
             </View>
 
-            <FormField label="Organization Name" value={orgName} onChangeText={setOrgName} placeholder="Your organization" />
-            <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="We plant. We protect. We inspire." />
-            <FormField label="Website" value={website} onChangeText={setWebsite} autoCapitalize="none" keyboardType="url" placeholder="https://" />
-            <FormField label="Contact Phone" value={contactPhone} onChangeText={setContactPhone} keyboardType="phone-pad" placeholder="Phone number" />
+            <FormField label="Organization Name" value={orgName} onChangeText={setOrgName} placeholder="eg - Your organization" />
+            <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - We plant. We protect. We inspire." />
+            <FormField label="Website" value={website} onChangeText={setWebsite} autoCapitalize="none" keyboardType="url" placeholder="eg - https://" />
+            <FormField label="Contact Phone" value={contactPhone} onChangeText={setContactPhone} keyboardType="phone-pad" placeholder="eg - Phone number" />
             <CityPickerField value={city} onChange={setCity} />
             <FormField
               label="Founded Year"
               value={foundedYear}
               onChangeText={(v: string) => setFoundedYear(v.replace(/[^0-9]/g, ''))}
               keyboardType="number-pad"
-              placeholder="2018"
+              placeholder="eg - 2018"
             />
             <FormField
               label="Volunteer Count (Approx.)"
               value={volunteerCountEstimate}
               onChangeText={(v: string) => setVolunteerCountEstimate(v.replace(/[^0-9]/g, ''))}
               keyboardType="number-pad"
-              placeholder="120"
+              placeholder="eg - 120"
             />
 
             <Text style={styles.sectionLabel}>Awards & recognition</Text>
@@ -188,15 +194,15 @@ export function NgoSettingsScreen({ navigation }: any) {
                       <Text style={styles.removeText}>Remove</Text>
                     </TouchableOpacity>
                   </View>
-                  <FormField label="Title" value={award.title} onChangeText={(v: string) => updateAward(i, { title: v })} placeholder="Award title" />
+                  <FormField label="Title" value={award.title} onChangeText={(v: string) => updateAward(i, { title: v })} placeholder="eg - Award title" />
                   <FormField
                     label="Year"
                     value={award.year ? String(award.year) : ''}
                     onChangeText={(v: string) => updateAward(i, { year: v ? Number(v.replace(/[^0-9]/g, '')) : undefined })}
                     keyboardType="number-pad"
-                    placeholder="Year"
+                    placeholder="eg - Year"
                   />
-                  <FormField label="Issued by" value={award.issuer ?? ''} onChangeText={(v: string) => updateAward(i, { issuer: v })} placeholder="Issuing body" />
+                  <FormField label="Issued by" value={award.issuer ?? ''} onChangeText={(v: string) => updateAward(i, { issuer: v })} placeholder="eg - Issuing body" />
                 </View>
               ))}
               <TouchableOpacity style={styles.addButton} onPress={addAward}>

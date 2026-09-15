@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Text } from '../common/AppText';
 import Animated, {
   useSharedValue,
@@ -58,22 +58,22 @@ export function LikeButton({ liked, count, onToggle, onPressCount, size = 22, is
   }, [liked, light, onToggle, burst, scale, isToggling]);
 
   return (
-    <TouchableOpacity style={styles.row} onPress={handlePress} activeOpacity={0.7} hitSlop={8}>
-      <Animated.View style={styles.heartWrap}>
-        <Animated.View style={[styles.burst, { width: size * 1.7, height: size * 1.7, borderRadius: size }, burstStyle]} />
-        <Animated.Text style={[{ fontSize: size }, heartStyle]}>{liked ? '❤️' : '🤍'}</Animated.Text>
-      </Animated.View>
+    <View style={styles.row}>
+      <TouchableOpacity onPress={handlePress} activeOpacity={0.7} hitSlop={8}>
+        <Animated.View style={styles.heartWrap}>
+          <Animated.View style={[styles.burst, { width: size * 1.7, height: size * 1.7, borderRadius: size }, burstStyle]} />
+          <Animated.Text style={[{ fontSize: size }, heartStyle]}>{liked ? '❤️' : '🤍'}</Animated.Text>
+        </Animated.View>
+      </TouchableOpacity>
 
       {count > 0 && (
-        <Text
-          style={[styles.count, liked && styles.countLiked]}
-          onPress={onPressCount}
-          suppressHighlighting
-        >
-          {count}
-        </Text>
+        <TouchableOpacity onPress={onPressCount} disabled={!onPressCount} activeOpacity={0.7} hitSlop={8}>
+          <Text style={[styles.count, liked && styles.countLiked]} suppressHighlighting>
+            {count}
+          </Text>
+        </TouchableOpacity>
       )}
-    </TouchableOpacity>
+    </View>
   );
 }
 

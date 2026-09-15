@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { IconBadge } from '../components/common/IconBadge';
 import { useSessions, useRevokeSession } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { ApiSession } from '../api/users';
 import { useConfirm } from '../context/ConfirmDialogContext';
 
@@ -51,7 +52,8 @@ function SessionRow({ session }: { session: ApiSession }) {
 
 export function SessionsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: sessions = [], isLoading } = useSessions();
+  const { data: sessions = [], isLoading, refetch } = useSessions();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
     <View style={styles.container}>
@@ -71,6 +73,7 @@ export function SessionsScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         {isLoading ? (
           <ActivityIndicator size="small" color={COLORS.sage} style={{ marginTop: 40 }} />

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { COLORS } from '../constants/colors';
@@ -13,6 +13,7 @@ import { useApprovalGate } from '../hooks/useApprovalGate';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { resolveMediaUrl } from '../api/client';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
   const animStyle = useSlideUp(delay, 18);
@@ -44,13 +45,18 @@ function MetaRow({ icon, text, style }: { icon: string; text: string; style?: an
 
 export function NgoDrivesScreen({ navigation }: any) {
   const bottomClearance = useBottomNavClearance();
-  const { data: drives = [], isLoading } = useMyDrives();
-  const { data: profile } = useNgoProfile();
+  const { data: drives = [], isLoading, refetch } = useMyDrives();
+  const { data: profile, refetch: refetchProfile } = useNgoProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
+  const { refreshing, onRefresh } = usePullToRefresh([refetch, refetchProfile]);
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && drives.length === 0 && (
           <EmptyState icon="🤝" title="No drives yet" body="Publish your first planting drive to start collecting RSVPs." actionLabel="New drive" onAction={guard(() => navigation.navigate('NgoCreateDrive'))} />

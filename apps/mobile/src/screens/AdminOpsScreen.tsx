@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +19,7 @@ import {
   useAdminOrders,
   useRefundAdminOrder,
 } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ApiError } from '../api/client';
 
 type Tab = 'drives' | 'donations' | 'orders';
@@ -48,6 +49,12 @@ export function AdminOpsScreen() {
   const cancelDrive = useCancelAdminDrive();
   const refundDonation = useRefundAdminDonation();
   const refundOrder = useRefundAdminOrder();
+
+  const { refreshing, onRefresh } = usePullToRefresh([
+    drivesQuery.refetch,
+    donationsQuery.refetch,
+    ordersQuery.refetch,
+  ]);
 
   const { data, isLoading, items, listKey } =
     tab === 'drives'
@@ -94,7 +101,11 @@ export function AdminOpsScreen() {
         </ScrollView>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         {isLoading && <ActivityIndicator color={COLORS.mint} style={styles.loader} />}
         {!isLoading && items.length === 0 && <EmptyState icon="📦" title={`No ${tab}`} body="Nothing here yet." tint="dark" />}
 
@@ -144,7 +155,7 @@ export function AdminOpsScreen() {
           style={styles.sheetInput}
           value={reason}
           onChangeText={setReason}
-          placeholder="What happened?"
+          placeholder="eg - What happened?"
           placeholderTextColor={ON_DARK_SURFACE.muted}
           multiline
         />

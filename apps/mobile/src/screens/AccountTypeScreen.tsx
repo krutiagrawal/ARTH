@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,6 +9,7 @@ import { COLORS } from '../constants/colors';
 import { SPACING } from '../constants/theme';
 import { FloatingParticles } from '../components/common/FloatingParticles';
 import { useSlideUp } from '../hooks/useAnimations';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 interface AccountTypeOption {
   route: string;
@@ -61,6 +62,7 @@ function AccountTypeCard({
  */
 export function AccountTypeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   return (
     <View style={styles.container}>
@@ -75,6 +77,7 @@ export function AccountTypeScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         <Text style={styles.title}>What best describes you?</Text>
         <Text style={styles.subtitle}>Pick an account type to get started – you can always reach out to switch later.</Text>

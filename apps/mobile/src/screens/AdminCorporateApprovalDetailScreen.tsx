@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { Sheet } from '../components/common/Sheet';
 import { useSetAdminCorporateStatus } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ApiError } from '../api/client';
 import type { ApiAdminCorporate, NgoApprovalStatus } from '../api/admin';
 import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
@@ -39,6 +40,7 @@ export function AdminCorporateApprovalDetailScreen({ navigation, route }: any) {
   const [error, setError] = useState<string | null>(null);
   const { period } = useTimeTheme();
   const isNightMode = isNightlikePeriod(period);
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   const applyStatus = async (status: NgoApprovalStatus, rejectionReason?: string) => {
     setError(null);
@@ -74,7 +76,11 @@ export function AdminCorporateApprovalDetailScreen({ navigation, route }: any) {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         <BorderCard style={styles.card}>
           <View style={[styles.statusChip, { borderColor: statusColor(corporate.status), alignSelf: 'flex-start' }]}>
             <Text style={[styles.statusChipText, { color: statusColor(corporate.status) }]}>{corporate.status}</Text>
@@ -152,8 +158,8 @@ export function AdminCorporateApprovalDetailScreen({ navigation, route }: any) {
           style={[styles.sheetInput, isNightMode && styles.sheetInputNight]}
           value={reason}
           onChangeText={setReason}
-          placeholder="Let them know why…"
-          placeholderTextColor={isNightMode ? ON_DARK_SURFACE.muted : COLORS.textMuted}
+          placeholder="eg - Let them know why…"
+          placeholderTextColor={isNightMode ? ON_DARK_SURFACE.muted : COLORS.textLight}
           multiline
         />
         <AnimatedButton

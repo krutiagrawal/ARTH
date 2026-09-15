@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -12,6 +12,7 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { CityPickerField } from '../components/common/CityPickerField';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function slugifyHandle(name: string): string {
   return name
@@ -33,6 +34,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   const handleRegister = useCallback(async () => {
     setError(null);
@@ -72,7 +74,11 @@ export function NurseryRegisterScreen({ navigation }: any) {
         locations={[0, 0.3, 0.7, 1]}
         style={StyleSheet.absoluteFill}
       />
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         <Text style={styles.logo}>ARTH</Text>
         <Text style={styles.tagline}>for nurseries</Text>
 
@@ -85,14 +91,14 @@ export function NurseryRegisterScreen({ navigation }: any) {
           <Text style={styles.sectionLabel}>Nursery</Text>
           <TextInput
             style={styles.input}
-            placeholder="Nursery name"
+            placeholder="eg - Nursery name"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={nurseryName}
             onChangeText={setNurseryName}
           />
           <TextInput
             style={[styles.input, styles.multiline]}
-            placeholder="What does your nursery grow?"
+            placeholder="eg - What does your nursery grow?"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={description}
             onChangeText={setDescription}
@@ -101,7 +107,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
           <CityPickerField value={city} onChange={setCity} variant="dark" />
           <TextInput
             style={styles.input}
-            placeholder="Contact phone (optional)"
+            placeholder="eg - Contact phone (optional)"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             keyboardType="phone-pad"
             value={contactPhone}
@@ -111,14 +117,14 @@ export function NurseryRegisterScreen({ navigation }: any) {
           <Text style={styles.sectionLabel}>Your account</Text>
           <TextInput
             style={styles.input}
-            placeholder="Your name"
+            placeholder="eg - Your name"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={ownerName}
             onChangeText={setOwnerName}
           />
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder="eg - Email"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             autoCapitalize="none"
             keyboardType="email-address"
@@ -127,7 +133,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
           />
           <PasswordInput
             inputStyle={styles.input}
-            placeholder="Password (min. 8 characters)"
+            placeholder="eg - Password (min. 8 characters)"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={password}
             onChangeText={setPassword}

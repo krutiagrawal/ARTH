@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +14,7 @@ import { Sheet } from '../components/common/Sheet';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useAdminAccounts, useBlockAdminAccount, useUnblockAdminAccount } from '../hooks/useApiQueries';
 import { useSlideUp } from '../hooks/useAnimations';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ApiError } from '../api/client';
 import type { AdminAccountType, ApiAdminAccount } from '../api/admin';
 
@@ -50,8 +51,9 @@ export function AdminAccountSearchScreen() {
     return () => clearTimeout(timer);
   }, [query]);
 
-  const { data, isLoading } = useAdminAccounts({ q: debouncedQuery || undefined, type: type || undefined, take: 30 });
+  const { data, isLoading, refetch } = useAdminAccounts({ q: debouncedQuery || undefined, type: type || undefined, take: 30 });
   const accounts = data?.accounts ?? [];
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const blockMutation = useBlockAdminAccount();
   const unblockMutation = useUnblockAdminAccount();
@@ -93,7 +95,7 @@ export function AdminAccountSearchScreen() {
       <View style={styles.filterBar}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by name, handle, email, org…"
+          placeholder="eg - Search by name, handle, email, org…"
           placeholderTextColor={ON_DARK_SURFACE.muted}
           value={query}
           onChangeText={setQuery}
@@ -108,7 +110,11 @@ export function AdminAccountSearchScreen() {
         </ScrollView>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         {isLoading && <ActivityIndicator color={COLORS.mint} style={styles.loader} />}
         {!isLoading && accounts.length === 0 && (
           <EmptyState icon="🔎" title="No matching accounts" body="Try a different search or filter." tint="dark" />
@@ -179,7 +185,7 @@ export function AdminAccountSearchScreen() {
           style={styles.sheetInput}
           value={reason}
           onChangeText={setReason}
-          placeholder="Kept on file, not shown to the account…"
+          placeholder="eg - Kept on file, not shown to the account…"
           placeholderTextColor={ON_DARK_SURFACE.muted}
           multiline
         />

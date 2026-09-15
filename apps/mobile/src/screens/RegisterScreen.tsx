@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -10,6 +10,7 @@ import { BorderCard } from '../components/common/BorderCard';
 import { PasswordInput } from '../components/common/PasswordInput';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useAuth } from '../context/AuthContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ApiError } from '../api/client';
 
 function slugifyHandle(name: string): string {
@@ -28,6 +29,7 @@ export function RegisterScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   const handleRegister = useCallback(async () => {
     setError(null);
@@ -63,7 +65,11 @@ export function RegisterScreen({ navigation }: any) {
         locations={[0, 0.3, 0.7, 1]}
         style={StyleSheet.absoluteFill}
       />
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         <Text style={styles.logo}>ARTH</Text>
         <Text style={styles.tagline}>Leave More Than Footprints</Text>
 
@@ -72,14 +78,14 @@ export function RegisterScreen({ navigation }: any) {
 
           <TextInput
             style={styles.input}
-            placeholder="Name"
+            placeholder="eg - Name"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={name}
             onChangeText={setName}
           />
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder="eg - Email"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             autoCapitalize="none"
             keyboardType="email-address"
@@ -88,7 +94,7 @@ export function RegisterScreen({ navigation }: any) {
           />
           <PasswordInput
             inputStyle={styles.input}
-            placeholder="Password (min. 8 characters)"
+            placeholder="eg - Password (min. 8 characters)"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={password}
             onChangeText={setPassword}

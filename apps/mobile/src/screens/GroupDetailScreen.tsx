@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,6 +11,7 @@ import { EmptyState } from '../components/common/EmptyState';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { useGroupChallenges, useJoinGroupChallenge } from '../hooks/useApiQueries';
 import { useSlideUp } from '../hooks/useAnimations';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ApiError } from '../api/client';
 import { useConfirm } from '../context/ConfirmDialogContext';
 
@@ -29,9 +30,10 @@ function FadeInRow({ delay, children }: { delay: number; children: React.ReactNo
 export function GroupDetailScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
   const groupId: string | undefined = route?.params?.groupId;
-  const { data: challenges = [], isLoading } = useGroupChallenges(groupId);
+  const { data: challenges = [], isLoading, refetch } = useGroupChallenges(groupId);
   const joinMutation = useJoinGroupChallenge();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const handleJoin = async (challengeId: string) => {
     try {
@@ -49,7 +51,11 @@ export function GroupDetailScreen({ navigation, route }: any) {
 
       <ScreenHeader title="Group" subtitle="Challenges and activity" onBack={() => navigation?.goBack?.()} align="left" />
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         <View style={styles.linkRow}>
           <TouchableOpacity
             style={styles.linkButton}

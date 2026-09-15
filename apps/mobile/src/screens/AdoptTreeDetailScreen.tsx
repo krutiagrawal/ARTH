@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,14 +11,16 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { LocationActions } from '../components/common/LocationActions';
 import { useHaptics } from '../hooks/useHaptics';
 import { useAdoptableTree, useAdoptTree } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ApiError } from '../api/client';
 
 export function AdoptTreeDetailScreen({ navigation, route }: any) {
   const { treeId } = route.params as { treeId: string };
   const insets = useSafeAreaInsets();
   const { success, error: errorHaptic } = useHaptics();
-  const { data: tree, isLoading } = useAdoptableTree(treeId);
+  const { data: tree, isLoading, refetch } = useAdoptableTree(treeId);
   const adoptMutation = useAdoptTree();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
   const [message, setMessage] = useState('');
   const [actionError, setActionError] = useState('');
   const [adopted, setAdopted] = useState(false);
@@ -56,7 +58,11 @@ export function AdoptTreeDetailScreen({ navigation, route }: any) {
       {isLoading || !tree ? (
         <ActivityIndicator color={COLORS.sage} style={styles.loader} />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           <BorderCard style={styles.card}>
             <Text style={styles.title}>{tree.nickname}</Text>
             <Text style={styles.ngoName}>{tree.speciesName} · listed by {tree.ngoName}</Text>
@@ -89,8 +95,8 @@ export function AdoptTreeDetailScreen({ navigation, route }: any) {
               <TextInput
                 value={message}
                 onChangeText={setMessage}
-                placeholder="Why does this tree matter to you?"
-                placeholderTextColor={COLORS.textMuted}
+                placeholder="eg - Why does this tree matter to you?"
+                placeholderTextColor={COLORS.textLight}
                 multiline
                 style={styles.input}
               />

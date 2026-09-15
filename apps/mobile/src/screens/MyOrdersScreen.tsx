@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useMyOrders } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { ApiOrder, OrderStatus } from '../api/orders';
 
 function formatRupees(cents: number) {
@@ -58,7 +59,8 @@ function OrderRow({ order, onPress }: { order: ApiOrder; onPress: () => void }) 
 
 export function MyOrdersScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: orders, isLoading } = useMyOrders();
+  const { data: orders, isLoading, refetch } = useMyOrders();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
     <View style={styles.container}>
@@ -80,7 +82,11 @@ export function MyOrdersScreen({ navigation }: any) {
       ) : !orders || orders.length === 0 ? (
         <EmptyState icon="📦" title="No orders yet" body="Saplings you buy from nurseries will show up here." />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           {orders.map((order) => (
             <OrderRow key={order.id} order={order} onPress={() => navigation.navigate('OrderDetail', { orderId: order.id })} />
           ))}

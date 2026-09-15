@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -12,6 +12,7 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { CityPickerField } from '../components/common/CityPickerField';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function slugifyHandle(name: string): string {
   return name
@@ -33,6 +34,7 @@ export function CorporateRegisterScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   const handleRegister = useCallback(async () => {
     setError(null);
@@ -72,7 +74,11 @@ export function CorporateRegisterScreen({ navigation }: any) {
         locations={[0, 0.3, 0.7, 1]}
         style={StyleSheet.absoluteFill}
       />
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         <Text style={styles.logo}>ARTH</Text>
         <Text style={styles.tagline}>for corporate CSR</Text>
 
@@ -85,14 +91,14 @@ export function CorporateRegisterScreen({ navigation }: any) {
           <Text style={styles.sectionLabel}>Company</Text>
           <TextInput
             style={styles.input}
-            placeholder="Company name"
+            placeholder="eg - Company name"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={companyName}
             onChangeText={setCompanyName}
           />
           <TextInput
             style={[styles.input, styles.multiline]}
-            placeholder="What does your company do?"
+            placeholder="eg - What does your company do?"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={description}
             onChangeText={setDescription}
@@ -100,7 +106,7 @@ export function CorporateRegisterScreen({ navigation }: any) {
           />
           <TextInput
             style={styles.input}
-            placeholder="Industry (optional)"
+            placeholder="eg - Industry (optional)"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={industry}
             onChangeText={setIndustry}
@@ -110,14 +116,14 @@ export function CorporateRegisterScreen({ navigation }: any) {
           <Text style={styles.sectionLabel}>Your account</Text>
           <TextInput
             style={styles.input}
-            placeholder="Your name"
+            placeholder="eg - Your name"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={contactName}
             onChangeText={setContactName}
           />
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder="eg - Email"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             autoCapitalize="none"
             keyboardType="email-address"
@@ -126,7 +132,7 @@ export function CorporateRegisterScreen({ navigation }: any) {
           />
           <PasswordInput
             inputStyle={styles.input}
-            placeholder="Password (min. 8 characters)"
+            placeholder="eg - Password (min. 8 characters)"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={password}
             onChangeText={setPassword}

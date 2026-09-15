@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +13,7 @@ import { useHaptics } from '../hooks/useHaptics';
 import { useCampaign, useCreateDonationIntent } from '../hooks/useApiQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '../api/client';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const AMOUNT_CHIPS = [100, 500, 1500, 5000];
 
@@ -24,10 +25,11 @@ export function CampaignDetailScreen({ navigation, route }: any) {
   const { campaignId } = route.params as { campaignId: string };
   const insets = useSafeAreaInsets();
   const { success, error: errorHaptic } = useHaptics();
-  const { data: campaign, isLoading } = useCampaign(campaignId);
+  const { data: campaign, isLoading, refetch } = useCampaign(campaignId);
   const createIntent = useCreateDonationIntent();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const queryClient = useQueryClient();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const [selectedAmount, setSelectedAmount] = useState<number | null>(500);
   const [customAmount, setCustomAmount] = useState('');
@@ -93,7 +95,11 @@ export function CampaignDetailScreen({ navigation, route }: any) {
       {isLoading || !campaign ? (
         <ActivityIndicator color={COLORS.sage} style={styles.loader} />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           <BorderCard style={styles.card}>
             <Text style={styles.title}>{campaign.title}</Text>
             <Text style={styles.ngoName}>{campaign.ngoName}</Text>
@@ -138,8 +144,8 @@ export function CampaignDetailScreen({ navigation, route }: any) {
                   setCustomAmount(v.replace(/[^0-9]/g, ''));
                   setSelectedAmount(null);
                 }}
-                placeholder="Or enter a custom amount (₹)"
-                placeholderTextColor={COLORS.textMuted}
+                placeholder="eg - Or enter a custom amount (₹)"
+                placeholderTextColor={COLORS.textLight}
                 keyboardType="number-pad"
                 style={styles.input}
               />

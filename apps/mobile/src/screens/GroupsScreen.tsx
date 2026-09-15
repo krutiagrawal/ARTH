@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,6 +13,7 @@ import { FormField } from '../components/common/FormField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { useMyGroups, useJoinGroup, useLeaveGroup } from '../hooks/useApiQueries';
 import { useSlideUp } from '../hooks/useAnimations';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ApiError } from '../api/client';
 import type { ApiGroupMembership } from '../api/group';
 import { useConfirm } from '../context/ConfirmDialogContext';
@@ -26,10 +27,11 @@ function FadeInRow({ delay, children }: { delay: number; children: React.ReactNo
 
 export function GroupsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: memberships = [], isLoading } = useMyGroups();
+  const { data: memberships = [], isLoading, refetch } = useMyGroups();
   const joinMutation = useJoinGroup();
   const leaveMutation = useLeaveGroup();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -59,10 +61,14 @@ export function GroupsScreen({ navigation }: any) {
 
       <ScreenHeader title="Groups" subtitle="Plant with your people" onBack={() => navigation?.goBack?.()} align="left" />
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         <View style={styles.joinRow}>
           <View style={{ flex: 1 }}>
-            <FormField label="Invite code" value={inviteCode} onChangeText={setInviteCode} placeholder="e.g. AB3XQ9KP" autoCapitalize="characters" />
+            <FormField label="Invite code" value={inviteCode} onChangeText={setInviteCode} placeholder="eg - AB3XQ9KP" autoCapitalize="characters" />
           </View>
         </View>
         {error && <Text style={styles.error}>{error}</Text>}

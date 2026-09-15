@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
+import AddressAutocompleteInput from '@/components/dashboard/AddressAutocompleteInput'
 import { useNurseryProfile } from '../NurseryProfileContext'
 import { proxy } from '../proxy'
 
@@ -151,10 +152,15 @@ export default function PickupDeliveryClient() {
             <p className="eyebrow">Delivery settings</p>
             <label className="block">
               <span className="text-xs text-muted-foreground">Nursery address</span>
-              <Input
+              <AddressAutocompleteInput
                 placeholder="e.g. 12 Baner Road, near City Mall"
                 value={line1}
-                onChange={(e) => setLine1(e.target.value)}
+                onChange={setLine1}
+                onSelectSuggestion={(s) => {
+                  setLine1(s.label)
+                  setCoords({ lat: s.lat, lng: s.lng })
+                }}
+                proxy={proxy}
                 className="mt-1 h-10 rounded-full"
               />
             </label>

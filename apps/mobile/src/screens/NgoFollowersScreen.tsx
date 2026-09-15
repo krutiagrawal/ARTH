@@ -9,6 +9,7 @@ import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useNgoFollowers, useRemoveFollower } from '../hooks/useSocialQueries';
 import type { ApiFollower } from '../api/ngoFollowers';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function FollowerRow({ follower, onRemove }: { follower: ApiFollower; onRemove: () => void }) {
   return (
@@ -37,12 +38,13 @@ function FollowerRow({ follower, onRemove }: { follower: ApiFollower; onRemove: 
 export function NgoFollowersScreen() {
   const [query, setQuery] = useState('');
   const clearance = useBottomNavClearance();
-  const { data, isLoading, refetch, isRefetching } = useNgoFollowers({
+  const { data, isLoading, refetch } = useNgoFollowers({
     status: 'accepted',
     q: query.trim() || undefined,
   });
   const removeFollower = useRemoveFollower();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const confirmRemove = (follower: ApiFollower) => {
     confirm(
@@ -75,8 +77,8 @@ export function NgoFollowersScreen() {
         <Text style={styles.searchIcon}>🔍</Text>
         <TextInput
           style={styles.search}
-          placeholder="Search followers"
-          placeholderTextColor={COLORS.textMuted}
+          placeholder="eg - Search followers"
+          placeholderTextColor={COLORS.textLight}
           value={query}
           onChangeText={setQuery}
           autoCapitalize="none"
@@ -93,8 +95,8 @@ export function NgoFollowersScreen() {
         keyExtractor={(f) => f.followId}
         renderItem={({ item }) => <FollowerRow follower={item} onRemove={() => confirmRemove(item)} />}
         contentContainerStyle={[styles.list, { paddingBottom: clearance }]}
-        onRefresh={refetch}
-        refreshing={isRefetching}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
         ListEmptyComponent={
           <EmptyState
             icon="🌍"

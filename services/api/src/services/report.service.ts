@@ -1,6 +1,20 @@
 import { Prisma, PrismaClient, ReportReason, ReportStatus, ReportTargetType } from '@plant/db';
 import { BadRequestError, NotFoundError } from '../utils/errors';
 import { applyAutoHideIfNeeded } from './post.service';
+
+const PORTFOLIO_AUTO_HIDE_REPORT_THRESHOLD = 3;
+
+/** Same auto-hide-at-threshold shape as post.service.ts's applyAutoHideIfNeeded, but portfolio
+ * entries have no dedicated FK column on ContentReport, so this counts by targetType+targetId
+ * instead of a postId column. */
+async function applyPortfolioAutoHideIfNeeded(prisma: PrismaClient, entryId: string) {
+  const openReports = await prisma.contentReport.count({
+    where: { targetType: 'portfolio_entry', targetId: entryId, status: 'open' },
+  });
+  if (openReports >= PORTFOLIO_AUTO_HIDE_REPORT_THRESHOLD) {
+    await prisma.ngoPortfolioEntry.update({ where: { id: entryId }, data: { isHidden: true } });
+  }
+}
 import { notify } from './notification.service';
 import { blockAccount } from './admin.service';
 
@@ -71,6 +85,8 @@ export async function createReport(prisma: PrismaClient, reporterId: string, inp
 
   if (input.targetType === 'post') {
     await applyAutoHideIfNeeded(prisma, input.targetId);
+  } else if (input.targetType === 'portfolio_entry') {
+    await applyPortfolioAutoHideIfNeeded(prisma, input.targetId);
   }
 }
 
@@ -212,6 +228,13 @@ export async function actOnReport(
     }
   } else if (report.targetType === 'story' && action === 'delete') {
     await prisma.story.deleteMany({ where: { id: report.targetId } });
+  } else if (report.targetType === 'portfolio_entry') {
+    const entry = await prisma.ngoPortfolioEntry.findUnique({ where: { id: report.targetId }, select: { id: true } });
+    if (entry) {
+      if (action === 'hide') await prisma.ngoPortfolioEntry.update({ where: { id: entry.id }, data: { isHidden: true } });
+      if (action === 'unhide') await prisma.ngoPortfolioEntry.update({ where: { id: entry.id }, data: { isHidden: false } });
+      if (action === 'delete') await prisma.ngoPortfolioEntry.delete({ where: { id: entry.id } });
+    }
   }
 
   // Deleting a post cascades its reports away, so only update rows that still exist.

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Image } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Image, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import Animated, {
   useSharedValue,
@@ -30,6 +30,7 @@ import { usePlantTree } from '../hooks/useApiQueries';
 import { useCheckPlantingEligibility } from '../hooks/useApiQueries';
 import { useVerifyPlantingPhoto } from '../hooks/useApiQueries';
 import { useNearbyStock } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ApiError } from '../api/client';
 import { SPECIES_EMOJI_OPTIONS } from '../api/species';
 import type { VerifyPlantingPhotoResult, ApiTree } from '../api/trees';
@@ -227,7 +228,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
   const bottomNavClearance = useBottomNavClearance(8);
 
-  const { data: speciesList = [] } = useSpecies();
+  const { data: speciesList = [], refetch: refetchSpecies } = useSpecies();
   const createSpeciesMutation = useCreateSpecies();
   const plantTreeMutation = usePlantTree();
   const checkEligibility = useCheckPlantingEligibility();
@@ -240,11 +241,12 @@ export function PlantTreeScreen({ navigation, route }: any) {
   const hasMoreSpecies = speciesList.length > INITIAL_SPECIES_COUNT;
 
   // "Recommended nearby" card — only once GPS has resolved.
-  const { data: nearbyStock = [] } = useNearbyStock(
+  const { data: nearbyStock = [], refetch: refetchNearbyStock } = useNearbyStock(
     selectedSpeciesId,
     location?.lat ?? null,
     location?.lng ?? null,
   );
+  const { refreshing, onRefresh } = usePullToRefresh([refetchSpecies, refetchNearbyStock]);
 
   const fetchLocation = useCallback(async () => {
     if (isPreVerified) return;
@@ -443,6 +445,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
         <ScrollView
           contentContainerStyle={[styles.uploadContent, { paddingBottom: 100 }]}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           {/* Camera capture — no gallery option: the planting photo must be taken live so the
               AI verification (and the location it's captured with) reflects the real moment. */}
@@ -490,6 +493,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
         <ScrollView
           contentContainerStyle={[styles.detailsContent, { paddingBottom: 120 }]}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           <BorderCard style={styles.detailsImageCard}>
             <View style={styles.detailsImage}>
@@ -591,8 +595,8 @@ export function PlantTreeScreen({ navigation, route }: any) {
                 style={styles.nicknameInput}
                 value={newSpeciesName}
                 onChangeText={setNewSpeciesName}
-                placeholder="e.g. Karanj, Rain Tree..."
-                placeholderTextColor={COLORS.textMuted}
+                placeholder="eg - Karanj, Rain Tree..."
+                placeholderTextColor={COLORS.textLight}
                 maxLength={40}
               />
 
@@ -630,8 +634,8 @@ export function PlantTreeScreen({ navigation, route }: any) {
             style={styles.nicknameInput}
             value={nickname}
             onChangeText={setNickname}
-            placeholder="e.g. Buddy, Luna, Whisper..."
-            placeholderTextColor={COLORS.textMuted}
+            placeholder="eg - Buddy, Luna, Whisper..."
+            placeholderTextColor={COLORS.textLight}
           />
 
           <Text style={styles.detailsLabel}>Leave a message</Text>
@@ -639,8 +643,8 @@ export function PlantTreeScreen({ navigation, route }: any) {
             style={[styles.nicknameInput, styles.captionInput]}
             value={caption}
             onChangeText={setCaption}
-            placeholder="Say a few words about this planting — this shows up as the caption on your post"
-            placeholderTextColor={COLORS.textMuted}
+            placeholder="eg - Say a few words about this planting — this shows up as the caption on your post"
+            placeholderTextColor={COLORS.textLight}
             multiline
             maxLength={2200}
           />

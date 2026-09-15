@@ -17,6 +17,7 @@ import {
 } from '../hooks/useSocialQueries';
 import type { ApiFollower } from '../api/nurseryFollowers';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function FollowerRow({ follower, isPending, onAccept, onDecline, onRemove }: {
   follower: ApiFollower;
@@ -56,11 +57,12 @@ export function NurseryFollowersScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<'accepted' | 'pending'>('accepted');
   const [query, setQuery] = useState('');
-  const { data, isLoading } = useNurseryFollowers({ status: tab, q: query.trim() || undefined });
+  const { data, isLoading, refetch } = useNurseryFollowers({ status: tab, q: query.trim() || undefined });
   const acceptMutation = useAcceptNurseryFollowRequest();
   const declineMutation = useDeclineNurseryFollowRequest();
   const removeMutation = useRemoveNurseryFollower();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const confirmRemove = (follower: ApiFollower) => {
     confirm(`Remove ${follower.user.name}?`, 'They will stop seeing your updates. They can follow you again later.', [
@@ -88,7 +90,7 @@ export function NurseryFollowersScreen({ navigation }: any) {
       </View>
 
       <View style={styles.searchWrap}>
-        <TextInput style={styles.search} placeholder="Search by name or handle" placeholderTextColor={COLORS.textMuted} value={query} onChangeText={setQuery} />
+        <TextInput style={styles.search} placeholder="eg - Search by name or handle" placeholderTextColor={COLORS.textLight} value={query} onChangeText={setQuery} />
       </View>
 
       {isLoading ? (
@@ -98,6 +100,8 @@ export function NurseryFollowersScreen({ navigation }: any) {
           data={followers}
           keyExtractor={(f) => f.followId}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           renderItem={({ item }) => (
             <FollowerRow
               follower={item}

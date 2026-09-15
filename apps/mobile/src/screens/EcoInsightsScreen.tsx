@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -30,6 +30,7 @@ import {
   ECO_CTA,
   EcoFact,
 } from '../constants/ecoInsightsContent';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const HERO_HEIGHT = 220;
 
@@ -61,9 +62,10 @@ export function EcoInsightsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { light } = useHaptics();
-  const { data: ecoFacts = [] } = useEcoFacts();
+  const { data: ecoFacts = [], refetch } = useEcoFacts();
   const [activePill, setActivePill] = useState<PillKey>('why');
   const [impactShareVisible, setImpactShareVisible] = useState(false);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const heroStyle = useFadeIn(0);
   const impactStyle = useSlideUp(100, 20);
@@ -89,6 +91,7 @@ export function EcoInsightsScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         <Animated.View style={heroStyle}>
           <LinearGradient colors={GRADIENTS.deepForest as any} style={styles.heroCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>

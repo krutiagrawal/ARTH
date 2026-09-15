@@ -35,7 +35,7 @@ export function FormField({ label, rightAccessory, style, multiline, dark, ...in
         <Text style={[styles.label, dark && styles.labelDark]}>{label}</Text>
         <TextInput
           style={[styles.input, dark && styles.inputDark, multiline && styles.multiline]}
-          placeholderTextColor={dark ? ON_DARK_SURFACE.muted : COLORS.textMuted}
+          placeholderTextColor={dark ? ON_DARK_SURFACE.muted : COLORS.textLight}
           multiline={multiline}
           {...inputProps}
         />

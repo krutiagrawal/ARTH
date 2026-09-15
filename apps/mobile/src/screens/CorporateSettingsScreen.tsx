@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
+import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -33,6 +33,7 @@ import { ApiError, resolveMediaUrl } from '../api/client';
 import type { ApiUserSettings } from '../api/settings';
 import { PRIVACY_POLICY_TEXT, TERMS_OF_SERVICE_TEXT } from '../constants/legalContent';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const DEFAULT_SETTINGS: ApiUserSettings = {
   haptics: true,
@@ -52,19 +53,20 @@ const appVersionLabel = Constants.expoConfig?.version ? `ARTH v${Constants.expoC
 
 export function CorporateSettingsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: profile, isLoading } = useCorporateProfile();
+  const { data: profile, isLoading, refetch: refetchProfile } = useCorporateProfile();
   const updateMutation = useUpdateCorporateProfile();
   const resubmitMutation = useResubmitCorporateProfile();
   // The corporate account's own login (email, logout, delete-account) is a regular User row (role
   // 'corporate') — these settings/session endpoints are already generic to any authenticated user,
   // so this screen reuses the exact same hooks the individual user's SettingsScreen does.
   const { user, logout } = useAuth();
-  const { data: fetchedSettings } = useSettings();
+  const { data: fetchedSettings, refetch: refetchSettings } = useSettings();
   const updateSettingsMutation = useUpdateSettings();
   const settings = fetchedSettings ?? DEFAULT_SETTINGS;
   const { override: reduceMotionOverride, setOverride: setReduceMotionOverride } = useReduceMotionContext();
-  const { data: sessions } = useSessions();
+  const { data: sessions, refetch: refetchSessions } = useSessions();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh([refetchProfile, refetchSettings, refetchSessions]);
 
   const [companyName, setCompanyName] = useState('');
   const [description, setDescription] = useState('');
@@ -173,7 +175,11 @@ export function CorporateSettingsScreen({ navigation }: any) {
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           <SettingsSectionHeader title="Company Profile" />
           <Animated.View style={cardAnim}>
             <View style={styles.logoWrap}>
@@ -185,9 +191,9 @@ export function CorporateSettingsScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            <FormField label="Company Name" value={companyName} onChangeText={setCompanyName} placeholder="Your company" />
-            <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="What does your company do?" />
-            <FormField label="Industry" value={industry} onChangeText={setIndustry} placeholder="Industry" />
+            <FormField label="Company Name" value={companyName} onChangeText={setCompanyName} placeholder="eg - Your company" />
+            <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What does your company do?" />
+            <FormField label="Industry" value={industry} onChangeText={setIndustry} placeholder="eg - Industry" />
             <CityPickerField value={city} onChange={setCity} />
 
             {error && <Text style={styles.error}>{error}</Text>}

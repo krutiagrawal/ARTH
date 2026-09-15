@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
+import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,6 +27,7 @@ import { ApiError, resolveMediaUrl } from '../api/client';
 import type { ApiUserSettings } from '../api/settings';
 import { PRIVACY_POLICY_TEXT, TERMS_OF_SERVICE_TEXT } from '../constants/legalContent';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const GROUP_TYPES: { value: 'family' | 'school' | 'club' | 'other'; label: string }[] = [
   { value: 'family', label: 'Family' },
@@ -53,19 +54,20 @@ const appVersionLabel = Constants.expoConfig?.version ? `ARTH v${Constants.expoC
 
 export function GroupSettingsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: profile, isLoading } = useGroupProfile();
+  const { data: profile, isLoading, refetch: refetchProfile } = useGroupProfile();
   const updateMutation = useUpdateGroupProfile();
   const regenerateMutation = useRegenerateGroupInviteCode();
   // The group account's own login (email, logout, delete-account) is a regular User row (role
   // 'group') — these settings/session endpoints are already generic to any authenticated user,
   // so this screen reuses the exact same hooks the individual user's SettingsScreen does.
   const { user, logout } = useAuth();
-  const { data: fetchedSettings } = useSettings();
+  const { data: fetchedSettings, refetch: refetchSettings } = useSettings();
   const updateSettingsMutation = useUpdateSettings();
   const settings = fetchedSettings ?? DEFAULT_SETTINGS;
   const { override: reduceMotionOverride, setOverride: setReduceMotionOverride } = useReduceMotionContext();
-  const { data: sessions } = useSessions();
+  const { data: sessions, refetch: refetchSessions } = useSessions();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh([refetchProfile, refetchSettings, refetchSessions]);
 
   const [groupName, setGroupName] = useState('');
   const [groupType, setGroupType] = useState<'family' | 'school' | 'club' | 'other'>('other');
@@ -174,7 +176,11 @@ export function GroupSettingsScreen({ navigation }: any) {
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           <SettingsSectionHeader title="Group Profile" />
           <Animated.View style={cardAnim}>
             <View style={styles.logoWrap}>
@@ -186,7 +192,7 @@ export function GroupSettingsScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            <FormField label="Group Name" value={groupName} onChangeText={setGroupName} placeholder="Your group" />
+            <FormField label="Group Name" value={groupName} onChangeText={setGroupName} placeholder="eg - Your group" />
 
             <Text style={styles.sectionLabel}>Group type</Text>
             <View style={styles.chipRow}>
@@ -197,7 +203,7 @@ export function GroupSettingsScreen({ navigation }: any) {
               ))}
             </View>
 
-            <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="What's your group about?" />
+            <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What's your group about?" />
             <CityPickerField value={city} onChange={setCity} />
 
             {error && <Text style={styles.error}>{error}</Text>}

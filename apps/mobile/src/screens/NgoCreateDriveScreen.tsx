@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Platform, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,9 +14,11 @@ import { useSlideUp } from '../hooks/useAnimations';
 import { PhotoPickerField, PickedPhoto } from '../components/common/PhotoPickerField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField, FormFieldShell } from '../components/common/FormField';
+import { AddressSearchField } from '../components/common/AddressSearchField';
 import { CityPickerField } from '../components/common/CityPickerField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 interface PickupPointDraft {
   address: string;
@@ -81,6 +83,7 @@ export function NgoCreateDriveScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const createDriveMutation = useCreateDrive();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -156,7 +159,11 @@ export function NgoCreateDriveScreen({ navigation }: any) {
         align="left"
       />
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         <Animated.View style={cardAnim}>
           <PhotoPickerField
             photo={photo}
@@ -167,10 +174,10 @@ export function NgoCreateDriveScreen({ navigation }: any) {
             aspect={[16, 9]}
           />
 
-          <FormField label="Drive Title" value={title} onChangeText={setTitle} placeholder="e.g. Riverbank Plantation Drive" />
-          <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="What will volunteers do?" />
-          <FormField label="Instructions for Volunteers" value={instructions} onChangeText={setInstructions} multiline placeholder="What to carry, weather, meeting point" />
-          <FormField label="Address" value={address} onChangeText={setAddress} multiline placeholder="Street / Landmark" />
+          <FormField label="Drive Title" value={title} onChangeText={setTitle} placeholder="eg - Riverbank Plantation Drive" />
+          <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What will volunteers do?" />
+          <FormField label="Instructions for Volunteers" value={instructions} onChangeText={setInstructions} multiline placeholder="eg - What to carry, weather, meeting point" />
+          <AddressSearchField label="Address" value={address} onChangeText={setAddress} multiline placeholder="eg - Street / Landmark" />
           <CityPickerField value={city} onChange={setCity} />
 
           <Text style={styles.sectionLabel}>Transport</Text>
@@ -203,11 +210,11 @@ export function NgoCreateDriveScreen({ navigation }: any) {
                       <Text style={styles.removeText}>Remove</Text>
                     </TouchableOpacity>
                   </View>
-                  <FormField
+                  <AddressSearchField
                     label="Pickup address"
                     value={p.address}
                     onChangeText={(v: string) => updatePickupPoint(i, { address: v })}
-                    placeholder="Where volunteers board"
+                    placeholder="eg - Where volunteers board"
                   />
                   <DateField label="Reach by" value={p.arrivalBy} onChange={(d) => updatePickupPoint(i, { arrivalBy: d })} />
                 </View>
@@ -232,14 +239,14 @@ export function NgoCreateDriveScreen({ navigation }: any) {
                   label="Species name"
                   value={p.speciesName}
                   onChangeText={(v: string) => updatePlant(i, { speciesName: v })}
-                  placeholder="e.g. Neem"
+                  placeholder="eg - Neem"
                 />
                 <FormField
                   label="Price to sponsor (₹)"
                   value={p.priceRupees}
                   onChangeText={(v: string) => updatePlant(i, { priceRupees: v.replace(/[^0-9]/g, '') })}
                   keyboardType="number-pad"
-                  placeholder="250"
+                  placeholder="eg - 250"
                 />
               </View>
             ))}
@@ -255,14 +262,14 @@ export function NgoCreateDriveScreen({ navigation }: any) {
             value={durationMinutes}
             onChangeText={(v: string) => setDurationMinutes(v.replace(/[^0-9]/g, ''))}
             keyboardType="number-pad"
-            placeholder="No limit"
+            placeholder="eg - No limit"
           />
           <FormField
             label="Capacity"
             value={capacity}
             onChangeText={(v: string) => setCapacity(v.replace(/[^0-9]/g, ''))}
             keyboardType="number-pad"
-            placeholder="No limit"
+            placeholder="eg - No limit"
           />
 
           {error && <Text style={styles.error}>{error}</Text>}

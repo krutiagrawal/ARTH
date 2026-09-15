@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -11,6 +11,7 @@ import { PasswordInput } from '../components/common/PasswordInput';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function slugifyHandle(name: string): string {
   return name
@@ -32,6 +33,7 @@ export function NgoRegisterScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   const handleRegister = useCallback(async () => {
     setError(null);
@@ -71,7 +73,11 @@ export function NgoRegisterScreen({ navigation }: any) {
         locations={[0, 0.3, 0.7, 1]}
         style={StyleSheet.absoluteFill}
       />
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         <Text style={styles.logo}>ARTH</Text>
         <Text style={styles.tagline}>for NGOs & organizations</Text>
 
@@ -84,14 +90,14 @@ export function NgoRegisterScreen({ navigation }: any) {
           <Text style={styles.sectionLabel}>Organization</Text>
           <TextInput
             style={styles.input}
-            placeholder="Organization name"
+            placeholder="eg - Organization name"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={orgName}
             onChangeText={setOrgName}
           />
           <TextInput
             style={[styles.input, styles.multiline]}
-            placeholder="What does your organization do?"
+            placeholder="eg - What does your organization do?"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={description}
             onChangeText={setDescription}
@@ -99,7 +105,7 @@ export function NgoRegisterScreen({ navigation }: any) {
           />
           <TextInput
             style={styles.input}
-            placeholder="Website (optional)"
+            placeholder="eg - Website (optional)"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             autoCapitalize="none"
             keyboardType="url"
@@ -108,7 +114,7 @@ export function NgoRegisterScreen({ navigation }: any) {
           />
           <TextInput
             style={styles.input}
-            placeholder="Contact phone (optional)"
+            placeholder="eg - Contact phone (optional)"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             keyboardType="phone-pad"
             value={contactPhone}
@@ -118,14 +124,14 @@ export function NgoRegisterScreen({ navigation }: any) {
           <Text style={styles.sectionLabel}>Your account</Text>
           <TextInput
             style={styles.input}
-            placeholder="Your name"
+            placeholder="eg - Your name"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={adminName}
             onChangeText={setAdminName}
           />
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder="eg - Email"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             autoCapitalize="none"
             keyboardType="email-address"
@@ -134,7 +140,7 @@ export function NgoRegisterScreen({ navigation }: any) {
           />
           <PasswordInput
             inputStyle={styles.input}
-            placeholder="Password (min. 8 characters)"
+            placeholder="eg - Password (min. 8 characters)"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={password}
             onChangeText={setPassword}

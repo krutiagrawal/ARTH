@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,6 +15,7 @@ import type { PickedPhoto } from '../components/common/PhotoPickerField';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useMyDrives, useNgoProfile, useNurseryProfile } from '../hooks/useApiQueries';
 import { useCreatePost } from '../hooks/useSocialQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useAuth } from '../context/AuthContext';
 import { useConfirm } from '../context/ConfirmDialogContext';
@@ -33,11 +34,12 @@ type Mode = 'post' | 'story';
 export function PostComposerScreen({ navigation, route }: any) {
   const bottomClearance = useBottomNavClearance();
   const { user } = useAuth();
-  const { data: ngoProfile } = useNgoProfile();
-  const { data: nurseryProfile } = useNurseryProfile();
-  const { data: drives = [] } = useMyDrives();
+  const { data: ngoProfile, refetch: refetchNgoProfile } = useNgoProfile();
+  const { data: nurseryProfile, refetch: refetchNurseryProfile } = useNurseryProfile();
+  const { data: drives = [], refetch: refetchDrives } = useMyDrives();
   const createPost = useCreatePost();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh([refetchDrives, refetchNgoProfile, refetchNurseryProfile]);
 
   const groupId: string | undefined = route?.params?.groupId;
   // A group post is a member posting as themselves, tagged to the group — never the
@@ -147,6 +149,7 @@ export function PostComposerScreen({ navigation, route }: any) {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         <Animated.View style={cardAnim}>
           <View style={styles.modeRow}>
@@ -202,8 +205,8 @@ export function PostComposerScreen({ navigation, route }: any) {
             multiline
             placeholder={
               mode === 'story'
-                ? 'A quick line about this moment…'
-                : 'Tell people what you planted, where, and who showed up…'
+                ? 'eg - A quick line about this moment…'
+                : 'eg - Tell people what you planted, where, and who showed up…'
             }
           />
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,11 +10,13 @@ import { BorderCard } from '../components/common/BorderCard';
 import { Mascot } from '../components/common/Mascot';
 import { StreakCalendar } from '../components/common/StreakCalendar';
 import { useGroupProfile, useGroupStreakCalendar } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 export function GroupStreakScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: profile } = useGroupProfile();
-  const { data: weeks = [] } = useGroupStreakCalendar(6);
+  const { data: profile, refetch: refetchProfile } = useGroupProfile();
+  const { data: weeks = [], refetch: refetchWeeks } = useGroupStreakCalendar(6);
+  const { refreshing, onRefresh } = usePullToRefresh([refetchProfile, refetchWeeks]);
 
   const streakCurrent = profile?.streakCurrent ?? 0;
   const streakMax = profile?.streakMax ?? 0;
@@ -29,7 +31,11 @@ export function GroupStreakScreen({ navigation }: any) {
         end={{ x: 0.8, y: 1 }}
       />
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.dismissButton}>
             <Text style={styles.dismissText}>← Back</Text>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,11 +14,13 @@ import { useSlideUp } from '../hooks/useAnimations';
 import { useCreateCampaign } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 export function NgoCreateCampaignScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const createMutation = useCreateCampaign();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -58,7 +60,11 @@ export function NgoCreateCampaignScreen({ navigation }: any) {
         onBack={() => navigation?.goBack?.()}
       />
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         <Animated.View style={cardAnim}>
           <PhotoPickerField
             photo={photo}
@@ -72,14 +78,14 @@ export function NgoCreateCampaignScreen({ navigation }: any) {
             label="Title"
             value={title}
             onChangeText={setTitle}
-            placeholder="Plant 1,000 trees this monsoon"
+            placeholder="eg - Plant 1,000 trees this monsoon"
           />
 
           <FormField
             label="Description"
             value={description}
             onChangeText={setDescription}
-            placeholder="What this campaign funds"
+            placeholder="eg - What this campaign funds"
             multiline
           />
 
@@ -87,7 +93,7 @@ export function NgoCreateCampaignScreen({ navigation }: any) {
             label="Goal (₹, optional)"
             value={goalRupees}
             onChangeText={(v: string) => setGoalRupees(v.replace(/[^0-9]/g, ''))}
-            placeholder="No limit"
+            placeholder="eg - No limit"
             keyboardType="number-pad"
           />
 

@@ -1,5 +1,5 @@
 import React, { useRef, type RefObject } from 'react';
-import { View, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
@@ -24,6 +24,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNgoStats, useNgoStreakCalendar, useNgoProfile } from '../hooks/useApiQueries';
 import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { currentStreakFromWeeks } from '../utils/streak';
 import { getHeroSeamColor, getHeroSeamTextColors } from '../utils/heroSeam';
 import type { NgoTabName } from '../navigation/AppNavigator';
@@ -157,9 +158,10 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
   const { weather } = useDeviceWeather();
   const sceneryMode = getSceneryMode(weather);
   const { user } = useAuth();
-  const { data: profile } = useNgoProfile();
-  const { data: stats, isLoading } = useNgoStats();
-  const { data: streakData } = useNgoStreakCalendar(8);
+  const { data: profile, refetch: refetchProfile } = useNgoProfile();
+  const { data: stats, isLoading, refetch: refetchStats } = useNgoStats();
+  const { data: streakData, refetch: refetchStreak } = useNgoStreakCalendar(8);
+  const { refreshing, onRefresh } = usePullToRefresh([refetchStats, refetchStreak, refetchProfile]);
   const streakCurrent = streakData ? currentStreakFromWeeks(streakData.weeks) : 0;
   const recentWeeks = (streakData?.weeks ?? []).slice(-STREAK_WEEKS_SHOWN);
   const statsAnim = useFadeIn(80);
@@ -198,6 +200,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         <View style={[styles.heroSection, { height: HERO_HEIGHT }]}>
           {theme.heroImage ? (

@@ -10,6 +10,7 @@ import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useNgoProfile } from '../hooks/useApiQueries';
 import { useDeletePost, useNgoPosts, useToggleLike, useToggleSave } from '../hooks/useSocialQueries';
 import type { ApiPost } from '../api/posts';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 /**
  * Everything this NGO has published, with its own engagement visible.
@@ -24,11 +25,11 @@ export function NgoOwnPostsScreen({ navigation }: any) {
     data,
     isLoading,
     refetch,
-    isRefetching,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
   } = useNgoPosts(profile?.id);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const toggleLike = useToggleLike();
   const toggleSave = useToggleSave();
@@ -55,8 +56,8 @@ export function NgoOwnPostsScreen({ navigation }: any) {
       data={posts}
       keyExtractor={(p) => p.id}
       contentContainerStyle={[styles.list, { paddingBottom: clearance }]}
-      onRefresh={refetch}
-      refreshing={isRefetching}
+      onRefresh={onRefresh}
+      refreshing={refreshing}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.6}
       ListHeaderComponent={

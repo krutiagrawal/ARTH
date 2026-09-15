@@ -161,8 +161,8 @@ export function NurserySaplingsTabContent({
       <View style={styles.searchRow}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search saplings by species..."
-          placeholderTextColor={COLORS.textMuted}
+          placeholder="eg - Search saplings by species..."
+          placeholderTextColor={COLORS.textLight}
           value={query}
           onChangeText={setQuery}
           returnKeyType="search"

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +13,7 @@ import { Toast } from '../components/common/Toast';
 import { FriendCard, FriendRequestRow } from '../components/social/FriendRow';
 import { useSoundSystem } from '../hooks/useSoundSystem';
 import { useFriends, useFriendRequests, useRingStatus } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 type Mode = 'requests' | 'squad';
 
@@ -28,11 +29,12 @@ export function FriendsListScreen({ navigation, route }: any) {
   const [query, setQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const { data: friends = [] } = useFriends();
-  const { data: friendRequests = [] } = useFriendRequests();
+  const { data: friends = [], refetch: refetchFriends } = useFriends();
+  const { data: friendRequests = [], refetch: refetchFriendRequests } = useFriendRequests();
   const ringStatus = useRingStatus({
     userIds: mode === 'squad' ? friends.map((f) => f.id) : friendRequests.map((r) => r.from.id),
   });
+  const { refreshing, onRefresh } = usePullToRefresh(mode === 'squad' ? refetchFriends : refetchFriendRequests);
 
   const celebrateFriendAccepted = (name: string) => {
     setToastMessage(`Hey, you are now friends with ${name}!`);
@@ -66,8 +68,8 @@ export function FriendsListScreen({ navigation, route }: any) {
       <View style={styles.searchWrap}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by name..."
-          placeholderTextColor={COLORS.textMuted}
+          placeholder="eg - Search by name..."
+          placeholderTextColor={COLORS.textLight}
           value={query}
           onChangeText={setQuery}
           autoCapitalize="none"
@@ -77,6 +79,7 @@ export function FriendsListScreen({ navigation, route }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         {list.length === 0 ? (
           <EmptyState

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,6 +12,7 @@ import { useMyCampaigns, useCloseCampaign, useReopenCampaign, useNgoProfile } fr
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
   const animStyle = useSlideUp(delay, 18);
@@ -33,15 +34,20 @@ function StatusPill({ label, color }: { label: string; color: string }) {
 
 export function NgoCampaignsScreen({ navigation }: any) {
   const bottomClearance = useBottomNavClearance();
-  const { data: campaigns = [], isLoading } = useMyCampaigns();
+  const { data: campaigns = [], isLoading, refetch } = useMyCampaigns();
   const closeMutation = useCloseCampaign();
   const reopenMutation = useReopenCampaign();
-  const { data: profile } = useNgoProfile();
+  const { data: profile, refetch: refetchProfile } = useNgoProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
+  const { refreshing, onRefresh } = usePullToRefresh([refetch, refetchProfile]);
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && campaigns.length === 0 && (
           <EmptyState icon="💚" title="No campaigns yet" body="Start a donation campaign to fund your next drive." actionLabel="New campaign" onAction={guard(() => navigation.navigate('NgoCreateCampaign'))} />

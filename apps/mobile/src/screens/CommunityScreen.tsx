@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -44,6 +44,7 @@ import type { ApiChallenge, ApiChallengeFriend } from '../api/challenges';
 import type { LeaderboardEntry } from '../api/leaderboard';
 import type { PublicNgoLeaderboardEntry, PublicNurseryLeaderboardEntry } from '../api/publicLeaderboard';
 import type { ApiActivity, ActivityType } from '../api/feed';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const { width: SW } = Dimensions.get('window');
 // 'feed' is the social feed of posts; 'activity' is the older gamification stream
@@ -105,8 +106,8 @@ function AddFriendPanel({ onClose, navigation }: { onClose: () => void; navigati
       <View style={styles.addFriendSearchBox}>
         <TextInput
           style={styles.addFriendInputDark}
-          placeholder="Search by name or handle..."
-          placeholderTextColor={COLORS.textMuted}
+          placeholder="eg - Search by name or handle..."
+          placeholderTextColor={COLORS.textLight}
           value={query}
           onChangeText={setQuery}
           autoCapitalize="none"
@@ -413,6 +414,10 @@ function LeaderboardTabContent({ navigation }: { navigation: any }) {
   const ngoBoard = usePublicNgoLeaderboardPage(ngoPage);
   const nurseryBoard = usePublicNurseryLeaderboardPage(nurseryPage);
 
+  const userRefresh = usePullToRefresh(userBoard.refetch);
+  const ngoRefresh = usePullToRefresh(ngoBoard.refetch);
+  const nurseryRefresh = usePullToRefresh(nurseryBoard.refetch);
+
   const userRingStatus = useRingStatus({ userIds: rankTab === 'users' ? (userBoard.data?.entries.map((e) => e.id) ?? []) : [] });
   const ngoRingStatus = useRingStatus({ ngoIds: rankTab === 'ngos' ? (ngoBoard.data?.entries.map((e) => e.id) ?? []) : [] });
   const nurseryRingStatus = useRingStatus({ nurseryIds: rankTab === 'nurseries' ? (nurseryBoard.data?.entries.map((e) => e.id) ?? []) : [] });
@@ -440,6 +445,7 @@ function LeaderboardTabContent({ navigation }: { navigation: any }) {
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavClearance }]}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={userRefresh.refreshing} onRefresh={userRefresh.onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           <View style={styles.section}>
             <BorderCard style={[styles.yourRankCard, styles.noBorder]}>
@@ -473,6 +479,7 @@ function LeaderboardTabContent({ navigation }: { navigation: any }) {
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavClearance }]}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={ngoRefresh.refreshing} onRefresh={ngoRefresh.onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           <View style={styles.section}>
             <Text style={styles.sectionTitleDark}>🏢 NGO Rankings</Text>
@@ -503,6 +510,7 @@ function LeaderboardTabContent({ navigation }: { navigation: any }) {
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavClearance }]}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={nurseryRefresh.refreshing} onRefresh={nurseryRefresh.onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           <View style={styles.section}>
             <Text style={styles.sectionTitleDark}>🌱 Nursery Rankings</Text>
@@ -550,17 +558,18 @@ export function CommunityScreen({ navigation }: any) {
     playSound('friendAccepted');
   };
 
-  const { data: friends = [] } = useFriends();
-  const { data: friendRequests = [] } = useFriendRequests();
+  const { data: friends = [], refetch: refetchFriends } = useFriends();
+  const { data: friendRequests = [], refetch: refetchFriendRequests } = useFriendRequests();
   const friendsRingStatus = useRingStatus({
     userIds: activeTab === 'friends' ? [...friends.map((f) => f.id), ...friendRequests.map((r) => r.from.id)] : [],
   });
-  const { data: challenges = [] } = useChallenges();
+  const { data: challenges = [], refetch: refetchChallenges } = useChallenges();
   const joinChallengeMutation = useJoinChallenge();
   const leaveChallengeMutation = useLeaveChallenge();
   const challengeFriendsJoined = useChallengeFriendsJoined(challenges.map((c) => c.id));
   const [friendsSheetChallengeId, setFriendsSheetChallengeId] = useState<string | null>(null);
-  const { data: feed = [] } = useFeed('friends');
+  const { data: feed = [], refetch: refetchFeed } = useFeed('friends');
+  const { refreshing, onRefresh } = usePullToRefresh([refetchFriends, refetchFriendRequests, refetchChallenges, refetchFeed]);
 
   return (
     <View style={styles.container}>
@@ -612,6 +621,7 @@ export function CommunityScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavClearance }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         <GlobalCounter />
 

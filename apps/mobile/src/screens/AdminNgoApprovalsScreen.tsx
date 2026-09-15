@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,6 +13,7 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useAdminNgos } from '../hooks/useApiQueries';
 import { useSlideUp } from '../hooks/useAnimations';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { NgoApprovalStatus } from '../api/admin';
 
 const FILTERS: { key: NgoApprovalStatus | 'all'; label: string }[] = [
@@ -51,7 +52,7 @@ export function AdminNgoApprovalsScreen({ navigation }: any) {
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useAdminNgos({
+  const { data, isLoading, refetch } = useAdminNgos({
     status: filter === 'all' ? undefined : filter,
     q: query.trim() || undefined,
     page,
@@ -61,6 +62,7 @@ export function AdminNgoApprovalsScreen({ navigation }: any) {
   const ngos = data?.ngos ?? [];
   const total = data?.total ?? 0;
   const hasMore = page * TAKE < total;
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const onFilterChange = (key: NgoApprovalStatus | 'all') => {
     setFilter(key);
@@ -90,7 +92,7 @@ export function AdminNgoApprovalsScreen({ navigation }: any) {
         </ScrollView>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by org name"
+          placeholder="eg - Search by org name"
           placeholderTextColor={ON_DARK_SURFACE.muted}
           value={query}
           onChangeText={(v: string) => {
@@ -101,7 +103,11 @@ export function AdminNgoApprovalsScreen({ navigation }: any) {
         />
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         {isLoading && <ActivityIndicator color={COLORS.mint} style={styles.loader} />}
         {!isLoading && ngos.length === 0 && (
           <EmptyState icon="🏢" title="No NGOs found" body="No applications match this filter." tint="dark" />

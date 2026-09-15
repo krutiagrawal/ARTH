@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -10,6 +10,7 @@ import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
 import { FormField } from '../components/common/FormField';
+import { AddressSearchField } from '../components/common/AddressSearchField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { Toggle } from '../components/common/Toggle';
 import { StatusModal } from '../components/common/StatusModal';
@@ -17,6 +18,7 @@ import { useNurseryProfile, useUpdateNurseryProfile } from '../hooks/useApiQueri
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import { ApiError } from '../api/client';
 import type { OperatingHourRow, PickupWindowRow } from '../api/nursery';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const DAY_OPTIONS: OperatingHourRow['day'][] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 const DAY_LABEL: Record<OperatingHourRow['day'], string> = {
@@ -25,9 +27,10 @@ const DAY_LABEL: Record<OperatingHourRow['day'], string> = {
 
 export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: profile } = useNurseryProfile();
+  const { data: profile, refetch } = useNurseryProfile();
   const updateMutation = useUpdateNurseryProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const [offersPickup, setOffersPickup] = useState(true);
   const [offersDelivery, setOffersDelivery] = useState(true);
@@ -126,7 +129,11 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
         onBack={navigation?.canGoBack?.() ? () => navigation.goBack() : undefined}
       />
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         <BorderCard style={styles.toggleCard}>
           <View style={styles.toggleRow}>
             <View style={{ flex: 1 }}>
@@ -149,7 +156,16 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
           <>
             <Text style={styles.sectionTitle}>Delivery details</Text>
 
-            <FormField label="Nursery address" value={line1} onChangeText={setLine1} placeholder="e.g. 12 Baner Road, near City Mall" />
+            <AddressSearchField
+              label="Nursery address"
+              value={line1}
+              onChangeText={setLine1}
+              placeholder="eg - 12 Baner Road, near City Mall"
+              onSelectSuggestion={(s) => {
+                setLine1(s.label);
+                setCoords({ lat: s.lat, lng: s.lng });
+              }}
+            />
             <View style={styles.locationRow}>
               <Text style={styles.locationStatus}>
                 {hasLocation ? '📍 Location set' : '📍 No location set — required to offer delivery'}
@@ -163,13 +179,13 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
 
             <View style={styles.inlineRow}>
               <View style={styles.inlineField}>
-                <FormField label="Delivery fee ₹ (blank = platform default)" value={deliveryFeeCents} onChangeText={setDeliveryFeeCents} placeholder="0" keyboardType="number-pad" />
+                <FormField label="Delivery fee ₹ (blank = platform default)" value={deliveryFeeCents} onChangeText={setDeliveryFeeCents} placeholder="eg - 0" keyboardType="number-pad" />
               </View>
               <View style={styles.inlineField}>
-                <FormField label="Min order ₹ (blank = none)" value={minDeliveryOrderCents} onChangeText={setMinDeliveryOrderCents} placeholder="0" keyboardType="number-pad" />
+                <FormField label="Min order ₹ (blank = none)" value={minDeliveryOrderCents} onChangeText={setMinDeliveryOrderCents} placeholder="eg - 0" keyboardType="number-pad" />
               </View>
             </View>
-            <FormField label="Delivery radius (km)" value={deliveryRadiusKm} onChangeText={setDeliveryRadiusKm} placeholder="e.g. 10" keyboardType="number-pad" />
+            <FormField label="Delivery radius (km)" value={deliveryRadiusKm} onChangeText={setDeliveryRadiusKm} placeholder="eg - 10" keyboardType="number-pad" />
           </>
         )}
 
@@ -180,7 +196,7 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
               label="Notes for planters (optional)"
               value={pickupInstructions}
               onChangeText={setPickupInstructions}
-              placeholder="e.g. Enter through the side gate, ask for Ramesh"
+              placeholder="eg - Enter through the side gate, ask for Ramesh"
               multiline
             />
 
@@ -195,13 +211,13 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
               <BorderCard key={i} style={styles.rowCard} noPadding>
                 <View style={styles.rowContent}>
                   <View style={{ flex: 1 }}>
-                    <FormField label="Label" value={row.label} onChangeText={(v) => updateWindowRow(i, { label: v })} placeholder="Morning" />
+                    <FormField label="Label" value={row.label} onChangeText={(v) => updateWindowRow(i, { label: v })} placeholder="eg - Morning" />
                   </View>
                   <View style={{ width: 90 }}>
-                    <FormField label="Start" value={row.startTime} onChangeText={(v) => updateWindowRow(i, { startTime: v })} placeholder="09:00" />
+                    <FormField label="Start" value={row.startTime} onChangeText={(v) => updateWindowRow(i, { startTime: v })} placeholder="eg - 09:00" />
                   </View>
                   <View style={{ width: 90 }}>
-                    <FormField label="End" value={row.endTime} onChangeText={(v) => updateWindowRow(i, { endTime: v })} placeholder="12:00" />
+                    <FormField label="End" value={row.endTime} onChangeText={(v) => updateWindowRow(i, { endTime: v })} placeholder="eg - 12:00" />
                   </View>
                   <TouchableOpacity onPress={() => removeWindowRow(i)} style={styles.removeButton}>
                     <Text style={styles.removeIcon}>🗑</Text>
@@ -234,10 +250,10 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
                 ))}
               </ScrollView>
               <View style={{ width: 90 }}>
-                <FormField label="Opens" value={row.opensAt} onChangeText={(v) => updateHourRow(i, { opensAt: v })} placeholder="09:00" />
+                <FormField label="Opens" value={row.opensAt} onChangeText={(v) => updateHourRow(i, { opensAt: v })} placeholder="eg - 09:00" />
               </View>
               <View style={{ width: 90 }}>
-                <FormField label="Closes" value={row.closesAt} onChangeText={(v) => updateHourRow(i, { closesAt: v })} placeholder="18:00" />
+                <FormField label="Closes" value={row.closesAt} onChangeText={(v) => updateHourRow(i, { closesAt: v })} placeholder="eg - 18:00" />
               </View>
               <TouchableOpacity onPress={() => removeHourRow(i)} style={styles.removeButton}>
                 <Text style={styles.removeIcon}>🗑</Text>

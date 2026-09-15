@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -11,6 +11,7 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useNurseryBulkRequirementsCombined } from '../hooks/useApiQueries';
 import type { ApiBulkRequirement } from '../api/nursery';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 type FilterTab = 'open' | 'responded' | 'accepted' | 'completed';
 
@@ -75,7 +76,8 @@ function badgeColor(status: string) {
 export function NurseryBulkRequirementsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<FilterTab>('open');
-  const { data: requirements = [], isLoading } = useNurseryBulkRequirementsCombined();
+  const { data: requirements = [], isLoading, refetch } = useNurseryBulkRequirementsCombined();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const filtered = useMemo(() => requirements.filter((r) => matchesTab(r, tab)), [requirements, tab]);
 
@@ -99,7 +101,11 @@ export function NurseryBulkRequirementsScreen({ navigation }: any) {
       ) : filtered.length === 0 ? (
         <EmptyState icon="🤝" title="Nothing here" body="Requirements in this stage will show up here." />
       ) : (
-        <ScrollView contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           {filtered.map((r) => (
             <RequirementRow key={r.id} item={r} navigation={navigation} />
           ))}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,14 +11,16 @@ import { Mascot } from '../components/common/Mascot';
 import { StreakCalendar } from '../components/common/StreakCalendar';
 import { AchievementGrid, AchievementDetailModal } from '../components/common/AchievementGrid';
 import { useNurseryProfile, useNurseryStreakCalendar, useNurseryBadges } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { ApiAchievement } from '../api/achievements';
 
 export function NurseryStreakBadgesScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: profile } = useNurseryProfile();
-  const { data: weeks = [] } = useNurseryStreakCalendar(6);
-  const { data: badges = [] } = useNurseryBadges();
+  const { data: profile, refetch: refetchProfile } = useNurseryProfile();
+  const { data: weeks = [], refetch: refetchWeeks } = useNurseryStreakCalendar(6);
+  const { data: badges = [], refetch: refetchBadges } = useNurseryBadges();
   const [selected, setSelected] = useState<ApiAchievement | null>(null);
+  const { refreshing, onRefresh } = usePullToRefresh([refetchProfile, refetchWeeks, refetchBadges]);
 
   const streakCurrent = profile?.streakCurrent ?? 0;
   const streakMax = profile?.streakMax ?? 0;
@@ -43,7 +45,11 @@ export function NurseryStreakBadgesScreen({ navigation }: any) {
         end={{ x: 0.8, y: 1 }}
       />
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.dismissButton}>
             <Text style={styles.dismissText}>← Back</Text>

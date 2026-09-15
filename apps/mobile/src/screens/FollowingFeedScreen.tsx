@@ -22,6 +22,7 @@ import {
 } from '../hooks/useSocialQueries';
 import { useRingStatus } from '../hooks/useApiQueries';
 import type { ApiPost } from '../api/posts';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 interface FollowingFeedScreenProps {
   navigation: any;
@@ -43,11 +44,11 @@ export function FollowingFeedScreen({ navigation, embedded = false }: FollowingF
     data,
     isLoading,
     refetch,
-    isRefetching,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
   } = useSocialFeed();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const toggleLike = useToggleLike();
   const toggleSave = useToggleSave();
@@ -123,8 +124,8 @@ export function FollowingFeedScreen({ navigation, embedded = false }: FollowingF
           keyExtractor={(p) => p.id}
           contentContainerStyle={[styles.list, { paddingBottom: clearance }]}
           showsVerticalScrollIndicator={false}
-          onRefresh={refetch}
-          refreshing={isRefetching}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
           onEndReached={onEndReached}
           onEndReachedThreshold={0.6}
           ListHeaderComponent={

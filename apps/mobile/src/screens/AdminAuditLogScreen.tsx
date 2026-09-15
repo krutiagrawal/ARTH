@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,6 +13,7 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useAdminActionLogs } from '../hooks/useApiQueries';
 import { useSlideUp } from '../hooks/useAnimations';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const TAKE = 25;
 
@@ -30,10 +31,11 @@ export function AdminAuditLogScreen({ navigation }: any) {
   const bottomClearance = useBottomNavClearance();
   const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useAdminActionLogs({ page, take: TAKE });
+  const { data, isLoading, refetch } = useAdminActionLogs({ page, take: TAKE });
   const logs = data?.logs ?? [];
   const total = data?.total ?? 0;
   const hasMore = page * TAKE < total;
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
     <View style={styles.container}>
@@ -44,7 +46,11 @@ export function AdminAuditLogScreen({ navigation }: any) {
         <Text style={styles.headerTitle}>Audit Log</Text>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         {isLoading && page === 1 && <ActivityIndicator color={COLORS.mint} style={styles.loader} />}
         {!isLoading && logs.length === 0 && (
           <EmptyState icon="📜" title="No actions yet" body="Admin actions will show up here as they happen." tint="dark" />

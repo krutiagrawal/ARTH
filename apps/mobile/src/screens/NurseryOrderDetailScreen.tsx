@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -27,6 +27,7 @@ import {
 } from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import { ApiError } from '../api/client';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function formatRupees(cents: number) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`;
@@ -37,7 +38,8 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const { success, error: errorHaptic } = useHaptics();
   const confirm = useConfirm();
-  const { data: order, isLoading } = useNurseryOrder(orderId);
+  const { data: order, isLoading, refetch } = useNurseryOrder(orderId);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
   const packMutation = usePackOrder();
   const dispatchMutation = useDispatchOrder();
   const deliverMutation = useDeliverOrder();
@@ -87,7 +89,11 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
       {isLoading || !order ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           <BorderCard style={styles.card}>
             <Text style={styles.customer}>{order.user.name}</Text>
             <Text style={styles.handle}>@{order.user.handle}</Text>
@@ -161,7 +167,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
                 </View>
               )}
               <Text style={styles.fieldLabel}>Handoff code</Text>
-              <TextInput style={styles.input} value={code} onChangeText={setCode} placeholder="4-digit code" placeholderTextColor={COLORS.textMuted} keyboardType="number-pad" maxLength={4} />
+              <TextInput style={styles.input} value={code} onChangeText={setCode} placeholder="eg - 4-digit code" placeholderTextColor={COLORS.textLight} keyboardType="number-pad" maxLength={4} />
               <AnimatedButton
                 label={pickedUpMutation.isPending ? 'Confirming…' : 'Confirm picked up'}
                 onPress={guard(() => run(() => pickedUpMutation.mutateAsync({ id: orderId, code: code.trim() })))}
@@ -199,7 +205,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
                   </View>
                 )}
                 <Text style={styles.fieldLabel}>Delivery code</Text>
-                <TextInput style={styles.input} value={code} onChangeText={setCode} placeholder="4-digit code" placeholderTextColor={COLORS.textMuted} keyboardType="number-pad" maxLength={4} />
+                <TextInput style={styles.input} value={code} onChangeText={setCode} placeholder="eg - 4-digit code" placeholderTextColor={COLORS.textLight} keyboardType="number-pad" maxLength={4} />
                 <AnimatedButton
                   label={deliverMutation.isPending ? 'Confirming…' : 'Confirm delivery'}
                   onPress={guard(() => run(() => deliverMutation.mutateAsync({ id: orderId, code: code.trim() })))}

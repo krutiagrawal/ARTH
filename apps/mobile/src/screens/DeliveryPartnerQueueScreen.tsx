@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -17,6 +17,7 @@ import { useHaptics } from '../hooks/useHaptics';
 import { useMyDeliveryQueue, useStartDelivery, useCompleteDelivery } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import type { ApiDeliveryQueueItem } from '../api/deliveryPartnerApp';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 // This screen must never import react-native-maps directly — Metro evaluates the whole package
 // on import, including its native MapView binding, which has no native module in Expo Go on
@@ -148,8 +149,8 @@ function DeliverSheet({ orderId, onClose }: { orderId: string | null; onClose: (
           style={styles.codeInput}
           value={code}
           onChangeText={setCode}
-          placeholder="4-digit code"
-          placeholderTextColor={COLORS.textMuted}
+          placeholder="eg - 4-digit code"
+          placeholderTextColor={COLORS.textLight}
           keyboardType="number-pad"
           maxLength={4}
         />
@@ -170,10 +171,11 @@ function DeliverSheet({ orderId, onClose }: { orderId: string | null; onClose: (
 
 export function DeliveryPartnerQueueScreen() {
   const bottomNavClearance = useBottomNavClearance();
-  const { data: queue = [], isLoading } = useMyDeliveryQueue();
+  const { data: queue = [], isLoading, refetch } = useMyDeliveryQueue();
   const startMutation = useStartDelivery();
   const [startingOrderId, setStartingOrderId] = useState<string | null>(null);
   const [deliveringOrderId, setDeliveringOrderId] = useState<string | null>(null);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const hasStartedDelivery = queue.some((item) => item.startedAt != null);
   const riderLocation = useRiderLiveLocation(hasStartedDelivery);
@@ -205,7 +207,11 @@ export function DeliveryPartnerQueueScreen() {
       ) : queue.length === 0 ? (
         <EmptyState icon="🛵" title="No deliveries yet" body="Once a nursery assigns you an order, it'll show up here." />
       ) : (
-        <ScrollView contentContainerStyle={[styles.list, { paddingBottom: bottomNavClearance }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.list, { paddingBottom: bottomNavClearance }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           {queue.map((item) => (
             <QueueCard
               key={item.orderId}

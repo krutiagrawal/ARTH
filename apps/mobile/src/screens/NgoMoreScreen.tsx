@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +14,7 @@ import { LeafBranch } from '../components/common/LeafBranch';
 import { useAuth } from '../context/AuthContext';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 interface MenuItem {
   emoji: string;
@@ -60,6 +61,7 @@ export function NgoMoreScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const bottomClearance = useBottomNavClearance();
   const { logout } = useAuth();
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   return (
     <View style={styles.container}>
@@ -70,6 +72,7 @@ export function NgoMoreScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 24, paddingBottom: bottomClearance }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         <Text style={styles.title}>More</Text>
         <Text style={styles.subtitle}>Access all features and settings</Text>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -12,6 +12,7 @@ import { EcoWidget } from '../components/common/EcoWidget';
 import { EmptyState } from '../components/common/EmptyState';
 import { useStockAnalytics, useStockLedger } from '../hooks/useApiQueries';
 import type { ApiStockLedgerEntry } from '../api/nursery';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const REASON_LABEL: Record<ApiStockLedgerEntry['reason'], string> = {
   manual_add: 'Added stock',
@@ -40,8 +41,9 @@ function LedgerRow({ item }: { item: ApiStockLedgerEntry }) {
 
 export function NurseryStockAnalyticsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: analytics, isLoading: statsLoading } = useStockAnalytics();
-  const { data: ledger = [], isLoading: ledgerLoading } = useStockLedger();
+  const { data: analytics, isLoading: statsLoading, refetch: refetchAnalytics } = useStockAnalytics();
+  const { data: ledger = [], isLoading: ledgerLoading, refetch: refetchLedger } = useStockLedger();
+  const { refreshing, onRefresh } = usePullToRefresh([refetchAnalytics, refetchLedger]);
 
   return (
     <View style={styles.container}>
@@ -57,7 +59,11 @@ export function NurseryStockAnalyticsScreen({ navigation }: any) {
       {statsLoading || !analytics ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           <View style={styles.gridRow}>
             <EcoWidget icon="🎁" value={analytics.totalGivenOutLifetime} label="Given out (lifetime)" color={COLORS.golden} delay={0} style={styles.gridTile} fill />
             <EcoWidget icon="🌱" value={analytics.totalAddedLifetime} label="Added (lifetime)" color={COLORS.sage} delay={60} style={styles.gridTile} fill />

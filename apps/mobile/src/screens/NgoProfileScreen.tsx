@@ -1,13 +1,16 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
+import { RADIUS } from '../constants/theme';
+import { FONTS } from '../constants/typography';
 import { BorderCard } from '../components/common/BorderCard';
 import { ActionSheet, type ActionSheetOption } from '../components/social/ActionSheet';
 import { ReportSheet } from '../components/social/ReportSheet';
+import { LikeButton } from '../components/social/LikeButton';
 import { ProfileHeader } from '../components/profile/ProfileHeader';
 import { ProfileTabBar, type ProfileTabKey } from '../components/profile/ProfileTabBar';
 import { PostGrid } from '../components/profile/PostGrid';
@@ -27,11 +30,79 @@ import {
   useUnfollowNgo,
   useMyDrives,
   useRingStatus,
+  useTogglePortfolioLike,
 } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { currentStreakFromWeeks } from '../utils/streak';
 import { resolveMediaUrl } from '../api/client';
 import type { ApiPost } from '../api/posts';
+import type { ApiPortfolioEntry } from '../api/portfolio';
 import type { NgoStreakWeek } from '../api/ngoStreaks';
+
+function formatPastWorkDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+}
+
+/** A "past work" entry as shown to a visitor on an NGO's public profile — same fields as the
+ * NGO's own private management card (NgoPortfolioScreen's EntryCard), but read-only plus
+ * Like/Report in place of Edit/Delete, matching how a regular Post can be liked and reported. */
+function PastWorkCard({
+  entry,
+  onToggleLike,
+  onReport,
+}: {
+  entry: ApiPortfolioEntry;
+  onToggleLike: () => void;
+  onReport: () => void;
+}) {
+  const cover = resolveMediaUrl(entry.media[0]?.url);
+
+  return (
+    <View style={styles.pastWorkCard}>
+      {cover ? (
+        <Image source={{ uri: cover }} style={styles.pastWorkCover} />
+      ) : (
+        <View style={[styles.pastWorkCover, styles.pastWorkCoverEmpty]}>
+          <Text style={styles.pastWorkCoverEmptyIcon}>🌱</Text>
+        </View>
+      )}
+
+      <View style={styles.pastWorkBody}>
+        <Text style={styles.pastWorkDate}>{formatPastWorkDate(entry.happenedOn)}</Text>
+        <Text style={styles.pastWorkTitle} numberOfLines={2}>
+          {entry.title}
+        </Text>
+        {entry.locationLabel || entry.city ? (
+          <Text style={styles.pastWorkLocation} numberOfLines={1}>
+            📍 {[entry.locationLabel, entry.city].filter(Boolean).join(', ')}
+          </Text>
+        ) : null}
+
+        <View style={styles.pastWorkStatRow}>
+          {entry.treesPlanted != null && (
+            <View style={styles.pastWorkStat}>
+              <Text style={styles.pastWorkStatValue}>{entry.treesPlanted.toLocaleString()}</Text>
+              <Text style={styles.pastWorkStatLabel}>trees</Text>
+            </View>
+          )}
+          {entry.volunteersInvolved != null && (
+            <View style={styles.pastWorkStat}>
+              <Text style={styles.pastWorkStatValue}>{entry.volunteersInvolved.toLocaleString()}</Text>
+              <Text style={styles.pastWorkStatLabel}>volunteers</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.pastWorkActions}>
+          <LikeButton liked={entry.likedByMe} count={entry.likeCount} onToggle={onToggleLike} size={18} />
+          <TouchableOpacity onPress={onReport} hitSlop={6}>
+            <Text style={styles.pastWorkReport}>🚩 Report</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
 
 /** A weekly-cadence streak strip — one pill per week rather than the user app's 7-day-per-week
  * grid, since an NGO's streak counts consecutive WEEKS with an update posted, not days. Kept
@@ -102,9 +173,18 @@ export function NgoProfileScreen({ route, navigation }: any) {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  const { refreshing, onRefresh } = usePullToRefresh(
+    isOwn
+      ? [ownProfile.refetch, ownStats.refetch, ownStreak.refetch, ownAchievements.refetch, ownLeaderboard.refetch, ownDrives.refetch]
+      : [publicProfile.refetch, publicAchievements.refetch],
+  );
+
   const [tab, setTab] = useState<ProfileTabKey>('posts');
   const [menuOpen, setMenuOpen] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [reportingEntryId, setReportingEntryId] = useState<string | null>(null);
+  const togglePortfolioLike = useTogglePortfolioLike(ngoId);
+  const pastWork = isOwn ? [] : publicProfile.data?.portfolio ?? [];
   const openPost = useCallback(
     (post: ApiPost) => {
       if (!effectiveNgoId) return;
@@ -195,6 +275,8 @@ export function NgoProfileScreen({ route, navigation }: any) {
           isFetchingNextPage={isFetchingNextPage}
           emptyTitle="No posts yet"
           showEmptyState={tab === 'posts'}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           ListHeaderComponent={
             <>
               <ProfileHeader
@@ -264,6 +346,20 @@ export function NgoProfileScreen({ route, navigation }: any) {
                       </View>
                     </View>
                   </BorderCard>
+
+                  {pastWork.length > 0 && (
+                    <>
+                      <Text style={styles.pastWorkSectionLabel}>Past work</Text>
+                      {pastWork.map((entry) => (
+                        <PastWorkCard
+                          key={entry.id}
+                          entry={entry}
+                          onToggleLike={() => togglePortfolioLike.mutate({ id: entry.id, liked: entry.likedByMe })}
+                          onReport={() => setReportingEntryId(entry.id)}
+                        />
+                      ))}
+                    </>
+                  )}
                 </View>
               )}
               {tab === 'achievements' && (
@@ -286,6 +382,13 @@ export function NgoProfileScreen({ route, navigation }: any) {
 
       <ActionSheet visible={menuOpen} onClose={() => setMenuOpen(false)} title={name} options={menuOptions} />
       <ReportSheet visible={reporting} onClose={() => setReporting(false)} targetType="ngo" targetId={ngoId ?? null} targetLabel="this organisation" />
+      <ReportSheet
+        visible={reportingEntryId !== null}
+        onClose={() => setReportingEntryId(null)}
+        targetType="portfolio_entry"
+        targetId={reportingEntryId}
+        targetLabel="this past work entry"
+      />
     </View>
   );
 }
@@ -332,4 +435,42 @@ const styles = StyleSheet.create({
   streakPillEmpty: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
   streakPillCheck: { fontSize: 12, color: COLORS.white, fontWeight: '700' },
   streakPillLabel: { fontSize: 8, color: COLORS.textSecondary, fontWeight: '600' },
+  pastWorkSectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  pastWorkCard: {
+    backgroundColor: 'transparent',
+    borderRadius: RADIUS.lg,
+    borderWidth: 1.5,
+    borderColor: 'rgba(139, 107, 71, 0.30)',
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  pastWorkCover: { width: '100%', height: 140, backgroundColor: COLORS.mintLight },
+  pastWorkCoverEmpty: { alignItems: 'center', justifyContent: 'center' },
+  pastWorkCoverEmptyIcon: { fontSize: 30, opacity: 0.5 },
+  pastWorkBody: { padding: 14, gap: 4 },
+  pastWorkDate: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.textMuted },
+  pastWorkTitle: { fontFamily: FONTS.displayBold, fontSize: 17, lineHeight: 22, color: COLORS.textPrimary },
+  pastWorkLocation: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+  pastWorkStatRow: { flexDirection: 'row', gap: 16, marginTop: 6 },
+  pastWorkStat: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  pastWorkStatValue: { fontSize: 14, fontWeight: '800', color: COLORS.forest },
+  pastWorkStatLabel: { fontSize: 10, color: COLORS.textMuted },
+  pastWorkActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(139, 107, 71, 0.15)',
+  },
+  pastWorkReport: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
 });

@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import PhotoUploadField from './PhotoUploadField'
 import CitySelect from './CitySelect'
+import AddressAutocompleteInput from './AddressAutocompleteInput'
+import { proxy } from '@/app/ngo/dashboard/proxy'
 
 const numberField = (message) =>
   z.preprocess(
@@ -185,7 +187,19 @@ export default function DriveFormSheet({ open, onOpenChange, item, submitting, o
         <FormSection label="Location">
           <label className="block">
             <FieldLabel required>Address</FieldLabel>
-            <textarea {...form.register('address')} rows={2} placeholder="Plot / street / landmark" className={fieldTextareaClassName} />
+            <Controller
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <AddressAutocompleteInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  proxy={proxy}
+                  multiline
+                  placeholder="Plot / street / landmark"
+                />
+              )}
+            />
             {form.formState.errors.address && <p className="mt-1 text-xs text-destructive">{form.formState.errors.address.message}</p>}
           </label>
           <label className="block">
@@ -252,7 +266,13 @@ export default function DriveFormSheet({ open, onOpenChange, item, submitting, o
                   </div>
                   <label className="mt-1.5 block">
                     <FieldLabel required>Pickup address</FieldLabel>
-                    <input {...form.register(`pickupPoints.${index}.address`)} className={fieldInputClassName} />
+                    <Controller
+                      control={form.control}
+                      name={`pickupPoints.${index}.address`}
+                      render={({ field }) => (
+                        <AddressAutocompleteInput value={field.value} onChange={field.onChange} proxy={proxy} />
+                      )}
+                    />
                   </label>
                   <label className="mt-1.5 block">
                     <FieldLabel required>Reach by</FieldLabel>

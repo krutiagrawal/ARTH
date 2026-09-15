@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useHaptics } from '../hooks/useHaptics';
 import { useMyAdoptions, useReleaseMyAdoption } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { ApiAdoptableTree } from '../api/adoptions';
 import { useConfirm } from '../context/ConfirmDialogContext';
 
@@ -49,7 +50,8 @@ function AdoptionRow({ tree, navigation }: { tree: ApiAdoptableTree; navigation:
 
 export function MyAdoptionsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: trees, isLoading } = useMyAdoptions();
+  const { data: trees, isLoading, refetch } = useMyAdoptions();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
     <View style={styles.container}>
@@ -71,7 +73,11 @@ export function MyAdoptionsScreen({ navigation }: any) {
       ) : !trees || trees.length === 0 ? (
         <EmptyState icon="🌳" title="No adopted trees yet" body="Trees you adopt from NGOs will show up here." />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           {trees.map((t) => (
             <AdoptionRow key={t.id} tree={t} navigation={navigation} />
           ))}

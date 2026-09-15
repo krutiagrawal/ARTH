@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { useUpdateMe } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import { BorderCard } from '../components/common/BorderCard';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const HANDLE_REGEX = /^[a-z0-9_]+$/;
 
@@ -19,6 +20,7 @@ export function EditProfileScreen({ navigation }: any) {
   const { user } = useAuth();
   const updateMeMutation = useUpdateMe();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   const [name, setName] = useState(user?.name ?? '');
   const [handle, setHandle] = useState(user?.handle ?? '');
@@ -63,6 +65,7 @@ export function EditProfileScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         <BorderCard>
           <Text style={styles.label}>Avatar</Text>
@@ -79,8 +82,8 @@ export function EditProfileScreen({ navigation }: any) {
             style={styles.input}
             value={name}
             onChangeText={setName}
-            placeholder="Your name"
-            placeholderTextColor={COLORS.textMuted}
+            placeholder="eg - Your name"
+            placeholderTextColor={COLORS.textLight}
             maxLength={60}
           />
 
@@ -89,8 +92,8 @@ export function EditProfileScreen({ navigation }: any) {
             style={styles.input}
             value={handle}
             onChangeText={(text) => setHandle(text.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-            placeholder="your_handle"
-            placeholderTextColor={COLORS.textMuted}
+            placeholder="eg - your_handle"
+            placeholderTextColor={COLORS.textLight}
             autoCapitalize="none"
             maxLength={30}
           />
@@ -103,8 +106,8 @@ export function EditProfileScreen({ navigation }: any) {
             style={[styles.input, styles.bioInput]}
             value={bio}
             onChangeText={(text) => setBio(text.slice(0, 160))}
-            placeholder="Tell people a bit about yourself"
-            placeholderTextColor={COLORS.textMuted}
+            placeholder="eg - Tell people a bit about yourself"
+            placeholderTextColor={COLORS.textLight}
             multiline
             maxLength={160}
           />

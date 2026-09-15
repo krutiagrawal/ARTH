@@ -78,7 +78,7 @@ async function assembleNgoProfile(prisma: PrismaClient, ngo: { id: string } & Re
         orderBy: { sortOrder: 'asc' },
         select: { id: true, name: true, role: true, photoUrl: true },
       }),
-      listPublicPortfolio(prisma, ngo.id),
+      listPublicPortfolio(prisma, ngo.id, viewerUserId),
       getPortfolioImpact(prisma, ngo.id),
     ]);
 

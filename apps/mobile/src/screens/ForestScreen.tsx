@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated, {
   useSharedValue,
@@ -54,6 +54,7 @@ import { StoryPreviewModal } from '../components/forest/StoryPreviewModal';
 import type { ApiDecorationType } from '../api/decorations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const FOREST_HEIGHT = SH;
@@ -299,14 +300,15 @@ export function ForestScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const bottomNavClearance = useBottomNavClearance();
   const { user } = useAuth();
-  const { data: themes = [] } = useThemes();
+  const { data: themes = [], refetch: refetchThemes } = useThemes();
   const selectThemeMutation = useSelectTheme();
   const selectedTheme = user?.selectedForestThemeId ?? themes.find(t => t.key === 'classic')?.id ?? null;
   const selectedThemeKey = themes.find(t => t.id === selectedTheme)?.key;
   const palette = getForestThemePalette(selectedThemeKey);
   const forestLevelLabel = getForestLevelLabel(user?.level ?? 1);
 
-  const { data: placements = [] } = useDecorationPlacements();
+  const { data: placements = [], refetch: refetchPlacements } = useDecorationPlacements();
+  const { refreshing, onRefresh } = usePullToRefresh([refetchThemes, refetchPlacements]);
   const [decorateMode, setDecorateMode] = useState(false);
   const [pickerZone, setPickerZone] = useState<EcosystemZoneKey | null>(null);
   const createPlacementMutation = useCreateDecorationPlacement();
@@ -585,6 +587,7 @@ export function ForestScreen({ navigation }: any) {
           <ScrollView
             contentContainerStyle={[styles.bottomContent, { paddingBottom: bottomNavClearance }]}
             showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
           >
         {/* Forest name */}
         <View style={styles.forestNameRow}>

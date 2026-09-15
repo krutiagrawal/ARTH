@@ -1,5 +1,5 @@
 import React, { useState, useRef, type RefObject } from 'react';
-import { View, Image, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Image, StyleSheet, ScrollView, TouchableOpacity, Dimensions, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -38,6 +38,7 @@ import { hexToRgba } from '../utils/color';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { getHeroSeamColor } from '../utils/heroSeam';
 import { StoriesTray } from '../components/stories/StoriesTray';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 /** How tall the illustrated hero section is — sky/hills/lake (or the real illustration image)
@@ -521,9 +522,10 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
   // glass depth with a diagonal sheen instead; blurTargetRef stays wired up as a harmless no-op.
   const blurTargetRef = useRef<View>(null);
 
-  const { data: trees = [] } = useTrees(4);
-  const { data: missions = [] } = useTodayMissions();
-  const { data: ecoFacts = [] } = useEcoFacts();
+  const { data: trees = [], refetch: refetchTrees } = useTrees(4);
+  const { data: missions = [], refetch: refetchMissions } = useTodayMissions();
+  const { data: ecoFacts = [], refetch: refetchEcoFacts } = useEcoFacts();
+  const { refreshing, onRefresh } = usePullToRefresh([refetchTrees, refetchMissions, refetchEcoFacts]);
 
   const todayFact = ecoFacts.length > 0 ? ecoFacts[new Date().getDate() % ecoFacts.length] : '';
   const forestLevelLabel = getForestLevelLabel(user?.level ?? 1);
@@ -536,6 +538,7 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavClearance }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         {/* Illustrated hero — header, stat row, scenery, and stats pill all scroll together as
             one normal-flow block instead of a fixed backdrop the rest of the page scrolls over. */}

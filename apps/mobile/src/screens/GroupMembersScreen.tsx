@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { COLORS } from '../constants/colors';
@@ -7,6 +7,7 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useGroupMembers, useSetGroupMemberRole, useRemoveGroupMember } from '../hooks/useApiQueries';
 import { useSlideUp } from '../hooks/useAnimations';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { ApiGroupMember } from '../api/group';
 import { useConfirm } from '../context/ConfirmDialogContext';
 
@@ -18,10 +19,11 @@ function FadeInRow({ delay, children }: { delay: number; children: React.ReactNo
 }
 
 export function GroupMembersScreen({ navigation }: any) {
-  const { data: members = [], isLoading } = useGroupMembers();
+  const { data: members = [], isLoading, refetch } = useGroupMembers();
   const setRole = useSetGroupMemberRole();
   const removeMember = useRemoveGroupMember();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const openActions = (member: ApiGroupMember) => {
     if (member.role === 'owner') return;
@@ -44,7 +46,11 @@ export function GroupMembersScreen({ navigation }: any) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+    >
       {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
       {!isLoading && members.length === 0 && (
         <EmptyState icon="👥" title="No members yet" body="Share your invite code from the Home tab to bring people in." />

@@ -234,7 +234,8 @@ const styles = StyleSheet.create({
   page: {
     height: SH,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: SH * 0.09,
     paddingHorizontal: 32,
   },
   illustrationContainer: {
@@ -243,27 +244,27 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   illustrationOuter: {
-    width: 220,
-    height: 220,
-    borderRadius: 110,
+    width: 196,
+    height: 196,
+    borderRadius: 98,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   illustrationInner: {
-    width: 180,
-    height: 180,
-    borderRadius: 90,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
     alignItems: 'center',
     justifyContent: 'center',
   },
   illustrationEmoji: {
-    fontSize: 82,
+    fontSize: 72,
   },
   textContainer: {
     alignItems: 'center',
     maxWidth: SW * 0.82,
-    marginBottom: 48,
+    marginBottom: 28,
   },
   pageTitle: {
     fontSize: 36,

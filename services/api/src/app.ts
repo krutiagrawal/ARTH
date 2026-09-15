@@ -53,11 +53,13 @@ import postsRoutes from './routes/posts.routes';
 import socialRoutes from './routes/social.routes';
 import ngoFollowersRoutes from './routes/ngoFollowers.routes';
 import portfolioRoutes from './routes/portfolio.routes';
+import portfolioLikesRoutes from './routes/portfolioLikes.routes';
 import plantedTreesRoutes from './routes/plantedTrees.routes';
 import competitionsPublicRoutes from './routes/competitions.public.routes';
 import competitionsRoutes from './routes/competitions.routes';
 import nurseryFollowersRoutes from './routes/nurseryFollowers.routes';
 import addressesRoutes from './routes/addresses.routes';
+import geocodeRoutes from './routes/geocode.routes';
 import cartRoutes from './routes/cart.routes';
 import ordersRoutes from './routes/orders.routes';
 import wishlistRoutes from './routes/wishlist.routes';
@@ -139,6 +141,7 @@ export async function buildApp() {
     await instance.register(staffRoutes, { prefix: '/api/ngo/staff' });
     await instance.register(ngoFollowersRoutes, { prefix: '/api/ngo/followers' });
     await instance.register(portfolioRoutes, { prefix: '/api/ngo/portfolio' });
+    await instance.register(portfolioLikesRoutes, { prefix: '/api/portfolio' });
     await instance.register(postsRoutes, { prefix: '/api/posts' });
     // Mounted at the bare /api root: it owns several unrelated paths (/social/feed,
     // /notifications, /blocks, /reports, /push-tokens) that don't share one prefix.
@@ -146,6 +149,7 @@ export async function buildApp() {
     await instance.register(plantedTreesRoutes, { prefix: '/api/ngo/planted-trees' });
     await instance.register(competitionsRoutes, { prefix: '/api/competitions' });
     await instance.register(addressesRoutes, { prefix: '/api/addresses' });
+    await instance.register(geocodeRoutes, { prefix: '/api/geocode' });
     await instance.register(cartRoutes, { prefix: '/api/cart' });
     await instance.register(ordersRoutes, { prefix: '/api/orders' });
     await instance.register(wishlistRoutes, { prefix: '/api/wishlist' });

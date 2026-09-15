@@ -105,6 +105,17 @@ export interface CreateDriveInput {
   photo?: { uri: string; name: string; type: string };
 }
 
+export interface ApiDriveAttendee {
+  id: string;
+  name: string;
+  handle: string;
+  rsvpedAt: string;
+}
+
+export async function fetchDriveAttendees(driveId: string): Promise<{ total: number; attendees: ApiDriveAttendee[] }> {
+  return apiFetch(`/api/drives/${driveId}/attendees?take=50`);
+}
+
 export async function createDrive(input: CreateDriveInput): Promise<ApiDrive> {
   const form = new FormData();
   form.append('title', input.title);

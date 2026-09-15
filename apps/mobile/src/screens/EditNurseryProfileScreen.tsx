@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +21,7 @@ import { useSlideUp } from '../hooks/useAnimations';
 import { useHaptics } from '../hooks/useHaptics';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { ApiError, resolveMediaUrl } from '../api/client';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const STATUS_COPY: Record<string, { title: string; body: string }> = {
   pending: { title: 'Under review', body: "We're reviewing your nursery. Your stock will go live once approved." },
@@ -29,9 +30,10 @@ const STATUS_COPY: Record<string, { title: string; body: string }> = {
 
 export function EditNurseryProfileScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: profile, isLoading } = useNurseryProfile();
+  const { data: profile, isLoading, refetch } = useNurseryProfile();
   const updateMutation = useUpdateNurseryProfile();
   const resubmitMutation = useResubmitNurseryProfile();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const [nurseryName, setNurseryName] = useState('');
   const [description, setDescription] = useState('');
@@ -143,7 +145,11 @@ export function EditNurseryProfileScreen({ navigation }: any) {
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           {statusCopy && (
             <BorderCard
               noPadding
@@ -164,10 +170,10 @@ export function EditNurseryProfileScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            <FormField label="Nursery Name" value={nurseryName} onChangeText={setNurseryName} placeholder="Your nursery" />
-            <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="What does your nursery grow?" />
+            <FormField label="Nursery Name" value={nurseryName} onChangeText={setNurseryName} placeholder="eg - Your nursery" />
+            <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What does your nursery grow?" />
             <CityPickerField value={city} onChange={setCity} />
-            <FormField label="Contact phone" value={contactPhone} onChangeText={setContactPhone} placeholder="Phone" keyboardType="phone-pad" />
+            <FormField label="Contact phone" value={contactPhone} onChangeText={setContactPhone} placeholder="eg - Phone" keyboardType="phone-pad" />
 
             <BorderCard noPadding style={styles.deliveryCard}>
               <View style={styles.deliveryRow}>
@@ -182,7 +188,7 @@ export function EditNurseryProfileScreen({ navigation }: any) {
                   label="Delivery radius (km, optional)"
                   value={deliveryRadiusKm}
                   onChangeText={setDeliveryRadiusKm}
-                  placeholder="e.g. 15"
+                  placeholder="eg - 15"
                   keyboardType="number-pad"
                 />
               )}

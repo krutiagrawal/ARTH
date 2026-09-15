@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity, ScrollView } from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated, {
   useSharedValue,
@@ -24,6 +24,7 @@ import { FloatingParticles } from '../components/common/FloatingParticles';
 import { useHaptics } from '../hooks/useHaptics';
 import { useAuth } from '../context/AuthContext';
 import { useProtectStreak } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -178,6 +179,7 @@ export function StreakProtectionScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const protectStreakMutation = useProtectStreak();
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   const freezeOptions = buildFreezeOptions(user?.streakFreezesAvailable ?? 0, user?.xp ?? 0);
 
@@ -241,6 +243,7 @@ export function StreakProtectionScreen({ navigation }: any) {
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           {/* Header */}
           <View style={[styles.header, { paddingTop: insets.top + 12 }]}>

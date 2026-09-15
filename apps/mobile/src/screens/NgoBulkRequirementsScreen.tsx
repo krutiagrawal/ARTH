@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -24,6 +24,7 @@ import {
 } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import type { ApiNgoBulkRequirement } from '../api/ngoBulkRequirements';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function RequirementCard({ item, onPress }: { item: ApiNgoBulkRequirement; onPress: () => void }) {
   return (
@@ -126,8 +127,9 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
 
 export function NgoBulkRequirementsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: requirements = [], isLoading } = useNgoBulkRequirements();
+  const { data: requirements = [], isLoading, refetch } = useNgoBulkRequirements();
   const createMutation = useCreateNgoBulkRequirement();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
   const { period } = useTimeTheme();
   const isNightMode = isNightlikePeriod(period);
 
@@ -198,7 +200,11 @@ export function NgoBulkRequirementsScreen({ navigation }: any) {
       ) : requirements.length === 0 ? (
         <EmptyState icon="🤝" title="No requirements yet" body="Post one to ask nurseries nearby for bulk saplings." actionLabel="Post a requirement" onAction={() => setShowCreate(true)} />
       ) : (
-        <ScrollView contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           {requirements.map((r) => (
             <RequirementCard key={r.id} item={r} onPress={() => setSelectedId(r.id)} />
           ))}
@@ -207,11 +213,11 @@ export function NgoBulkRequirementsScreen({ navigation }: any) {
 
       <Sheet visible={showCreate} onClose={() => setShowCreate(false)} title="New bulk requirement" scrollable maxHeight={560}>
         <View style={{ gap: 4 }}>
-          <FormField dark={isNightMode} label="Species (optional description)" value={speciesNote} onChangeText={setSpeciesNote} placeholder="e.g. Native shade trees" />
-          <FormField dark={isNightMode} label="Quantity needed" value={quantityNeeded} onChangeText={setQuantityNeeded} placeholder="0" keyboardType="number-pad" />
-          <FormField dark={isNightMode} label="Needed by (YYYY-MM-DD, optional)" value={neededByDate} onChangeText={setNeededByDate} placeholder="2026-10-01" />
-          <FormField dark={isNightMode} label="City (optional)" value={city} onChangeText={setCity} placeholder="e.g. Pune" />
-          <FormField dark={isNightMode} label="Notes (optional)" value={notes} onChangeText={setNotes} placeholder="Anything nurseries should know" multiline />
+          <FormField dark={isNightMode} label="Species (optional description)" value={speciesNote} onChangeText={setSpeciesNote} placeholder="eg - Native shade trees" />
+          <FormField dark={isNightMode} label="Quantity needed" value={quantityNeeded} onChangeText={setQuantityNeeded} placeholder="eg - 0" keyboardType="number-pad" />
+          <FormField dark={isNightMode} label="Needed by (YYYY-MM-DD, optional)" value={neededByDate} onChangeText={setNeededByDate} placeholder="eg - 2026-10-01" />
+          <FormField dark={isNightMode} label="City (optional)" value={city} onChangeText={setCity} placeholder="eg - Pune" />
+          <FormField dark={isNightMode} label="Notes (optional)" value={notes} onChangeText={setNotes} placeholder="eg - Anything nurseries should know" multiline />
           {error && <Text style={styles.errorText}>{error}</Text>}
           <AnimatedButton
             label={createMutation.isPending ? 'Posting…' : 'Post requirement'}

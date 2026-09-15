@@ -10,6 +10,7 @@ import { ScreenHeader } from '../components/common/ScreenHeader';
 import { EmptyState } from '../components/common/EmptyState';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useNgoPublicFollowers, useNurseryPublicFollowers } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { ApiPublicFollower } from '../api/publicFollowers';
 
 function FollowerRow({ follower, onPress }: { follower: ApiPublicFollower; onPress: () => void }) {
@@ -36,7 +37,8 @@ export function PublicFollowersScreen({ navigation, route }: any) {
 
   const ngoQuery = useNgoPublicFollowers(kind === 'ngo' ? id : undefined);
   const nurseryQuery = useNurseryPublicFollowers(kind === 'nursery' ? id : undefined);
-  const { data, isLoading } = kind === 'nursery' ? nurseryQuery : ngoQuery;
+  const { data, isLoading, refetch } = kind === 'nursery' ? nurseryQuery : ngoQuery;
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const followers = data?.followers ?? [];
 
@@ -54,6 +56,8 @@ export function PublicFollowersScreen({ navigation, route }: any) {
           data={followers}
           keyExtractor={(f) => f.id}
           contentContainerStyle={[styles.list, { paddingBottom: clearance }]}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           renderItem={({ item }) => (
             <FollowerRow follower={item} onPress={() => navigation.navigate('UserPublicProfile', { userId: item.id })} />
           )}

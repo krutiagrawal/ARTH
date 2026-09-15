@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -22,17 +22,19 @@ import {
 } from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import { ApiError } from '../api/client';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
   const requirementId: string = route?.params?.requirementId;
   const insets = useSafeAreaInsets();
   const confirm = useConfirm();
-  const { data: req, isLoading } = useNurseryBulkRequirement(requirementId);
+  const { data: req, isLoading, refetch } = useNurseryBulkRequirement(requirementId);
   const respondMutation = useRespondToBulkRequirement();
   const withdrawMutation = useWithdrawBulkResponse();
   const fulfilledMutation = useMarkBulkResponseFulfilled();
   const { data: profile } = useNurseryProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const [quantityOffered, setQuantityOffered] = useState('');
   const [priceCents, setPriceCents] = useState('');
@@ -100,7 +102,11 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
       {isLoading || !req ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           <BorderCard style={styles.card}>
             <Text style={styles.ngoName}>{req.ngo.orgName}</Text>
             <Text style={styles.species}>
@@ -178,10 +184,10 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
               <Text style={styles.sectionTitle}>{req.myResponse ? 'Send a new offer' : 'Respond with an offer'}</Text>
               <View style={styles.inlineRow}>
                 <View style={styles.inlineField}>
-                  <FormField label="Quantity offered" value={quantityOffered} onChangeText={setQuantityOffered} placeholder="0" keyboardType="number-pad" />
+                  <FormField label="Quantity offered" value={quantityOffered} onChangeText={setQuantityOffered} placeholder="eg - 0" keyboardType="number-pad" />
                 </View>
                 <View style={styles.inlineField}>
-                  <FormField label="Price ₹ (optional)" value={priceCents} onChangeText={setPriceCents} placeholder="0" keyboardType="number-pad" />
+                  <FormField label="Price ₹ (optional)" value={priceCents} onChangeText={setPriceCents} placeholder="eg - 0" keyboardType="number-pad" />
                 </View>
               </View>
               <BorderCard style={styles.toggleCard}>
@@ -194,7 +200,7 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
                   <Toggle value={canPickup} onValueChange={setCanPickup} />
                 </View>
               </BorderCard>
-              <FormField label="Message (optional)" value={message} onChangeText={setMessage} placeholder="Anything the NGO should know" multiline />
+              <FormField label="Message (optional)" value={message} onChangeText={setMessage} placeholder="eg - Anything the NGO should know" multiline />
 
               {error && <Text style={styles.errorText}>{error}</Text>}
 

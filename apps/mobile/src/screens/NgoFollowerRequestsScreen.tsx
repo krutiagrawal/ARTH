@@ -12,6 +12,7 @@ import {
   useNgoFollowers,
 } from '../hooks/useSocialQueries';
 import type { ApiFollower } from '../api/ngoFollowers';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function RequestRow({
   request,
@@ -69,10 +70,11 @@ function RequestRow({
  */
 export function NgoFollowerRequestsScreen({ navigation }: any) {
   const clearance = useBottomNavClearance();
-  const { data, isLoading, refetch, isRefetching } = useNgoFollowers({ status: 'pending' });
+  const { data, isLoading, refetch } = useNgoFollowers({ status: 'pending' });
   const accept = useAcceptFollowRequest();
   const decline = useDeclineFollowRequest();
   const busy = accept.isPending || decline.isPending;
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   if (isLoading) {
     return (
@@ -111,8 +113,8 @@ export function NgoFollowerRequestsScreen({ navigation }: any) {
           />
         )}
         contentContainerStyle={[styles.list, { paddingBottom: clearance }]}
-        onRefresh={refetch}
-        refreshing={isRefetching}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
         ListEmptyComponent={
           isOpenPolicy ? null : (
             <EmptyState

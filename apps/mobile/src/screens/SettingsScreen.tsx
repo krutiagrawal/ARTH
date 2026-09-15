@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Linking } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Linking, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,6 +15,7 @@ import { useReduceMotionContext } from '../context/ReduceMotionContext';
 import { useAuth } from '../context/AuthContext';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { useSettings, useUpdateSettings, useSessions } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { deleteAccount } from '../api/auth';
 import type { ApiUserSettings } from '../api/settings';
 import { PRIVACY_POLICY_TEXT, TERMS_OF_SERVICE_TEXT } from '../constants/legalContent';
@@ -50,7 +51,7 @@ interface ToggleItem {
 export function SettingsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
-  const { data: fetchedSettings } = useSettings();
+  const { data: fetchedSettings, refetch: refetchSettings } = useSettings();
   const updateSettingsMutation = useUpdateSettings();
   const settings = fetchedSettings ?? DEFAULT_SETTINGS;
   const { override: reduceMotionOverride, setOverride: setReduceMotionOverride } = useReduceMotionContext();
@@ -85,7 +86,8 @@ export function SettingsScreen({ navigation }: any) {
   };
 
   const fadeStyle = useFadeIn(0);
-  const { data: sessions } = useSessions();
+  const { data: sessions, refetch: refetchSessions } = useSessions();
+  const { refreshing, onRefresh } = usePullToRefresh([refetchSettings, refetchSessions]);
 
   const handleSendFeedback = async () => {
     const url = 'mailto:support@plantapp.example?subject=ARTH%20Feedback';
@@ -121,6 +123,7 @@ export function SettingsScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         {/* Profile card */}
         <Animated.View style={fadeStyle}>

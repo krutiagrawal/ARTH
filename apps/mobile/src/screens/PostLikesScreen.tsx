@@ -9,12 +9,14 @@ import { FONTS } from '../constants/typography';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { EmptyState } from '../components/common/EmptyState';
 import { usePostLikers } from '../hooks/useSocialQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 /** Who liked a post. Reached by tapping the like count on a PostCard. */
 export function PostLikesScreen({ navigation, route }: any) {
   const postId: string | undefined = route?.params?.postId;
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, refetch, isRefetching } =
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
     usePostLikers(postId);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const likers = useMemo(() => data?.pages.flatMap((p) => p.likers) ?? [], [data]);
 
@@ -42,8 +44,8 @@ export function PostLikesScreen({ navigation, route }: any) {
           data={likers}
           keyExtractor={(u) => u.id}
           contentContainerStyle={styles.list}
-          onRefresh={refetch}
-          refreshing={isRefetching}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
           onEndReached={onEndReached}
           onEndReachedThreshold={0.6}
           renderItem={({ item }) => (

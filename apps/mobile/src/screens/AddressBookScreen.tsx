@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,7 +10,9 @@ import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { EmptyState } from '../components/common/EmptyState';
+import { AddressSearchField } from '../components/common/AddressSearchField';
 import { useAddresses, useCreateAddress, useUpdateAddress, useDeleteAddress } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { ApiAddress } from '../api/addresses';
 
 function AddressCard({ address }: { address: ApiAddress }) {
@@ -44,8 +46,9 @@ function AddressCard({ address }: { address: ApiAddress }) {
 
 export function AddressBookScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: addresses, isLoading } = useAddresses();
+  const { data: addresses, isLoading, refetch } = useAddresses();
   const createMutation = useCreateAddress();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const [showForm, setShowForm] = useState(false);
   const [line1, setLine1] = useState('');
@@ -103,7 +106,11 @@ export function AddressBookScreen({ navigation }: any) {
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           {!addresses || addresses.length === 0 ? (
             <EmptyState icon="📍" title="No saved addresses" body="Add one so checkout is faster next time." />
           ) : (
@@ -112,10 +119,22 @@ export function AddressBookScreen({ navigation }: any) {
 
           {showForm ? (
             <BorderCard style={styles.card}>
-              <TextInput style={styles.input} placeholder="Flat / street / society" placeholderTextColor={COLORS.textMuted} value={line1} onChangeText={setLine1} />
-              <TextInput style={styles.input} placeholder="Pincode" placeholderTextColor={COLORS.textMuted} value={pincode} onChangeText={setPincode} keyboardType="number-pad" />
+              <AddressSearchField
+                label="Address"
+                value={line1}
+                onChangeText={(text) => {
+                  setLine1(text);
+                  setCoords(null);
+                }}
+                placeholder="eg - Flat / street / society"
+                onSelectSuggestion={(s) => {
+                  setLine1(s.label);
+                  setCoords({ lat: s.lat, lng: s.lng });
+                }}
+              />
+              <TextInput style={styles.input} placeholder="eg - Pincode" placeholderTextColor={COLORS.textLight} value={pincode} onChangeText={setPincode} keyboardType="number-pad" />
               <TouchableOpacity style={styles.locationButton} onPress={useCurrentLocation} disabled={locating}>
-                <Text style={styles.locationButtonText}>{locating ? 'Locating…' : coords ? '📍 Location captured' : '📍 Use current location (required)'}</Text>
+                <Text style={styles.locationButtonText}>{locating ? 'Locating…' : coords ? '📍 Location captured' : '📍 Or use current location'}</Text>
               </TouchableOpacity>
               {error && <Text style={styles.errorText}>{error}</Text>}
               <AnimatedButton label="Save address" onPress={handleAdd} variant="primary" size="md" fullWidth disabled={createMutation.isPending || !coords} />

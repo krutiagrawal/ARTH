@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +14,7 @@ import { ScreenHeader } from '../components/common/ScreenHeader';
 import { IconBadge } from '../components/common/IconBadge';
 import { useNgoReports } from '../hooks/useApiQueries';
 import { useFadeIn, useCountUp } from '../hooks/useAnimations';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function AnimatedBar({ count, max, delay, isLatest }: { count: number; max: number; delay: number; isLatest: boolean }) {
   const height = useCountUp(Math.max(4, (count / max) * 100), 900, delay);
@@ -68,7 +69,8 @@ function MonthlyBarRow({
 
 export function NgoReportsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: reports, isLoading } = useNgoReports();
+  const { data: reports, isLoading, refetch } = useNgoReports();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
     <View style={styles.container}>
@@ -80,7 +82,11 @@ export function NgoReportsScreen({ navigation }: any) {
       {isLoading || !reports ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           <View style={styles.summaryCard}>
             <StatDisplay value={String(reports.totalDrives)} label="Total Drives" align="center" size="md" color={ON_DARK_SURFACE.primary} labelColor={ON_DARK_SURFACE.secondary} style={styles.summaryItem} />
             <View style={styles.summaryDivider} />

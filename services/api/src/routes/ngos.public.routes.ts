@@ -82,9 +82,13 @@ export default async function ngosPublicRoutes(fastify: FastifyInstance) {
   });
 
   // Past work, shown on the public profile alongside completed drives.
-  fastify.get<{ Params: { id: string } }>('/:id/portfolio', async (request, reply) => {
-    reply.send(await listPublicPortfolio(fastify.prisma, request.params.id));
-  });
+  fastify.get<{ Params: { id: string } }>(
+    '/:id/portfolio',
+    { preHandler: [fastify.optionalAuthenticate] },
+    async (request, reply) => {
+      reply.send(await listPublicPortfolio(fastify.prisma, request.params.id, request.user?.id));
+    },
+  );
 
   fastify.get<{ Params: { id: string } }>('/:id/achievements', async (request, reply) => {
     const achievements = await fastify.prisma.ngoAchievement.findMany({

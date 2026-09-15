@@ -16,6 +16,7 @@ import {
   useUserPosts,
 } from '../hooks/useSocialQueries';
 import { useRingStatus } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { ApiPost } from '../api/posts';
 
 // Rough average PostCard height, used only to seed getItemLayout before a row has actually been
@@ -47,8 +48,9 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
   const ngoPosts = useNgoPosts(authorKind === 'ngo' ? authorId : undefined);
   const nurseryPosts = useNurseryPosts(authorKind === 'nursery' ? authorId : undefined);
   const groupPosts = useGroupPosts(authorKind === 'group' ? authorId : undefined);
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, refetch } =
     authorKind === 'ngo' ? ngoPosts : authorKind === 'nursery' ? nurseryPosts : authorKind === 'group' ? groupPosts : userPosts;
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const posts = useMemo(() => data?.pages.flatMap((p) => p.posts) ?? [], [data]);
 
@@ -125,6 +127,7 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
           post={item}
           onToggleLike={(p) => toggleLike.mutate({ id: p.id, liked: p.likedByMe })}
           isTogglingLike={toggleLike.isPending && toggleLike.variables?.id === item.id}
+          onPressLikes={(p) => navigation.navigate('PostLikes', { postId: p.id })}
           onDelete={item.isMine ? (p) => deletePost.mutate(p.id) : undefined}
           onReport={!item.isMine ? () => setReportTarget(item) : undefined}
           enableShare={false}
@@ -158,6 +161,8 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           onEndReached={onEndReached}
           onEndReachedThreshold={0.6}
           ListFooterComponent={

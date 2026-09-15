@@ -1,5 +1,5 @@
 import React, { useRef, type RefObject } from 'react';
-import { View, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,6 +28,7 @@ import { useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { getHeroSeamColor, getHeroSeamTextColors } from '../utils/heroSeam';
 import { hexToRgba } from '../utils/color';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const HERO_HEIGHT = SH * 0.5;
@@ -220,10 +221,11 @@ export function NurseryDashboardScreen({ navigation }: NurseryDashboardScreenPro
   const { weather } = useDeviceWeather();
   const sceneryMode = getSceneryMode(weather);
   const { user } = useAuth();
-  const { data: profile } = useNurseryProfile();
-  const { data: stats, isLoading } = useNurseryStats();
-  const { data: pendingReservations = [] } = useNurseryReservations('pending');
-  const { data: today } = useNurseryDashboardToday();
+  const { data: profile, refetch: refetchProfile } = useNurseryProfile();
+  const { data: stats, isLoading, refetch: refetchStats } = useNurseryStats();
+  const { data: pendingReservations = [], refetch: refetchReservations } = useNurseryReservations('pending');
+  const { data: today, refetch: refetchToday } = useNurseryDashboardToday();
+  const { refreshing, onRefresh } = usePullToRefresh([refetchProfile, refetchStats, refetchReservations, refetchToday]);
   const blurTargetRef = useRef<View>(null);
 
   const pageBackground = getHeroSeamColor(theme);
@@ -291,6 +293,7 @@ export function NurseryDashboardScreen({ navigation }: NurseryDashboardScreenPro
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         <View style={[styles.heroSection, { height: HERO_HEIGHT }]}>
           {theme.heroImage ? (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
+import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +21,7 @@ import { deleteAccount } from '../api/auth';
 import { resolveMediaUrl } from '../api/client';
 import type { ApiUserSettings } from '../api/settings';
 import { PRIVACY_POLICY_TEXT, TERMS_OF_SERVICE_TEXT } from '../constants/legalContent';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const DEFAULT_SETTINGS: ApiUserSettings = {
   haptics: true,
@@ -40,7 +41,7 @@ const appVersionLabel = Constants.expoConfig?.version ? `ARTH v${Constants.expoC
 
 export function NurserySettingsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: profile, isLoading } = useNurseryProfile();
+  const { data: profile, isLoading, refetch } = useNurseryProfile();
   // The nursery account's own login (email, logout, delete-account) is a regular User row (role
   // 'nursery') — these settings/session endpoints are already generic to any authenticated user,
   // so this screen reuses the exact same hooks the individual user's SettingsScreen does. Profile
@@ -53,6 +54,7 @@ export function NurserySettingsScreen({ navigation }: any) {
   const { override: reduceMotionOverride, setOverride: setReduceMotionOverride } = useReduceMotionContext();
   const { data: sessions } = useSessions();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const fadeStyle = useFadeIn(0);
   const logoUri = resolveMediaUrl(profile?.logoUrl) ?? null;
@@ -109,7 +111,11 @@ export function NurserySettingsScreen({ navigation }: any) {
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           {/* Profile card — a shortcut, not the profile itself */}
           <Animated.View style={fadeStyle}>
             <LinearGradient colors={[COLORS.forest, COLORS.sageDark]} style={styles.profileCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>

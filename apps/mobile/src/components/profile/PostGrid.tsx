@@ -53,6 +53,8 @@ export function PostGrid({
   emptyTitle = 'No posts yet',
   emptyBody,
   showEmptyState = true,
+  refreshing,
+  onRefresh,
 }: {
   posts: ApiPost[];
   onPressPost: (post: ApiPost) => void;
@@ -65,6 +67,9 @@ export function PostGrid({
    * `false` on those tabs so the grid area doesn't show a "No posts yet" message underneath
    * that tab's real content, which has nothing to do with posts. */
   showEmptyState?: boolean;
+  /** Optional pull-to-refresh — omit both to leave the list without one (unchanged default). */
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }) {
   const renderItem = useMemo(
     () =>
@@ -95,6 +100,8 @@ export function PostGrid({
         onEndReachedThreshold={0.6}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        refreshing={onRefresh ? refreshing : undefined}
+        onRefresh={onRefresh}
       />
     </KeyboardAvoidingView>
   );

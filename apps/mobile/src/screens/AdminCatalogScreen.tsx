@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { Sheet } from '../components/common/Sheet';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useAdminCatalog, useCreateAdminCatalogItem, useUpdateAdminCatalogItem } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ADMIN_CATALOG_MODELS, coerceCatalogValue } from '../constants/adminCatalogModels';
 import type { AdminCatalogModel } from '../api/admin';
 import { ApiError } from '../api/client';
@@ -24,9 +25,10 @@ export function AdminCatalogScreen() {
   const [modelKey, setModelKey] = useState<AdminCatalogModel>(MODEL_KEYS[0]);
   const config = ADMIN_CATALOG_MODELS[modelKey];
 
-  const { data: items, isLoading } = useAdminCatalog(modelKey);
+  const { data: items, isLoading, refetch } = useAdminCatalog(modelKey);
   const createMutation = useCreateAdminCatalogItem(modelKey);
   const updateMutation = useUpdateAdminCatalogItem(modelKey);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const [editing, setEditing] = useState<any | null>(null); // null = create sheet closed; {} = creating; {...item} = editing
   const [form, setForm] = useState<Record<string, any>>({});
@@ -96,7 +98,11 @@ export function AdminCatalogScreen() {
         </ScrollView>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         {isLoading && <ActivityIndicator color={COLORS.mint} style={styles.loader} />}
         {!isLoading && (!items || items.length === 0) && (
           <EmptyState icon="📚" title="Nothing here yet" body={`Create your first ${config.label.toLowerCase()}.`} tint="dark" />
@@ -176,7 +182,7 @@ export function AdminCatalogScreen() {
                   onChangeText={(v: string) => setForm((s) => ({ ...s, [f.name]: v }))}
                   keyboardType={f.type === 'number' ? 'numeric' : 'default'}
                   multiline={f.type === 'textarea'}
-                  placeholder={f.type === 'date' ? 'YYYY-MM-DD' : undefined}
+                  placeholder={f.type === 'date' ? 'eg - YYYY-MM-DD' : undefined}
                   placeholderTextColor={ON_DARK_SURFACE.muted}
                 />
               )}

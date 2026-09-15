@@ -12,6 +12,7 @@ import { EmptyState } from '../components/common/EmptyState';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { resolveMediaUrl } from '../api/client';
 import { useActOnReport, useAdminReports } from '../hooks/useSocialQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { ApiAdminReport, ModerationAction, ReportStatus, ReportTargetTypeFilter } from '../api/admin';
 import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
 
@@ -170,8 +171,9 @@ export function AdminReportsScreen() {
   const { period } = useTimeTheme();
   const isNightMode = isNightlikePeriod(period);
 
-  const { data, isLoading, refetch, isRefetching } = useAdminReports(filter, targetTab);
+  const { data, isLoading, refetch } = useAdminReports(filter, targetTab);
   const act = useActOnReport();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const confirm = () => {
     if (!pending) return;
@@ -233,8 +235,8 @@ export function AdminReportsScreen() {
           data={data?.reports ?? []}
           keyExtractor={(r) => r.id}
           contentContainerStyle={[styles.list, { paddingBottom: clearance }]}
-          onRefresh={refetch}
-          refreshing={isRefetching}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
           renderItem={({ item }) => (
             <ReportRow report={item} onAct={(action) => setPending({ report: item, action })} />
           )}
@@ -285,8 +287,8 @@ export function AdminReportsScreen() {
 
         <TextInput
           style={[styles.reasonInput, isNightMode && styles.reasonInputNight]}
-          placeholder="Reason (optional – saved to the audit log)"
-          placeholderTextColor={isNightMode ? ON_DARK_SURFACE.muted : COLORS.textMuted}
+          placeholder="eg - Reason (optional – saved to the audit log)"
+          placeholderTextColor={isNightMode ? ON_DARK_SURFACE.muted : COLORS.textLight}
           value={reason}
           onChangeText={setReason}
           multiline

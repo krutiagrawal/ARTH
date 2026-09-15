@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,6 +10,7 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useNgoVolunteers } from '../hooks/useApiQueries';
 import { useSlideUp } from '../hooks/useAnimations';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
   const animStyle = useSlideUp(delay, 18);
@@ -18,7 +19,8 @@ function FadeInRow({ delay, children, style }: { delay: number; children: React.
 
 export function NgoVolunteersScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: volunteers = [], isLoading } = useNgoVolunteers();
+  const { data: volunteers = [], isLoading, refetch } = useNgoVolunteers();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
     <View style={styles.container}>
@@ -35,7 +37,11 @@ export function NgoVolunteersScreen({ navigation }: any) {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         <Text style={styles.hint}>People who've RSVP'd to your drives – attendance count and last activity.</Text>
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && volunteers.length === 0 && (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useWishlist, useRemoveWishlistItem } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { ApiWishlistItem } from '../api/wishlist';
 
 function WishlistRow({ item, navigation }: { item: ApiWishlistItem; navigation: any }) {
@@ -43,7 +44,8 @@ function WishlistRow({ item, navigation }: { item: ApiWishlistItem; navigation: 
 
 export function WishlistScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: items, isLoading } = useWishlist();
+  const { data: items, isLoading, refetch } = useWishlist();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
     <View style={styles.container}>
@@ -65,7 +67,11 @@ export function WishlistScreen({ navigation }: any) {
       ) : !items || items.length === 0 ? (
         <EmptyState icon="♥" title="Nothing saved yet" body="Tap the heart on a nursery or sapling to save it here." />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           {items.map((item) => (
             <WishlistRow key={item.id} item={item} navigation={navigation} />
           ))}

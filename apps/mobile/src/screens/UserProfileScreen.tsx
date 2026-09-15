@@ -35,6 +35,7 @@ import {
   useThemes,
   useSelectTheme,
 } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { getXpProgress } from '../constants/forestLevels';
 import type { ApiPost } from '../api/posts';
 
@@ -67,8 +68,8 @@ export function UserProfileScreen({ route, navigation }: any) {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const ownAchievements = useAchievements();
-  const { data: streakWeeks = [] } = useStreakCalendar(4);
-  const { data: leaderboard } = useLeaderboard('global');
+  const { data: streakWeeks = [], refetch: refetchStreakWeeks } = useStreakCalendar(4);
+  const { data: leaderboard, refetch: refetchLeaderboard } = useLeaderboard('global');
   const ownDrives = useJoinedDrives();
   const { data: themes = [] } = useThemes();
   const selectThemeMutation = useSelectTheme();
@@ -87,11 +88,18 @@ export function UserProfileScreen({ route, navigation }: any) {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    refetch: refetchPosts,
   } = useUserPosts(isOwn ? user?.id : userId);
   const posts = useMemo(() => postsData?.pages.flatMap((p) => p.posts) ?? [], [postsData]);
   const onEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const { refreshing, onRefresh } = usePullToRefresh(
+    isOwn
+      ? [refetchPosts, ownAchievements.refetch, refetchStreakWeeks, refetchLeaderboard, ownDrives.refetch]
+      : [refetchPosts, publicProfile.refetch, publicAchievements.refetch, publicDrives.refetch]
+  );
 
   const [tab, setTab] = useState<ProfileTabKey>('posts');
   const profileUserId = isOwn ? user?.id : userId;
@@ -232,6 +240,8 @@ export function UserProfileScreen({ route, navigation }: any) {
           isFetchingNextPage={isFetchingNextPage}
           emptyTitle="No posts yet"
           showEmptyState={tab === 'posts'}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           ListHeaderComponent={
             <>
               {pendingRequest && (

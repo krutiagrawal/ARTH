@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Image } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Image, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { EmptyState } from '../components/common/EmptyState';
 import { useBrowseNurseries } from '../hooks/useApiQueries';
 import { useMyLocation } from '../hooks/useMyLocation';
 import { resolveMediaUrl } from '../api/client';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 export function NurseryDirectoryScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -18,12 +19,13 @@ export function NurseryDirectoryScreen({ navigation }: any) {
   const [deliveryOnly, setDeliveryOnly] = useState(false);
   const [nearbyOnly, setNearbyOnly] = useState(false);
   const { coords } = useMyLocation();
-  const { data, isLoading } = useBrowseNurseries({
+  const { data, isLoading, refetch } = useBrowseNurseries({
     q: query || undefined,
     deliveryOnly: deliveryOnly || undefined,
     lat: nearbyOnly ? coords?.lat : undefined,
     lng: nearbyOnly ? coords?.lng : undefined,
   });
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
   const nurseries = data?.nurseries ?? [];
 
   return (
@@ -44,8 +46,8 @@ export function NurseryDirectoryScreen({ navigation }: any) {
       <View style={styles.searchWrap}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search nurseries by name or city"
-          placeholderTextColor={COLORS.textMuted}
+          placeholder="eg - Search nurseries by name or city"
+          placeholderTextColor={COLORS.textLight}
           value={query}
           onChangeText={setQuery}
         />
@@ -57,7 +59,11 @@ export function NurseryDirectoryScreen({ navigation }: any) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && nurseries.length === 0 && (
           <EmptyState icon="🌱" title="No nurseries found" body="Try a different search term." />

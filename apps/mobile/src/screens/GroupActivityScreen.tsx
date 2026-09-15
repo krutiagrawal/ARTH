@@ -12,6 +12,7 @@ import { PostCard } from '../components/social/PostCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useGroupActivity, useGroupActivityForMember } from '../hooks/useApiQueries';
 import { useToggleLike, useToggleSave, useDeletePost } from '../hooks/useSocialQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { GroupActivityItem } from '../api/groupActivity';
 import type { ApiPost } from '../api/posts';
 
@@ -65,7 +66,8 @@ export function GroupActivityScreen({ navigation, route }: GroupActivityScreenPr
 
   const ownerQuery = useGroupActivity({ enabled: !groupId });
   const memberQuery = useGroupActivityForMember(groupId);
-  const { data: items = [], isLoading, refetch, isRefetching } = groupId ? memberQuery : ownerQuery;
+  const { data: items = [], isLoading, refetch } = groupId ? memberQuery : ownerQuery;
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const toggleLike = useToggleLike();
   const toggleSave = useToggleSave();
@@ -102,14 +104,15 @@ export function GroupActivityScreen({ navigation, route }: GroupActivityScreenPr
           keyExtractor={(item) => `${item.kind}-${item.id}`}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
-          onRefresh={refetch}
-          refreshing={isRefetching}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
           renderItem={({ item }) =>
             item.kind === 'post' ? (
               <PostCard
                 post={item.post as ApiPost}
                 onToggleLike={(p) => toggleLike.mutate({ id: p.id, liked: p.likedByMe })}
                 onToggleSave={(p) => toggleSave.mutate({ id: p.id, saved: p.savedByMe })}
+                onPressLikes={(p) => navigation.navigate('PostLikes', { postId: p.id })}
                 onDelete={(p) => deletePost.mutate(p.id)}
                 isTogglingLike={toggleLike.isPending && toggleLike.variables?.id === item.post.id}
               />

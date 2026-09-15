@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Platform, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,6 +10,7 @@ import { COLORS } from '../constants/colors';
 import { useCreateGroupChallenge } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import { useSlideUp } from '../hooks/useAnimations';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField, FormFieldShell } from '../components/common/FormField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
@@ -75,6 +76,7 @@ export function GroupCreateChallengeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const confirm = useConfirm();
   const createChallengeMutation = useCreateGroupChallenge();
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -118,10 +120,14 @@ export function GroupCreateChallengeScreen({ navigation }: any) {
 
       <ScreenHeader title="New Challenge" subtitle="Set a shared goal for your group" onBack={() => navigation?.goBack?.()} align="left" />
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         <Animated.View style={cardAnim}>
-          <FormField label="Title" value={title} onChangeText={setTitle} placeholder="e.g. Monsoon Sprint" />
-          <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="What are you working toward?" />
+          <FormField label="Title" value={title} onChangeText={setTitle} placeholder="eg - Monsoon Sprint" />
+          <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What are you working toward?" />
 
           <Text style={styles.sectionLabel}>Goal type</Text>
           <View style={styles.chipRow}>
@@ -141,7 +147,7 @@ export function GroupCreateChallengeScreen({ navigation }: any) {
             value={goalTotal}
             onChangeText={(v: string) => setGoalTotal(v.replace(/[^0-9]/g, ''))}
             keyboardType="number-pad"
-            placeholder="e.g. 100"
+            placeholder="eg - 100"
           />
 
           <DateField label="Starts at" value={startsAt} onChange={setStartsAt} />

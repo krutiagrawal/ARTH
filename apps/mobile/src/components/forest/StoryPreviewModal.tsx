@@ -66,7 +66,7 @@ export function StoryPreviewModal({
           <View style={styles.captionOverlay}>
             <TextInput
               style={styles.captionInput}
-              placeholder="Add a caption…"
+              placeholder="eg - Add a caption…"
               placeholderTextColor={ON_DARK_SURFACE.muted}
               value={caption}
               onChangeText={setCaption}

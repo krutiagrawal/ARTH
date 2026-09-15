@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -14,6 +14,7 @@ import { useHaptics } from '../hooks/useHaptics';
 import { useNurseryReviews, useRespondToReview, useNurseryProfile } from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import type { ApiNurseryReview } from '../api/nursery';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function ReviewRow({ review, guard }: { review: ApiNurseryReview; guard: <A extends any[]>(fn: (...a: A) => void) => (...a: A) => void }) {
   const respondMutation = useRespondToReview();
@@ -40,7 +41,7 @@ function ReviewRow({ review, guard }: { review: ApiNurseryReview; guard: <A exte
         </View>
       ) : responding ? (
         <View style={styles.responseForm}>
-          <TextInput style={styles.input} value={text} onChangeText={setText} placeholder="Write a response…" placeholderTextColor={COLORS.textMuted} multiline />
+          <TextInput style={styles.input} value={text} onChangeText={setText} placeholder="eg - Write a response…" placeholderTextColor={COLORS.textLight} multiline />
           <TouchableOpacity
             style={styles.sendButton}
             disabled={!text.trim() || respondMutation.isPending}
@@ -64,9 +65,10 @@ function ReviewRow({ review, guard }: { review: ApiNurseryReview; guard: <A exte
 
 export function NurseryReviewsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: reviews = [], isLoading } = useNurseryReviews();
+  const { data: reviews = [], isLoading, refetch } = useNurseryReviews();
   const { data: profile } = useNurseryProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
     <View style={styles.container}>
@@ -80,7 +82,11 @@ export function NurseryReviewsScreen({ navigation }: any) {
       ) : reviews.length === 0 ? (
         <EmptyState icon="⭐" title="No reviews yet" body="Reviews from customers who received their order will show up here." />
       ) : (
-        <ScrollView contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           {reviews.map((r) => (
             <ReviewRow key={r.id} review={r} guard={guard} />
           ))}

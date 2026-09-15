@@ -6,6 +6,7 @@ import {
   Platform,
   TouchableOpacity,
   KeyboardAvoidingView,
+  RefreshControl,
 } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,6 +17,7 @@ import { RADIUS, SPACING } from '../constants/theme';
 import { FONTS } from '../constants/typography';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { FormField, FormFieldShell } from '../components/common/FormField';
+import { AddressSearchField } from '../components/common/AddressSearchField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { MultiPhotoPickerField } from '../components/social/MultiPhotoPickerField';
 import { StatusModal } from '../components/common/StatusModal';
@@ -27,6 +29,7 @@ import { useCreatePortfolioEntry, useUpdatePortfolioEntry } from '../hooks/useSo
 import { useNgoProfile } from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 /**
  * Create/edit a past-work entry.
@@ -63,6 +66,7 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
   const confirm = useConfirm();
   const { data: profile } = useNgoProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   const submit = () => {
     if (!title.trim()) {
@@ -115,10 +119,14 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.form}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           <FormField
             label="What was it?"
-            placeholder="Yamuna bank restoration"
+            placeholder="eg - Yamuna bank restoration"
             value={title}
             onChangeText={setTitle}
           />
@@ -156,16 +164,16 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
 
           <FormField
             label="Story"
-            placeholder="What did you set out to do, and what changed?"
+            placeholder="eg - What did you set out to do, and what changed?"
             value={description}
             onChangeText={setDescription}
             multiline
           />
 
           <Text style={styles.sectionTitle}>Where</Text>
-          <FormField
+          <AddressSearchField
             label="Location"
-            placeholder="Yamuna Bank, near Metro Station"
+            placeholder="eg - Yamuna Bank, near Metro Station"
             value={locationLabel}
             onChangeText={setLocationLabel}
           />
@@ -178,21 +186,21 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
           </Text>
           <FormField
             label="Trees planted"
-            placeholder="4200"
+            placeholder="eg - 4200"
             value={treesPlanted}
             onChangeText={setTreesPlanted}
             keyboardType="number-pad"
           />
           <FormField
             label="Volunteers involved"
-            placeholder="180"
+            placeholder="eg - 180"
             value={volunteers}
             onChangeText={setVolunteers}
             keyboardType="number-pad"
           />
           <FormField
             label="Partners"
-            placeholder="Delhi Jal Board, local schools"
+            placeholder="eg - Delhi Jal Board, local schools"
             value={partnerOrgs}
             onChangeText={setPartnerOrgs}
           />

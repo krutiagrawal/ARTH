@@ -10,14 +10,16 @@ import { ScreenHeader } from '../components/common/ScreenHeader';
 import { EmptyState } from '../components/common/EmptyState';
 import { resolveMediaUrl } from '../api/client';
 import { useBlocks, useUnblockTarget } from '../hooks/useSocialQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { ApiBlock } from '../api/social';
 import { useConfirm } from '../context/ConfirmDialogContext';
 
 /** Manage blocked people and organisations. Reachable from Settings. */
 export function BlockedAccountsScreen({ navigation }: any) {
-  const { data: blocks = [], isLoading, refetch, isRefetching } = useBlocks();
+  const { data: blocks = [], isLoading, refetch } = useBlocks();
   const unblock = useUnblockTarget();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const confirmUnblock = (block: ApiBlock) => {
     confirm(`Unblock ${block.name}?`, 'You will start seeing their posts and stories again.', [
@@ -48,8 +50,8 @@ export function BlockedAccountsScreen({ navigation }: any) {
           data={blocks}
           keyExtractor={(b) => b.id}
           contentContainerStyle={styles.list}
-          onRefresh={refetch}
-          refreshing={isRefetching}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
           ListHeaderComponent={
             blocks.length > 0 ? (
               <Text style={styles.intro}>

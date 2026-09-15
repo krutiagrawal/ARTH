@@ -8,7 +8,7 @@ const portfolioInclude = {
   media: { orderBy: { order: 'asc' as const }, select: { id: true, url: true, order: true, caption: true } },
 };
 
-export function serializePortfolioEntry(e: any) {
+export function serializePortfolioEntry(e: any, likedEntryIds?: Set<string>) {
   return {
     id: e.id,
     title: e.title,
@@ -20,6 +20,8 @@ export function serializePortfolioEntry(e: any) {
     volunteersInvolved: e.volunteersInvolved,
     partnerOrgs: e.partnerOrgs,
     sortOrder: e.sortOrder,
+    likeCount: e.likeCount ?? 0,
+    likedByMe: likedEntryIds ? likedEntryIds.has(e.id) : false,
     media: e.media.map((m: any) => ({ id: m.id, url: m.url, order: m.order, caption: m.caption })),
     createdAt: e.createdAt,
   };
@@ -35,16 +37,49 @@ export async function listOwnPortfolio(prisma: PrismaClient, ngoUserId: string) 
     orderBy: portfolioOrder,
     include: portfolioInclude,
   });
-  return entries.map(serializePortfolioEntry);
+  return entries.map((e) => serializePortfolioEntry(e));
 }
 
-export async function listPublicPortfolio(prisma: PrismaClient, ngoId: string) {
+export async function listPublicPortfolio(prisma: PrismaClient, ngoId: string, viewerId?: string) {
   const entries = await prisma.ngoPortfolioEntry.findMany({
-    where: { ngoId, ngo: { status: 'approved' } },
+    where: { ngoId, ngo: { status: 'approved' }, isHidden: false },
     orderBy: portfolioOrder,
     include: portfolioInclude,
   });
-  return entries.map(serializePortfolioEntry);
+
+  let likedEntryIds: Set<string> | undefined;
+  if (viewerId && entries.length > 0) {
+    const likes = await prisma.ngoPortfolioLike.findMany({
+      where: { userId: viewerId, entryId: { in: entries.map((e) => e.id) } },
+      select: { entryId: true },
+    });
+    likedEntryIds = new Set(likes.map((l) => l.entryId));
+  }
+
+  return entries.map((e) => serializePortfolioEntry(e, likedEntryIds));
+}
+
+export async function likePortfolioEntry(prisma: PrismaClient, viewerId: string, entryId: string) {
+  const entry = await prisma.ngoPortfolioEntry.findUnique({ where: { id: entryId } });
+  if (!entry || entry.isHidden) throw new NotFoundError('Past work entry not found');
+
+  await prisma.$transaction(async (tx) => {
+    const result = await tx.ngoPortfolioLike.createMany({ data: [{ entryId, userId: viewerId }], skipDuplicates: true });
+    if (result.count > 0) await tx.ngoPortfolioEntry.update({ where: { id: entryId }, data: { likeCount: { increment: 1 } } });
+  });
+
+  const fresh = await prisma.ngoPortfolioEntry.findUnique({ where: { id: entryId }, select: { likeCount: true } });
+  return { liked: true, likeCount: fresh?.likeCount ?? 0 };
+}
+
+export async function unlikePortfolioEntry(prisma: PrismaClient, viewerId: string, entryId: string) {
+  await prisma.$transaction(async (tx) => {
+    const result = await tx.ngoPortfolioLike.deleteMany({ where: { entryId, userId: viewerId } });
+    if (result.count > 0) await tx.ngoPortfolioEntry.update({ where: { id: entryId }, data: { likeCount: { decrement: 1 } } });
+  });
+
+  const fresh = await prisma.ngoPortfolioEntry.findUnique({ where: { id: entryId }, select: { likeCount: true } });
+  return { liked: false, likeCount: fresh?.likeCount ?? 0 };
 }
 
 /**

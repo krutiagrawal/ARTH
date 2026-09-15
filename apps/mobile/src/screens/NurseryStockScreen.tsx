@@ -27,6 +27,7 @@ import type { ApiSaplingStock, SunlightNeeds, WaterNeeds } from '../api/nursery'
 import { ApiError, resolveMediaUrl } from '../api/client';
 import { SPECIES_EMOJI_OPTIONS } from '../api/species';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const ENVIRONMENT_OPTIONS = ['terrace', 'garden', 'farm', 'roadside'];
 const SEASON_OPTIONS = ['monsoon', 'winter', 'summer', 'year-round'];
@@ -78,10 +79,11 @@ function StockRow({ item, onDelete }: { item: ApiSaplingStock; onDelete: () => v
 
 export function NurseryStockScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: stock = [], isLoading } = useSaplingStock();
+  const { data: stock = [], isLoading, refetch } = useSaplingStock();
   const { data: speciesCatalog = [] } = useSpecies();
   const createMutation = useCreateSaplingStock();
   const deleteMutation = useDeleteSaplingStock();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   // ---- Fast path: species picker + quantity + price ----
   const [speciesQuery, setSpeciesQuery] = useState('');
@@ -233,6 +235,8 @@ export function NurseryStockScreen({ navigation }: any) {
         data={stock}
         keyExtractor={(item) => item.id}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         renderItem={({ item }) => <StockRow item={item} onDelete={() => handleDelete(item)} />}
         ListHeaderComponent={
           <View style={styles.addCard}>
@@ -257,8 +261,8 @@ export function NurseryStockScreen({ navigation }: any) {
                     setShowSpeciesResults(true);
                   }}
                   onFocus={() => setShowSpeciesResults(true)}
-                  placeholder="Search species e.g. Neem"
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholder="eg - Search species, Neem"
+                  placeholderTextColor={COLORS.textLight}
                 />
                 {showSpeciesResults && speciesMatches.length > 0 && (
                   <View style={styles.resultsList}>
@@ -285,7 +289,7 @@ export function NurseryStockScreen({ navigation }: any) {
 
             {showAddSpecies && !selectedSpeciesId && (
               <View style={styles.inlineSpeciesBlock}>
-                <FormField label="Common name" value={newCommonName} onChangeText={setNewCommonName} placeholder="e.g. Karanj" />
+                <FormField label="Common name" value={newCommonName} onChangeText={setNewCommonName} placeholder="eg - Karanj" />
                 <Text style={[styles.formLabel, { marginTop: 10 }]}>Emoji</Text>
                 <View style={styles.emojiGrid}>
                   {SPECIES_EMOJI_OPTIONS.slice(0, 16).map((emoji) => (
@@ -299,10 +303,10 @@ export function NurseryStockScreen({ navigation }: any) {
 
             <View style={styles.inlineRow}>
               <View style={styles.inlineField}>
-                <FormField label="Quantity" value={quantity} onChangeText={setQuantity} placeholder="0" keyboardType="number-pad" />
+                <FormField label="Quantity" value={quantity} onChangeText={setQuantity} placeholder="eg - 0" keyboardType="number-pad" />
               </View>
               <View style={styles.inlineField}>
-                <FormField label="Price ₹ (blank = free)" value={priceCents} onChangeText={setPriceCents} placeholder="0" keyboardType="number-pad" />
+                <FormField label="Price ₹ (blank = free)" value={priceCents} onChangeText={setPriceCents} placeholder="eg - 0" keyboardType="number-pad" />
               </View>
             </View>
             <TouchableOpacity onPress={pickPhoto} style={styles.photoPickerRow}>
@@ -318,18 +322,18 @@ export function NurseryStockScreen({ navigation }: any) {
               <View style={styles.moreDetailsBlock}>
                 <View style={styles.inlineRow}>
                   <View style={styles.inlineField}>
-                    <FormField label="Age" value={ageLabel} onChangeText={setAgeLabel} placeholder="e.g. 6 months" />
+                    <FormField label="Age" value={ageLabel} onChangeText={setAgeLabel} placeholder="eg - 6 months" />
                   </View>
                   <View style={styles.inlineField}>
-                    <FormField label="Height" value={heightLabel} onChangeText={setHeightLabel} placeholder="e.g. 2 ft" />
+                    <FormField label="Height" value={heightLabel} onChangeText={setHeightLabel} placeholder="eg - 2 ft" />
                   </View>
                 </View>
                 <View style={styles.inlineRow}>
                   <View style={styles.inlineField}>
-                    <FormField label="Pot size" value={potSize} onChangeText={setPotSize} placeholder="e.g. 10 inch" />
+                    <FormField label="Pot size" value={potSize} onChangeText={setPotSize} placeholder="eg - 10 inch" />
                   </View>
                   <View style={styles.inlineField}>
-                    <FormField label="Low stock alert below" value={lowStockThreshold} onChangeText={setLowStockThreshold} placeholder="5" keyboardType="number-pad" />
+                    <FormField label="Low stock alert below" value={lowStockThreshold} onChangeText={setLowStockThreshold} placeholder="eg - 5" keyboardType="number-pad" />
                   </View>
                 </View>
 
@@ -340,17 +344,17 @@ export function NurseryStockScreen({ navigation }: any) {
                   ))}
                 </View>
 
-                <FormField label="Notes (visible to you only)" value={nurseryNotes} onChangeText={setNurseryNotes} placeholder="Internal notes" multiline />
+                <FormField label="Notes (visible to you only)" value={nurseryNotes} onChangeText={setNurseryNotes} placeholder="eg - Internal notes" multiline />
 
                 {showAddSpecies && !selectedSpeciesId && (
                   <>
                     <Text style={styles.botanicalHeading}>New species botanical details</Text>
                     <View style={styles.inlineRow}>
                       <View style={styles.inlineField}>
-                        <FormField label="Scientific name" value={newScientificName} onChangeText={setNewScientificName} placeholder="Optional" />
+                        <FormField label="Scientific name" value={newScientificName} onChangeText={setNewScientificName} placeholder="eg - Optional" />
                       </View>
                       <View style={styles.inlineField}>
-                        <FormField label="Local name" value={newLocalName} onChangeText={setNewLocalName} placeholder="Optional" />
+                        <FormField label="Local name" value={newLocalName} onChangeText={setNewLocalName} placeholder="eg - Optional" />
                       </View>
                     </View>
                     <View style={styles.toggleRow}>
@@ -369,8 +373,8 @@ export function NurseryStockScreen({ navigation }: any) {
                         <Chip key={v} label={v} selected={newWater === v} onPress={() => setNewWater(newWater === v ? null : v)} />
                       ))}
                     </View>
-                    <FormField label="Soil needs" value={newSoilNeeds} onChangeText={setNewSoilNeeds} placeholder="Optional" />
-                    <FormField label="Mature height" value={newMatureHeight} onChangeText={setNewMatureHeight} placeholder="e.g. 15-20 ft" />
+                    <FormField label="Soil needs" value={newSoilNeeds} onChangeText={setNewSoilNeeds} placeholder="eg - Optional" />
+                    <FormField label="Mature height" value={newMatureHeight} onChangeText={setNewMatureHeight} placeholder="eg - 15-20 ft" />
                     <Text style={styles.formLabel}>Planting seasons</Text>
                     <View style={styles.chipRow}>
                       {SEASON_OPTIONS.map((s) => (

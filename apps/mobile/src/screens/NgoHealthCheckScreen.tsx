@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,6 +15,7 @@ import { useApprovalGate } from '../hooks/useApprovalGate';
 import type { TreeHealthStatus } from '../api/plantedTrees';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function FadeInRow({ delay, children }: { delay: number; children: React.ReactNode }) {
   const animStyle = useSlideUp(delay, 18);
@@ -30,13 +31,14 @@ const STATUS_META: Record<TreeHealthStatus, { emoji: string; color: string; labe
 
 export function NgoHealthCheckScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data, isLoading } = usePlantedTrees({ take: 200 });
-  const { data: stats } = useSurvivalStats();
+  const { data, isLoading, refetch } = usePlantedTrees({ take: 200 });
+  const { data: stats, refetch: refetchStats } = useSurvivalStats();
   const bulkMutation = useLogBulkHealthChecks();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const confirm = useConfirm();
-  const { data: profile } = useNgoProfile();
+  const { data: profile, refetch: refetchProfile } = useNgoProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
+  const { refreshing, onRefresh } = usePullToRefresh([refetch, refetchStats, refetchProfile]);
 
   const trees = data?.trees ?? [];
 
@@ -90,7 +92,11 @@ export function NgoHealthCheckScreen({ navigation }: any) {
         </View>
       )}
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: (selected.size > 0 ? 100 : 32) + insets.bottom }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: (selected.size > 0 ? 100 : 32) + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && trees.length === 0 && (
           <EmptyState icon="🌳" title="No planted trees logged" body="Log a batch of planted trees to start tracking survival." actionLabel="Log trees" onAction={guard(() => navigation.navigate('NgoLogPlantedTrees'))} />

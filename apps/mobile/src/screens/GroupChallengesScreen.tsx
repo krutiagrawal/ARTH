@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { COLORS } from '../constants/colors';
@@ -7,6 +7,7 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useOwnGroupChallenges } from '../hooks/useApiQueries';
 import { useSlideUp } from '../hooks/useAnimations';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const GOAL_TYPE_LABEL: Record<string, string> = {
   trees_planted_count: 'Trees planted',
@@ -21,10 +22,15 @@ function FadeInRow({ delay, children }: { delay: number; children: React.ReactNo
 }
 
 export function GroupChallengesScreen({ navigation }: any) {
-  const { data: challenges = [], isLoading } = useOwnGroupChallenges();
+  const { data: challenges = [], isLoading, refetch } = useOwnGroupChallenges();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+    >
       {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
       {!isLoading && challenges.length === 0 && (
         <EmptyState icon="🏆" title="No challenges yet" body="Set a shared goal for your members to plant toward together." />

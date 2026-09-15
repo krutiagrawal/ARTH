@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,12 +10,14 @@ import { EmptyState } from '../components/common/EmptyState';
 import { useMyLocation } from '../hooks/useMyLocation';
 import { useDrives } from '../hooks/useApiQueries';
 import { useHaptics } from '../hooks/useHaptics';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 export function DrivesListScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { selection } = useHaptics();
   const { coords } = useMyLocation();
-  const { data: drives = [], isLoading } = useDrives(coords?.lat, coords?.lng);
+  const { data: drives = [], isLoading, refetch } = useDrives(coords?.lat, coords?.lng);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
     <View style={styles.container}>
@@ -32,7 +34,11 @@ export function DrivesListScreen({ navigation }: any) {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && drives.length === 0 && (
           <EmptyState icon="🤝" title="No drives nearby yet" body="Check back soon – NGOs add new planting drives regularly." />
@@ -47,7 +53,14 @@ export function DrivesListScreen({ navigation }: any) {
             }}
           >
             <BorderCard style={styles.card}>
-              <Text style={styles.cardTitle}>{drive.title}</Text>
+              <View style={styles.titleRow}>
+                <Text style={styles.cardTitle} numberOfLines={1}>{drive.title}</Text>
+                {drive.isRsvped && (
+                  <View style={styles.rsvpBadge}>
+                    <Text style={styles.rsvpBadgeText}>Going</Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.cardSubtitle}>{drive.ngoName}</Text>
               <View style={styles.metaRow}>
                 <Text style={styles.metaText} numberOfLines={1}>
@@ -82,7 +95,10 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 20 },
   loader: { marginTop: 40 },
   card: { marginBottom: 12 },
-  cardTitle: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardTitle: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary, flexShrink: 1 },
+  rsvpBadge: { backgroundColor: `${COLORS.sage}22`, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999 },
+  rsvpBadgeText: { fontSize: 11, fontWeight: '700', color: COLORS.sageDark },
   cardSubtitle: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, gap: 8 },
   metaText: { fontSize: 12, color: COLORS.textSecondary, flexShrink: 1 },

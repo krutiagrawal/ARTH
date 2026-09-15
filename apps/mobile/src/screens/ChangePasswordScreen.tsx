@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,11 +11,13 @@ import { useChangePassword } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import { BorderCard } from '../components/common/BorderCard';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 export function ChangePasswordScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const changePasswordMutation = useChangePassword();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -59,6 +61,7 @@ export function ChangePasswordScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         <BorderCard>
           <Text style={styles.label}>Current Password</Text>
@@ -66,8 +69,8 @@ export function ChangePasswordScreen({ navigation }: any) {
             inputStyle={styles.input}
             value={currentPassword}
             onChangeText={setCurrentPassword}
-            placeholder="Enter current password"
-            placeholderTextColor={COLORS.textMuted}
+            placeholder="eg - Enter current password"
+            placeholderTextColor={COLORS.textLight}
           />
 
           <Text style={styles.label}>New Password</Text>
@@ -75,8 +78,8 @@ export function ChangePasswordScreen({ navigation }: any) {
             inputStyle={styles.input}
             value={newPassword}
             onChangeText={setNewPassword}
-            placeholder="At least 8 characters"
-            placeholderTextColor={COLORS.textMuted}
+            placeholder="eg - At least 8 characters"
+            placeholderTextColor={COLORS.textLight}
           />
 
           <Text style={styles.label}>Confirm New Password</Text>
@@ -84,8 +87,8 @@ export function ChangePasswordScreen({ navigation }: any) {
             inputStyle={styles.input}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
-            placeholder="Re-enter new password"
-            placeholderTextColor={COLORS.textMuted}
+            placeholder="eg - Re-enter new password"
+            placeholderTextColor={COLORS.textLight}
           />
 
           {error && <Text style={styles.error}>{error}</Text>}

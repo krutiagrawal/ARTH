@@ -13,6 +13,7 @@ import { resolveMediaUrl } from '../api/client';
 import { useDeletePortfolioEntry, useMyPortfolio } from '../hooks/useSocialQueries';
 import type { ApiPortfolioEntry } from '../api/portfolio';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
@@ -91,9 +92,10 @@ function EntryCard({
  * numbers are self-reported rather than backed by tree health checks.
  */
 export function NgoPortfolioScreen({ navigation }: any) {
-  const { data: entries = [], isLoading, refetch, isRefetching } = useMyPortfolio();
+  const { data: entries = [], isLoading, refetch } = useMyPortfolio();
   const deleteEntry = useDeletePortfolioEntry();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const confirmDelete = (entry: ApiPortfolioEntry) => {
     confirm('Delete this entry?', `“${entry.title}” will be removed from your profile.`, [
@@ -120,8 +122,8 @@ export function NgoPortfolioScreen({ navigation }: any) {
           data={entries}
           keyExtractor={(e) => e.id}
           contentContainerStyle={styles.list}
-          onRefresh={refetch}
-          refreshing={isRefetching}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
           ListHeaderComponent={
             <View style={styles.intro}>
               <Text style={styles.introText}>
@@ -172,8 +174,10 @@ const styles = StyleSheet.create({
   introTotal: { fontFamily: FONTS.display, fontSize: 17, lineHeight: 23, color: COLORS.forest },
   addBtn: { alignSelf: 'flex-start' },
   card: {
-    backgroundColor: COLORS.white,
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.lg,
+    borderWidth: 1.5,
+    borderColor: 'rgba(139, 107, 71, 0.30)',
     overflow: 'hidden',
   },
   cover: { width: '100%', height: 150, backgroundColor: COLORS.mintLight },

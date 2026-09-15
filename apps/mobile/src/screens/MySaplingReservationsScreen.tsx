@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -9,6 +9,7 @@ import { RADIUS, SPACING } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useMyReservations, useCancelReservation } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { resolveMediaUrl } from '../api/client';
 import type { ApiMyReservation } from '../api/reservations';
 import { useConfirm } from '../context/ConfirmDialogContext';
@@ -56,7 +57,8 @@ function ReservationCard({ item }: { item: ApiMyReservation }) {
 
 export function MySaplingReservationsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: reservations = [], isLoading } = useMyReservations();
+  const { data: reservations = [], isLoading, refetch } = useMyReservations();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
     <View style={styles.container}>
@@ -78,7 +80,11 @@ export function MySaplingReservationsScreen({ navigation }: any) {
       ) : reservations.length === 0 ? (
         <EmptyState icon="🌱" title="No requests yet" body="Requests you send to nurseries for saplings will show up here." />
       ) : (
-        <ScrollView contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           {reservations.map((r) => (
             <ReservationCard key={r.id} item={r} />
           ))}

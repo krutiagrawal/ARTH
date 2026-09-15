@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,10 +10,12 @@ import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
+import { AddressSearchField } from '../components/common/AddressSearchField';
 import { useHaptics } from '../hooks/useHaptics';
 import { useCart, useAddresses, useCreateAddress, useCheckout } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import type { ApiAddress } from '../api/addresses';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function formatRupees(cents: number) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`;
@@ -38,11 +40,12 @@ function AddressRow({ address, selected, onPress }: { address: ApiAddress; selec
 export function CheckoutScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { success, error: errorHaptic } = useHaptics();
-  const { data: cart, isLoading: cartLoading } = useCart();
-  const { data: addresses, isLoading: addressesLoading } = useAddresses();
+  const { data: cart, isLoading: cartLoading, refetch: refetchCart } = useCart();
+  const { data: addresses, isLoading: addressesLoading, refetch: refetchAddresses } = useAddresses();
   const createAddressMutation = useCreateAddress();
   const checkoutMutation = useCheckout();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const { refreshing, onRefresh } = usePullToRefresh([refetchCart, refetchAddresses]);
 
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -154,7 +157,11 @@ export function CheckoutScreen({ navigation }: any) {
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           <Text style={styles.sectionTitle}>Delivery address</Text>
           {activeAddresses.map((a) => (
             <AddressRow key={a.id} address={a} selected={a.id === currentAddressId} onPress={() => setSelectedAddressId(a.id)} />
@@ -162,10 +169,22 @@ export function CheckoutScreen({ navigation }: any) {
 
           {showAddForm ? (
             <BorderCard style={styles.card}>
-              <TextInput style={styles.input} placeholder="Flat / street / society" placeholderTextColor={COLORS.textMuted} value={line1} onChangeText={setLine1} />
-              <TextInput style={styles.input} placeholder="Pincode" placeholderTextColor={COLORS.textMuted} value={pincode} onChangeText={setPincode} keyboardType="number-pad" />
+              <AddressSearchField
+                label="Address"
+                value={line1}
+                onChangeText={(text) => {
+                  setLine1(text);
+                  setCoords(null);
+                }}
+                placeholder="eg - Flat / street / society"
+                onSelectSuggestion={(s) => {
+                  setLine1(s.label);
+                  setCoords({ lat: s.lat, lng: s.lng });
+                }}
+              />
+              <TextInput style={styles.input} placeholder="eg - Pincode" placeholderTextColor={COLORS.textLight} value={pincode} onChangeText={setPincode} keyboardType="number-pad" />
               <TouchableOpacity style={styles.locationButton} onPress={useCurrentLocation} disabled={locating}>
-                <Text style={styles.locationButtonText}>{locating ? 'Locating…' : coords ? '📍 Location captured' : '📍 Use current location (required)'}</Text>
+                <Text style={styles.locationButtonText}>{locating ? 'Locating…' : coords ? '📍 Location captured' : '📍 Or use current location'}</Text>
               </TouchableOpacity>
               <AnimatedButton label="Save address" onPress={handleAddAddress} variant="secondary" size="md" fullWidth disabled={createAddressMutation.isPending || !coords} />
             </BorderCard>

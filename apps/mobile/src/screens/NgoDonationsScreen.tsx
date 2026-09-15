@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,6 +17,7 @@ import { IconBadge } from '../components/common/IconBadge';
 import { useNgoDonations, useNgoDonationsSummary } from '../hooks/useApiQueries';
 import type { DonationsFilter } from '../api/ngo';
 import { useSlideUp } from '../hooks/useAnimations';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const STATUS_BADGE: Record<string, { icon: string; color: string }> = {
   succeeded: { icon: '💰', color: COLORS.sage },
@@ -41,9 +42,10 @@ const STATUS_FILTERS: { key: DonationsFilter['status'] | 'all'; label: string }[
 export function NgoDonationsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [statusFilter, setStatusFilter] = useState<DonationsFilter['status'] | 'all'>('all');
-  const { data, isLoading } = useNgoDonations(statusFilter === 'all' ? {} : { status: statusFilter });
-  const { data: summary = [] } = useNgoDonationsSummary();
+  const { data, isLoading, refetch } = useNgoDonations(statusFilter === 'all' ? {} : { status: statusFilter });
+  const { data: summary = [], refetch: refetchSummary } = useNgoDonationsSummary();
   const donations = data?.donations ?? [];
+  const { refreshing, onRefresh } = usePullToRefresh([refetch, refetchSummary]);
 
   return (
     <View style={styles.container}>
@@ -52,7 +54,11 @@ export function NgoDonationsScreen({ navigation }: any) {
 
       <ScreenHeader title="Donations" subtitle="View and manage all donations" onBack={() => navigation.goBack()} />
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         {summary.length > 0 && (
           <>
           <SectionHeader title="By campaign" />

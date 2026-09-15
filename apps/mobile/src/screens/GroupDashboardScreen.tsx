@@ -1,5 +1,5 @@
 import React, { useRef, type RefObject } from 'react';
-import { View, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,6 +24,7 @@ import { useDeviceWeather } from '../hooks/useDeviceWeather';
 import { useAuth } from '../context/AuthContext';
 import { useGroupProfile, useGroupStats } from '../hooks/useApiQueries';
 import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { getHeroSeamColor, getHeroSeamTextColors } from '../utils/heroSeam';
 import { getXpProgress } from '../constants/forestLevels';
@@ -95,8 +96,9 @@ export function GroupDashboardScreen({ navigation, onNavigateTab }: GroupDashboa
   const { weather } = useDeviceWeather();
   const sceneryMode = getSceneryMode(weather);
   const { user } = useAuth();
-  const { data: profile } = useGroupProfile();
-  const { data: stats, isLoading } = useGroupStats();
+  const { data: profile, refetch: refetchProfile } = useGroupProfile();
+  const { data: stats, isLoading, refetch: refetchStats } = useGroupStats();
+  const { refreshing, onRefresh } = usePullToRefresh([refetchProfile, refetchStats]);
   const statsAnim = useFadeIn(80);
 
   const pageBackground = getHeroSeamColor(theme);
@@ -117,6 +119,7 @@ export function GroupDashboardScreen({ navigation, onNavigateTab }: GroupDashboa
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         <View style={[styles.heroSection, { height: HERO_HEIGHT }]}>
           {theme.heroImage ? (

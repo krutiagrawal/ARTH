@@ -28,6 +28,7 @@ import {
   useSelectGroupTheme,
   useRingStatus,
 } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { getXpProgress } from '../constants/forestLevels';
 import type { ApiPost } from '../api/posts';
 
@@ -62,6 +63,12 @@ export function GroupProfileScreen({ route, navigation }: any) {
   const onEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const { refreshing, onRefresh } = usePullToRefresh(
+    isOwn
+      ? [ownProfile.refetch, ownStats.refetch, ownAchievements.refetch, ownLeaderboard.refetch]
+      : [publicProfile.refetch, publicAchievements.refetch, publicDrives.refetch],
+  );
 
   const [tab, setTab] = useState<ProfileTabKey>('posts');
   const openPost = useCallback(
@@ -136,6 +143,8 @@ export function GroupProfileScreen({ route, navigation }: any) {
           isFetchingNextPage={isFetchingNextPage}
           emptyTitle="No posts yet"
           showEmptyState={tab === 'posts'}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           ListHeaderComponent={
             <>
               <ProfileHeader

@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Image, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Image, KeyboardAvoidingView, ScrollView, Platform, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,6 +28,7 @@ import {
 } from '../hooks/useApiQueries';
 import { resolveMediaUrl } from '../api/client';
 import type { ApiPost } from '../api/posts';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function followLabel(status: string | null, followersCount: number): string {
   if (status === 'accepted') return 'Following ✓';
@@ -60,11 +61,17 @@ export function NurseryProfileScreen({ route, navigation }: any) {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    refetch: refetchPosts,
   } = useNurseryPosts(effectiveNurseryId);
   const posts = useMemo(() => postsData?.pages.flatMap((p) => p.posts) ?? [], [postsData]);
   const onEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const { refreshing, onRefresh } = usePullToRefresh(
+    isOwn
+      ? [ownProfile.refetch, ownStats.refetch, ownStock.refetch, refetchPosts]
+      : [publicProfile.refetch, refetchPosts],
+  );
 
   const [tab, setTab] = useState<ProfileTabKey>('posts');
   const openPost = useCallback(
@@ -195,7 +202,13 @@ export function NurseryProfileScreen({ route, navigation }: any) {
         // ScrollView doesn't have that problem and is the same keyboard-avoidance pattern
         // already used elsewhere in the app (e.g. NgoPortfolioEntryScreen).
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView ref={saplingsScrollRef} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <ScrollView
+            ref={saplingsScrollRef}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+          >
             {headerBlock}
             <NurserySaplingsTabContent
               isOwn={isOwn}
@@ -214,6 +227,8 @@ export function NurseryProfileScreen({ route, navigation }: any) {
           isFetchingNextPage={isFetchingNextPage}
           emptyTitle="No posts yet"
           showEmptyState={tab === 'posts'}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           ListHeaderComponent={
             <>
               {headerBlock}

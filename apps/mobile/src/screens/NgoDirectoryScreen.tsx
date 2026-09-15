@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Image } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Image, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,12 +10,14 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useBrowseNgos } from '../hooks/useApiQueries';
 import { resolveMediaUrl } from '../api/client';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 export function NgoDirectoryScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
-  const { data, isLoading } = useBrowseNgos({ q: query || undefined });
+  const { data, isLoading, refetch } = useBrowseNgos({ q: query || undefined });
   const ngos = data?.ngos ?? [];
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
     <View style={styles.container}>
@@ -39,14 +41,18 @@ export function NgoDirectoryScreen({ navigation }: any) {
       <View style={styles.searchWrap}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search NGOs by name or city"
-          placeholderTextColor={COLORS.textMuted}
+          placeholder="eg - Search NGOs by name or city"
+          placeholderTextColor={COLORS.textLight}
           value={query}
           onChangeText={setQuery}
         />
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && ngos.length === 0 && (
           <EmptyState icon="🌍" title="No NGOs found" body="Try a different search term." />

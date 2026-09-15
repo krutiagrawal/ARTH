@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
@@ -15,17 +15,19 @@ import {
   useToggleLike,
   useToggleSave,
 } from '../hooks/useSocialQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 /** A single post on its own screen — where a notification or a deep link lands. */
 export function PostDetailScreen({ navigation, route }: any) {
   const postId: string | undefined = route?.params?.postId;
-  const { data: post, isLoading, isError } = usePost(postId);
+  const { data: post, isLoading, isError, refetch } = usePost(postId);
 
   const toggleLike = useToggleLike();
   const toggleSave = useToggleSave();
   const deletePost = useDeletePost();
   const blockTarget = useBlockTarget();
   const [reporting, setReporting] = useState(false);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
     <View style={styles.container}>
@@ -45,7 +47,10 @@ export function PostDetailScreen({ navigation, route }: any) {
           body="It may have been deleted, or hidden while it is reviewed."
         />
       ) : (
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           <PostCard
             post={post}
             onToggleLike={(p) => toggleLike.mutate({ id: p.id, liked: p.likedByMe })}

@@ -436,6 +436,7 @@ model User {
   following              Follow[]
   posts                  Post[]
   postLikes              PostLike[]
+  ngoPortfolioLikes      NgoPortfolioLike[]
   savedPosts             SavedPost[]
   storyViews             StoryView[]
   storyLikes             StoryLike[]
@@ -1998,14 +1999,31 @@ model NgoPortfolioEntry {
   volunteersInvolved Int?     @map("volunteers_involved")
   partnerOrgs        String?  @map("partner_orgs")
   sortOrder          Int      @default(0) @map("sort_order")
+  likeCount          Int      @default(0) @map("like_count")
+  isHidden           Boolean  @default(false) @map("is_hidden")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   ngo   NgoProfile          @relation(fields: [ngoId], references: [id], onDelete: Cascade)
   media NgoPortfolioMedia[]
+  likes NgoPortfolioLike[]
 
   @@index([ngoId, happenedOn(sort: Desc)])
   @@map("ngo_portfolio_entries")
+}
+
+model NgoPortfolioLike {
+  id        String   @id @default(uuid())
+  entryId   String   @map("entry_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  entry NgoPortfolioEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  user  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, userId])
+  @@index([entryId])
+  @@map("ngo_portfolio_likes")
 }
 
 model NgoPortfolioMedia {

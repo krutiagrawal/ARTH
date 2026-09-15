@@ -19,6 +19,8 @@ export interface ApiPortfolioEntry {
   volunteersInvolved: number | null;
   partnerOrgs: string | null;
   sortOrder: number;
+  likeCount: number;
+  likedByMe: boolean;
   media: ApiPortfolioMedia[];
   createdAt: string;
 }
@@ -92,4 +94,17 @@ export async function updatePortfolioEntry(
 
 export async function deletePortfolioEntry(id: string): Promise<void> {
   await apiFetch<void>(`/api/ngo/portfolio/${id}`, { method: 'DELETE' });
+}
+
+export interface PortfolioLikeResult {
+  liked: boolean;
+  likeCount: number;
+}
+
+export async function likePortfolioEntry(id: string): Promise<PortfolioLikeResult> {
+  return apiFetch<PortfolioLikeResult>(`/api/portfolio/${id}/like`, { method: 'POST' });
+}
+
+export async function unlikePortfolioEntry(id: string): Promise<PortfolioLikeResult> {
+  return apiFetch<PortfolioLikeResult>(`/api/portfolio/${id}/like`, { method: 'DELETE' });
 }

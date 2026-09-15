@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,17 +9,20 @@ import { COLORS } from '../constants/colors';
 import { PhotoPickerField, PickedPhoto } from '../components/common/PhotoPickerField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
+import { AddressSearchField } from '../components/common/AddressSearchField';
 import { CityPickerField } from '../components/common/CityPickerField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useCreateAdoptableTree } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const createTreeMutation = useCreateAdoptableTree();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   const [nickname, setNickname] = useState('');
   const [speciesName, setSpeciesName] = useState('');
@@ -65,7 +68,11 @@ export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
         onBack={() => navigation?.goBack?.()}
       />
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         <Animated.View style={cardAnim}>
           <PhotoPickerField
             photo={photo}
@@ -79,21 +86,21 @@ export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
             label="Tree nickname"
             value={nickname}
             onChangeText={setNickname}
-            placeholder="Grandmother Banyan"
+            placeholder="eg - Grandmother Banyan"
           />
 
           <FormField
             label="Species"
             value={speciesName}
             onChangeText={setSpeciesName}
-            placeholder="Banyan"
+            placeholder="eg - Banyan"
           />
 
           <FormField
             label="Description"
             value={description}
             onChangeText={setDescription}
-            placeholder="Tell the tree's story"
+            placeholder="eg - Tell the tree's story"
             multiline
           />
 
@@ -101,15 +108,15 @@ export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
             label="Instructions for adopters"
             value={instructions}
             onChangeText={setInstructions}
-            placeholder="What adopting this tree involves, visiting notes, etc."
+            placeholder="eg - What adopting this tree involves, visiting notes, etc."
             multiline
           />
 
-          <FormField
+          <AddressSearchField
             label="Area / landmark"
             value={locationLabel}
             onChangeText={setLocationLabel}
-            placeholder="Optional"
+            placeholder="eg - Optional"
           />
 
           <CityPickerField value={city} onChange={setCity} />

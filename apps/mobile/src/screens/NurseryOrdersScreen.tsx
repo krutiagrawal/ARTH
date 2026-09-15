@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -13,6 +13,7 @@ import { Sheet } from '../components/common/Sheet';
 import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
 import { useNurseryOrders } from '../hooks/useApiQueries';
 import type { ApiNurseryOrder, NurseryOrderStatus } from '../api/nursery';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function formatRupees(cents: number) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`;
@@ -84,9 +85,10 @@ export function NurseryOrdersScreen({ navigation }: any) {
   const [statusTab, setStatusTab] = useState<NurseryOrderStatus | 'all'>('confirmed');
   const [showStatusSheet, setShowStatusSheet] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const { data: orders = [], isLoading } = useNurseryOrders({
+  const { data: orders = [], isLoading, refetch } = useNurseryOrders({
     status: statusTab === 'all' ? undefined : statusTab,
   });
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const filteredOrders = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -114,8 +116,8 @@ export function NurseryOrdersScreen({ navigation }: any) {
       <View style={styles.filterRow}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search customer or species"
-          placeholderTextColor={COLORS.textMuted}
+          placeholder="eg - Search customer or species"
+          placeholderTextColor={COLORS.textLight}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -161,7 +163,11 @@ export function NurseryOrdersScreen({ navigation }: any) {
           body={searchQuery.trim() && orders.length > 0 ? 'No orders match your search.' : 'Orders in this stage will show up here.'}
         />
       ) : (
-        <ScrollView contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           {filteredOrders.map((o) => (
             <OrderRow key={o.id} order={o} navigation={navigation} />
           ))}

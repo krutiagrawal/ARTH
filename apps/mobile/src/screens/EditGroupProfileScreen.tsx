@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,14 +10,16 @@ import { useGroupProfile, useUpdateGroupProfile } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import { BorderCard } from '../components/common/BorderCard';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const HANDLE_REGEX = /^[a-z0-9_]+$/;
 
 export function EditGroupProfileScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: profile } = useGroupProfile();
+  const { data: profile, refetch } = useGroupProfile();
   const updateGroupMutation = useUpdateGroupProfile();
   const confirm = useConfirm();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const [groupName, setGroupName] = useState(profile?.groupName ?? '');
   const [handle, setHandle] = useState(profile?.handle ?? '');
@@ -65,6 +67,7 @@ export function EditGroupProfileScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         <BorderCard>
           <Text style={styles.label}>Avatar</Text>
@@ -81,8 +84,8 @@ export function EditGroupProfileScreen({ navigation }: any) {
             style={styles.input}
             value={groupName}
             onChangeText={setGroupName}
-            placeholder="Your group's name"
-            placeholderTextColor={COLORS.textMuted}
+            placeholder="eg - Your group's name"
+            placeholderTextColor={COLORS.textLight}
             maxLength={120}
           />
 
@@ -91,8 +94,8 @@ export function EditGroupProfileScreen({ navigation }: any) {
             style={styles.input}
             value={handle}
             onChangeText={(text) => setHandle(text.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-            placeholder="your_group_handle"
-            placeholderTextColor={COLORS.textMuted}
+            placeholder="eg - your_group_handle"
+            placeholderTextColor={COLORS.textLight}
             autoCapitalize="none"
             maxLength={30}
           />

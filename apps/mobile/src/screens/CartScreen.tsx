@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { EmptyState } from '../components/common/EmptyState';
 import { useHaptics } from '../hooks/useHaptics';
 import { useCart, useUpdateCartItem, useRemoveCartItem } from '../hooks/useApiQueries';
 import type { ApiCartItem } from '../api/cart';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function formatRupees(cents: number) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`;
@@ -54,7 +55,8 @@ function CartRow({ item }: { item: ApiCartItem }) {
 
 export function CartScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: cart, isLoading } = useCart();
+  const { data: cart, isLoading, refetch } = useCart();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
     <View style={styles.container}>
@@ -77,7 +79,11 @@ export function CartScreen({ navigation }: any) {
         <EmptyState icon="🛒" title="Your cart is empty" body="Browse a nursery and add saplings to get started." />
       ) : (
         <>
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+          >
             {cart.items.map((item) => (
               <CartRow key={item.id} item={item} />
             ))}

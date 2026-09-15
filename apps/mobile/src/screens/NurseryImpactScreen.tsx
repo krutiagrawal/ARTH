@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -11,11 +11,13 @@ import { BorderCard } from '../components/common/BorderCard';
 import { ImpactStatsCard } from '../components/common/ImpactStatsCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useNurseryImpact, useNurseryProfile } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 export function NurseryImpactScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: impact, isLoading } = useNurseryImpact();
+  const { data: impact, isLoading, refetch } = useNurseryImpact();
   const { data: profile } = useNurseryProfile();
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const maxTrend = Math.max(1, ...(impact?.monthlyTrend ?? []).map((m) => m.count));
 
@@ -33,7 +35,11 @@ export function NurseryImpactScreen({ navigation }: any) {
       {isLoading || !impact ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        >
           <ImpactStatsCard
             co2={impact.estimatedCo2Kg}
             treesPlanted={impact.treesGrowingThroughYou}

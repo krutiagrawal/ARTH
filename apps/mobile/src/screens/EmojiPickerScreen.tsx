@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -7,6 +7,7 @@ import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { AVATAR_EMOJI_CATEGORIES } from '../constants/avatarEmojis';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const { width: SW } = Dimensions.get('window');
 const COLUMNS = 6;
@@ -20,6 +21,7 @@ const TILE = (SW - SPACING.md * 2 - (COLUMNS - 1) * 8) / COLUMNS;
 export function EmojiPickerScreen({ navigation, route }: any) {
   const selected: string | undefined = route?.params?.selected;
   const onSelect: ((emoji: string) => void) | undefined = route?.params?.onSelect;
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   const pick = (emoji: string) => {
     onSelect?.(emoji);
@@ -33,7 +35,11 @@ export function EmojiPickerScreen({ navigation, route }: any) {
 
       <ScreenHeader title="Choose an Emoji" onBack={() => navigation.goBack()} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         {AVATAR_EMOJI_CATEGORIES.map((category) => (
           <View key={category.label} style={styles.section}>
             <Text style={styles.sectionTitle}>{category.label}</Text>

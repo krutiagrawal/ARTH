@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -12,6 +12,7 @@ import { ForestHeroCanvas } from '../components/common/ForestHeroCanvas';
 import { HomeScreen } from './HomeScreen';
 import { useTimeTheme, getThemeForHour, PERIOD_HOUR, type TimePeriod } from '../hooks/useTimeTheme';
 import { useUpdateSettings } from '../hooks/useApiQueries';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 /** Swallows any navigation attempted from inside the full-homepage preview (tapping a mission,
  * a tree, the grow CTA, etc.) — the preview is a look-only sandbox, not a real live Home. */
@@ -34,6 +35,7 @@ export function HomeThemePickerScreen({ navigation, route }: any) {
   const [selected, setSelected] = useState<TimePeriod | null>(initial);
   const [previewOpen, setPreviewOpen] = useState(false);
   const updateSettingsMutation = useUpdateSettings();
+  const { refreshing, onRefresh } = usePullToRefresh();
 
   // Same hook every homepage card uses — passing `selected` previews exactly what pinning that
   // period would look like (greeting/emoji still live), and passing `null` previews "Auto".
@@ -51,7 +53,11 @@ export function HomeThemePickerScreen({ navigation, route }: any) {
 
       <ScreenHeader title="Homepage Theme" onBack={() => navigation.goBack()} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         <View style={styles.previewWrap}>
           {previewTheme.heroImage ? (
             <Image source={previewTheme.heroImage} style={StyleSheet.absoluteFill} resizeMode="cover" />

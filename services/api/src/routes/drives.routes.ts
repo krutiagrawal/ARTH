@@ -51,7 +51,7 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
     const parsed = nearbyQuerySchema.safeParse(request.query);
     if (!parsed.success) throw new BadRequestError('Invalid query parameters');
 
-    const results = await driveService.listDrives(fastify.prisma, parsed.data);
+    const results = await driveService.listDrives(fastify.prisma, parsed.data, request.user?.id);
     reply.send(results.map(serializeDrive));
   });
 

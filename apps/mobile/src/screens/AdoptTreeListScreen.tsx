@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,12 +10,14 @@ import { EmptyState } from '../components/common/EmptyState';
 import { useMyLocation } from '../hooks/useMyLocation';
 import { useAdoptableTrees } from '../hooks/useApiQueries';
 import { useHaptics } from '../hooks/useHaptics';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 export function AdoptTreeListScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { selection } = useHaptics();
   const { coords } = useMyLocation();
-  const { data: trees = [], isLoading } = useAdoptableTrees(coords?.lat, coords?.lng);
+  const { data: trees = [], isLoading, refetch } = useAdoptableTrees(coords?.lat, coords?.lng);
+  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
     <View style={styles.container}>
@@ -32,7 +34,11 @@ export function AdoptTreeListScreen({ navigation }: any) {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+      >
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
         {!isLoading && trees.length === 0 && (
           <EmptyState icon="🌳" title="No trees available to adopt yet" body="NGOs list trees near you as they become available." />
