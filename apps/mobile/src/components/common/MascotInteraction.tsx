@@ -4,7 +4,8 @@
  * Responsibilities
  * ────────────────
  * • Slides the animation in from the right when the page changes.
- * • Runs the typewriter dialogue sequence in sync with a "woof" sound cue.
+ * • Reveals each dialogue line in full immediately, held on screen long enough to
+ *   read, in sync with a "woof" sound cue.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -53,7 +54,10 @@ type Phase =
 const LOTTIE_SIZE = 260;
 const BUBBLE_GAP  = 14;
 
-const CHAR_INTERVAL_MS = 38;
+// How long a line is held on screen before moving on, scaled by its length so
+// longer lines still get read in full.
+const READ_MS_PER_CHAR = 38;
+const MIN_READ_MS = 900;
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
@@ -74,34 +78,30 @@ export function MascotInteraction({ pageIndex, visible = true }: MascotInteracti
   const mascotX       = useSharedValue(SW);
   const bubbleOpacity = useSharedValue(0);
 
-  const typeTimerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const typeTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seqTimerRef   = useRef<ReturnType<typeof setTimeout>  | null>(null);
-  const charIndexRef  = useRef(0);
-  const currentLineRef = useRef('');
+  const onDoneRef     = useRef<() => void>(() => {});
 
   const clearTimers = useCallback(() => {
-    if (typeTimerRef.current) clearInterval(typeTimerRef.current);
+    if (typeTimerRef.current) clearTimeout(typeTimerRef.current);
     if (seqTimerRef.current)  clearTimeout(seqTimerRef.current);
   }, []);
 
-  // ── Typewriter ────────────────────────────────────────────────────────────
+  // ── Reveal a line ──────────────────────────────────────────────────────────
+  // Shows the full line right away — a per-character setInterval here previously
+  // read as lag rather than a clean typewriter effect, since each keystroke was
+  // its own state update competing with the Lottie/Reanimated work on the JS
+  // thread. The line is still held on screen for a duration proportional to its
+  // length, so the pacing against the woof cue and the next line is unchanged.
 
   const startTyping = useCallback((text: string, onDone: () => void) => {
-    if (typeTimerRef.current) clearInterval(typeTimerRef.current);
-    currentLineRef.current = text;
-    charIndexRef.current   = 0;
-    setDisplayedText('');
+    if (typeTimerRef.current) clearTimeout(typeTimerRef.current);
+    setDisplayedText(text);
+    onDoneRef.current = onDone;
     bubbleOpacity.value = withTiming(1, { duration: 200 });
 
-    typeTimerRef.current = setInterval(() => {
-      charIndexRef.current += 1;
-      const partial = currentLineRef.current.slice(0, charIndexRef.current);
-      setDisplayedText(partial);
-      if (charIndexRef.current >= currentLineRef.current.length) {
-        clearInterval(typeTimerRef.current!);
-        onDone();
-      }
-    }, CHAR_INTERVAL_MS);
+    const readDuration = Math.max(MIN_READ_MS, text.length * READ_MS_PER_CHAR);
+    typeTimerRef.current = setTimeout(onDone, readDuration);
   }, []);
 
   // ── Main sequence ─────────────────────────────────────────────────────────
@@ -164,19 +164,16 @@ export function MascotInteraction({ pageIndex, visible = true }: MascotInteracti
     };
   }, [pageIndex, visible]);
 
-  // ── Tap to skip typing ────────────────────────────────────────────────────
+  // ── Tap to skip the reading pause ─────────────────────────────────────────
+  // The line is already shown in full, so a tap just fast-forwards past the
+  // hold time straight into whatever the sequence does next (woof, next line).
 
   const handleTap = useCallback(() => {
-    if (phase === 'line1_typing') {
-      clearInterval(typeTimerRef.current!);
-      setDisplayedText(script.line1);
-      setPhase('line1_done');
-    } else if (phase === 'line2_typing') {
-      clearInterval(typeTimerRef.current!);
-      setDisplayedText(script.line2);
-      setPhase('line2_done');
+    if (phase === 'line1_typing' || phase === 'line2_typing') {
+      if (typeTimerRef.current) clearTimeout(typeTimerRef.current);
+      onDoneRef.current();
     }
-  }, [phase, script]);
+  }, [phase]);
 
   // ── Animated styles ───────────────────────────────────────────────────────
 

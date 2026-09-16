@@ -12,6 +12,7 @@ import DataTable from '@/components/dashboard/DataTable'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
+import { Section, Field } from '@/components/dashboard/DetailSection'
 import { proxy } from '@/lib/adminProxyClient'
 import { resolveMediaUrl } from '@/lib/media'
 
@@ -50,25 +51,6 @@ const TRUST_FACTOR_LABELS = {
   rating: 'Buyer ratings',
   inventoryFreshness: 'Inventory freshness',
   responsiveness: 'Responsiveness',
-}
-
-function Section({ title, children }) {
-  return (
-    <div className="space-y-2">
-      <p className="eyebrow text-muted-foreground">{title}</p>
-      <div className="space-y-2">{children}</div>
-    </div>
-  )
-}
-
-function Field({ label, value }) {
-  if (value === null || value === undefined || value === '') return null
-  return (
-    <div className="flex items-baseline justify-between gap-4 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-medium">{value}</span>
-    </div>
-  )
 }
 
 function NurseryDetailSheet({ nursery, onOpenChange, onAction }) {

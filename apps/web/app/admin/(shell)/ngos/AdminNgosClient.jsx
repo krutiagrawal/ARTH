@@ -14,14 +14,95 @@ import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
 import StatTile from '@/components/dashboard/StatTile'
+import { Section, Field } from '@/components/dashboard/DetailSection'
 import { proxy } from '@/lib/adminProxyClient'
+import { resolveMediaUrl } from '@/lib/media'
 
 const STATUS_VARIANT = { pending: 'outline', approved: 'default', rejected: 'destructive', suspended: 'secondary' }
 const FILTERS = ['pending', 'approved', 'rejected', 'suspended']
 
+const ORG_TYPE_LABELS = {
+  trust: 'Trust',
+  society: 'Society',
+  section8_company: 'Section 8 company',
+  registered_nonprofit: 'Registered non-profit',
+  other: 'Other',
+}
+
+const WORK_AREA_LABELS = {
+  tree_plantation: 'Tree plantation',
+  forest_restoration: 'Forest restoration',
+  urban_greening: 'Urban greening',
+  biodiversity: 'Biodiversity',
+  water_conservation: 'Water conservation',
+  waste_management: 'Waste management',
+  environmental_education: 'Environmental education',
+  rural_community_development: 'Rural/community development',
+  other: 'Other',
+}
+
+const ARTH_USAGE_LABELS = {
+  organise_plantation_drives: 'Organise plantation drives',
+  recruit_volunteers: 'Recruit volunteers',
+  source_saplings: 'Source saplings',
+  track_planted_trees: 'Track planted trees',
+  manage_corporate_school_programs: 'Manage corporate/school programs',
+  receive_donations: 'Receive donations',
+  showcase_projects: 'Showcase projects',
+  other: 'Other',
+}
+
+const PARTICIPANT_TYPE_LABELS = {
+  individuals: 'Individuals',
+  schools: 'Schools',
+  colleges: 'Colleges',
+  corporates: 'Corporates',
+  government: 'Government',
+  communities: 'Communities',
+  volunteers: 'Volunteers',
+  other_ngos: 'Other NGOs',
+}
+
+const DOCUMENT_TYPE_LABELS = {
+  registration_certificate: 'Registration certificate',
+  twelve_a_certificate: '12A/12AB certificate',
+  eighty_g_certificate: '80G certificate',
+  fcra_certificate: 'FCRA certificate',
+  csr1_certificate: 'CSR-1 certificate',
+  authorization_proof: 'Authorisation proof',
+}
+
+function ChipList({ values, labels }) {
+  if (!values?.length) return null
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {values.map((v) => (
+        <Badge key={v} variant="secondary" className="font-normal">
+          {labels[v] || v}
+        </Badge>
+      ))}
+    </div>
+  )
+}
+
+function LinkList({ links }) {
+  if (!links?.length) return null
+  return (
+    <div className="space-y-1">
+      {links.map((link, i) => (
+        <a key={`${link}-${i}`} href={link} target="_blank" rel="noreferrer" className="block truncate text-sm text-primary underline">
+          {link}
+        </a>
+      ))}
+    </div>
+  )
+}
+
 function NgoDetailSheet({ ngo, onOpenChange, onAction }) {
   const [summary, setSummary] = useState(null)
   const [loadingSummary, setLoadingSummary] = useState(true)
+  const [detail, setDetail] = useState(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
   const [confirm, setConfirm] = useState(null) // 'approve' | 'reject' | 'suspend' | 'reinstate'
   const [reason, setReason] = useState('')
   const [working, setWorking] = useState(false)
@@ -35,10 +116,32 @@ function NgoDetailSheet({ ngo, onOpenChange, onAction }) {
       .finally(() => setLoadingSummary(false))
   }, [ngo])
 
+  useEffect(() => {
+    if (!ngo) {
+      setDetail(null)
+      return
+    }
+    let cancelled = false
+    setLoadingDetail(true)
+    proxy(`/admin/ngos/${ngo.id}`)
+      .then((data) => {
+        if (!cancelled) setDetail(data)
+      })
+      .catch((err) => {
+        if (!cancelled) toast.error(err.message || "Couldn't load this NGO's details.")
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingDetail(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [ngo])
+
   const confirmCopy = {
     approve: { title: 'Approve this NGO?', confirmLabel: 'Approve', body: 'They can immediately start publishing drives, trees, and campaigns.', status: 'approved' },
     reject: { title: 'Reject this application?', confirmLabel: 'Reject', body: 'They can edit their details and resubmit.', status: 'rejected' },
-    suspend: { title: 'Suspend this NGO?', confirmLabel: 'Suspend', body: 'They keep read access to their history but can\'t publish anything new until reinstated.', status: 'suspended' },
+    suspend: { title: 'Suspend this NGO?', confirmLabel: 'Suspend', body: "They keep read access to their history but can't publish anything new until reinstated.", status: 'suspended' },
     reinstate: { title: 'Reinstate this NGO?', confirmLabel: 'Reinstate', body: 'They regain full publishing access.', status: 'approved' },
   }
 
@@ -60,55 +163,234 @@ function NgoDetailSheet({ ngo, onOpenChange, onAction }) {
   }
 
   if (!ngo) return null
+  const d = detail || ngo
+  const documents = d.documents ?? []
+  const pastWorkPhotos = documents.filter((doc) => doc.docType === 'past_work_photo')
+  const certificates = documents.filter((doc) => doc.docType !== 'past_work_photo')
 
   return (
     <>
       <Sheet open={Boolean(ngo)} onOpenChange={onOpenChange}>
-        <SheetContent className="overflow-y-auto">
+        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
           <SheetHeader>
-            <SheetTitle className="font-serif">{ngo.orgName}</SheetTitle>
+            <SheetTitle className="font-serif">{d.orgName}</SheetTitle>
             <SheetDescription>
-              {ngo.owner?.name} · {ngo.owner?.email}
+              {d.owner?.name} · {d.owner?.email}
             </SheetDescription>
           </SheetHeader>
 
           <div className="mt-6 space-y-6">
             <div>
-              <Badge variant={STATUS_VARIANT[ngo.status]} className="capitalize">
-                {ngo.status}
+              <Badge variant={STATUS_VARIANT[d.status]} className="capitalize">
+                {d.status}
               </Badge>
-              {ngo.rejectionReason && <p className="mt-2 text-sm text-muted-foreground">Reason on file: &ldquo;{ngo.rejectionReason}&rdquo;</p>}
+              {d.rejectionReason && <p className="mt-2 text-sm text-muted-foreground">Reason on file: &ldquo;{d.rejectionReason}&rdquo;</p>}
             </div>
 
-            <p className="text-sm text-muted-foreground">{ngo.description}</p>
-            {ngo.website && (
-              <p className="text-sm">
-                <a href={ngo.website} target="_blank" rel="noreferrer" className="text-primary underline">
-                  {ngo.website}
-                </a>
-              </p>
+            <p className="text-sm text-muted-foreground">{d.description}</p>
+
+            {loadingDetail && !detail ? (
+              <p className="text-sm text-muted-foreground">Loading full application…</p>
+            ) : (
+              <>
+                {documents.length > 0 && (
+                  <Section title="Documents">
+                    {pastWorkPhotos.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {pastWorkPhotos.map((doc) => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            key={doc.id}
+                            src={resolveMediaUrl(doc.fileUrl)}
+                            alt="Past plantation work"
+                            className="h-24 w-24 rounded-lg border border-border/70 object-cover"
+                          />
+                        ))}
+                      </div>
+                    )}
+                    {certificates.map((doc) => (
+                      <a
+                        key={doc.id}
+                        href={resolveMediaUrl(doc.fileUrl)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block text-sm text-primary underline"
+                      >
+                        {DOCUMENT_TYPE_LABELS[doc.docType] || doc.docType} · View
+                      </a>
+                    ))}
+                  </Section>
+                )}
+
+                <Section title="Organisation">
+                  <Field label="Type" value={d.orgType ? ORG_TYPE_LABELS[d.orgType] || d.orgType : null} />
+                  <Field label="Year established" value={d.foundedYear} />
+                  <Field
+                    label="Website"
+                    value={
+                      d.website ? (
+                        <a href={d.website} target="_blank" rel="noreferrer" className="text-primary underline">
+                          {d.website}
+                        </a>
+                      ) : null
+                    }
+                  />
+                  <Field label="Official email" value={d.officialEmail} />
+                  <Field label="Official phone" value={d.contactPhone ? `+91 ${d.contactPhone}` : null} />
+                  {d.socialMediaLinks?.length > 0 && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Social media</p>
+                      <LinkList links={d.socialMediaLinks} />
+                    </div>
+                  )}
+                </Section>
+
+                {(d.line1 || d.city || d.operatingCities?.length > 0 || d.operatingStates?.length > 0) && (
+                  <Section title="Address">
+                    <Field label="Registered address" value={d.line1} />
+                    <Field label="City" value={d.city} />
+                    <Field label="Operating cities" value={d.operatingCities?.length ? d.operatingCities.join(', ') : null} />
+                    <Field label="Operating states" value={d.operatingStates?.length ? d.operatingStates.join(', ') : null} />
+                  </Section>
+                )}
+
+                {(d.registrationNumber || d.panNumber || d.ngoDarpanId || d.twelveARegistrationNumber || d.eightyGRegistrationNumber || d.fcraRegistrationNumber || d.csr1RegistrationNumber) && (
+                  <Section title="Registration & legal">
+                    <Field label="Registration number" value={d.registrationNumber} />
+                    <Field label="Registration authority" value={d.registrationAuthority} />
+                    <Field label="PAN" value={d.panNumber} />
+                    <Field label="NGO Darpan ID" value={d.ngoDarpanId} />
+                    <Field label="12A/12AB number" value={d.twelveARegistrationNumber} />
+                    <Field label="80G number" value={d.eightyGRegistrationNumber} />
+                    <Field label="FCRA number" value={d.fcraRegistrationNumber} />
+                    <Field label="CSR-1 number" value={d.csr1RegistrationNumber} />
+                  </Section>
+                )}
+
+                {(d.primaryContactName || d.officeBearers?.length > 0) && (
+                  <Section title="People">
+                    <Field label="Primary contact" value={d.primaryContactName} />
+                    <Field label="Designation" value={d.primaryContactDesignation} />
+                    <Field label="Phone" value={d.primaryContactPhone ? `+91 ${d.primaryContactPhone}` : null} />
+                    <Field label="Email" value={d.primaryContactEmail} />
+                    {d.officeBearers?.map((bearer, i) => (
+                      <Field
+                        key={i}
+                        label={`Office bearer ${i + 1}`}
+                        value={[bearer.name, bearer.designation, bearer.phone ? `+91 ${bearer.phone}` : null].filter(Boolean).join(' · ')}
+                      />
+                    ))}
+                  </Section>
+                )}
+
+                <Section title="What they do">
+                  <ChipList values={d.primaryWorkAreas} labels={WORK_AREA_LABELS} />
+                  <Field label="Drives conducted (historical)" value={d.drivesConductedHistorical} />
+                  <Field label="Trees planted (historical)" value={d.treesPlantedHistorical} />
+                  <Field label="Active volunteers" value={d.volunteerCountEstimate} />
+                  <Field label="Major projects" value={d.majorProjectsDescription} />
+                  <Field label="Environmental work since" value={d.environmentalWorkSinceYear} />
+                </Section>
+
+                {d.conductsPlantationDrives != null && (
+                  <Section title="Plantation practices">
+                    <Field label="Conducts plantation drives" value={d.conductsPlantationDrives ? 'Yes' : 'No'} />
+                    <Field label="Typical saplings per drive" value={d.typicalSaplingsPerDrive} />
+                    <Field label="Typical locations" value={d.typicalDriveLocations} />
+                    <Field label="Species commonly planted" value={d.speciesCommonlyPlanted} />
+                    <Field label="Sapling source" value={d.saplingSourceDescription} />
+                    <Field label="Monitors survival post-planting" value={d.monitorsSurvivalPostPlanting == null ? null : d.monitorsSurvivalPostPlanting ? 'Yes' : 'No'} />
+                    <Field label="Does post-plantation maintenance" value={d.doesPostPlantationMaintenance == null ? null : d.doesPostPlantationMaintenance ? 'Yes' : 'No'} />
+                    <Field label="Verification method" value={d.plantationVerificationMethod} />
+                    {d.previousProjectLinks?.length > 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Previous project links</p>
+                        <LinkList links={d.previousProjectLinks} />
+                      </div>
+                    )}
+                  </Section>
+                )}
+
+                {(d.driveReportLinks?.length > 0 ||
+                  d.mediaCoverageLinks?.length > 0 ||
+                  d.projectPageLinks?.length > 0 ||
+                  d.annualReportLinks?.length > 0 ||
+                  d.impactReportLinks?.length > 0 ||
+                  d.socialMediaPostLinks?.length > 0) && (
+                  <Section title="Proof of previous work">
+                    {d.driveReportLinks?.length > 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Drive reports</p>
+                        <LinkList links={d.driveReportLinks} />
+                      </div>
+                    )}
+                    {d.mediaCoverageLinks?.length > 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Media coverage</p>
+                        <LinkList links={d.mediaCoverageLinks} />
+                      </div>
+                    )}
+                    {d.projectPageLinks?.length > 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Project pages</p>
+                        <LinkList links={d.projectPageLinks} />
+                      </div>
+                    )}
+                    {d.annualReportLinks?.length > 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Annual reports</p>
+                        <LinkList links={d.annualReportLinks} />
+                      </div>
+                    )}
+                    {d.impactReportLinks?.length > 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Impact reports</p>
+                        <LinkList links={d.impactReportLinks} />
+                      </div>
+                    )}
+                    {d.socialMediaPostLinks?.length > 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Social media posts</p>
+                        <LinkList links={d.socialMediaPostLinks} />
+                      </div>
+                    )}
+                  </Section>
+                )}
+
+                {(d.arthUsageGoals?.length > 0 || d.participantTypes?.length > 0 || d.expectedDrivesPerYear) && (
+                  <Section title="ARTH goals">
+                    <ChipList values={d.arthUsageGoals} labels={ARTH_USAGE_LABELS} />
+                    <Field label="Expected drives/year via ARTH" value={d.expectedDrivesPerYear} />
+                    <ChipList values={d.participantTypes} labels={PARTICIPANT_TYPE_LABELS} />
+                  </Section>
+                )}
+
+                <div>
+                  <p className="eyebrow mb-3">Activity</p>
+                  {loadingSummary ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <Skeleton className="h-20" />
+                      <Skeleton className="h-20" />
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      <StatTile label="Drives" value={summary.drivesCount} />
+                      <StatTile label="Campaigns" value={summary.campaignsCount} />
+                      <StatTile label="Trees listed" value={summary.treesCount} />
+                      <StatTile label="Total raised" value={`₹${(summary.totalRaisedCents / 100).toLocaleString()}`} />
+                    </div>
+                  )}
+                </div>
+
+                <Section title="Account">
+                  <Field label="Handle" value={d.owner?.handle ? `@${d.owner.handle}` : null} />
+                  <Field label="Applied" value={new Date(d.createdAt).toLocaleString()} />
+                </Section>
+              </>
             )}
-            {ngo.contactPhone && <p className="text-sm text-muted-foreground">{ngo.contactPhone}</p>}
-
-            <div>
-              <p className="eyebrow mb-3">Activity</p>
-              {loadingSummary ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <Skeleton className="h-20" />
-                  <Skeleton className="h-20" />
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <StatTile label="Drives" value={summary.drivesCount} />
-                  <StatTile label="Campaigns" value={summary.campaignsCount} />
-                  <StatTile label="Trees listed" value={summary.treesCount} />
-                  <StatTile label="Total raised" value={`₹${(summary.totalRaisedCents / 100).toLocaleString()}`} />
-                </div>
-              )}
-            </div>
 
             <div className="flex flex-wrap gap-2">
-              {ngo.status === 'pending' && (
+              {d.status === 'pending' && (
                 <>
                   <Button className="rounded-full" onClick={() => setConfirm('approve')}>
                     <ShieldCheck className="h-4 w-4" /> Approve
@@ -118,17 +400,17 @@ function NgoDetailSheet({ ngo, onOpenChange, onAction }) {
                   </Button>
                 </>
               )}
-              {ngo.status === 'approved' && (
+              {d.status === 'approved' && (
                 <Button variant="outline" className="rounded-full" onClick={() => setConfirm('suspend')}>
                   <ShieldAlert className="h-4 w-4" /> Suspend
                 </Button>
               )}
-              {ngo.status === 'suspended' && (
+              {d.status === 'suspended' && (
                 <Button className="rounded-full" onClick={() => setConfirm('reinstate')}>
                   <ShieldQuestion className="h-4 w-4" /> Reinstate
                 </Button>
               )}
-              {ngo.status === 'rejected' && (
+              {d.status === 'rejected' && (
                 <Button className="rounded-full" onClick={() => setConfirm('approve')}>
                   <ShieldCheck className="h-4 w-4" /> Approve
                 </Button>

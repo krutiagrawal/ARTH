@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { getAccessToken, getRefreshToken, clearTokens } from '../api/tokenStorage';
 import { ApiError, setAccountBlockedHandler, setUnauthorizedHandler } from '../api/client';
 import * as authApi from '../api/auth';
-import type { ApiUser, RegisterNurseryInput } from '../api/auth';
+import type { ApiUser, RegisterNurseryInput, RegisterNgoInput } from '../api/auth';
 
 interface AuthContextValue {
   user: ApiUser | null;
@@ -11,16 +11,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<ApiUser>;
   register: (input: { email: string; password: string; name: string; handle: string }) => Promise<void>;
-  registerNgo: (input: {
-    email: string;
-    password: string;
-    name: string;
-    handle: string;
-    orgName: string;
-    description: string;
-    website?: string;
-    contactPhone?: string;
-  }) => Promise<void>;
+  registerNgo: (input: RegisterNgoInput) => Promise<void>;
   registerGroup: (input: {
     email: string;
     password: string;
@@ -139,16 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const registerNgo = useCallback(
-    async (input: {
-      email: string;
-      password: string;
-      name: string;
-      handle: string;
-      orgName: string;
-      description: string;
-      website?: string;
-      contactPhone?: string;
-    }) => {
+    async (input: RegisterNgoInput) => {
       const registeredUser = await authApi.registerNgo(input);
       queryClient.clear();
       setUser(registeredUser);

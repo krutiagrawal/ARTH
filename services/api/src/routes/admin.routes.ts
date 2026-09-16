@@ -36,6 +36,78 @@ function serializeNgo(profile: any) {
   };
 }
 
+// Everything the NGO filled in at signup, for the approvals detail view — a superset of
+// serializeNgo's table-row summary, mirroring serializeNurseryDetail below (kept separate for the
+// same payload-size reason: the list endpoint returns up to 50 rows at once).
+function serializeNgoDetail(profile: any) {
+  return {
+    ...serializeNgo(profile),
+    logoUrl: profile.logoUrl,
+    foundedYear: profile.foundedYear,
+    volunteerCountEstimate: profile.volunteerCountEstimate,
+    awards: profile.awards ?? [],
+
+    orgType: profile.orgType,
+    line1: profile.line1,
+    operatingCities: profile.operatingCities ?? [],
+    operatingStates: profile.operatingStates ?? [],
+    officialEmail: profile.officialEmail,
+    socialMediaLinks: profile.socialMediaLinks ?? [],
+
+    registrationNumber: profile.registrationNumber,
+    registrationAuthority: profile.registrationAuthority,
+    panNumber: profile.panNumber,
+    ngoDarpanId: profile.ngoDarpanId,
+    twelveARegistrationNumber: profile.twelveARegistrationNumber,
+    eightyGRegistrationNumber: profile.eightyGRegistrationNumber,
+    fcraRegistrationNumber: profile.fcraRegistrationNumber,
+    csr1RegistrationNumber: profile.csr1RegistrationNumber,
+
+    primaryContactName: profile.primaryContactName,
+    primaryContactDesignation: profile.primaryContactDesignation,
+    primaryContactPhone: profile.primaryContactPhone,
+    primaryContactEmail: profile.primaryContactEmail,
+    officeBearers: profile.officeBearers ?? [],
+
+    primaryWorkAreas: profile.primaryWorkAreas ?? [],
+    drivesConductedHistorical: profile.drivesConductedHistorical,
+    treesPlantedHistorical: profile.treesPlantedHistorical,
+    majorProjectsDescription: profile.majorProjectsDescription,
+    environmentalWorkSinceYear: profile.environmentalWorkSinceYear,
+
+    conductsPlantationDrives: profile.conductsPlantationDrives,
+    typicalSaplingsPerDrive: profile.typicalSaplingsPerDrive,
+    typicalDriveLocations: profile.typicalDriveLocations,
+    speciesCommonlyPlanted: profile.speciesCommonlyPlanted,
+    saplingSourceDescription: profile.saplingSourceDescription,
+    monitorsSurvivalPostPlanting: profile.monitorsSurvivalPostPlanting,
+    doesPostPlantationMaintenance: profile.doesPostPlantationMaintenance,
+    plantationVerificationMethod: profile.plantationVerificationMethod,
+    previousProjectLinks: profile.previousProjectLinks ?? [],
+
+    driveReportLinks: profile.driveReportLinks ?? [],
+    mediaCoverageLinks: profile.mediaCoverageLinks ?? [],
+    projectPageLinks: profile.projectPageLinks ?? [],
+    annualReportLinks: profile.annualReportLinks ?? [],
+    impactReportLinks: profile.impactReportLinks ?? [],
+    socialMediaPostLinks: profile.socialMediaPostLinks ?? [],
+
+    arthUsageGoals: profile.arthUsageGoals ?? [],
+    expectedDrivesPerYear: profile.expectedDrivesPerYear,
+    participantTypes: profile.participantTypes ?? [],
+
+    documents: (profile.verificationDocuments ?? []).map((d: any) => ({
+      id: d.id,
+      docType: d.docType,
+      fileUrl: d.fileUrl,
+      uploadedAt: d.uploadedAt,
+    })),
+
+    approvedAt: profile.approvedAt,
+    ownerCreatedAt: profile.user?.createdAt,
+  };
+}
+
 function serializeNursery(profile: any) {
   return {
     id: profile.id,
@@ -182,6 +254,11 @@ export default async function adminRoutes(fastify: FastifyInstance) {
     reply.send({ total, ngos: ngos.map(serializeNgo) });
   });
 
+  fastify.get<{ Params: { id: string } }>('/ngos/:id', async (request, reply) => {
+    const profile = await adminService.getNgoDetail(fastify.prisma, request.params.id);
+    reply.send(serializeNgoDetail(profile));
+  });
+
   fastify.get<{ Params: { id: string } }>('/ngos/:id/summary', async (request, reply) => {
     const summary = await adminService.getNgoSummary(fastify.prisma, request.params.id);
     reply.send(summary);
@@ -197,7 +274,7 @@ export default async function adminRoutes(fastify: FastifyInstance) {
       adminUserId: request.user!.id,
     });
 
-    reply.send(serializeNgo(profile));
+    reply.send(serializeNgoDetail(profile));
   });
 
   // ---------- Nurseries / Corporate (same approval workflow as NGO) ----------

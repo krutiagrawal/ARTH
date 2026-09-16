@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { NgoDocumentType } from '@plant/db';
 import {
   registerSchema,
   registerNgoSchema,
@@ -13,8 +14,28 @@ import {
 } from '../schemas/auth.schema';
 import * as authService from '../services/auth.service';
 import { BadRequestError } from '../utils/errors';
-import { saveNurseryVerificationPhoto } from '../services/upload.service';
-import { splitMultipartBody } from '../utils/multipart';
+import { saveNurseryVerificationPhoto, saveNgoVerificationDocument, saveNgoPastWorkPhoto } from '../services/upload.service';
+import { splitMultipartBody, splitMultipartNamedFiles } from '../utils/multipart';
+
+const NGO_SINGLE_DOC_FIELDS = [
+  'registrationCertificate',
+  'twelveACertificate',
+  'eightyGCertificate',
+  'fcraCertificate',
+  'csr1Certificate',
+  'authorizationProof',
+] as const;
+
+const NGO_DOC_FIELD_TO_TYPE: Record<(typeof NGO_SINGLE_DOC_FIELDS)[number], NgoDocumentType> = {
+  registrationCertificate: 'registration_certificate',
+  twelveACertificate: 'twelve_a_certificate',
+  eightyGCertificate: 'eighty_g_certificate',
+  fcraCertificate: 'fcra_certificate',
+  csr1Certificate: 'csr1_certificate',
+  authorizationProof: 'authorization_proof',
+};
+
+const NGO_MAX_PAST_WORK_PHOTOS = 5;
 
 export default async function authRoutes(fastify: FastifyInstance) {
   // Public and unauthenticated on purpose — every registration form (including the pre-signup
@@ -42,13 +63,52 @@ export default async function authRoutes(fastify: FastifyInstance) {
   });
 
   fastify.post('/register-ngo', async (request, reply) => {
-    const parsed = registerNgoSchema.safeParse(request.body);
+    // Unlike nursery (which still has to support an older JSON-only web form with no photo), the
+    // NGO wizard is being built fresh on both mobile and web as part of this feature, so there's
+    // no legacy client to preserve — multipart is required unconditionally, since the mandatory
+    // authorization-proof upload can't travel over a plain JSON body anyway.
+    const contentType = request.headers['content-type'] ?? '';
+    if (!contentType.includes('multipart/form-data')) {
+      throw new BadRequestError('NGO registration must be submitted as multipart/form-data');
+    }
+
+    const { fields, files, fileArrays } = splitMultipartNamedFiles(
+      request.body as any,
+      [...NGO_SINGLE_DOC_FIELDS],
+      ['pastWorkPhotos'],
+    );
+
+    const parsed = registerNgoSchema.safeParse(fields);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    if (!files.authorizationProof) {
+      throw new BadRequestError('Proof that you are authorised to represent this NGO is required');
+    }
+
+    const pastWorkPhotos = fileArrays.pastWorkPhotos ?? [];
+    if (pastWorkPhotos.length > NGO_MAX_PAST_WORK_PHOTOS) {
+      throw new BadRequestError(`At most ${NGO_MAX_PAST_WORK_PHOTOS} past-work photos`);
+    }
+
+    const documents: { docType: NgoDocumentType; fileUrl: string }[] = [];
+    for (const field of NGO_SINGLE_DOC_FIELDS) {
+      const file = files[field];
+      if (!file) continue;
+      const buffer = await file.toBuffer();
+      const fileUrl = await saveNgoVerificationDocument({ filename: file.filename, mimetype: file.mimetype, buffer });
+      documents.push({ docType: NGO_DOC_FIELD_TO_TYPE[field], fileUrl });
+    }
+    for (const file of pastWorkPhotos) {
+      const buffer = await file.toBuffer();
+      const fileUrl = await saveNgoPastWorkPhoto({ filename: file.filename, mimetype: file.mimetype, buffer });
+      documents.push({ docType: 'past_work_photo', fileUrl });
+    }
 
     const result = await authService.registerNgo(fastify.prisma, {
       ...parsed.data,
       email: parsed.data.email.toLowerCase(),
       handle: parsed.data.handle.toLowerCase(),
+      documents,
     });
 
     reply.status(201).send(result);

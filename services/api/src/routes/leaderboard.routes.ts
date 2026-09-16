@@ -36,7 +36,7 @@ export default async function leaderboardRoutes(fastify: FastifyInstance) {
         SELECT u.id, u.name, u.handle, u.avatar_emoji, u.trees_planted_count, u.streak_current,
                RANK() OVER (ORDER BY u.trees_planted_count DESC) AS rank
         FROM users u
-        WHERE u.id IN (${Prisma.join(friendIds)}) AND u.is_deleted = false
+        WHERE u.id IN (${Prisma.join(friendIds)}) AND u.is_deleted = false AND u.role = 'user'
         ORDER BY u.trees_planted_count DESC
         LIMIT ${limit} OFFSET ${offset};
       `;
@@ -45,7 +45,7 @@ export default async function leaderboardRoutes(fastify: FastifyInstance) {
         SELECT rank FROM (
           SELECT u.id, RANK() OVER (ORDER BY u.trees_planted_count DESC) AS rank
           FROM users u
-          WHERE u.id IN (${Prisma.join(friendIds)}) AND u.is_deleted = false
+          WHERE u.id IN (${Prisma.join(friendIds)}) AND u.is_deleted = false AND u.role = 'user'
         ) ranked WHERE id = ${userId};
       `;
     } else {
@@ -54,7 +54,7 @@ export default async function leaderboardRoutes(fastify: FastifyInstance) {
                RANK() OVER (ORDER BY u.trees_planted_count DESC) AS rank
         FROM users u
         LEFT JOIN user_settings s ON s.user_id = u.id
-        WHERE COALESCE(s.public_profile, true) AND u.is_deleted = false
+        WHERE COALESCE(s.public_profile, true) AND u.is_deleted = false AND u.role = 'user'
         ORDER BY u.trees_planted_count DESC
         LIMIT ${limit} OFFSET ${offset};
       `;
@@ -64,12 +64,12 @@ export default async function leaderboardRoutes(fastify: FastifyInstance) {
           SELECT u.id, RANK() OVER (ORDER BY u.trees_planted_count DESC) AS rank
           FROM users u
           LEFT JOIN user_settings s ON s.user_id = u.id
-          WHERE COALESCE(s.public_profile, true) AND u.is_deleted = false
+          WHERE COALESCE(s.public_profile, true) AND u.is_deleted = false AND u.role = 'user'
         ) ranked WHERE id = ${userId};
       `;
     }
 
-    const totalUsers = await fastify.prisma.user.count({ where: { isDeleted: false } });
+    const totalUsers = await fastify.prisma.user.count({ where: { isDeleted: false, role: 'user' } });
 
     reply.send({
       entries: rows.map((row) => ({

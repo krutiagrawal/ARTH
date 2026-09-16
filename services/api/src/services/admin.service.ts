@@ -72,7 +72,10 @@ export async function setNgoStatus(prisma: PrismaClient, ngoId: string, input: S
         approvedAt: input.status === 'approved' ? new Date() : null,
         approvedByUserId: input.status === 'approved' ? input.adminUserId : null,
       },
-      include: { user: { select: { id: true, email: true, name: true, handle: true } } },
+      include: {
+        user: { select: { id: true, email: true, name: true, handle: true, createdAt: true } },
+        verificationDocuments: { orderBy: { uploadedAt: 'asc' } },
+      },
     });
 
     await tx.adminActionLog.create({
@@ -87,6 +90,22 @@ export async function setNgoStatus(prisma: PrismaClient, ngoId: string, input: S
 
     return updated;
   });
+}
+
+// Full row (every signup-time field, not just the approvals-table summary) for the admin NGO
+// detail screen — mirrors getNurseryDetail below. No reputation-summary equivalent exists for
+// NGO (getReputationSummary is nursery-specific, keyed off its Trust Score system), so this
+// doesn't attach one.
+export async function getNgoDetail(prisma: PrismaClient, ngoId: string) {
+  const profile = await prisma.ngoProfile.findUnique({
+    where: { id: ngoId },
+    include: {
+      user: { select: { id: true, email: true, name: true, handle: true, createdAt: true } },
+      verificationDocuments: { orderBy: { uploadedAt: 'asc' } },
+    },
+  });
+  if (!profile) throw new NotFoundError('NGO not found');
+  return profile;
 }
 
 export async function getNgoSummary(prisma: PrismaClient, ngoId: string) {

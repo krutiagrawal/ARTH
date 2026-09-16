@@ -117,6 +117,24 @@ enum NgoApprovalStatus {
   suspended
 }
 
+enum NgoOrgType {
+  trust
+  society
+  section8_company
+  registered_nonprofit
+  other
+}
+
+enum NgoDocumentType {
+  registration_certificate
+  twelve_a_certificate
+  eighty_g_certificate
+  fcra_certificate
+  csr1_certificate
+  authorization_proof
+  past_work_photo
+}
+
 enum DriveStatus {
   upcoming
   cancelled
@@ -1663,6 +1681,65 @@ model NgoProfile {
   streakCurrent          Int               @default(0) @map("streak_current")
   streakMax              Int               @default(0) @map("streak_max")
   badgesCount            Int               @default(0) @map("badges_count")
+
+  // ---- Organisation details ----
+  orgType                     NgoOrgType?    @map("org_type")
+  line1                       String?
+  operatingCities             String[]       @map("operating_cities")
+  operatingStates             String[]       @map("operating_states")
+  officialEmail               String?        @map("official_email")
+  socialMediaLinks            String[]       @map("social_media_links")
+
+  // ---- Registration & legal (numbers only — certificates live in NgoVerificationDocument) ----
+  registrationNumber          String?        @map("registration_number")
+  registrationAuthority       String?        @map("registration_authority")
+  panNumber                   String?        @map("pan_number")
+  ngoDarpanId                 String?        @map("ngo_darpan_id")
+  twelveARegistrationNumber   String?        @map("twelve_a_registration_number")
+  eightyGRegistrationNumber   String?        @map("eighty_g_registration_number")
+  fcraRegistrationNumber      String?        @map("fcra_registration_number")
+  csr1RegistrationNumber      String?        @map("csr1_registration_number")
+
+  // ---- People behind the organisation ----
+  primaryContactName          String?        @map("primary_contact_name")
+  primaryContactDesignation   String?        @map("primary_contact_designation")
+  primaryContactPhone         String?        @map("primary_contact_phone")
+  primaryContactEmail         String?        @map("primary_contact_email")
+  // Array of { name, designation, phone, email }, max 3 — validated at the Zod layer, not
+  // DB-constrained, mirroring the existing `awards Json?` precedent above.
+  officeBearers                Json?         @map("office_bearers")
+
+  // ---- What the NGO does ----
+  primaryWorkAreas             String[]      @map("primary_work_areas")
+  drivesConductedHistorical    Int?          @map("drives_conducted_historical")
+  treesPlantedHistorical       Int?          @map("trees_planted_historical")
+  majorProjectsDescription     String?       @map("major_projects_description")
+  environmentalWorkSinceYear   Int?          @map("environmental_work_since_year")
+
+  // ---- Plantation-specific ----
+  conductsPlantationDrives      Boolean?     @map("conducts_plantation_drives")
+  typicalSaplingsPerDrive       String?      @map("typical_saplings_per_drive")
+  typicalDriveLocations         String?      @map("typical_drive_locations")
+  speciesCommonlyPlanted        String?      @map("species_commonly_planted")
+  saplingSourceDescription      String?      @map("sapling_source_description")
+  monitorsSurvivalPostPlanting  Boolean?     @map("monitors_survival_post_planting")
+  doesPostPlantationMaintenance Boolean?     @map("does_post_plantation_maintenance")
+  plantationVerificationMethod  String?      @map("plantation_verification_method")
+  previousProjectLinks          String[]     @map("previous_project_links")
+
+  // ---- Proof of previous work (links only — photos live in NgoVerificationDocument) ----
+  driveReportLinks               String[]    @map("drive_report_links")
+  mediaCoverageLinks             String[]    @map("media_coverage_links")
+  projectPageLinks               String[]    @map("project_page_links")
+  annualReportLinks              String[]    @map("annual_report_links")
+  impactReportLinks              String[]    @map("impact_report_links")
+  socialMediaPostLinks           String[]    @map("social_media_post_links")
+
+  // ---- ARTH-specific ----
+  arthUsageGoals                 String[]    @map("arth_usage_goals")
+  expectedDrivesPerYear          Int?        @map("expected_drives_per_year")
+  participantTypes               String[]    @map("participant_types")
+
   createdAt              DateTime          @default(now()) @map("created_at")
   updatedAt              DateTime          @updatedAt @map("updated_at")
 
@@ -1682,9 +1759,24 @@ model NgoProfile {
   streakHistory          NgoStreakHistory[]
   achievementUnlocks     NgoAchievementUnlock[]
   bulkRequirements       BulkRequirement[]
+  verificationDocuments  NgoVerificationDocument[]
 
   @@index([status])
   @@map("ngo_profiles")
+}
+
+model NgoVerificationDocument {
+  id         String          @id @default(uuid())
+  ngoId      String          @map("ngo_id")
+  docType    NgoDocumentType @map("doc_type")
+  fileUrl    String          @map("file_url")
+  uploadedAt DateTime        @default(now()) @map("uploaded_at")
+
+  ngo NgoProfile @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+
+  @@index([ngoId])
+  @@index([ngoId, docType])
+  @@map("ngo_verification_documents")
 }
 
 model Drive {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { ArrowLeft, Flag, MapPin, Phone, ShoppingCart, Sprout, Star } from 'lucide-react'
+import { ArrowLeft, Calendar, ExternalLink, Flag, MapPin, Phone, ShoppingCart, Sprout, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -11,6 +11,7 @@ import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import ReportDialog from '@/components/dashboard/ReportDialog'
 import { proxy } from '@/lib/memberProxy'
 import { resolveMediaUrl } from '@/lib/media'
+import { NURSERY_TYPE_LABELS, PLANT_CATEGORY_LABELS } from '@/lib/nurseryOptions'
 
 function formatRupees(cents) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`
@@ -125,6 +126,74 @@ export default function NurseryDetailClient({ nurseryId }) {
       </div>
 
       <ReportDialog open={reportOpen} onOpenChange={setReportOpen} targetType="nursery" targetId={nurseryId} targetLabel={profile.nurseryName} />
+
+      {(profile.nurseryType ||
+        profile.yearEstablished ||
+        profile.line1 ||
+        profile.websiteUrl ||
+        profile.plantCategories?.length > 0 ||
+        profile.offersDelivery ||
+        profile.offersPickup) && (
+        <div className="rounded-3xl border border-border/70 bg-card p-6 soft-shadow space-y-4">
+          <p className="eyebrow">About this nursery</p>
+
+          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            {profile.nurseryType && (
+              <span className="text-muted-foreground">{NURSERY_TYPE_LABELS[profile.nurseryType] || profile.nurseryType}</span>
+            )}
+            {profile.yearEstablished && (
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <Calendar className="h-3.5 w-3.5" /> Established {profile.yearEstablished}
+              </span>
+            )}
+          </div>
+
+          {profile.line1 && (
+            <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" /> {profile.line1}
+            </p>
+          )}
+
+          {profile.websiteUrl && (
+            <a
+              href={/^https?:\/\//i.test(profile.websiteUrl) ? profile.websiteUrl : `https://${profile.websiteUrl}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+            >
+              <ExternalLink className="h-3.5 w-3.5" /> {profile.websiteUrl}
+            </a>
+          )}
+
+          {profile.plantCategories?.length > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5">What they stock</p>
+              <div className="flex flex-wrap gap-1.5">
+                {profile.plantCategories.map((c) => (
+                  <Badge key={c} variant="secondary" className="font-normal">
+                    {PLANT_CATEGORY_LABELS[c] || c}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(profile.offersDelivery || profile.offersPickup) && (
+            <div className="flex flex-wrap gap-2">
+              {profile.offersDelivery && (
+                <Badge variant="outline" className="font-normal">
+                  🚚 Delivers{profile.deliveryRadiusKm ? ` within ${profile.deliveryRadiusKm}km` : ''}
+                </Badge>
+              )}
+              {profile.offersPickup && (
+                <Badge variant="outline" className="font-normal">
+                  🏪 Pickup available
+                </Badge>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div>
         <p className="eyebrow mb-4">Available saplings</p>

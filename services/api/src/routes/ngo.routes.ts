@@ -36,6 +36,55 @@ function serializeNgoProfile(profile: any) {
     status: profile.status,
     rejectionReason: profile.rejectionReason,
     createdAt: profile.createdAt,
+
+    orgType: profile.orgType,
+    line1: profile.line1,
+    operatingCities: profile.operatingCities ?? [],
+    operatingStates: profile.operatingStates ?? [],
+    officialEmail: profile.officialEmail,
+    socialMediaLinks: profile.socialMediaLinks ?? [],
+
+    registrationNumber: profile.registrationNumber,
+    registrationAuthority: profile.registrationAuthority,
+    panNumber: profile.panNumber,
+    ngoDarpanId: profile.ngoDarpanId,
+    twelveARegistrationNumber: profile.twelveARegistrationNumber,
+    eightyGRegistrationNumber: profile.eightyGRegistrationNumber,
+    fcraRegistrationNumber: profile.fcraRegistrationNumber,
+    csr1RegistrationNumber: profile.csr1RegistrationNumber,
+
+    primaryContactName: profile.primaryContactName,
+    primaryContactDesignation: profile.primaryContactDesignation,
+    primaryContactPhone: profile.primaryContactPhone,
+    primaryContactEmail: profile.primaryContactEmail,
+    officeBearers: profile.officeBearers ?? [],
+
+    primaryWorkAreas: profile.primaryWorkAreas ?? [],
+    drivesConductedHistorical: profile.drivesConductedHistorical,
+    treesPlantedHistorical: profile.treesPlantedHistorical,
+    majorProjectsDescription: profile.majorProjectsDescription,
+    environmentalWorkSinceYear: profile.environmentalWorkSinceYear,
+
+    conductsPlantationDrives: profile.conductsPlantationDrives,
+    typicalSaplingsPerDrive: profile.typicalSaplingsPerDrive,
+    typicalDriveLocations: profile.typicalDriveLocations,
+    speciesCommonlyPlanted: profile.speciesCommonlyPlanted,
+    saplingSourceDescription: profile.saplingSourceDescription,
+    monitorsSurvivalPostPlanting: profile.monitorsSurvivalPostPlanting,
+    doesPostPlantationMaintenance: profile.doesPostPlantationMaintenance,
+    plantationVerificationMethod: profile.plantationVerificationMethod,
+    previousProjectLinks: profile.previousProjectLinks ?? [],
+
+    driveReportLinks: profile.driveReportLinks ?? [],
+    mediaCoverageLinks: profile.mediaCoverageLinks ?? [],
+    projectPageLinks: profile.projectPageLinks ?? [],
+    annualReportLinks: profile.annualReportLinks ?? [],
+    impactReportLinks: profile.impactReportLinks ?? [],
+    socialMediaPostLinks: profile.socialMediaPostLinks ?? [],
+
+    arthUsageGoals: profile.arthUsageGoals ?? [],
+    expectedDrivesPerYear: profile.expectedDrivesPerYear,
+    participantTypes: profile.participantTypes ?? [],
   };
 }
 

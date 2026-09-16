@@ -35,6 +35,82 @@ export interface ApiAdminNgoSummary {
   totalRaisedCents: number;
 }
 
+export interface ApiAdminNgoDocument {
+  id: string;
+  docType: string;
+  fileUrl: string;
+  uploadedAt: string;
+}
+
+export interface ApiAdminNgoOfficeBearer {
+  name: string;
+  designation?: string;
+  phone?: string;
+  email?: string;
+}
+
+// Everything the NGO filled in at signup — returned by the detail route, a superset of
+// ApiAdminNgo's approvals-table summary shape. Mirrors ApiAdminNurseryDetail.
+export interface ApiAdminNgoDetail extends ApiAdminNgo {
+  logoUrl: string | null;
+  foundedYear: number | null;
+  volunteerCountEstimate: number | null;
+  awards: { title: string; year?: number; issuer?: string }[];
+
+  orgType: string | null;
+  line1: string | null;
+  operatingCities: string[];
+  operatingStates: string[];
+  officialEmail: string | null;
+  socialMediaLinks: string[];
+
+  registrationNumber: string | null;
+  registrationAuthority: string | null;
+  panNumber: string | null;
+  ngoDarpanId: string | null;
+  twelveARegistrationNumber: string | null;
+  eightyGRegistrationNumber: string | null;
+  fcraRegistrationNumber: string | null;
+  csr1RegistrationNumber: string | null;
+
+  primaryContactName: string | null;
+  primaryContactDesignation: string | null;
+  primaryContactPhone: string | null;
+  primaryContactEmail: string | null;
+  officeBearers: ApiAdminNgoOfficeBearer[];
+
+  primaryWorkAreas: string[];
+  drivesConductedHistorical: number | null;
+  treesPlantedHistorical: number | null;
+  majorProjectsDescription: string | null;
+  environmentalWorkSinceYear: number | null;
+
+  conductsPlantationDrives: boolean | null;
+  typicalSaplingsPerDrive: string | null;
+  typicalDriveLocations: string | null;
+  speciesCommonlyPlanted: string | null;
+  saplingSourceDescription: string | null;
+  monitorsSurvivalPostPlanting: boolean | null;
+  doesPostPlantationMaintenance: boolean | null;
+  plantationVerificationMethod: string | null;
+  previousProjectLinks: string[];
+
+  driveReportLinks: string[];
+  mediaCoverageLinks: string[];
+  projectPageLinks: string[];
+  annualReportLinks: string[];
+  impactReportLinks: string[];
+  socialMediaPostLinks: string[];
+
+  arthUsageGoals: string[];
+  expectedDrivesPerYear: number | null;
+  participantTypes: string[];
+
+  documents: ApiAdminNgoDocument[];
+  approvedAt: string | null;
+  ownerCreatedAt?: string;
+}
+
 export interface ApiAdminActionLog {
   id: string;
   action: string;
@@ -60,6 +136,10 @@ export async function fetchAdminNgos(filter: AdminNgosFilter = {}): Promise<{ to
   return apiFetch(`/api/admin/ngos${toQueryString(filter)}`);
 }
 
+export async function fetchAdminNgo(id: string): Promise<ApiAdminNgoDetail> {
+  return apiFetch<ApiAdminNgoDetail>(`/api/admin/ngos/${id}`);
+}
+
 export async function fetchAdminNgoSummary(id: string): Promise<ApiAdminNgoSummary> {
   return apiFetch<ApiAdminNgoSummary>(`/api/admin/ngos/${id}/summary`);
 }
@@ -67,8 +147,8 @@ export async function fetchAdminNgoSummary(id: string): Promise<ApiAdminNgoSumma
 export async function setAdminNgoStatus(
   id: string,
   input: { status: NgoApprovalStatus; rejectionReason?: string }
-): Promise<ApiAdminNgo> {
-  return apiFetch<ApiAdminNgo>(`/api/admin/ngos/${id}/status`, { method: 'PATCH', body: input });
+): Promise<ApiAdminNgoDetail> {
+  return apiFetch<ApiAdminNgoDetail>(`/api/admin/ngos/${id}/status`, { method: 'PATCH', body: input });
 }
 
 // ---------- Nurseries / Corporates (same approval workflow as NGO) ----------

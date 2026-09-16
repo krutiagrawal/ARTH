@@ -1,4 +1,4 @@
-import { PrismaClient, User, GroupType, NurseryType } from '@plant/db';
+import { PrismaClient, User, GroupType, NurseryType, NgoOrgType, NgoDocumentType, Prisma } from '@plant/db';
 import { hashPassword, comparePassword } from '../utils/password';
 import {
   signAccessToken,
@@ -20,11 +20,72 @@ interface RegisterInput {
   deviceInfo?: string;
 }
 
+interface OfficeBearerInput {
+  name: string;
+  designation?: string;
+  phone?: string;
+  email?: string;
+}
+
 interface RegisterNgoInput extends RegisterInput {
   orgName: string;
   description: string;
   website?: string;
   contactPhone?: string;
+
+  orgType?: NgoOrgType;
+  foundedYear?: number;
+  line1?: string;
+  city?: string;
+  operatingCities?: string[];
+  operatingStates?: string[];
+  officialEmail?: string;
+  socialMediaLinks?: string[];
+
+  registrationNumber?: string;
+  registrationAuthority?: string;
+  panNumber?: string;
+  ngoDarpanId?: string;
+  twelveARegistrationNumber?: string;
+  eightyGRegistrationNumber?: string;
+  fcraRegistrationNumber?: string;
+  csr1RegistrationNumber?: string;
+
+  primaryContactName?: string;
+  primaryContactDesignation?: string;
+  primaryContactPhone?: string;
+  primaryContactEmail?: string;
+  officeBearers?: OfficeBearerInput[];
+
+  primaryWorkAreas?: string[];
+  drivesConductedHistorical?: number;
+  treesPlantedHistorical?: number;
+  volunteerCountEstimate?: number;
+  majorProjectsDescription?: string;
+  environmentalWorkSinceYear?: number;
+
+  conductsPlantationDrives?: boolean;
+  typicalSaplingsPerDrive?: string;
+  typicalDriveLocations?: string;
+  speciesCommonlyPlanted?: string;
+  saplingSourceDescription?: string;
+  monitorsSurvivalPostPlanting?: boolean;
+  doesPostPlantationMaintenance?: boolean;
+  plantationVerificationMethod?: string;
+  previousProjectLinks?: string[];
+
+  driveReportLinks?: string[];
+  mediaCoverageLinks?: string[];
+  projectPageLinks?: string[];
+  annualReportLinks?: string[];
+  impactReportLinks?: string[];
+  socialMediaPostLinks?: string[];
+
+  arthUsageGoals?: string[];
+  expectedDrivesPerYear?: number;
+  participantTypes?: string[];
+
+  documents?: { docType: NgoDocumentType; fileUrl: string }[];
 }
 
 interface RegisterGroupInput extends RegisterInput {
@@ -228,6 +289,52 @@ export async function registerNgo(prisma: PrismaClient, input: RegisterNgoInput)
         description: input.description,
         website: input.website,
         contactPhone: input.contactPhone,
+        orgType: input.orgType,
+        foundedYear: input.foundedYear,
+        line1: input.line1,
+        city: input.city,
+        operatingCities: input.operatingCities ?? [],
+        operatingStates: input.operatingStates ?? [],
+        officialEmail: input.officialEmail,
+        socialMediaLinks: input.socialMediaLinks ?? [],
+        registrationNumber: input.registrationNumber,
+        registrationAuthority: input.registrationAuthority,
+        panNumber: input.panNumber,
+        ngoDarpanId: input.ngoDarpanId,
+        twelveARegistrationNumber: input.twelveARegistrationNumber,
+        eightyGRegistrationNumber: input.eightyGRegistrationNumber,
+        fcraRegistrationNumber: input.fcraRegistrationNumber,
+        csr1RegistrationNumber: input.csr1RegistrationNumber,
+        primaryContactName: input.primaryContactName,
+        primaryContactDesignation: input.primaryContactDesignation,
+        primaryContactPhone: input.primaryContactPhone,
+        primaryContactEmail: input.primaryContactEmail,
+        officeBearers: (input.officeBearers ?? undefined) as Prisma.InputJsonValue | undefined,
+        primaryWorkAreas: input.primaryWorkAreas ?? [],
+        drivesConductedHistorical: input.drivesConductedHistorical,
+        treesPlantedHistorical: input.treesPlantedHistorical,
+        volunteerCountEstimate: input.volunteerCountEstimate,
+        majorProjectsDescription: input.majorProjectsDescription,
+        environmentalWorkSinceYear: input.environmentalWorkSinceYear,
+        conductsPlantationDrives: input.conductsPlantationDrives,
+        typicalSaplingsPerDrive: input.typicalSaplingsPerDrive,
+        typicalDriveLocations: input.typicalDriveLocations,
+        speciesCommonlyPlanted: input.speciesCommonlyPlanted,
+        saplingSourceDescription: input.saplingSourceDescription,
+        monitorsSurvivalPostPlanting: input.monitorsSurvivalPostPlanting,
+        doesPostPlantationMaintenance: input.doesPostPlantationMaintenance,
+        plantationVerificationMethod: input.plantationVerificationMethod,
+        previousProjectLinks: input.previousProjectLinks ?? [],
+        driveReportLinks: input.driveReportLinks ?? [],
+        mediaCoverageLinks: input.mediaCoverageLinks ?? [],
+        projectPageLinks: input.projectPageLinks ?? [],
+        annualReportLinks: input.annualReportLinks ?? [],
+        impactReportLinks: input.impactReportLinks ?? [],
+        socialMediaPostLinks: input.socialMediaPostLinks ?? [],
+        arthUsageGoals: input.arthUsageGoals ?? [],
+        expectedDrivesPerYear: input.expectedDrivesPerYear,
+        participantTypes: input.participantTypes ?? [],
+        verificationDocuments: input.documents?.length ? { create: input.documents } : undefined,
       },
     });
 

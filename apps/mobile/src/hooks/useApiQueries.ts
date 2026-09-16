@@ -224,6 +224,7 @@ import { followNgo, unfollowNgo, fetchFollowedNgos, fetchFollowingFeed } from '.
 import {
   fetchAdminOverview,
   fetchAdminNgos,
+  fetchAdminNgo,
   fetchAdminNgoSummary,
   setAdminNgoStatus,
   fetchAdminActionLogs,
@@ -1335,6 +1336,15 @@ export function useAdminNgos(filter: AdminNgosFilter = {}) {
   });
 }
 
+export function useAdminNgo(id: string) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['admin', 'ngos', id],
+    queryFn: () => fetchAdminNgo(id),
+    enabled: isAuthenticated && !!id,
+  });
+}
+
 export function useAdminNgoSummary(id: string | null) {
   const { isAuthenticated } = useAuth();
   return useQuery({
@@ -1349,8 +1359,9 @@ export function useSetAdminNgoStatus() {
   return useMutation({
     mutationFn: ({ id, status, rejectionReason }: { id: string; status: NgoApprovalStatus; rejectionReason?: string }) =>
       setAdminNgoStatus(id, { status, rejectionReason }),
-    onSuccess: () => {
+    onSuccess: (_data, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'ngos'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'ngos', id] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] });
     },
   });

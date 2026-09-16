@@ -40,3 +40,11 @@ export function isValidWebsite(value) {
     return false
   }
 }
+
+/** Loose GSTIN format check (not authoritative) — mirrors apps/mobile/src/utils/validation.ts.
+ * The backend doesn't enforce this format, so this is only used for a friendly inline hint. */
+const GSTIN_REGEX = /^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/
+
+export function isValidGstin(value) {
+  return GSTIN_REGEX.test((value || '').trim().toUpperCase())
+}

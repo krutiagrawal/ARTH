@@ -3,6 +3,54 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { useAuth } from '../context/AuthContext';
 import { registerPushToken } from '../api/social';
+import { navigationRef } from '../navigation/AppNavigator';
+
+/**
+ * Routes a tapped push notification to the same screen its in-app notification-centre row would
+ * open — mirroring NotificationsScreen's `openTarget`, but limited to what the push `data` payload
+ * actually carries (`type` and `postId`; see notification.service.ts). Cases that need actor info
+ * (e.g. friend_request_accepted) fall back to the notification centre itself.
+ */
+/** Polls briefly for the nav container to mount — needed for the cold-start path below, which can
+ *  run before NavigationContainer has finished its first render. */
+async function waitForNavigationReady(attempts = 20): Promise<boolean> {
+  for (let i = 0; i < attempts; i++) {
+    if (navigationRef.isReady()) return true;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return navigationRef.isReady();
+}
+
+function routeForPushData(data: Record<string, unknown> | undefined) {
+  if (!navigationRef.isReady() || !data) return;
+
+  const postId = typeof data.postId === 'string' ? data.postId : undefined;
+  if (postId) {
+    navigationRef.navigate('PostDetail', { postId });
+    return;
+  }
+
+  switch (data.type) {
+    case 'cart_abandoned':
+      navigationRef.navigate('Cart');
+      return;
+    case 'reservation_requested':
+      navigationRef.navigate('NurseryReservations');
+      return;
+    case 'reservation_fulfilled':
+    case 'reservation_declined':
+      navigationRef.navigate('MySaplingReservations');
+      return;
+    case 'follow_request':
+      navigationRef.navigate('NgoMain');
+      return;
+    case 'friend_request':
+      navigationRef.navigate('FriendsList', { mode: 'requests' });
+      return;
+    default:
+      navigationRef.navigate('Notifications');
+  }
+}
 
 /**
  * Registers this device for Expo push notifications, once per signed-in session.
@@ -52,6 +100,23 @@ export function usePushRegistration() {
           importance: Notifications.AndroidImportance.MAX,
           vibrationPattern: [0, 250, 250, 250],
         });
+      }
+
+      // Tapping a notification while the app is backgrounded only ever fires this listener — it
+      // does not go through NotificationsScreen's in-app `openTarget` at all, so without this the
+      // tap just cold-opens to whatever the default landing screen is and silently drops the
+      // notification's target (e.g. an abandoned-cart push landed on an empty default screen
+      // instead of Cart).
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        routeForPushData(response.notification.request.content.data as Record<string, unknown>);
+      });
+
+      // Covers the cold-start case: the app was fully killed and the tap is what launched it, so
+      // the listener above — registered only once JS is running — never sees that first response.
+      const lastResponse = await Notifications.getLastNotificationResponseAsync();
+      if (lastResponse) {
+        await waitForNavigationReady();
+        routeForPushData(lastResponse.notification.request.content.data as Record<string, unknown>);
       }
     })();
   }, []);

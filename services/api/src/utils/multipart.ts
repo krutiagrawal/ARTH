@@ -56,3 +56,37 @@ export function splitMultipartFiles(body: MultipartBody, fileFieldName = 'photos
 
   return { fields, files };
 }
+
+/**
+ * Combines both shapes above for forms that need several distinct single-file fields (e.g. one
+ * certificate per registration type) *and* one repeated multi-file field (e.g. past-work photos)
+ * at once — NGO registration is the first caller with this many concurrent file fields. Any file
+ * part whose field name isn't in either list is silently dropped, matching the existing behaviour
+ * of splitMultipartBody/splitMultipartFiles.
+ */
+export function splitMultipartNamedFiles(
+  body: MultipartBody,
+  singleFileFieldNames: string[],
+  multiFileFieldNames: string[] = [],
+) {
+  const fields: Record<string, string> = {};
+  const files: Record<string, MultipartFile> = {};
+  const fileArrays: Record<string, MultipartFile[]> = Object.fromEntries(multiFileFieldNames.map((name) => [name, []]));
+
+  for (const [key, part] of Object.entries(body ?? {})) {
+    const parts = Array.isArray(part) ? part : [part];
+    for (const p of parts) {
+      if (isFilePart(p)) {
+        if (singleFileFieldNames.includes(key) && !files[key]) {
+          files[key] = p;
+        } else if (multiFileFieldNames.includes(key)) {
+          fileArrays[key].push(p);
+        }
+      } else {
+        fields[key] = (p as { value: string }).value;
+      }
+    }
+  }
+
+  return { fields, files, fileArrays };
+}

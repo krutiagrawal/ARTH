@@ -435,7 +435,7 @@ export type RootStackParamList = {
 
 const Stack = createStackNavigator<RootStackParamList>();
 
-const navigationRef = createNavigationContainerRef<RootStackParamList>();
+export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 /**
  * Resets the stack back to Login whenever `logout()` actually finishes — nothing else does. The

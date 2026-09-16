@@ -25,6 +25,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import CitySelect from '@/components/dashboard/CitySelect'
 import PhoneInput from '@/components/dashboard/PhoneInput'
+import NurseryProfileFields, { extendedProfileDefaults, extendedProfilePayload } from '@/components/dashboard/NurseryProfileFields'
 import { proxy } from './proxy'
 import { useNurseryProfile } from './NurseryProfileContext'
 import { usePhoneField } from '@/lib/usePhoneField'
@@ -72,14 +73,17 @@ function RejectedPanel({ profile, onResubmitted }) {
     description: profile.description || '',
     city: profile.city || 'Pune',
     contactPhone: profile.contactPhone || '',
+    ...extendedProfileDefaults(profile),
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [phoneTouched, setPhoneTouched] = useState(false)
+  const [responsiblePhoneTouched, setResponsiblePhoneTouched] = useState(false)
 
   // Format validation only — resubmits NurseryProfile.contactPhone (a business contact number),
   // not the User.phone identity field, so no real-time duplicate check here.
   const phoneField = usePhoneField(form.contactPhone, phoneTouched, { checkAvailability: false })
+  const responsiblePhoneField = usePhoneField(form.responsiblePersonPhone, responsiblePhoneTouched, { checkAvailability: false })
 
   const set = (key) => (e) => setForm((s) => ({ ...s, [key]: e.target.value }))
 
@@ -87,13 +91,25 @@ function RejectedPanel({ profile, onResubmitted }) {
     e.preventDefault()
     setError('')
     setPhoneTouched(true)
+    setResponsiblePhoneTouched(true)
     if (!phoneField.isOk) {
       setError(phoneField.error || 'Enter a valid phone number.')
       return
     }
+    if (!responsiblePhoneField.isOk) {
+      setError(responsiblePhoneField.error || 'Enter a valid phone number for the responsible person.')
+      return
+    }
     setSubmitting(true)
     try {
-      await proxy('/nursery/profile', { method: 'PATCH', body: form })
+      const payload = {
+        nurseryName: form.nurseryName,
+        description: form.description,
+        city: form.city || undefined,
+        contactPhone: form.contactPhone || undefined,
+        ...extendedProfilePayload(form),
+      }
+      await proxy('/nursery/profile', { method: 'PATCH', body: payload })
       const updated = await proxy('/nursery/resubmit', { method: 'POST' })
       onResubmitted(updated)
     } catch (err) {
@@ -113,7 +129,7 @@ function RejectedPanel({ profile, onResubmitted }) {
         Update your details below whenever you&rsquo;re ready, and send it our way again.
       </p>
 
-      <form onSubmit={resubmit} className="mt-6 space-y-3 max-w-lg">
+      <form onSubmit={resubmit} className="mt-6 space-y-3 max-w-2xl">
         <label className="block">
           <span className="eyebrow">Nursery name</span>
           <Input required value={form.nurseryName} onChange={set('nurseryName')} className="mt-2 h-11 rounded-full" />
@@ -137,8 +153,22 @@ function RejectedPanel({ profile, onResubmitted }) {
             {phoneField.error && <p className="mt-1 text-xs text-destructive">{phoneField.error}</p>}
           </label>
         </div>
+
+        <div className="pt-2 border-t border-border/70">
+          <NurseryProfileFields
+            form={form}
+            setForm={setForm}
+            responsiblePhoneError={responsiblePhoneField.error}
+            onResponsiblePhoneBlur={() => setResponsiblePhoneTouched(true)}
+          />
+        </div>
+
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button disabled={submitting || (form.contactPhone && !phoneField.isOk)} type="submit" className="rounded-full h-11">
+        <Button
+          disabled={submitting || (form.contactPhone && !phoneField.isOk) || (form.responsiblePersonPhone && !responsiblePhoneField.isOk)}
+          type="submit"
+          className="rounded-full h-11"
+        >
           {submitting ? 'Resubmitting…' : 'Resubmit for review'}
         </Button>
       </form>

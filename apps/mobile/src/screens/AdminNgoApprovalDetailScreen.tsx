@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking, RefreshControl } from 'react-native';
+import { View, Image, Linking, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,11 +10,105 @@ import { BorderCard } from '../components/common/BorderCard';
 import { StatDisplay } from '../components/common/StatDisplay';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { Sheet } from '../components/common/Sheet';
-import { useAdminNgoSummary, useSetAdminNgoStatus } from '../hooks/useApiQueries';
+import { useAdminNgo, useAdminNgoSummary, useSetAdminNgoStatus } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
-import { ApiError } from '../api/client';
-import type { ApiAdminNgo, NgoApprovalStatus } from '../api/admin';
+import { ApiError, resolveMediaUrl } from '../api/client';
+import type { ApiAdminNgo, ApiAdminNgoDocument, NgoApprovalStatus } from '../api/admin';
 import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
+
+const ORG_TYPE_LABELS: Record<string, string> = {
+  trust: 'Trust',
+  society: 'Society',
+  section8_company: 'Section 8 company',
+  registered_nonprofit: 'Registered non-profit',
+  other: 'Other',
+};
+
+const WORK_AREA_LABELS: Record<string, string> = {
+  tree_plantation: 'Tree plantation',
+  forest_restoration: 'Forest restoration',
+  urban_greening: 'Urban greening',
+  biodiversity: 'Biodiversity',
+  water_conservation: 'Water conservation',
+  waste_management: 'Waste management',
+  environmental_education: 'Environmental education',
+  rural_community_development: 'Rural/community development',
+  other: 'Other',
+};
+
+const ARTH_USAGE_LABELS: Record<string, string> = {
+  organise_plantation_drives: 'Organise plantation drives',
+  recruit_volunteers: 'Recruit volunteers',
+  source_saplings: 'Source saplings',
+  track_planted_trees: 'Track planted trees',
+  manage_corporate_school_programs: 'Manage corporate/school programs',
+  receive_donations: 'Receive donations',
+  showcase_projects: 'Showcase projects',
+  other: 'Other',
+};
+
+const PARTICIPANT_TYPE_LABELS: Record<string, string> = {
+  individuals: 'Individuals',
+  schools: 'Schools',
+  colleges: 'Colleges',
+  corporates: 'Corporates',
+  government: 'Government',
+  communities: 'Communities',
+  volunteers: 'Volunteers',
+  other_ngos: 'Other NGOs',
+};
+
+const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  registration_certificate: 'Registration certificate',
+  twelve_a_certificate: '12A/12AB certificate',
+  eighty_g_certificate: '80G certificate',
+  fcra_certificate: 'FCRA certificate',
+  csr1_certificate: 'CSR-1 certificate',
+  authorization_proof: 'Authorisation proof',
+};
+
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+  if (value === null || value === undefined || value === '') return null;
+  return (
+    <View style={styles.infoRow}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={styles.infoValue}>{value}</Text>
+    </View>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <Text style={styles.sectionLabel}>{children}</Text>;
+}
+
+function ChipRow({ values, labels }: { values?: string[] | null; labels: Record<string, string> }) {
+  if (!values || values.length === 0) return null;
+  return (
+    <View style={styles.chipRow}>
+      {values.map((v) => (
+        <View key={v} style={styles.chip}>
+          <Text style={styles.chipText}>{labels[v] || v}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function LinkListRow({ label, links }: { label: string; links?: string[] | null }) {
+  if (!links || links.length === 0) return null;
+  return (
+    <View style={styles.infoRow}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      {links.map((link, i) => (
+        <TouchableOpacity key={`${link}-${i}`} onPress={() => Linking.openURL(link)}>
+          <Text style={[styles.infoValue, styles.link]} numberOfLines={1}>
+            {link}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
 
 function statusColor(status: string) {
   switch (status) {
@@ -33,16 +127,27 @@ function statusColor(status: string) {
 export function AdminNgoApprovalDetailScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
   const initialNgo: ApiAdminNgo = route.params.ngo;
-  const [ngo, setNgo] = useState(initialNgo);
-  const { data: summary, isLoading: summaryLoading, refetch } = useAdminNgoSummary(ngo.id);
+  const [ngo, setNgo] = useState<ApiAdminNgo>(initialNgo);
+  const detailQuery = useAdminNgo(initialNgo.id);
+  const ngoDetail = detailQuery.data;
+  const { data: summary, isLoading: summaryLoading, refetch: refetchSummary } = useAdminNgoSummary(ngo.id);
   const setStatusMutation = useSetAdminNgoStatus();
-  const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const [reasonSheet, setReasonSheet] = useState<'rejected' | 'suspended' | null>(null);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const { period } = useTimeTheme();
   const isNightMode = isNightlikePeriod(period);
+  const { refreshing, onRefresh } = usePullToRefresh(async () => {
+    await Promise.all([detailQuery.refetch(), refetchSummary()]);
+  });
+
+  // Merge: the full detail fetch is the source of truth once it lands, but the list-row object
+  // passed via route params keeps the header/status usable while that request is in flight.
+  const d: ApiAdminNgo & Partial<Record<string, any>> = { ...ngo, ...(ngoDetail ?? {}) };
+  const documents: ApiAdminNgoDocument[] = d.documents ?? [];
+  const pastWorkPhotos = documents.filter((doc) => doc.docType === 'past_work_photo');
+  const certificates = documents.filter((doc) => doc.docType !== 'past_work_photo');
 
   const applyStatus = async (status: NgoApprovalStatus, rejectionReason?: string) => {
     setError(null);
@@ -87,44 +192,140 @@ export function AdminNgoApprovalDetailScreen({ navigation, route }: any) {
           <View style={[styles.statusChip, { borderColor: statusColor(ngo.status), alignSelf: 'flex-start' }]}>
             <Text style={[styles.statusChipText, { color: statusColor(ngo.status) }]}>{ngo.status}</Text>
           </View>
-          <Text style={styles.description}>{ngo.description}</Text>
+          <Text style={styles.description}>{d.description}</Text>
 
-          {ngo.owner && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Owner</Text>
-              <Text style={styles.infoValue}>{ngo.owner.name} · {ngo.owner.email}</Text>
-            </View>
-          )}
-          {ngo.website && (
-            <TouchableOpacity onPress={() => Linking.openURL(ngo.website as string)}>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Website</Text>
-                <Text style={[styles.infoValue, styles.link]} numberOfLines={1}>{ngo.website}</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-          {ngo.contactPhone && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Phone</Text>
-              <Text style={styles.infoValue}>{ngo.contactPhone}</Text>
-            </View>
-          )}
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Applied</Text>
-            <Text style={styles.infoValue}>{new Date(ngo.createdAt).toLocaleDateString()}</Text>
-          </View>
-          {ngo.rejectionReason && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Reason on file</Text>
-              <Text style={styles.infoValue}>{ngo.rejectionReason}</Text>
-            </View>
-          )}
+          <InfoRow label="Owner" value={d.owner ? `${d.owner.name} · ${d.owner.email}` : null} />
+          <InfoRow label="Applied" value={new Date(ngo.createdAt).toLocaleDateString()} />
+          <InfoRow label="Reason on file" value={d.rejectionReason} />
+
+          {detailQuery.isLoading && !ngoDetail && <Text style={styles.loadingText}>Loading full application…</Text>}
         </BorderCard>
+
+        {documents.length > 0 && (
+          <BorderCard style={styles.card}>
+            <SectionLabel>Documents</SectionLabel>
+            {pastWorkPhotos.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoStrip}>
+                {pastWorkPhotos.map((doc) => (
+                  <Image key={doc.id} source={{ uri: resolveMediaUrl(doc.fileUrl) }} style={styles.pastWorkPhoto} resizeMode="cover" />
+                ))}
+              </ScrollView>
+            )}
+            {certificates.map((doc) => (
+              <TouchableOpacity key={doc.id} onPress={() => Linking.openURL(resolveMediaUrl(doc.fileUrl) ?? doc.fileUrl)} style={styles.docRow}>
+                <Text style={styles.docIcon}>📄</Text>
+                <Text style={[styles.infoValue, styles.link]}>{DOCUMENT_TYPE_LABELS[doc.docType] || doc.docType} · View</Text>
+              </TouchableOpacity>
+            ))}
+          </BorderCard>
+        )}
+
+        <BorderCard style={styles.card}>
+          <SectionLabel>Organisation</SectionLabel>
+          <InfoRow label="Type" value={d.orgType ? ORG_TYPE_LABELS[d.orgType] || d.orgType : null} />
+          <InfoRow label="Year established" value={d.foundedYear} />
+          <InfoRow label="Website" value={d.website} />
+          <InfoRow label="Official email" value={d.officialEmail} />
+          <InfoRow label="Official phone" value={d.contactPhone ? `+91 ${d.contactPhone}` : null} />
+          {d.socialMediaLinks?.length > 0 && <LinkListRow label="Social media" links={d.socialMediaLinks} />}
+        </BorderCard>
+
+        {(d.line1 || d.city || d.operatingCities?.length > 0 || d.operatingStates?.length > 0) && (
+          <BorderCard style={styles.card}>
+            <SectionLabel>Address</SectionLabel>
+            <InfoRow label="Registered address" value={d.line1} />
+            <InfoRow label="City" value={d.city} />
+            <InfoRow label="Operating cities" value={d.operatingCities?.length ? d.operatingCities.join(', ') : null} />
+            <InfoRow label="Operating states" value={d.operatingStates?.length ? d.operatingStates.join(', ') : null} />
+          </BorderCard>
+        )}
+
+        {(d.registrationNumber || d.panNumber || d.ngoDarpanId || d.twelveARegistrationNumber || d.eightyGRegistrationNumber || d.fcraRegistrationNumber || d.csr1RegistrationNumber) && (
+          <BorderCard style={styles.card}>
+            <SectionLabel>Registration & legal</SectionLabel>
+            <InfoRow label="Registration number" value={d.registrationNumber} />
+            <InfoRow label="Registration authority" value={d.registrationAuthority} />
+            <InfoRow label="PAN" value={d.panNumber} />
+            <InfoRow label="NGO Darpan ID" value={d.ngoDarpanId} />
+            <InfoRow label="12A/12AB number" value={d.twelveARegistrationNumber} />
+            <InfoRow label="80G number" value={d.eightyGRegistrationNumber} />
+            <InfoRow label="FCRA number" value={d.fcraRegistrationNumber} />
+            <InfoRow label="CSR-1 number" value={d.csr1RegistrationNumber} />
+          </BorderCard>
+        )}
+
+        {(d.primaryContactName || d.officeBearers?.length > 0) && (
+          <BorderCard style={styles.card}>
+            <SectionLabel>People</SectionLabel>
+            <InfoRow label="Primary contact" value={d.primaryContactName} />
+            <InfoRow label="Designation" value={d.primaryContactDesignation} />
+            <InfoRow label="Phone" value={d.primaryContactPhone ? `+91 ${d.primaryContactPhone}` : null} />
+            <InfoRow label="Email" value={d.primaryContactEmail} />
+            {d.officeBearers?.map((bearer: any, i: number) => (
+              <InfoRow
+                key={i}
+                label={`Office bearer ${i + 1}`}
+                value={[bearer.name, bearer.designation, bearer.phone ? `+91 ${bearer.phone}` : null].filter(Boolean).join(' · ')}
+              />
+            ))}
+          </BorderCard>
+        )}
+
+        <BorderCard style={styles.card}>
+          <SectionLabel>What they do</SectionLabel>
+          <ChipRow values={d.primaryWorkAreas} labels={WORK_AREA_LABELS} />
+          <InfoRow label="Drives conducted (historical)" value={d.drivesConductedHistorical} />
+          <InfoRow label="Trees planted (historical)" value={d.treesPlantedHistorical} />
+          <InfoRow label="Active volunteers" value={d.volunteerCountEstimate} />
+          <InfoRow label="Major projects" value={d.majorProjectsDescription} />
+          <InfoRow label="Environmental work since" value={d.environmentalWorkSinceYear} />
+        </BorderCard>
+
+        {d.conductsPlantationDrives != null && (
+          <BorderCard style={styles.card}>
+            <SectionLabel>Plantation practices</SectionLabel>
+            <InfoRow label="Conducts plantation drives" value={d.conductsPlantationDrives ? 'Yes' : 'No'} />
+            <InfoRow label="Typical saplings per drive" value={d.typicalSaplingsPerDrive} />
+            <InfoRow label="Typical locations" value={d.typicalDriveLocations} />
+            <InfoRow label="Species commonly planted" value={d.speciesCommonlyPlanted} />
+            <InfoRow label="Sapling source" value={d.saplingSourceDescription} />
+            <InfoRow label="Monitors survival post-planting" value={d.monitorsSurvivalPostPlanting == null ? null : d.monitorsSurvivalPostPlanting ? 'Yes' : 'No'} />
+            <InfoRow label="Does post-plantation maintenance" value={d.doesPostPlantationMaintenance == null ? null : d.doesPostPlantationMaintenance ? 'Yes' : 'No'} />
+            <InfoRow label="Verification method" value={d.plantationVerificationMethod} />
+            <LinkListRow label="Previous project links" links={d.previousProjectLinks} />
+          </BorderCard>
+        )}
+
+        {(d.driveReportLinks?.length > 0 ||
+          d.mediaCoverageLinks?.length > 0 ||
+          d.projectPageLinks?.length > 0 ||
+          d.annualReportLinks?.length > 0 ||
+          d.impactReportLinks?.length > 0 ||
+          d.socialMediaPostLinks?.length > 0) && (
+          <BorderCard style={styles.card}>
+            <SectionLabel>Proof of previous work</SectionLabel>
+            <LinkListRow label="Drive reports" links={d.driveReportLinks} />
+            <LinkListRow label="Media coverage" links={d.mediaCoverageLinks} />
+            <LinkListRow label="Project pages" links={d.projectPageLinks} />
+            <LinkListRow label="Annual reports" links={d.annualReportLinks} />
+            <LinkListRow label="Impact reports" links={d.impactReportLinks} />
+            <LinkListRow label="Social media posts" links={d.socialMediaPostLinks} />
+          </BorderCard>
+        )}
+
+        {(d.arthUsageGoals?.length > 0 || d.participantTypes?.length > 0 || d.expectedDrivesPerYear) && (
+          <BorderCard style={styles.card}>
+            <SectionLabel>ARTH goals</SectionLabel>
+            <ChipRow values={d.arthUsageGoals} labels={ARTH_USAGE_LABELS} />
+            <InfoRow label="Expected drives/year via ARTH" value={d.expectedDrivesPerYear} />
+            <ChipRow values={d.participantTypes} labels={PARTICIPANT_TYPE_LABELS} />
+          </BorderCard>
+        )}
 
         <BorderCard style={styles.card}>
           <Text style={styles.cardTitle}>Activity</Text>
           {summaryLoading || !summary ? (
-            <ActivityIndicator color={COLORS.mint} style={{ marginTop: 12 }} />
+            <Text style={styles.loadingText}>Loading…</Text>
           ) : (
             <View style={styles.statsGrid}>
               <StatDisplay value={String(summary.drivesCount)} label="Drives" color={ON_DARK_SURFACE.primary} labelColor={ON_DARK_SURFACE.secondary} />
@@ -210,6 +411,15 @@ const styles = StyleSheet.create({
   infoLabel: { fontSize: 11, fontWeight: '700', color: ON_DARK_SURFACE.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
   infoValue: { fontSize: 14, color: ON_DARK_SURFACE.primary, marginTop: 2 },
   link: { color: COLORS.mint, textDecorationLine: 'underline' },
+  loadingText: { fontSize: 12, color: ON_DARK_SURFACE.muted, marginTop: 12, fontStyle: 'italic' },
+  sectionLabel: { fontSize: 11, fontWeight: '700', color: COLORS.sageLight, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
+  photoStrip: { marginBottom: 10 },
+  pastWorkPhoto: { width: 120, height: 120, borderRadius: RADIUS.md, marginRight: 8 },
+  docRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
+  docIcon: { fontSize: 16 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 },
+  chip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.full, backgroundColor: 'rgba(255,255,255,0.1)' },
+  chipText: { fontSize: 12, fontWeight: '600', color: ON_DARK_SURFACE.primary },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginTop: 12 },
   error: { fontSize: 13, color: COLORS.dangerLight, marginBottom: 12 },
   actions: { gap: 10, marginTop: 4 },

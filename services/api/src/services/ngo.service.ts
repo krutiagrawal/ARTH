@@ -1,7 +1,14 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient, NgoOrgType, Prisma } from '@plant/db';
 import { ForbiddenError, NotFoundError } from '../utils/errors';
 
 const RECENT_ACTIVITY_LIMIT = 10;
+
+interface OfficeBearerInput {
+  name: string;
+  designation?: string;
+  phone?: string;
+  email?: string;
+}
 
 interface UpdateProfileInput {
   orgName?: string;
@@ -13,6 +20,56 @@ interface UpdateProfileInput {
   foundedYear?: number;
   volunteerCountEstimate?: number;
   awards?: { title: string; year?: number; issuer?: string }[];
+  followPolicy?: 'open' | 'approval';
+
+  orgType?: NgoOrgType;
+  line1?: string;
+  operatingCities?: string[];
+  operatingStates?: string[];
+  officialEmail?: string;
+  socialMediaLinks?: string[];
+
+  registrationNumber?: string;
+  registrationAuthority?: string;
+  panNumber?: string;
+  ngoDarpanId?: string;
+  twelveARegistrationNumber?: string;
+  eightyGRegistrationNumber?: string;
+  fcraRegistrationNumber?: string;
+  csr1RegistrationNumber?: string;
+
+  primaryContactName?: string;
+  primaryContactDesignation?: string;
+  primaryContactPhone?: string;
+  primaryContactEmail?: string;
+  officeBearers?: OfficeBearerInput[];
+
+  primaryWorkAreas?: string[];
+  drivesConductedHistorical?: number;
+  treesPlantedHistorical?: number;
+  majorProjectsDescription?: string;
+  environmentalWorkSinceYear?: number;
+
+  conductsPlantationDrives?: boolean;
+  typicalSaplingsPerDrive?: string;
+  typicalDriveLocations?: string;
+  speciesCommonlyPlanted?: string;
+  saplingSourceDescription?: string;
+  monitorsSurvivalPostPlanting?: boolean;
+  doesPostPlantationMaintenance?: boolean;
+  plantationVerificationMethod?: string;
+  previousProjectLinks?: string[];
+
+  driveReportLinks?: string[];
+  mediaCoverageLinks?: string[];
+  projectPageLinks?: string[];
+  annualReportLinks?: string[];
+  impactReportLinks?: string[];
+  socialMediaPostLinks?: string[];
+
+  arthUsageGoals?: string[];
+  expectedDrivesPerYear?: number;
+  participantTypes?: string[];
 }
 
 interface DonationsFilter {
@@ -34,7 +91,7 @@ export async function updateOwnProfile(prisma: PrismaClient, userId: string, inp
   const profile = await prisma.ngoProfile.findUnique({ where: { userId } });
   if (!profile) throw new NotFoundError('NGO profile not found');
 
-  return prisma.ngoProfile.update({ where: { id: profile.id }, data: input });
+  return prisma.ngoProfile.update({ where: { id: profile.id }, data: input as Prisma.NgoProfileUpdateInput });
 }
 
 // A rejected NGO can edit their details (via updateOwnProfile above, which has

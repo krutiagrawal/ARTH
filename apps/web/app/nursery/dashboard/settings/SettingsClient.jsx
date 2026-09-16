@@ -10,6 +10,7 @@ import PhotoUploadField from '@/components/dashboard/PhotoUploadField'
 import CitySelect from '@/components/dashboard/CitySelect'
 import PhoneInput from '@/components/dashboard/PhoneInput'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
+import NurseryProfileFields, { extendedProfileDefaults, extendedProfilePayload } from '@/components/dashboard/NurseryProfileFields'
 import { useNurseryProfile } from '../NurseryProfileContext'
 import { proxy } from '../proxy'
 import { usePhoneField } from '@/lib/usePhoneField'
@@ -21,10 +22,12 @@ export default function SettingsClient() {
   const [coverFile, setCoverFile] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [phoneTouched, setPhoneTouched] = useState(false)
+  const [responsiblePhoneTouched, setResponsiblePhoneTouched] = useState(false)
 
   // Format validation only, no real-time duplicate check — this edits NurseryProfile.contactPhone
   // (a business contact number), not the User.phone identity field.
   const phoneField = usePhoneField(form?.contactPhone ?? '', phoneTouched, { checkAvailability: false })
+  const responsiblePhoneField = usePhoneField(form?.responsiblePersonPhone ?? '', responsiblePhoneTouched, { checkAvailability: false })
 
   useEffect(() => {
     if (profile) {
@@ -34,6 +37,7 @@ export default function SettingsClient() {
         city: profile.city || 'Pune',
         contactPhone: profile.contactPhone || '',
         followPolicy: profile.followPolicy || 'open',
+        ...extendedProfileDefaults(profile),
       })
     }
   }, [profile])
@@ -43,8 +47,13 @@ export default function SettingsClient() {
   const submit = async (e) => {
     e.preventDefault()
     setPhoneTouched(true)
+    setResponsiblePhoneTouched(true)
     if (!phoneField.isOk) {
       toast.error(phoneField.error || 'Enter a valid phone number.')
+      return
+    }
+    if (!responsiblePhoneField.isOk) {
+      toast.error(responsiblePhoneField.error || 'Enter a valid phone number for the responsible person.')
       return
     }
     setSubmitting(true)
@@ -55,13 +64,15 @@ export default function SettingsClient() {
         city: form.city || undefined,
         contactPhone: form.contactPhone || undefined,
         followPolicy: form.followPolicy,
+        ...extendedProfilePayload(form),
       }
 
       let updated
       if (logoFile || coverFile) {
         const body = new FormData()
         Object.entries(payload).forEach(([k, v]) => {
-          if (v !== undefined) body.append(k, v)
+          if (v === undefined) return
+          body.append(k, typeof v === 'object' ? JSON.stringify(v) : v)
         })
         if (logoFile) body.append('logo', logoFile)
         if (coverFile) body.append('coverPhoto', coverFile)
@@ -149,7 +160,20 @@ export default function SettingsClient() {
           </div>
         </div>
 
-        <Button disabled={submitting || (form.contactPhone && !phoneField.isOk)} type="submit" className="rounded-full h-11">
+        <div className="pt-2 border-t border-border/70">
+          <NurseryProfileFields
+            form={form}
+            setForm={setForm}
+            responsiblePhoneError={responsiblePhoneField.error}
+            onResponsiblePhoneBlur={() => setResponsiblePhoneTouched(true)}
+          />
+        </div>
+
+        <Button
+          disabled={submitting || (form.contactPhone && !phoneField.isOk) || (form.responsiblePersonPhone && !responsiblePhoneField.isOk)}
+          type="submit"
+          className="rounded-full h-11"
+        >
           {submitting ? 'Saving…' : 'Save changes'}
         </Button>
       </form>

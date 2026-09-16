@@ -39,6 +39,92 @@ export const resetPasswordSchema = z.object({
   password: z.string().min(8).max(72),
 });
 
+// Multipart form fields arrive as strings even when the value is logically an array/object
+// (officeBearers, and every link-array field below) — JSON-encoded client-side. A JSON body
+// already sends real arrays, so this passes those through untouched and only parses when the
+// value is a string. Mirrors ngo.schema.ts's/nursery.schema.ts's jsonValue.
+function jsonValue<T extends z.ZodTypeAny>(schema: T) {
+  return z.preprocess((value) => {
+    if (typeof value !== 'string') return value;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }, schema);
+}
+
+// Enum-value multi-selects (city/state names, work areas, ARTH usage goals, participant types) —
+// arrive as a comma-joined string over multipart (safe: none of these values can themselves
+// contain a comma, unlike the URL fields below which use jsonValue instead) or as a real array
+// over a plain JSON body (e.g. the profile-update route, which isn't always multipart).
+export function commaList(max = 20) {
+  return z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((v) => {
+      if (v === undefined) return undefined;
+      const arr = Array.isArray(v) ? v : v.split(',');
+      return arr.map((c) => c.trim()).filter(Boolean).slice(0, max);
+    });
+}
+
+export const boolFromString = z
+  .union([z.boolean(), z.string()])
+  .optional()
+  .transform((v) => (v === undefined ? undefined : v === true || v === 'true'));
+
+// Kept in sync with the NgoOrgType/etc. enums and TS const arrays in packages/db/prisma/schema.prisma.
+export const NGO_ORG_TYPES = ['trust', 'society', 'section8_company', 'registered_nonprofit', 'other'] as const;
+
+export const NGO_WORK_AREAS = [
+  'tree_plantation',
+  'forest_restoration',
+  'urban_greening',
+  'biodiversity',
+  'water_conservation',
+  'waste_management',
+  'environmental_education',
+  'rural_community_development',
+  'other',
+] as const;
+
+export const NGO_ARTH_USAGE_GOALS = [
+  'organise_plantation_drives',
+  'recruit_volunteers',
+  'source_saplings',
+  'track_planted_trees',
+  'manage_corporate_school_programs',
+  'receive_donations',
+  'showcase_projects',
+  'other',
+] as const;
+
+export const NGO_PARTICIPANT_TYPES = [
+  'individuals',
+  'schools',
+  'colleges',
+  'corporates',
+  'government',
+  'communities',
+  'volunteers',
+  'other_ngos',
+] as const;
+
+export const officeBearerSchema = z.object({
+  name: z.string().min(1).max(120),
+  designation: z.string().max(80).optional(),
+  phone: phoneSchema.optional(),
+  email: z.string().email().optional(),
+});
+
+// A shared shape for every "list of links" field in sections 5-6 (previous projects, drive
+// reports, media coverage, project pages, annual/impact reports, social posts) — all optional,
+// all URLs, all sent as JSON-in-a-string over multipart since URLs can legally contain commas.
+export function linkListSchema(max = 20) {
+  return jsonValue(z.array(websiteUrlSchema).max(max)).optional();
+}
+
 export const registerNgoSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(72),
@@ -48,10 +134,73 @@ export const registerNgoSchema = z.object({
     .min(3)
     .max(30)
     .regex(/^[a-z0-9_]+$/, 'Handle may only contain lowercase letters, numbers, and underscores'),
+
+  // Organisation details — orgName/description are the only two fields required at this layer
+  // (mirrors registerNurserySchema); everything else is required in the mobile/web wizard's own
+  // step validation but kept optional here so the schema never blocks a partially-filled client.
   orgName: z.string().min(1).max(120),
   description: z.string().min(1).max(2000),
+  orgType: z.enum(NGO_ORG_TYPES).optional(),
+  foundedYear: z.coerce.number().int().min(1800).max(2100).optional(),
+  line1: z.string().max(300).optional(),
+  city: z.string().max(120).optional(),
+  operatingCities: commaList(),
+  operatingStates: commaList(),
   website: websiteUrlSchema.optional(),
+  officialEmail: z.string().email().optional(),
   contactPhone: phoneSchema.optional(),
+  socialMediaLinks: linkListSchema(),
+
+  // Registration & legal — none of these are mandatory; a legitimate NGO may not hold every
+  // registration yet.
+  registrationNumber: z.string().max(80).optional(),
+  registrationAuthority: z.string().max(120).optional(),
+  panNumber: z.string().max(20).optional(),
+  ngoDarpanId: z.string().max(40).optional(),
+  twelveARegistrationNumber: z.string().max(60).optional(),
+  eightyGRegistrationNumber: z.string().max(60).optional(),
+  fcraRegistrationNumber: z.string().max(60).optional(),
+  csr1RegistrationNumber: z.string().max(60).optional(),
+
+  // People behind the organisation
+  primaryContactName: z.string().max(120).optional(),
+  primaryContactDesignation: z.string().max(80).optional(),
+  primaryContactPhone: phoneSchema.optional(),
+  primaryContactEmail: z.string().email().optional(),
+  officeBearers: jsonValue(z.array(officeBearerSchema).max(3)).optional(),
+
+  // What the NGO does
+  primaryWorkAreas: commaList(),
+  drivesConductedHistorical: z.coerce.number().int().min(0).max(1_000_000).optional(),
+  treesPlantedHistorical: z.coerce.number().int().min(0).max(100_000_000).optional(),
+  volunteerCountEstimate: z.coerce.number().int().min(0).max(1_000_000).optional(),
+  majorProjectsDescription: z.string().max(2000).optional(),
+  environmentalWorkSinceYear: z.coerce.number().int().min(1800).max(2100).optional(),
+
+  // Plantation-specific
+  conductsPlantationDrives: boolFromString,
+  typicalSaplingsPerDrive: z.string().max(60).optional(),
+  typicalDriveLocations: z.string().max(300).optional(),
+  speciesCommonlyPlanted: z.string().max(300).optional(),
+  saplingSourceDescription: z.string().max(500).optional(),
+  monitorsSurvivalPostPlanting: boolFromString,
+  doesPostPlantationMaintenance: boolFromString,
+  plantationVerificationMethod: z.string().max(500).optional(),
+  previousProjectLinks: linkListSchema(),
+
+  // Proof of previous work — links only; past-work photos travel as multipart files, not JSON.
+  driveReportLinks: linkListSchema(),
+  mediaCoverageLinks: linkListSchema(),
+  projectPageLinks: linkListSchema(),
+  annualReportLinks: linkListSchema(),
+  impactReportLinks: linkListSchema(),
+  socialMediaPostLinks: linkListSchema(),
+
+  // ARTH-specific
+  arthUsageGoals: commaList(),
+  expectedDrivesPerYear: z.coerce.number().int().min(0).max(10_000).optional(),
+  participantTypes: commaList(),
+
   deviceInfo: z.string().max(200).optional(),
 });
 
@@ -80,11 +229,6 @@ export const NURSERY_TYPES = [
   'landscaping',
   'other',
 ] as const;
-
-const boolFromString = z
-  .union([z.boolean(), z.string()])
-  .optional()
-  .transform((v) => (v === undefined ? undefined : v === true || v === 'true'));
 
 export const registerNurserySchema = z.object({
   email: z.string().email(),

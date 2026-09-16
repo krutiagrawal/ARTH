@@ -5,6 +5,7 @@ import { env } from '../config/env';
 import { BadRequestError } from '../utils/errors';
 
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic']);
+const ALLOWED_DOCUMENT_MIME_TYPES = new Set([...ALLOWED_MIME_TYPES, 'application/pdf']);
 
 interface PhotoInput {
   filename: string;
@@ -12,11 +13,7 @@ interface PhotoInput {
   buffer: Buffer;
 }
 
-async function saveImage(photo: PhotoInput, subdir: string): Promise<string> {
-  if (!ALLOWED_MIME_TYPES.has(photo.mimetype)) {
-    throw new BadRequestError('Unsupported image type. Please upload a JPEG, PNG, WEBP, or HEIC file.');
-  }
-
+async function writeUpload(photo: PhotoInput, subdir: string): Promise<string> {
   const extension = path.extname(photo.filename) || '.jpg';
   const filename = `${randomUUID()}${extension}`;
   const dir = path.resolve(process.cwd(), env.UPLOAD_DIR, subdir);
@@ -26,6 +23,23 @@ async function saveImage(photo: PhotoInput, subdir: string): Promise<string> {
   await fs.promises.writeFile(destination, photo.buffer);
 
   return `/uploads/${subdir}/${filename}`;
+}
+
+async function saveImage(photo: PhotoInput, subdir: string): Promise<string> {
+  if (!ALLOWED_MIME_TYPES.has(photo.mimetype)) {
+    throw new BadRequestError('Unsupported image type. Please upload a JPEG, PNG, WEBP, or HEIC file.');
+  }
+  return writeUpload(photo, subdir);
+}
+
+// Registration/tax certificates are commonly scanned as PDFs, unlike every other upload in the
+// app (logos, cover photos, verification photos) which is always a photo — this is the one place
+// that also accepts application/pdf alongside the standard image types.
+async function saveDocument(photo: PhotoInput, subdir: string): Promise<string> {
+  if (!ALLOWED_DOCUMENT_MIME_TYPES.has(photo.mimetype)) {
+    throw new BadRequestError('Unsupported file type. Please upload a JPEG, PNG, WEBP, HEIC, or PDF file.');
+  }
+  return writeUpload(photo, subdir);
 }
 
 export function saveTreePhoto(photo: PhotoInput): Promise<string> {
@@ -98,4 +112,12 @@ export function saveHealthCheckPhoto(photo: PhotoInput): Promise<string> {
 
 export function savePlantedTreePhoto(photo: PhotoInput): Promise<string> {
   return saveImage(photo, 'planted-trees');
+}
+
+export function saveNgoVerificationDocument(photo: PhotoInput): Promise<string> {
+  return saveDocument(photo, 'ngo-verification-docs');
+}
+
+export function saveNgoPastWorkPhoto(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'ngo-past-work');
 }
