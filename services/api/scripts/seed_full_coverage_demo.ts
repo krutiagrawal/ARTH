@@ -497,7 +497,9 @@ async function main() {
     for (let w = 0; w < 2; w++) {
       const weekStart = new Date(daysAgo(ni + w * 7));
       weekStart.setHours(0, 0, 0, 0);
-      await prisma.ngoStreakHistory.create({ data: { ngoId: ngo.id, weekStart, posted: w === 0 } }).catch(() => undefined);
+      await prisma.ngoContributionStreak
+        .create({ data: { ngoId: ngo.id, streakType: 'updates', periodStart: weekStart, metCriteria: w === 0 } })
+        .catch(() => undefined);
     }
     const achievement = pick(ngoAchievements, ni);
     await prisma.ngoAchievementUnlock

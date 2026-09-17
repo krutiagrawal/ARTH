@@ -6,7 +6,7 @@ import { saveNgoLogo } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
 import { BadRequestError } from '../utils/errors';
 import { updateProfileSchema, donationsQuerySchema } from '../schemas/ngo.schema';
-import { startOfIsoWeekUtc, addWeeks } from '../services/ngoStreak.service';
+import { getContributionStreakSummary, getReputationSummary } from '../services/ngoReputation.service';
 
 interface NgoLeaderboardRow {
   id: string;
@@ -216,24 +216,14 @@ export default async function ngoRoutes(fastify: FastifyInstance) {
     const ngo = await requireNgoProfile(fastify.prisma, request.user!.id);
     const weeksCount = Math.min(Math.max(Number(request.query.weeks) || 12, 1), 26);
 
-    const thisWeek = startOfIsoWeekUtc(new Date());
-    const startWeek = addWeeks(thisWeek, -(weeksCount - 1));
+    const { updates } = await getContributionStreakSummary(fastify.prisma, ngo.id, weeksCount);
+    reply.send({ weeks: updates.weeks.map((w) => ({ weekLabel: w.week, posted: w.met })) });
+  });
 
-    const rows = await fastify.prisma.ngoStreakHistory.findMany({
-      where: { ngoId: ngo.id, weekStart: { gte: startWeek } },
-    });
-    const postedWeeks = new Set(rows.filter((r) => r.posted).map((r) => r.weekStart.toISOString().slice(0, 10)));
-
-    const weeks = [];
-    for (let w = 0; w < weeksCount; w++) {
-      const weekStart = addWeeks(startWeek, w);
-      weeks.push({
-        weekLabel: `Week ${w + 1}`,
-        posted: postedWeeks.has(weekStart.toISOString().slice(0, 10)),
-      });
-    }
-
-    reply.send({ weeks });
+  fastify.get<{ Querystring: { weeks?: string } }>('/reputation', async (request, reply) => {
+    const ngo = await requireNgoProfile(fastify.prisma, request.user!.id);
+    const weeksCount = Math.min(Math.max(Number(request.query.weeks) || 12, 1), 26);
+    reply.send(await getReputationSummary(fastify.prisma, ngo.id, weeksCount));
   });
 
   fastify.get<{ Querystring: { limit?: string } }>('/leaderboard', async (request, reply) => {

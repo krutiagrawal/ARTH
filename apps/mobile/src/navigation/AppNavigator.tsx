@@ -94,6 +94,9 @@ import { NgoDonationsScreen } from '../screens/NgoDonationsScreen';
 import { NgoVolunteersScreen } from '../screens/NgoVolunteersScreen';
 import { NgoLogPlantedTreesScreen } from '../screens/NgoLogPlantedTreesScreen';
 import { NgoHealthCheckScreen } from '../screens/NgoHealthCheckScreen';
+import { NgoFollowersScreen } from '../screens/NgoFollowersScreen';
+import { NgoFollowerRequestsScreen } from '../screens/NgoFollowerRequestsScreen';
+import { NgoStreakBadgesScreen } from '../screens/NgoStreakBadgesScreen';
 import { PostComposerScreen } from '../screens/PostComposerScreen';
 import { NgoCommunityScreen } from '../screens/NgoCommunityScreen';
 import { NgoPortfolioScreen } from '../screens/NgoPortfolioScreen';
@@ -406,6 +409,9 @@ export type RootStackParamList = {
   NgoVolunteers: undefined;
   NgoLogPlantedTrees: undefined;
   NgoHealthCheck: undefined;
+  NgoFollowers: undefined;
+  NgoFollowerRequests: undefined;
+  NgoStreakBadges: undefined;
   NgoPostUpdate: undefined;
   NgoCommunity: undefined;
   Map: undefined;
@@ -879,6 +885,9 @@ export function AppNavigator() {
         <Stack.Screen name="NgoVolunteers" component={NgoVolunteersScreen} />
         <Stack.Screen name="NgoLogPlantedTrees" component={NgoLogPlantedTreesScreen} />
         <Stack.Screen name="NgoHealthCheck" component={NgoHealthCheckScreen} />
+        <Stack.Screen name="NgoFollowers" component={NgoFollowersScreen} />
+        <Stack.Screen name="NgoFollowerRequests" component={NgoFollowerRequestsScreen} />
+        <Stack.Screen name="NgoStreakBadges" component={NgoStreakBadgesScreen} />
         <Stack.Screen name="NgoPostUpdate" component={PostComposerScreen} />
         <Stack.Screen name="NgoCommunity" component={NgoCommunityScreen} />
         <Stack.Screen name="Map" component={NgoMapScreen} />

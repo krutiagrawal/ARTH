@@ -100,6 +100,19 @@ function describe(n: ApiNotification): string {
       return 'A tree you supplied hit a growth milestone 🌳';
     case 'nursery_impact_milestone':
       return 'You hit an impact milestone 🏆';
+    // ---- NGO-flow (NGO-received) ----
+    case 'ngo_donation_received':
+      return `donated ₹${(((n.data as any)?.amountCents ?? 0) / 100).toLocaleString('en-IN')} to your campaign`;
+    case 'ngo_drive_rsvp':
+      return "RSVP'd to your drive";
+    case 'ngo_tree_adopted':
+      return 'adopted a tree from you';
+    case 'ngo_streak_at_risk':
+      return 'Your Updates Streak needs you this week 🔥';
+    case 'ngo_streak_broken':
+      return 'Your Updates Streak broke – start a new one 💔';
+    case 'ngo_impact_milestone':
+      return 'You hit a Growth Level milestone 🏆';
     default:
       return 'sent you an update';
   }
@@ -172,6 +185,18 @@ function iconFor(n: ApiNotification): string {
       return '🌳';
     case 'nursery_impact_milestone':
       return '🏆';
+    case 'ngo_donation_received':
+      return '💸';
+    case 'ngo_drive_rsvp':
+      return '🤝';
+    case 'ngo_tree_adopted':
+      return '🌳';
+    case 'ngo_streak_at_risk':
+      return '🔥';
+    case 'ngo_streak_broken':
+      return '💔';
+    case 'ngo_impact_milestone':
+      return '🏆';
     default:
       return '🛡️';
   }
@@ -222,7 +247,10 @@ function NotificationRow({
     notification.type === 'nursery_tree_milestone' ||
     notification.type === 'nursery_impact_milestone' ||
     notification.type === 'order_fulfillment_today' ||
-    notification.type === 'bulk_requirement_response_received';
+    notification.type === 'bulk_requirement_response_received' ||
+    notification.type === 'ngo_streak_at_risk' ||
+    notification.type === 'ngo_streak_broken' ||
+    notification.type === 'ngo_impact_milestone';
 
   return (
     <TouchableOpacity
@@ -315,7 +343,7 @@ export function NotificationsScreen({ navigation }: any) {
         return;
       }
       if (n.type === 'follow_request') {
-        navigation.navigate(isNursery ? 'NurseryFollowers' : 'NgoMain');
+        navigation.navigate(isNursery ? 'NurseryFollowers' : 'NgoFollowerRequests');
         return;
       }
       if (n.type === 'friend_request') {
@@ -354,6 +382,19 @@ export function NotificationsScreen({ navigation }: any) {
         n.type === 'nursery_impact_milestone'
       ) {
         navigation.navigate('NurseryImpact');
+        return;
+      }
+      if (n.type === 'ngo_donation_received') {
+        navigation.navigate('NgoDonations');
+        return;
+      }
+      if (n.type === 'ngo_drive_rsvp') {
+        const driveId = (n.data as any)?.driveId;
+        if (driveId) navigation.navigate('DriveDetail', { driveId });
+        return;
+      }
+      if (n.type === 'ngo_streak_at_risk' || n.type === 'ngo_streak_broken' || n.type === 'ngo_impact_milestone') {
+        navigation.navigate('NgoStreakBadges');
         return;
       }
       if (ORDER_NOTIFICATION_TYPES.has(n.type)) {

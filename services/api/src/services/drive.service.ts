@@ -5,6 +5,7 @@ import { geocodeAddress } from '../utils/geocode';
 import { haversineDistanceKm } from '../utils/geo';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
 import { notify } from './notification.service';
+import { recordNgoContribution, recomputeReputation } from './ngoReputation.service';
 
 interface PickupPointInput {
   address: string;
@@ -91,22 +92,29 @@ export async function createDrive(prisma: PrismaClient, ngoUserId: string, input
   const { pickupPoints, plants, address, city, ...rest } = input;
   const geo = await geocodeAddress(`${address}, ${city}`);
 
-  return prisma.drive.create({
-    data: {
-      ngoId: ngo.id,
-      address,
-      city,
-      ...rest,
-      lat: geo?.lat,
-      lng: geo?.lng,
-      pickupPoints: pickupPoints?.length
-        ? { create: pickupPoints.map((p, i) => ({ address: p.address, arrivalBy: p.arrivalBy, order: p.order ?? i })) }
-        : undefined,
-      plants: plants?.length
-        ? { create: plants.map((p, i) => ({ speciesName: p.speciesName, priceCents: p.priceCents, order: i })) }
-        : undefined,
-    },
-    include: driveInclude,
+  return prisma.$transaction(async (tx) => {
+    const drive = await tx.drive.create({
+      data: {
+        ngoId: ngo.id,
+        address,
+        city,
+        ...rest,
+        lat: geo?.lat,
+        lng: geo?.lng,
+        pickupPoints: pickupPoints?.length
+          ? { create: pickupPoints.map((p, i) => ({ address: p.address, arrivalBy: p.arrivalBy, order: p.order ?? i })) }
+          : undefined,
+        plants: plants?.length
+          ? { create: plants.map((p, i) => ({ speciesName: p.speciesName, priceCents: p.priceCents, order: i })) }
+          : undefined,
+      },
+      include: driveInclude,
+    });
+
+    await recordNgoContribution(tx, ngo.id, ['drive_activity']);
+    await recomputeReputation(tx, ngo.id);
+
+    return drive;
   });
 }
 
@@ -218,10 +226,18 @@ export async function setDriveFeatured(
 export async function completeDrive(prisma: PrismaClient, ngoUserId: string, driveId: string) {
   const drive = await findOwnedDriveOrThrow(prisma, ngoUserId, driveId);
   if (drive.status !== 'upcoming') throw new ConflictError('Only an upcoming drive can be marked completed');
-  return prisma.drive.update({
-    where: { id: drive.id },
-    data: { status: 'completed' as DriveStatus },
-    include: driveInclude,
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.drive.update({
+      where: { id: drive.id },
+      data: { status: 'completed' as DriveStatus },
+      include: driveInclude,
+    });
+
+    await recordNgoContribution(tx, drive.ngoId, ['drive_activity']);
+    await recomputeReputation(tx, drive.ngoId);
+
+    return updated;
   });
 }
 
@@ -324,7 +340,14 @@ export async function listDriveAttendees(prisma: PrismaClient, ngoUserId: string
       orderBy: { createdAt: 'desc' },
       take,
       skip: (page - 1) * take,
-      select: { id: true, createdAt: true, user: { select: { name: true, handle: true } } },
+      select: {
+        id: true,
+        createdAt: true,
+        attended: true,
+        hoursLogged: true,
+        role: true,
+        user: { select: { name: true, handle: true } },
+      },
     }),
     prisma.driveRsvp.count({ where: { driveId: drive.id, status: 'confirmed' } }),
   ]);
@@ -332,9 +355,48 @@ export async function listDriveAttendees(prisma: PrismaClient, ngoUserId: string
   return { attendees: rsvps, total };
 }
 
-export async function rsvp(prisma: PrismaClient, userId: string, driveId: string) {
+/**
+ * Mark whether an RSVP'd user actually showed up, and optionally log their hours/role. Only
+ * meaningful once the drive itself is `completed` — attendance for an upcoming drive isn't a real
+ * fact yet.
+ */
+export async function setRsvpAttendance(
+  prisma: PrismaClient,
+  ngoUserId: string,
+  driveId: string,
+  rsvpId: string,
+  input: { attended?: boolean; hoursLogged?: number | null; role?: string | null },
+) {
+  const drive = await findOwnedDriveReadOnly(prisma, ngoUserId, driveId);
+  if (drive.status !== 'completed') throw new ConflictError('Attendance can only be recorded on a completed drive');
+
+  const rsvp = await prisma.driveRsvp.findFirst({ where: { id: rsvpId, driveId: drive.id } });
+  if (!rsvp) throw new NotFoundError('RSVP not found');
+
   return prisma.$transaction(async (tx) => {
-    const drive = await tx.drive.findUnique({ where: { id: driveId } });
+    const updated = await tx.driveRsvp.update({
+      where: { id: rsvp.id },
+      data: {
+        ...(input.attended !== undefined ? { attended: input.attended } : {}),
+        ...(input.hoursLogged !== undefined ? { hoursLogged: input.hoursLogged } : {}),
+        ...(input.role !== undefined ? { role: input.role } : {}),
+      },
+      select: { id: true, attended: true, hoursLogged: true, role: true },
+    });
+
+    // Recording who actually showed up is itself a real-world verification action.
+    if (input.attended) {
+      await recordNgoContribution(tx, drive.ngoId, ['impact_verification']);
+      await recomputeReputation(tx, drive.ngoId);
+    }
+
+    return updated;
+  });
+}
+
+export async function rsvp(prisma: PrismaClient, userId: string, driveId: string) {
+  const result = await prisma.$transaction(async (tx) => {
+    const drive = await tx.drive.findUnique({ where: { id: driveId }, include: { ngo: { select: { userId: true, orgName: true } } } });
     if (!drive || drive.status !== 'upcoming') throw new NotFoundError('Drive not found');
 
     const existing = await tx.driveRsvp.findUnique({ where: { driveId_userId: { driveId, userId } } });
@@ -345,11 +407,23 @@ export async function rsvp(prisma: PrismaClient, userId: string, driveId: string
       if (confirmedCount >= drive.capacity) throw new ConflictError('This drive is full');
     }
 
-    if (existing) {
-      return tx.driveRsvp.update({ where: { id: existing.id }, data: { status: 'confirmed' } });
-    }
-    return tx.driveRsvp.create({ data: { driveId, userId, status: 'confirmed' } });
+    const rsvpRow = existing
+      ? await tx.driveRsvp.update({ where: { id: existing.id }, data: { status: 'confirmed' } })
+      : await tx.driveRsvp.create({ data: { driveId, userId, status: 'confirmed' } });
+
+    return { rsvpRow, drive };
   });
+
+  const planter = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+  await notify(prisma, {
+    userId: result.drive.ngo.userId,
+    type: 'ngo_drive_rsvp',
+    actorUserId: userId,
+    data: { driveId, driveTitle: result.drive.title },
+    push: { title: result.drive.ngo.orgName, body: `${planter?.name ?? 'Someone'} RSVP'd to "${result.drive.title}"` },
+  });
+
+  return result.rsvpRow;
 }
 
 export async function cancelRsvp(prisma: PrismaClient, userId: string, driveId: string) {

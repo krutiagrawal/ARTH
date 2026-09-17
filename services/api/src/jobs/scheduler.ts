@@ -5,6 +5,8 @@ import { runCartAbandonedJob } from './cartAbandoned.job';
 import { runNurseryFulfillmentTodayJob } from './nurseryFulfillmentToday.job';
 import { runTreeMilestonesJob } from './treeMilestones.job';
 import { runNurseryReputationJob } from './nurseryReputation.job';
+import { runNgoReputationJob } from './ngoReputation.job';
+import { runNgoStreakAtRiskJob, runNgoStreakBrokenJob } from './ngoStreakReminders.job';
 
 const TICK_INTERVAL_MS = 15 * 60 * 1000;
 const INITIAL_DELAY_MS = 10 * 1000;
@@ -32,6 +34,9 @@ export function startScheduler(app: FastifyInstance): void {
       await runNurseryFulfillmentTodayJob(app.prisma);
       await runTreeMilestonesJob(app.prisma);
       await runNurseryReputationJob(app.prisma);
+      await runNgoReputationJob(app.prisma);
+      await runNgoStreakAtRiskJob(app.prisma);
+      await runNgoStreakBrokenJob(app.prisma);
     } catch (error) {
       app.log.warn({ error }, '[scheduler] tick failed');
     } finally {

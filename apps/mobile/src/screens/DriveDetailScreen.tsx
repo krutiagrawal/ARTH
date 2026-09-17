@@ -13,7 +13,7 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { LocationActions } from '../components/common/LocationActions';
 import { useHaptics } from '../hooks/useHaptics';
 import { useAuth } from '../context/AuthContext';
-import { useDrive, useDriveAttendees, useJoinDrive, useLeaveDrive, useNgoProfile, useSponsorPlant } from '../hooks/useApiQueries';
+import { useDrive, useDriveAttendees, useJoinDrive, useLeaveDrive, useNgoProfile, useSponsorPlant, useSetDriveRsvpAttendance } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import type { ApiDrivePlant } from '../api/drives';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -31,6 +31,7 @@ export function DriveDetailScreen({ navigation, route }: any) {
   const ngoProfile = useNgoProfile();
   const isOwnDrive = user?.role === 'ngo' && !!drive && ngoProfile.data?.id === drive.ngoId;
   const attendeesQuery = useDriveAttendees(driveId, isOwnDrive);
+  const attendanceMutation = useSetDriveRsvpAttendance(driveId);
   const joinMutation = useJoinDrive();
   const leaveMutation = useLeaveDrive();
   const sponsorMutation = useSponsorPlant();
@@ -192,6 +193,9 @@ export function DriveDetailScreen({ navigation, route }: any) {
           {isOwnDrive ? (
             <>
               <Text style={styles.sectionLabel}>Who's coming ({drive.confirmedCount})</Text>
+              {drive.status === 'completed' && (attendeesQuery.data?.attendees.length ?? 0) > 0 && (
+                <Text style={styles.infoText}>Tap to check off who actually showed up.</Text>
+              )}
               {attendeesQuery.isLoading ? (
                 <ActivityIndicator color={COLORS.sage} style={{ marginVertical: 12 }} />
               ) : (attendeesQuery.data?.attendees.length ?? 0) === 0 ? (
@@ -199,9 +203,22 @@ export function DriveDetailScreen({ navigation, route }: any) {
               ) : (
                 attendeesQuery.data!.attendees.map((a) => (
                   <View key={a.id} style={styles.attendeeRow}>
-                    <View>
-                      <Text style={styles.attendeeName}>{a.name}</Text>
-                      <Text style={styles.attendeeHandle}>@{a.handle}</Text>
+                    <View style={styles.attendeeLeft}>
+                      {drive.status === 'completed' && (
+                        <TouchableOpacity
+                          style={[styles.attendeeCheckbox, a.attended && styles.attendeeCheckboxChecked]}
+                          onPress={() => attendanceMutation.mutate({ rsvpId: a.id, attended: !a.attended })}
+                          disabled={attendanceMutation.isPending}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked: !!a.attended }}
+                        >
+                          {a.attended && <Text style={styles.attendeeCheckmark}>✓</Text>}
+                        </TouchableOpacity>
+                      )}
+                      <View>
+                        <Text style={styles.attendeeName}>{a.name}</Text>
+                        <Text style={styles.attendeeHandle}>@{a.handle}</Text>
+                      </View>
                     </View>
                     <Text style={styles.attendeeDate}>{new Date(a.rsvpedAt).toLocaleDateString()}</Text>
                   </View>
@@ -282,6 +299,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(94,133,80,0.12)',
   },
+  attendeeLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  attendeeCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: COLORS.sage,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attendeeCheckboxChecked: { backgroundColor: COLORS.forest, borderColor: COLORS.forest },
+  attendeeCheckmark: { fontSize: 13, fontWeight: '700', color: COLORS.white },
   attendeeName: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary },
   attendeeHandle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   attendeeDate: { fontSize: 12, color: COLORS.textSecondary },

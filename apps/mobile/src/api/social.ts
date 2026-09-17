@@ -94,7 +94,14 @@ export type NotificationType =
   | 'bulk_requirement_response_accepted'
   | 'sapling_planted'
   | 'nursery_tree_milestone'
-  | 'nursery_impact_milestone';
+  | 'nursery_impact_milestone'
+  // ---- NGO-flow (NGO-received) ----
+  | 'ngo_donation_received'
+  | 'ngo_drive_rsvp'
+  | 'ngo_tree_adopted'
+  | 'ngo_streak_at_risk'
+  | 'ngo_streak_broken'
+  | 'ngo_impact_milestone';
 
 export interface ApiNotification {
   id: string;

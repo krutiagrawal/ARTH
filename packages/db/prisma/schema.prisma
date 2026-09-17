@@ -396,6 +396,12 @@ enum NotificationType {
   sapling_planted
   nursery_tree_milestone
   nursery_impact_milestone
+  ngo_donation_received
+  ngo_drive_rsvp
+  ngo_tree_adopted
+  ngo_streak_at_risk
+  ngo_streak_broken
+  ngo_impact_milestone
 }
 
 // ---------- Core ----------
@@ -1678,9 +1684,13 @@ model NgoProfile {
   rejectionReason        String?           @map("rejection_reason")
   approvedAt             DateTime?         @map("approved_at")
   approvedByUserId       String?           @map("approved_by_user_id")
-  streakCurrent          Int               @default(0) @map("streak_current")
-  streakMax              Int               @default(0) @map("streak_max")
   badgesCount            Int               @default(0) @map("badges_count")
+  // Reputation (see NgoContributionStreak for the underlying weekly activity history) —
+  // denormalized, recomputed by ngoReputation.service.ts both inline at activity hooks and by
+  // the weekly ngoReputation.job.ts catch-up pass. Null trustScore means "not yet computed"
+  // (should only happen pre-approval — see computeTrustScore). Mirrors NurseryProfile's fields.
+  trustScore             Int?              @map("trust_score")
+  growthLevel            NgoGrowthLevel    @default(seedling) @map("growth_level")
 
   // ---- Organisation details ----
   orgType                     NgoOrgType?    @map("org_type")
@@ -1756,7 +1766,7 @@ model NgoProfile {
   notificationsTriggered Notification[]         @relation("NotificationActorNgo")
   staff                  StaffMember[]
   plantedTrees           PlantedTree[]
-  streakHistory          NgoStreakHistory[]
+  contributionStreaks    NgoContributionStreak[]
   achievementUnlocks     NgoAchievementUnlock[]
   bulkRequirements       BulkRequirement[]
   verificationDocuments  NgoVerificationDocument[]
@@ -1861,11 +1871,16 @@ model DrivePlantSponsorship {
 }
 
 model DriveRsvp {
-  id        String     @id @default(uuid())
-  driveId   String     @map("drive_id")
-  userId    String     @map("user_id")
-  status    RsvpStatus @default(confirmed)
-  createdAt DateTime   @default(now()) @map("created_at")
+  id          String     @id @default(uuid())
+  driveId     String     @map("drive_id")
+  userId      String     @map("user_id")
+  status      RsvpStatus @default(confirmed)
+  // Null until the NGO marks the (completed) drive's attendance — distinct from `status`, which
+  // only tracks whether the RSVP itself was cancelled, not whether the person actually showed up.
+  attended    Boolean?
+  hoursLogged Float?     @map("hours_logged")
+  role        String?
+  createdAt   DateTime   @default(now()) @map("created_at")
 
   drive Drive @relation(fields: [driveId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -2002,6 +2017,9 @@ model Donation {
   currency              String         @default("inr")
   stripePaymentIntentId String         @unique @map("stripe_payment_intent_id")
   status                DonationStatus @default(pending)
+  // Set once, when the webhook first marks the donation `succeeded` — never regenerated, so the
+  // same receipt number is stable across repeat views/emails. Null for pending/failed donations.
+  receiptNumber         String?        @unique @map("receipt_number")
   createdAt             DateTime       @default(now()) @map("created_at")
   updatedAt             DateTime       @updatedAt @map("updated_at")
 
@@ -2351,20 +2369,39 @@ model TreeHealthCheck {
 }
 
 // ---------- NGO gamification (streak / achievements) ----------
-// Weekly analog of StreakHistory — an NGO's cadence is "posted an update this week",
-// not a daily action, so this is keyed by weekStart (Monday) instead of a calendar day.
-model NgoStreakHistory {
-  id        String   @id @default(uuid())
-  ngoId     String   @map("ngo_id")
-  weekStart DateTime @map("week_start") @db.Date
-  posted    Boolean  @default(false)
-  createdAt DateTime @default(now()) @map("created_at")
+enum NgoGrowthLevel {
+  seedling
+  growing
+  established
+  evergreen
+}
+
+// Which weekly contribution streak an NgoContributionStreak row belongs to — replaces the old
+// single-type NgoStreakHistory (which only tracked "posted an update this week"), mirroring
+// NurseryStreakType's move from one daily streak to several weekly ones.
+enum NgoStreakType {
+  updates
+  drive_activity
+  impact_verification
+}
+
+// One row per (ngo, streak type, week) — Monday-anchored, same shape as
+// NurseryContributionStreak. `metCriteria` is written true by ngoReputation.service.ts's
+// recordNgoContribution whenever a qualifying activity happens; current/longest streak length is
+// derived by walking these rows backward, never stored redundantly.
+model NgoContributionStreak {
+  id          String        @id @default(uuid())
+  ngoId       String        @map("ngo_id")
+  streakType  NgoStreakType @map("streak_type")
+  periodStart DateTime      @map("period_start") @db.Date
+  metCriteria Boolean       @default(false) @map("met_criteria")
+  createdAt   DateTime      @default(now()) @map("created_at")
 
   ngo NgoProfile @relation(fields: [ngoId], references: [id], onDelete: Cascade)
 
-  @@unique([ngoId, weekStart])
-  @@index([ngoId, weekStart(sort: Desc)])
-  @@map("ngo_streak_history")
+  @@unique([ngoId, streakType, periodStart])
+  @@index([ngoId, streakType, periodStart(sort: Desc)])
+  @@map("ngo_contribution_streaks")
 }
 
 // Definition table, mirrors Achievement — fixed, seeded list, not user/ngo-editable.

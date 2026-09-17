@@ -281,6 +281,8 @@ export async function getOwnStats(prisma: PrismaClient, userId: string) {
     totalDrives,
     co2AbsorptionKg,
     activity,
+    trustScore: ngo.trustScore,
+    growthLevel: ngo.growthLevel,
   };
 }
 
@@ -370,26 +372,36 @@ export async function getOwnDonationsSummary(prisma: PrismaClient, userId: strin
 export async function getOwnVolunteers(prisma: PrismaClient, userId: string) {
   const ngo = await requireNgoProfile(prisma, userId);
 
-  const grouped = await prisma.driveRsvp.groupBy({
-    by: ['userId'],
+  const rsvps = await prisma.driveRsvp.findMany({
     where: { status: 'confirmed', drive: { ngoId: ngo.id } },
-    _count: { _all: true },
-    _max: { createdAt: true },
+    select: { userId: true, createdAt: true, attended: true },
   });
 
+  const byUser = new Map<string, { count: number; attendedCount: number; hasAttendanceData: boolean; lastActiveAt: Date }>();
+  for (const r of rsvps) {
+    const entry = byUser.get(r.userId) ?? { count: 0, attendedCount: 0, hasAttendanceData: false, lastActiveAt: r.createdAt };
+    entry.count += 1;
+    if (r.attended !== null) entry.hasAttendanceData = true;
+    if (r.attended === true) entry.attendedCount += 1;
+    if (r.createdAt > entry.lastActiveAt) entry.lastActiveAt = r.createdAt;
+    byUser.set(r.userId, entry);
+  }
+
   const users = await prisma.user.findMany({
-    where: { id: { in: grouped.map((g) => g.userId) } },
+    where: { id: { in: [...byUser.keys()] } },
     select: { id: true, name: true, handle: true },
   });
   const userById = new Map(users.map((u) => [u.id, u]));
 
-  return grouped
-    .map((g) => ({
-      userId: g.userId,
-      name: userById.get(g.userId)?.name ?? 'Unknown',
-      handle: userById.get(g.userId)?.handle ?? '',
-      drivesAttended: g._count._all,
-      lastActiveAt: g._max.createdAt,
+  return [...byUser.entries()]
+    .map(([userId, entry]) => ({
+      userId,
+      name: userById.get(userId)?.name ?? 'Unknown',
+      handle: userById.get(userId)?.handle ?? '',
+      // Once the NGO has recorded attendance for this person, that's the real count; until then,
+      // the RSVP count is the best available signal.
+      drivesAttended: entry.hasAttendanceData ? entry.attendedCount : entry.count,
+      lastActiveAt: entry.lastActiveAt,
     }))
     .sort((a, b) => (b.lastActiveAt?.getTime() ?? 0) - (a.lastActiveAt?.getTime() ?? 0));
 }

@@ -74,6 +74,8 @@ export interface ApiNgoStats {
   totalDrives: number;
   co2AbsorptionKg: number;
   activity: unknown[];
+  trustScore: number | null;
+  growthLevel: 'seedling' | 'growing' | 'established' | 'evergreen';
 }
 
 export async function fetchNgoStats(): Promise<ApiNgoStats> {

@@ -2,9 +2,9 @@ import { Prisma, PrismaClient } from '@plant/db';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
 import { requireApprovedNgoProfile } from './ngo.service';
 import { requireApprovedNurseryProfile } from './nursery.service';
-import { recordUpdatePostedThisWeek } from './ngoStreak.service';
 import { evaluateNgoAchievements } from './ngoAchievement.service';
 import { recordNurseryContribution, recomputeReputation } from './nurseryReputation.service';
+import { recordNgoContribution, recomputeReputation as recomputeNgoReputation } from './ngoReputation.service';
 import { evaluateNurseryAchievements } from './nurseryAchievement.service';
 import { notify, notifyFollowersOfNewPost, notifyFollowersOfNewNurseryPost } from './notification.service';
 import { BlockedIds, getBlockedIds } from './block.service';
@@ -194,9 +194,10 @@ export async function createPost(prisma: PrismaClient, viewerId: string, input: 
     });
 
     if (ngo) {
-      // Posting is what keeps an NGO's weekly streak alive — same rule as the old update flow.
-      await recordUpdatePostedThisWeek(tx as unknown as PrismaClient, ngo.id);
+      // Posting is what keeps an NGO's Updates streak alive.
+      await recordNgoContribution(tx as unknown as PrismaClient, ngo.id, ['updates']);
       await evaluateNgoAchievements(tx as unknown as PrismaClient, ngo.id);
+      await recomputeNgoReputation(tx as unknown as PrismaClient, ngo.id);
     }
     if (nursery) {
       await recordNurseryContribution(tx as unknown as PrismaClient, nursery.id, ['arth_contribution']);

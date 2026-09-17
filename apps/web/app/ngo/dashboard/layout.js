@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Home, CalendarDays, TreePine, HeartHandshake, Settings as SettingsIcon, LogOut, Leaf, ChevronDown, BarChart3, HandCoins, Users, WifiOff, Sprout, Newspaper } from 'lucide-react'
+import { Home, CalendarDays, TreePine, HeartHandshake, Settings as SettingsIcon, LogOut, Leaf, ChevronDown, BarChart3, HandCoins, Users, UserPlus, Trophy, WifiOff, Sprout, Newspaper } from 'lucide-react'
 import AppSidebar from '@/components/dashboard/AppSidebar'
 import SidebarScenery from '@/components/dashboard/SidebarScenery'
 import { Button } from '@/components/ui/button'
@@ -17,9 +17,11 @@ const SECTIONS = [
       { label: 'Campaigns', href: '/ngo/dashboard/campaigns', icon: HeartHandshake },
       { label: 'Updates', href: '/ngo/dashboard/updates', icon: Newspaper },
       { label: 'Survival & Impact', href: '/ngo/dashboard/survival', icon: Sprout },
+      { label: 'Growth & Trust', href: '/ngo/dashboard/growth', icon: Trophy },
       { label: 'Reports', href: '/ngo/dashboard/reports', icon: BarChart3 },
       { label: 'Donations', href: '/ngo/dashboard/donations', icon: HandCoins },
       { label: 'Volunteers', href: '/ngo/dashboard/volunteers', icon: Users },
+      { label: 'Followers', href: '/ngo/dashboard/followers', icon: UserPlus },
       { label: 'Staff', href: '/ngo/dashboard/staff', icon: Users },
       { label: 'Settings', href: '/ngo/dashboard/settings', icon: SettingsIcon },
     ],

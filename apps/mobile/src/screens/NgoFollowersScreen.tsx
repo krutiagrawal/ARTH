@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
 import { FONTS } from '../constants/typography';
 import { EmptyState } from '../components/common/EmptyState';
+import { ScreenHeader } from '../components/common/ScreenHeader';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useNgoFollowers, useRemoveFollower } from '../hooks/useSocialQueries';
 import type { ApiFollower } from '../api/ngoFollowers';
@@ -35,7 +38,7 @@ function FollowerRow({ follower, onRemove }: { follower: ApiFollower; onRemove: 
 }
 
 /** The accepted-followers list, with search and a silent remove action. */
-export function NgoFollowersScreen() {
+export function NgoFollowersScreen({ navigation }: any) {
   const [query, setQuery] = useState('');
   const clearance = useBottomNavClearance();
   const { data, isLoading, refetch } = useNgoFollowers({
@@ -73,6 +76,19 @@ export function NgoFollowersScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar style="dark" />
+      <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
+
+      <ScreenHeader
+        title="Followers"
+        onBack={navigation?.canGoBack?.() ? () => navigation.goBack() : undefined}
+        right={
+          <TouchableOpacity onPress={() => navigation?.navigate('NgoFollowerRequests')} style={styles.requestsButton} activeOpacity={0.8}>
+            <Text style={styles.requestsText}>Requests{data?.pendingCount ? ` (${data.pendingCount})` : ''}</Text>
+          </TouchableOpacity>
+        }
+      />
+
       <View style={styles.searchWrap}>
         <Text style={styles.searchIcon}>🔍</Text>
         <TextInput
@@ -116,6 +132,13 @@ export function NgoFollowersScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  requestsButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.forest,
+  },
+  requestsText: { fontSize: 12, fontWeight: '700', color: COLORS.white },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',

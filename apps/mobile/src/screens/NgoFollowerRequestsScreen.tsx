@@ -1,10 +1,13 @@
 import React from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
 import { FONTS } from '../constants/typography';
 import { EmptyState } from '../components/common/EmptyState';
+import { ScreenHeader } from '../components/common/ScreenHeader';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import {
   useAcceptFollowRequest,
@@ -89,6 +92,14 @@ export function NgoFollowerRequestsScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
+      <StatusBar style="dark" />
+      <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
+
+      <ScreenHeader
+        title="Follow Requests"
+        onBack={navigation?.canGoBack?.() ? () => navigation.goBack() : undefined}
+      />
+
       {isOpenPolicy && (
         <View style={styles.policyNote}>
           <Text style={styles.policyText}>

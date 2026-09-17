@@ -110,10 +110,21 @@ export interface ApiDriveAttendee {
   name: string;
   handle: string;
   rsvpedAt: string;
+  attended: boolean | null;
+  hoursLogged: number | null;
+  role: string | null;
 }
 
 export async function fetchDriveAttendees(driveId: string): Promise<{ total: number; attendees: ApiDriveAttendee[] }> {
   return apiFetch(`/api/drives/${driveId}/attendees?take=50`);
+}
+
+export async function setDriveRsvpAttendance(
+  driveId: string,
+  rsvpId: string,
+  input: { attended?: boolean; hoursLogged?: number | null; role?: string | null },
+): Promise<{ id: string; attended: boolean | null; hoursLogged: number | null; role: string | null }> {
+  return apiFetch(`/api/drives/${driveId}/attendees/${rsvpId}`, { method: 'PATCH', body: input });
 }
 
 export async function createDrive(input: CreateDriveInput): Promise<ApiDrive> {

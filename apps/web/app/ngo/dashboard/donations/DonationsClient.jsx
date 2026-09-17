@@ -83,6 +83,18 @@ export default function DonationsClient() {
         header: 'Date',
         cell: ({ row }) => <span className="text-sm text-muted-foreground">{new Date(row.original.createdAt).toLocaleDateString()}</span>,
       },
+      {
+        id: 'receipt',
+        header: '',
+        cell: ({ row }) =>
+          row.original.status === 'succeeded' ? (
+            <Button asChild variant="ghost" size="sm" className="h-7 rounded-full px-2.5 text-xs">
+              <a href={`/api/ngo/proxy/campaigns/donations/${row.original.id}/receipt`} target="_blank" rel="noreferrer">
+                Receipt
+              </a>
+            </Button>
+          ) : null,
+      },
     ],
     [],
   )

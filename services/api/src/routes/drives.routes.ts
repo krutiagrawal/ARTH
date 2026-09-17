@@ -6,6 +6,7 @@ import {
   nearbyQuerySchema,
   ownedListQuerySchema,
   paginationQuerySchema,
+  attendanceSchema,
 } from '../schemas/drives.schema';
 import { saveDrivePhoto } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
@@ -84,8 +85,34 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
       );
       reply.send({
         total,
-        attendees: attendees.map((a) => ({ id: a.id, name: a.user.name, handle: a.user.handle, rsvpedAt: a.createdAt })),
+        attendees: attendees.map((a) => ({
+          id: a.id,
+          name: a.user.name,
+          handle: a.user.handle,
+          rsvpedAt: a.createdAt,
+          attended: a.attended,
+          hoursLogged: a.hoursLogged,
+          role: a.role,
+        })),
       });
+    },
+  );
+
+  fastify.patch<{ Params: { id: string; rsvpId: string }; Body: { attended?: boolean; hoursLogged?: number | null; role?: string | null } }>(
+    '/:id/attendees/:rsvpId',
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
+    async (request, reply) => {
+      const parsed = attendanceSchema.safeParse(request.body);
+      if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+      const rsvp = await driveService.setRsvpAttendance(
+        fastify.prisma,
+        request.user!.id,
+        request.params.id,
+        request.params.rsvpId,
+        parsed.data,
+      );
+      reply.send(rsvp);
     },
   );
 

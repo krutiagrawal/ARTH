@@ -93,6 +93,13 @@ export default async function donationsRoutes(fastify: FastifyInstance) {
     reply.send(serializeCampaign(campaign));
   });
 
+  // Viewable by either the donor or the NGO that received it — donationService.getDonationReceiptHtml
+  // does that authorization check itself since it depends on the donation row, not a role.
+  fastify.get<{ Params: { donationId: string } }>('/donations/:donationId/receipt', async (request, reply) => {
+    const html = await donationService.getDonationReceiptHtml(fastify.prisma, request.user!.id, request.params.donationId);
+    reply.type('text/html').send(html);
+  });
+
   fastify.post('/', { preHandler: [fastify.requireRole(...ORG_ROLES)] }, async (request, reply) => {
     const { fields, file } = splitMultipartBody(request.body as any);
 

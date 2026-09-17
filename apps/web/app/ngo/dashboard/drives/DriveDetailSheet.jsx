@@ -7,6 +7,7 @@ import DrawerFormShell, { DetailPanel, DetailSection, DetailRow, DetailGrid, Det
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Checkbox } from '@/components/ui/checkbox'
 import { proxy } from '../proxy'
 
 const STATUS_VARIANT = { upcoming: 'default', completed: 'secondary', cancelled: 'destructive' }
@@ -30,6 +31,17 @@ export default function DriveDetailSheet({ drive, onOpenChange, onEdit }) {
   }, [drive])
 
   const totalSponsoredCents = (drive?.plants ?? []).reduce((sum, p) => sum + p.priceCents * p.sponsoredCount, 0)
+
+  const toggleAttended = async (attendee) => {
+    const nextAttended = !attendee.attended
+    setAttendees((prev) => prev.map((a) => (a.id === attendee.id ? { ...a, attended: nextAttended } : a)))
+    try {
+      await proxy(`/drives/${drive.id}/attendees/${attendee.id}`, { method: 'PATCH', body: { attended: nextAttended } })
+    } catch (err) {
+      setAttendees((prev) => prev.map((a) => (a.id === attendee.id ? { ...a, attended: attendee.attended } : a)))
+      toast.error(err.message || 'Could not update attendance.')
+    }
+  }
 
   return (
     <DrawerFormShell
@@ -126,6 +138,9 @@ export default function DriveDetailSheet({ drive, onOpenChange, onEdit }) {
           )}
 
           <DetailSection label={`Attendees (${drive.confirmedCount})`}>
+            {drive.status === 'completed' && attendees.length > 0 && (
+              <p className="mb-2 text-[12px] text-muted-foreground">Check off who actually showed up.</p>
+            )}
             {loading ? (
               <div className="space-y-2">
                 <Skeleton className="h-9 w-full" />
@@ -137,9 +152,14 @@ export default function DriveDetailSheet({ drive, onOpenChange, onEdit }) {
               <DetailList>
                 {attendees.map((a) => (
                   <div key={a.id} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
-                    <div>
-                      <p className="text-[14px] font-medium text-foreground">{a.name}</p>
-                      <p className="text-[12px] text-muted-foreground">{a.handle}</p>
+                    <div className="flex items-center gap-2.5">
+                      {drive.status === 'completed' && (
+                        <Checkbox checked={Boolean(a.attended)} onCheckedChange={() => toggleAttended(a)} aria-label={`Mark ${a.name} attended`} />
+                      )}
+                      <div>
+                        <p className="text-[14px] font-medium text-foreground">{a.name}</p>
+                        <p className="text-[12px] text-muted-foreground">{a.handle}</p>
+                      </div>
                     </div>
                     <p className="text-[12px] text-muted-foreground">{new Date(a.rsvpedAt).toLocaleDateString()}</p>
                   </div>

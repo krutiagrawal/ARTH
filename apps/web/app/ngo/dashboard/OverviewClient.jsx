@@ -15,6 +15,7 @@ import {
   Leaf,
   Quote,
   Plus,
+  ShieldCheck,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -29,6 +30,7 @@ import PhoneInput from '@/components/dashboard/PhoneInput'
 import { Skeleton } from '@/components/ui/skeleton'
 import { proxy } from './proxy'
 import { useNgoProfile } from './NgoProfileContext'
+import { GROWTH_LEVEL_META } from './growth/GrowthClient'
 import { usePhoneField } from '@/lib/usePhoneField'
 import { isValidWebsite } from '@/lib/validation'
 
@@ -357,6 +359,27 @@ export default function OverviewClient() {
           icon={Users}
           tone="sand"
           sparklineData={weeklySparkline(stats?.activity)}
+          loading={statsLoading}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+        <StatTile
+          label="ARTH Trust Score"
+          value={stats?.trustScore ?? 'Not yet verified'}
+          description="Drive completion, updates, compliance"
+          icon={ShieldCheck}
+          tone="primary"
+          href="/ngo/dashboard/growth"
+          loading={statsLoading}
+        />
+        <StatTile
+          label="Growth Level"
+          value={`${GROWTH_LEVEL_META[stats?.growthLevel || 'seedling'].emoji} ${GROWTH_LEVEL_META[stats?.growthLevel || 'seedling'].label}`}
+          description="Based on tenure & lifetime impact"
+          icon={Sprout}
+          tone="sand"
+          href="/ngo/dashboard/growth"
           loading={statsLoading}
         />
       </div>

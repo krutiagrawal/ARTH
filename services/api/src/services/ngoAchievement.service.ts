@@ -1,4 +1,5 @@
 import { Prisma, NgoAchievementCriteriaType } from '@plant/db';
+import { getUpdatesStreakCurrent } from './ngoReputation.service';
 
 async function computeNgoProgress(
   tx: Prisma.TransactionClient,
@@ -31,8 +32,9 @@ async function computeNgoProgress(
       return tx.follow.count({ where: { ngoId } });
     }
     case 'streak_weeks': {
-      const ngo = await tx.ngoProfile.findUniqueOrThrow({ where: { id: ngoId } });
-      return ngo.streakCurrent;
+      // Repointed from the removed NgoProfile.streakCurrent — now the Updates Streak, same rule
+      // nurseryAchievement.service.ts follows for its own repointed streak criteria.
+      return getUpdatesStreakCurrent(tx, ngoId);
     }
     default:
       return 0;

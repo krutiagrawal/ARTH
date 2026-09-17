@@ -11,7 +11,6 @@ import { COLORS } from '../constants/colors';
 import { FONTS } from '../constants/typography';
 import { SHADOWS } from '../constants/theme';
 import { EcoWidget } from '../components/common/EcoWidget';
-import { IconBadge } from '../components/common/IconBadge';
 import { ThemedCard } from '../components/common/ThemedCard';
 import { ForestHeroCanvas } from '../components/common/ForestHeroCanvas';
 import { Mascot } from '../components/common/Mascot';
@@ -22,11 +21,13 @@ import { useTimeTheme, type TimeTheme } from '../hooks/useTimeTheme';
 import { useDeviceWeather } from '../hooks/useDeviceWeather';
 import { useAuth } from '../context/AuthContext';
 import { useNgoStats, useNgoStreakCalendar, useNgoProfile } from '../hooks/useApiQueries';
+import { useNgoFollowers } from '../hooks/useSocialQueries';
 import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { currentStreakFromWeeks } from '../utils/streak';
 import { getHeroSeamColor, getHeroSeamTextColors } from '../utils/heroSeam';
+import { hexToRgba } from '../utils/color';
 import type { NgoTabName } from '../navigation/AppNavigator';
 
 const { width: SW, height: SH } = Dimensions.get('window');
@@ -37,6 +38,15 @@ const STREAK_WEEKS_SHOWN = 5;
 
 /** Periods dark/saturated enough that the streak leaves need to switch off green — see StreakLeafIcon. */
 const EVENING_PERIODS = new Set(['sunset', 'blueHour', 'night', 'lateNight']);
+
+/** Same tier set as NgoStreakBadgesScreen's NGO_GROWTH_LEVEL_META, just the emoji/label this tile
+ * needs — not worth importing the full badge-styled version for one stat tile. */
+const GROWTH_LEVEL_TILE_META: Record<string, { emoji: string; label: string }> = {
+  seedling: { emoji: '🌱', label: 'Seedling' },
+  growing: { emoji: '🪴', label: 'Growing' },
+  established: { emoji: '🌳', label: 'Established' },
+  evergreen: { emoji: '🌲', label: 'Evergreen' },
+};
 
 /**
  * One streak-day leaf, drawn as a vector path instead of the 🌿 emoji it replaces.
@@ -113,41 +123,91 @@ function StreakCard({
   );
 }
 
-function QuickAction({
-  theme,
+interface DockActionSpec {
+  key: string;
+  emoji: string;
+  color: string;
+  title: string;
+  badge?: number;
+  onPress: () => void;
+}
+
+// Circular icon shortcut, matching nursery's dashboard dock — a payments-app-style quick-actions
+// row instead of another stack of full-width cards.
+function DockItem({
+  seamText,
   delay,
   emoji,
   color,
   title,
-  body,
+  badge,
   onPress,
-  blurTarget,
 }: {
-  theme: TimeTheme;
+  seamText: { primary: string; secondary: string };
   delay: number;
   emoji: string;
   color: string;
   title: string;
-  body: string;
+  badge?: number;
   onPress: () => void;
-  blurTarget: RefObject<View | null>;
 }) {
-  const animStyle = useSlideUp(delay, 18);
+  const animStyle = useSlideUp(delay, 16);
   return (
     <Animated.View style={animStyle}>
-      <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-        <ThemedCard theme={theme} style={styles.actionCard} blurTarget={blurTarget}>
-          <View style={styles.actionRow}>
-            <IconBadge icon={emoji} color={color} round />
-            <View style={styles.actionTextColumn}>
-              <Text style={[styles.actionTitle, { color: theme.textPrimaryOnCard }]}>{title}</Text>
-              <Text style={[styles.actionBody, { color: theme.textSecondaryOnCard }]}>{body}</Text>
+      <TouchableOpacity activeOpacity={0.75} onPress={onPress} style={styles.dockTouchable}>
+        <View style={styles.dockIconWrap}>
+          <LinearGradient
+            colors={[color, hexToRgba(color, 0.65)]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.dockIconCircle}
+          >
+            <Text style={styles.dockIconEmoji}>{emoji}</Text>
+          </LinearGradient>
+          {!!badge && (
+            <View style={styles.dockBadge}>
+              <Text style={styles.dockBadgeText}>{badge}</Text>
             </View>
-            <Text style={[styles.chevron, { color: theme.textSecondaryOnCard }]}>›</Text>
-          </View>
-        </ThemedCard>
+          )}
+        </View>
+        <Text style={[styles.dockLabel, { color: seamText.secondary }]} numberOfLines={2}>
+          {title}
+        </Text>
       </TouchableOpacity>
     </Animated.View>
+  );
+}
+
+// Equal-width flex columns so a row of 3 lines up under the row above it.
+function DockRow({
+  seamText,
+  items,
+  delayStart,
+}: {
+  seamText: { primary: string; secondary: string };
+  items: (DockActionSpec | null)[];
+  delayStart: number;
+}) {
+  return (
+    <View style={styles.dockGridRow}>
+      {items.map((item, i) =>
+        item ? (
+          <View key={item.key} style={styles.dockSlot}>
+            <DockItem
+              seamText={seamText}
+              delay={delayStart + i * 30}
+              emoji={item.emoji}
+              color={item.color}
+              title={item.title}
+              badge={item.badge}
+              onPress={item.onPress}
+            />
+          </View>
+        ) : (
+          <View key={`empty-${i}`} style={styles.dockSlot} />
+        )
+      )}
+    </View>
   );
 }
 
@@ -161,6 +221,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
   const { data: profile, refetch: refetchProfile } = useNgoProfile();
   const { data: stats, isLoading, refetch: refetchStats } = useNgoStats();
   const { data: streakData, refetch: refetchStreak } = useNgoStreakCalendar(8);
+  const { data: pendingFollowers } = useNgoFollowers({ status: 'pending' });
   const { refreshing, onRefresh } = usePullToRefresh([refetchStats, refetchStreak, refetchProfile]);
   const streakCurrent = streakData ? currentStreakFromWeeks(streakData.weeks) : 0;
   const recentWeeks = (streakData?.weeks ?? []).slice(-STREAK_WEEKS_SHOWN);
@@ -192,6 +253,35 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
     subTextColor: theme.textSecondaryOnCard,
     blurTarget: blurTargetRef,
   };
+
+  // Drives/Campaigns/Trees creation stays on the Manage tab, which already has its own bottom-tab
+  // entry — same reasoning nursery uses to keep Orders/Edit Profile out of its dock.
+  const dockActions: DockActionSpec[] = [
+    { key: 'post', emoji: '📸', color: COLORS.golden, title: 'Post an update', onPress: () => navigation.navigate('NgoPostUpdate') },
+    { key: 'survival', emoji: '🩺', color: COLORS.sage, title: 'Survival & impact', onPress: () => navigation.navigate('NgoHealthCheck') },
+    { key: 'plantedTrees', emoji: '🌳', color: COLORS.forest, title: 'Log planted trees', onPress: () => navigation.navigate('NgoLogPlantedTrees') },
+    { key: 'bulkRequirements', emoji: '🤝', color: COLORS.amber, title: 'Bulk requirements', onPress: () => navigation.navigate('NgoBulkRequirements') },
+    {
+      key: 'followers',
+      emoji: '👥',
+      color: COLORS.xpBlue,
+      title: 'Followers',
+      badge: pendingFollowers?.pendingCount,
+      onPress: () => navigation.navigate('NgoFollowers'),
+    },
+    { key: 'streak', emoji: '🔥', color: COLORS.sage, title: 'Growth & Trust', onPress: () => navigation.navigate('NgoStreakBadges') },
+    { key: 'volunteers', emoji: '🙋', color: COLORS.coral, title: 'Volunteers', onPress: () => navigation.navigate('NgoVolunteers') },
+    { key: 'staff', emoji: '🧑‍🤝‍🧑', color: COLORS.warmBrown, title: 'Staff roster', onPress: () => navigation.navigate('NgoStaff') },
+    { key: 'donations', emoji: '💸', color: COLORS.sageDark, title: 'Donations', onPress: () => navigation.navigate('NgoDonations') },
+    { key: 'reports', emoji: '📊', color: COLORS.streakGold, title: 'Reports', onPress: () => navigation.navigate('NgoReports') },
+    { key: 'portfolio', emoji: '📚', color: COLORS.earth, title: 'Past work', onPress: () => navigation.navigate('NgoPortfolio') },
+    { key: 'map', emoji: '🗺️', color: COLORS.skyDay, title: 'View on Map', onPress: () => navigation.navigate('Map') },
+  ];
+
+  const dockRows: DockActionSpec[][] = [];
+  for (let i = 0; i < dockActions.length; i += 3) {
+    dockRows.push(dockActions.slice(i, i + 3));
+  }
 
   return (
     <BlurTargetView ref={blurTargetRef} collapsable={false} style={[styles.container, { backgroundColor: pageBackground }]}>
@@ -265,7 +355,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
               subTextColor={theme.textSecondaryOnCard}
               borderColor={theme.cardBorder}
               delay={200}
-              onPress={() => navigation.navigate('NgoProfile')}
+              onPress={() => navigation.navigate('NgoStreakBadges')}
               blurTarget={blurTargetRef}
             />
           </View>
@@ -275,7 +365,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
           theme={theme}
           streakCurrent={streakCurrent}
           recentWeeks={recentWeeks}
-          onPress={() => navigation.navigate('NgoPostUpdate')}
+          onPress={() => navigation.navigate('NgoStreakBadges')}
           blurTarget={blurTargetRef}
         />
 
@@ -301,52 +391,40 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
                 <EcoWidget {...tileProps} icon="👥" value={String(stats.volunteersInvolved)} label="Volunteers" delay={240} />
                 <EcoWidget {...tileProps} icon="🌍" value={`${stats.co2AbsorptionKg}kg`} label="CO₂ potential" delay={300} />
               </View>
+              <View style={styles.gridRow}>
+                <EcoWidget
+                  {...tileProps}
+                  icon="🤝"
+                  value={stats.trustScore != null ? String(stats.trustScore) : '—'}
+                  label="ARTH Trust Score"
+                  delay={360}
+                  onPress={() => navigation.navigate('NgoStreakBadges')}
+                />
+                <EcoWidget
+                  {...tileProps}
+                  icon={GROWTH_LEVEL_TILE_META[stats.growthLevel].emoji}
+                  value={GROWTH_LEVEL_TILE_META[stats.growthLevel].label}
+                  label="Growth Level"
+                  delay={420}
+                  onPress={() => navigation.navigate('NgoStreakBadges')}
+                />
+                <EcoWidget {...tileProps} icon="📋" value={String(stats.totalDrives)} label="Total drives" delay={480} />
+              </View>
             </Animated.View>
           </>
         )}
 
         <Text style={[styles.sectionTitle, { color: seamText.primary }]}>Quick Actions</Text>
-
-        <QuickAction
-          theme={theme}
-          delay={120}
-          emoji="📸"
-          color={COLORS.golden}
-          title="Post an update"
-          body="Share real-time updates with your followers."
-          onPress={() => navigation.navigate('NgoPostUpdate')}
-          blurTarget={blurTargetRef}
-        />
-        <QuickAction
-          theme={theme}
-          delay={160}
-          emoji="🩺"
-          color={COLORS.sage}
-          title="Survival & impact"
-          body="Log tree survival and track impact."
-          onPress={() => navigation.navigate('NgoHealthCheck')}
-          blurTarget={blurTargetRef}
-        />
-        <QuickAction
-          theme={theme}
-          delay={200}
-          emoji="📋"
-          color={COLORS.earth}
-          title="Manage drives"
-          body="View and manage all your drives."
-          onPress={() => onNavigateTab('Manage')}
-          blurTarget={blurTargetRef}
-        />
-        <QuickAction
-          theme={theme}
-          delay={240}
-          emoji="🤝"
-          color={COLORS.amber}
-          title="Bulk requirements"
-          body="Ask nurseries for saplings at scale."
-          onPress={() => navigation.navigate('NgoBulkRequirements')}
-          blurTarget={blurTargetRef}
-        />
+        <View style={styles.dockGrid}>
+          {dockRows.map((row, i) => (
+            <DockRow
+              key={i}
+              seamText={seamText}
+              delayStart={120 + i * 90}
+              items={row.length === 3 ? row : [...row, ...Array(3 - row.length).fill(null)]}
+            />
+          ))}
+        </View>
       </ScrollView>
 
       <View style={styles.ambientLayer} pointerEvents="none">
@@ -397,10 +475,15 @@ const styles = StyleSheet.create({
 
   sectionTitle: { fontFamily: FONTS.display, fontSize: 20, lineHeight: 27, marginTop: 20 },
   sectionSubtitle: { fontSize: 12, marginTop: 2, marginBottom: 12 },
-  actionCard: { marginBottom: 12, marginTop: 2 },
-  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  actionTextColumn: { flex: 1 },
-  actionTitle: { fontSize: 16, fontWeight: '700' },
-  actionBody: { fontSize: 12, marginTop: 2 },
-  chevron: { fontSize: 22, fontWeight: '600' },
+
+  dockGrid: { marginTop: 4 },
+  dockGridRow: { flexDirection: 'row' },
+  dockSlot: { flex: 1, alignItems: 'center', paddingVertical: 8 },
+  dockTouchable: { alignItems: 'center' },
+  dockIconWrap: { position: 'relative' },
+  dockIconCircle: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', ...SHADOWS.sm },
+  dockIconEmoji: { fontSize: 25 },
+  dockBadge: { position: 'absolute', top: -3, right: -6, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: COLORS.coral, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
+  dockBadgeText: { fontSize: 10, fontWeight: '700', color: COLORS.white },
+  dockLabel: { fontSize: 14, fontWeight: '700', textAlign: 'center', marginTop: 8, lineHeight: 17 },
 });

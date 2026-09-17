@@ -65,6 +65,7 @@ import {
   createDrive,
   CreateDriveInput,
   fetchDriveAttendees,
+  setDriveRsvpAttendance,
 } from '../api/drives';
 import {
   fetchAdoptableTrees,
@@ -131,6 +132,7 @@ import {
 import { fetchMyUpdates, createUpdate, deleteUpdate, CreateUpdateInput } from '../api/ngoUpdates';
 import { fetchNgoAchievements, fetchNgoPublicAchievements } from '../api/ngoAchievements';
 import { fetchNgoStreakCalendar } from '../api/ngoStreaks';
+import { fetchNgoReputation } from '../api/ngoReputation';
 import { fetchGroupStreakCalendar, fetchGroupStreakCalendarForMember } from '../api/groupStreaks';
 import { fetchGroupAchievements, fetchGroupAchievementsForMember } from '../api/groupAchievements';
 import { fetchGroupActivity, fetchGroupActivityForMember } from '../api/groupActivity';
@@ -803,6 +805,17 @@ export function useDriveAttendees(id: string | null, enabled: boolean) {
   });
 }
 
+export function useSetDriveRsvpAttendance(driveId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { rsvpId: string; attended?: boolean; hoursLogged?: number | null; role?: string | null }) =>
+      setDriveRsvpAttendance(driveId, input.rsvpId, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['drives', driveId, 'attendees'] });
+    },
+  });
+}
+
 export function useJoinDrive() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -1208,6 +1221,15 @@ export function useNgoStreakCalendar(weeks = 12) {
   return useQuery({
     queryKey: ['ngo', 'streaks', 'calendar', weeks],
     queryFn: () => fetchNgoStreakCalendar(weeks),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useNgoReputation(weeks = 12) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'reputation', weeks],
+    queryFn: () => fetchNgoReputation(weeks),
     enabled: isAuthenticated,
   });
 }

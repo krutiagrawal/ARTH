@@ -1,6 +1,7 @@
 import { PrismaClient, TreeHealthStatus } from '@plant/db';
 import { NotFoundError } from '../utils/errors';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
+import { recordNgoContribution, recomputeReputation } from './ngoReputation.service';
 
 interface BulkCreateInput {
   driveId?: string;
@@ -63,6 +64,9 @@ export async function bulkCreatePlantedTrees(prisma: PrismaClient, ngoUserId: st
     await tx.treeHealthCheck.createMany({
       data: created.map((t) => ({ plantedTreeId: t.id, status: 'healthy' as const })),
     });
+
+    await recordNgoContribution(tx, ngo.id, ['impact_verification']);
+    await recomputeReputation(tx, ngo.id);
 
     return { createdCount: created.length, plantedTreeIds: created.map((t) => t.id) };
   });
