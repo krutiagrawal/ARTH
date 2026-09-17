@@ -263,7 +263,6 @@ export function NurseryDashboardScreen({ navigation }: NurseryDashboardScreenPro
     { key: 'followers', emoji: '👥', color: COLORS.xpBlue, title: 'Followers', onPress: () => navigation.navigate('NurseryFollowers') },
     { key: 'streak', emoji: '🔥', color: COLORS.sage, title: 'Growth & Trust', onPress: () => navigation.navigate('NurseryStreakBadges') },
     { key: 'analytics', emoji: '📊', color: COLORS.golden, title: 'Stock Analytics', onPress: () => navigation.navigate('NurseryStockAnalytics') },
-    { key: 'viewProfile', emoji: '🌿', color: COLORS.forest, title: 'View public profile', onPress: () => navigation.navigate('NurseryProfile') },
     { key: 'map', emoji: '🗺️', color: COLORS.coral, title: 'View on Map', onPress: () => navigation.navigate('NurseryMap') },
     { key: 'pickupDelivery', emoji: '🚴', color: COLORS.xpBlue, title: 'Pickup & Delivery', onPress: () => navigation.navigate('NurseryPickupDeliveryConfig') },
     { key: 'deliveryPartners', emoji: '🛵', color: COLORS.sageDark, title: 'Delivery Partners', onPress: () => navigation.navigate('NurseryDeliveryPartners') },
@@ -314,9 +313,15 @@ export function NurseryDashboardScreen({ navigation }: NurseryDashboardScreenPro
           />
 
           <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-            <View>
+            <View style={styles.headerLeft}>
               <Text style={[styles.greeting, { color: theme.textOnSky }]}>{theme.greeting} {theme.emoji}</Text>
-              <Text style={[styles.orgName, { color: theme.textOnSky }]}>{profile?.nurseryName ?? user?.name ?? 'Your nursery'}</Text>
+              <Text
+                style={[styles.orgName, { color: theme.textOnSky }]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {profile?.nurseryName ?? user?.name ?? 'Your nursery'}
+              </Text>
             </View>
             <View style={styles.headerRight}>
               <MuteButton bare />
@@ -336,14 +341,16 @@ export function NurseryDashboardScreen({ navigation }: NurseryDashboardScreenPro
               label="Species"
               variant="glass"
               fill
-              dark
-              color={theme.accentColor}
-              cardBackground={theme.cardBackground}
-              cardBackgroundAlt={theme.cardBackgroundAlt}
-              cardOverlayAlpha={theme.cardOverlayAlpha}
-              textColor={theme.textSecondaryOnCard}
-              subTextColor={theme.textSecondaryOnCard}
-              borderColor={theme.cardBorder}
+              fillMinHeight={70}
+              compact
+              dark={false}
+              color={COLORS.forest}
+              cardBackground={COLORS.cream}
+              cardBackgroundAlt={COLORS.beigeLight}
+              cardOverlayAlpha={0.94}
+              textColor={COLORS.textSecondary}
+              subTextColor={COLORS.textSecondary}
+              borderColor="rgba(139, 107, 71, 0.3)"
               delay={100}
               onPress={() => navigation.navigate('NurseryStock')}
               blurTarget={blurTargetRef}
@@ -354,14 +361,16 @@ export function NurseryDashboardScreen({ navigation }: NurseryDashboardScreenPro
               label="In stock"
               variant="glass"
               fill
-              dark
-              color={theme.accentColor}
-              cardBackground={theme.cardBackground}
-              cardBackgroundAlt={theme.cardBackgroundAlt}
-              cardOverlayAlpha={theme.cardOverlayAlpha}
-              textColor={theme.textSecondaryOnCard}
-              subTextColor={theme.textSecondaryOnCard}
-              borderColor={theme.cardBorder}
+              fillMinHeight={70}
+              compact
+              dark={false}
+              color={COLORS.forest}
+              cardBackground={COLORS.cream}
+              cardBackgroundAlt={COLORS.beigeLight}
+              cardOverlayAlpha={0.94}
+              textColor={COLORS.textSecondary}
+              subTextColor={COLORS.textSecondary}
+              borderColor="rgba(139, 107, 71, 0.3)"
               delay={200}
               onPress={() => navigation.navigate('NurseryStock')}
               blurTarget={blurTargetRef}
@@ -372,14 +381,16 @@ export function NurseryDashboardScreen({ navigation }: NurseryDashboardScreenPro
               label="Growth Level"
               variant="glass"
               fill
-              dark
-              color={theme.accentColor}
-              cardBackground={theme.cardBackground}
-              cardBackgroundAlt={theme.cardBackgroundAlt}
-              cardOverlayAlpha={theme.cardOverlayAlpha}
-              textColor={theme.textSecondaryOnCard}
-              subTextColor={theme.textSecondaryOnCard}
-              borderColor={theme.cardBorder}
+              fillMinHeight={70}
+              compact
+              dark={false}
+              color={COLORS.forest}
+              cardBackground={COLORS.cream}
+              cardBackgroundAlt={COLORS.beigeLight}
+              cardOverlayAlpha={0.94}
+              textColor={COLORS.textSecondary}
+              subTextColor={COLORS.textSecondary}
+              borderColor="rgba(139, 107, 71, 0.3)"
               delay={300}
               onPress={() => navigation.navigate('NurseryStreakBadges')}
               blurTarget={blurTargetRef}
@@ -486,6 +497,7 @@ const styles = StyleSheet.create({
   heroSection: { position: 'relative', overflow: 'hidden', marginHorizontal: -16 },
   heroBottomFade: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12, zIndex: 10 },
+  headerLeft: { flex: 1, marginRight: 12 },
   greeting: { fontSize: 13, fontWeight: '500', letterSpacing: 0.3, textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
   orgName: { fontFamily: FONTS.displayBold, fontSize: 24, lineHeight: 32, letterSpacing: -0.3, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 5 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },

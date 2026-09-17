@@ -11,6 +11,19 @@ import { EmptyState } from '../components/common/EmptyState';
 import { resolveMediaUrl } from '../api/client';
 import type { ApiNotification } from '../api/social';
 import { useMarkNotificationsRead, useNotifications } from '../hooks/useSocialQueries';
+import { useAuth } from '../context/AuthContext';
+
+const ORDER_NOTIFICATION_TYPES = new Set([
+  'order_placed',
+  'order_confirmed',
+  'order_out_for_delivery',
+  'order_delivered',
+  'order_cancelled',
+  'order_ready_for_pickup',
+  'order_picked_up',
+  'order_plantation_verified',
+  'order_fulfillment_today',
+]);
 
 /** One line of copy per notification type. The actor's name is rendered separately, in bold. */
 function describe(n: ApiNotification): string {
@@ -49,6 +62,44 @@ function describe(n: ApiNotification): string {
       return "We've missed you 🌳";
     case 'cart_abandoned':
       return 'You left something in your cart 🛒';
+    // ---- Marketplace order lifecycle (planter-facing) ----
+    case 'order_placed':
+      return 'placed a new order with you';
+    case 'order_confirmed':
+      return (n.data as any)?.stage === 'packed' ? 'Your order was packed 📦' : 'Your order was confirmed';
+    case 'order_out_for_delivery':
+      return 'Your order is on its way';
+    case 'order_delivered':
+      return 'Your order was delivered';
+    case 'order_cancelled':
+      return 'Your order was cancelled and refunded';
+    case 'order_ready_for_pickup':
+      return 'Your order is ready for pickup';
+    case 'order_picked_up':
+      return 'Your order pickup was confirmed';
+    case 'order_plantation_verified':
+      return "This order's saplings are now verified ARTH Trees 🌳";
+    case 'order_fulfillment_today':
+      return 'You have an order due today';
+    case 'wishlist_back_in_stock':
+      return 'A species on your wishlist is back in stock';
+    // ---- Nursery-flow (nursery-received) ----
+    case 'stock_low':
+      return 'One of your species is running low on stock';
+    case 'stock_out_of_stock':
+      return 'One of your species just ran out of stock';
+    case 'bulk_requirement_nearby':
+      return 'An NGO nearby is looking for saplings';
+    case 'bulk_requirement_response_received':
+      return 'A nursery offered to supply your bulk requirement';
+    case 'bulk_requirement_response_accepted':
+      return 'Your bulk-supply offer was accepted';
+    case 'sapling_planted':
+      return 'A sapling you supplied was planted';
+    case 'nursery_tree_milestone':
+      return 'A tree you supplied hit a growth milestone 🌳';
+    case 'nursery_impact_milestone':
+      return 'You hit an impact milestone 🏆';
     default:
       return 'sent you an update';
   }
@@ -85,6 +136,42 @@ function iconFor(n: ApiNotification): string {
       return '🌳';
     case 'cart_abandoned':
       return '🛒';
+    case 'order_placed':
+      return '🛒';
+    case 'order_confirmed':
+      return '📦';
+    case 'order_out_for_delivery':
+      return '🚴';
+    case 'order_delivered':
+      return '🚚';
+    case 'order_cancelled':
+      return '🚫';
+    case 'order_ready_for_pickup':
+      return '📦';
+    case 'order_picked_up':
+      return '🎉';
+    case 'order_plantation_verified':
+      return '🌳';
+    case 'order_fulfillment_today':
+      return '📅';
+    case 'wishlist_back_in_stock':
+      return '🌱';
+    case 'stock_low':
+      return '⚠️';
+    case 'stock_out_of_stock':
+      return '🚫';
+    case 'bulk_requirement_nearby':
+      return '🤝';
+    case 'bulk_requirement_response_received':
+      return '🤝';
+    case 'bulk_requirement_response_accepted':
+      return '✅';
+    case 'sapling_planted':
+      return '🌱';
+    case 'nursery_tree_milestone':
+      return '🌳';
+    case 'nursery_impact_milestone':
+      return '🏆';
     default:
       return '🛡️';
   }
@@ -118,7 +205,24 @@ function NotificationRow({
     notification.type === 'streak_at_risk' ||
     notification.type === 'streak_broken' ||
     notification.type === 'reengagement_nudge' ||
-    notification.type === 'cart_abandoned';
+    notification.type === 'cart_abandoned' ||
+    notification.type === 'order_confirmed' ||
+    notification.type === 'order_out_for_delivery' ||
+    notification.type === 'order_delivered' ||
+    notification.type === 'order_cancelled' ||
+    notification.type === 'order_ready_for_pickup' ||
+    notification.type === 'order_picked_up' ||
+    notification.type === 'order_plantation_verified' ||
+    notification.type === 'wishlist_back_in_stock' ||
+    notification.type === 'stock_low' ||
+    notification.type === 'stock_out_of_stock' ||
+    notification.type === 'bulk_requirement_nearby' ||
+    notification.type === 'bulk_requirement_response_accepted' ||
+    notification.type === 'sapling_planted' ||
+    notification.type === 'nursery_tree_milestone' ||
+    notification.type === 'nursery_impact_milestone' ||
+    notification.type === 'order_fulfillment_today' ||
+    notification.type === 'bulk_requirement_response_received';
 
   return (
     <TouchableOpacity
@@ -170,6 +274,8 @@ export function NotificationsScreen({ navigation }: any) {
   const { data, isLoading, refetch, isRefetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useNotifications();
   const markRead = useMarkNotificationsRead();
+  const { user } = useAuth();
+  const isNursery = user?.role === 'nursery';
 
   const notifications = useMemo(
     () => data?.pages.flatMap((p) => p.notifications) ?? [],
@@ -209,7 +315,7 @@ export function NotificationsScreen({ navigation }: any) {
         return;
       }
       if (n.type === 'follow_request') {
-        navigation.navigate('NgoMain');
+        navigation.navigate(isNursery ? 'NurseryFollowers' : 'NgoMain');
         return;
       }
       if (n.type === 'friend_request') {
@@ -224,11 +330,50 @@ export function NotificationsScreen({ navigation }: any) {
         navigation.navigate('Cart');
         return;
       }
+      if (n.type === 'wishlist_back_in_stock') {
+        navigation.navigate('Wishlist');
+        return;
+      }
+      if (n.type === 'stock_low' || n.type === 'stock_out_of_stock') {
+        navigation.navigate('NurseryStock');
+        return;
+      }
+      if (n.type === 'bulk_requirement_nearby' || n.type === 'bulk_requirement_response_accepted') {
+        const requirementId = (n.data as any)?.requirementId;
+        if (requirementId) navigation.navigate('NurseryBulkRequirementDetail', { requirementId });
+        else navigation.navigate('NurseryBulkRequirements');
+        return;
+      }
+      if (n.type === 'bulk_requirement_response_received') {
+        navigation.navigate('NgoBulkRequirements');
+        return;
+      }
+      if (
+        n.type === 'sapling_planted' ||
+        n.type === 'nursery_tree_milestone' ||
+        n.type === 'nursery_impact_milestone'
+      ) {
+        navigation.navigate('NurseryImpact');
+        return;
+      }
+      if (ORDER_NOTIFICATION_TYPES.has(n.type)) {
+        const orderId = (n.data as any)?.orderId;
+        if (orderId) {
+          navigation.navigate(isNursery ? 'NurseryOrderDetail' : 'OrderDetail', { orderId });
+        } else {
+          navigation.navigate(isNursery ? 'NurseryOrders' : 'MyOrders');
+        }
+        return;
+      }
       if (n.actor?.kind === 'ngo') {
         navigation.navigate('NgoPublicProfile', { ngoId: n.actor.id });
+        return;
+      }
+      if (n.actor?.kind === 'nursery') {
+        navigation.navigate('NurseryPublicProfile', { nurseryId: n.actor.id });
       }
     },
-    [navigation],
+    [navigation, isNursery],
   );
 
   const onEndReached = useCallback(() => {

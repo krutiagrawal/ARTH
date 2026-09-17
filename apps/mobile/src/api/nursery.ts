@@ -488,6 +488,12 @@ export async function dispatchOrder(id: string, deliveryPartnerId: string): Prom
   return apiFetch<ApiNurseryOrder>(`/api/nursery/orders/${id}/dispatch`, { method: 'POST', body: { deliveryPartnerId } });
 }
 
+/** Swaps the assigned delivery partner while the order is still `out_for_delivery` — i.e. before
+ * the rider has completed delivery. Unlike `dispatchOrder`, this doesn't change the order status. */
+export async function reassignDeliveryPartner(id: string, deliveryPartnerId: string): Promise<ApiNurseryOrder> {
+  return apiFetch<ApiNurseryOrder>(`/api/nursery/orders/${id}/reassign-delivery-partner`, { method: 'POST', body: { deliveryPartnerId } });
+}
+
 export async function deliverOrder(id: string, code: string): Promise<ApiNurseryOrder> {
   return apiFetch<ApiNurseryOrder>(`/api/nursery/orders/${id}/deliver`, { method: 'POST', body: { code } });
 }

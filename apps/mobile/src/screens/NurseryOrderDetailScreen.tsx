@@ -18,6 +18,7 @@ import {
   useNurseryOrder,
   usePackOrder,
   useDispatchOrder,
+  useReassignDeliveryPartner,
   useDeliverOrder,
   useReadyForPickupOrder,
   usePickedUpOrder,
@@ -42,6 +43,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
   const packMutation = usePackOrder();
   const dispatchMutation = useDispatchOrder();
+  const reassignMutation = useReassignDeliveryPartner();
   const deliverMutation = useDeliverOrder();
   const readyForPickupMutation = useReadyForPickupOrder();
   const pickedUpMutation = usePickedUpOrder();
@@ -51,6 +53,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
   const [code, setCode] = useState('');
   const [actionError, setActionError] = useState('');
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [pickerMode, setPickerMode] = useState<'assign' | 'reassign'>('assign');
   const { data: profile } = useNurseryProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
   // Sheet switches to a dark navy surface at night (see Sheet.tsx's isNightMode) but has no way
@@ -125,12 +128,43 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
             </>
           )}
 
-          {!isPickup && order.tracking?.riderName && (
+          {/* Assigning/changing the delivery partner is available from the moment the order is
+              confirmed (not just once it's packed and dispatched) — a nursery may want to line up
+              a rider ahead of time, and should always be able to correct a mistaken pick right up
+              until the order has actually left (picked up/delivered/cancelled). */}
+          {!isPickup && ['confirmed', 'packed', 'out_for_delivery'].includes(order.status) && (
             <>
               <Text style={styles.sectionTitle}>Delivery partner</Text>
               <BorderCard style={styles.card}>
-                <Text style={styles.partnerAssignedName}>{order.tracking.riderName}</Text>
-                {order.tracking.riderPhone && <Text style={styles.partnerAssignedPhone}>{order.tracking.riderPhone}</Text>}
+                {order.tracking?.riderName ? (
+                  <View style={styles.partnerAssignedRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.partnerAssignedName}>{order.tracking.riderName}</Text>
+                      {order.tracking.riderPhone && <Text style={styles.partnerAssignedPhone}>{order.tracking.riderPhone}</Text>}
+                    </View>
+                    <TouchableOpacity
+                      onPress={guard(() => {
+                        setPickerMode('reassign');
+                        setPickerVisible(true);
+                      })}
+                      disabled={reassignMutation.isPending}
+                    >
+                      <Text style={styles.changeRiderText}>{reassignMutation.isPending ? 'Changing…' : 'Change rider'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    onPress={guard(() => {
+                      setPickerMode('reassign');
+                      setPickerVisible(true);
+                    })}
+                    disabled={reassignMutation.isPending}
+                  >
+                    <Text style={styles.changeRiderText}>
+                      {reassignMutation.isPending ? 'Assigning…' : '+ Assign a delivery partner'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </BorderCard>
             </>
           )}
@@ -180,14 +214,33 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
           )}
 
           {order.status === 'packed' && !isPickup && (
-            <AnimatedButton
-              label={dispatchMutation.isPending ? 'Dispatching…' : 'Assign a delivery partner'}
-              onPress={guard(() => setPickerVisible(true))}
-              disabled={dispatchMutation.isPending}
-              variant="primary"
-              size="lg"
-              fullWidth
-            />
+            // If a rider was already picked in the "Delivery partner" section above, sending it
+            // out is one tap with that same partner — no need to pick again. Otherwise this still
+            // opens the picker and assigns + dispatches together, same as before.
+            order.tracking?.deliveryPartnerId ? (
+              <AnimatedButton
+                label={dispatchMutation.isPending ? 'Sending…' : `Send out with ${order.tracking.riderName}`}
+                onPress={guard(() =>
+                  run(() => dispatchMutation.mutateAsync({ id: orderId, deliveryPartnerId: order.tracking!.deliveryPartnerId! })),
+                )}
+                disabled={dispatchMutation.isPending}
+                variant="primary"
+                size="lg"
+                fullWidth
+              />
+            ) : (
+              <AnimatedButton
+                label={dispatchMutation.isPending ? 'Dispatching…' : 'Assign a delivery partner'}
+                onPress={guard(() => {
+                  setPickerMode('assign');
+                  setPickerVisible(true);
+                })}
+                disabled={dispatchMutation.isPending}
+                variant="primary"
+                size="lg"
+                fullWidth
+              />
+            )
           )}
 
           {order.status === 'out_for_delivery' && !isPickup && (
@@ -247,7 +300,12 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
         </ScrollView>
       )}
 
-      <Sheet visible={pickerVisible} onClose={() => setPickerVisible(false)} title="Assign a delivery partner" scrollable>
+      <Sheet
+        visible={pickerVisible}
+        onClose={() => setPickerVisible(false)}
+        title={pickerMode === 'reassign' ? 'Choose a delivery partner' : 'Assign a delivery partner'}
+        scrollable
+      >
         {(deliveryPartners ?? []).filter((p) => p.isActive).length === 0 ? (
           <Text style={[styles.emptyPartnersText, isNightMode && { color: ON_DARK_SURFACE.secondary }]}>
             No active delivery partners yet — add one from the Delivery Partners screen first.
@@ -259,10 +317,14 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
               <TouchableOpacity
                 key={partner.id}
                 style={[styles.partnerRow, isNightMode && styles.partnerRowNight]}
-                disabled={dispatchMutation.isPending}
+                disabled={dispatchMutation.isPending || reassignMutation.isPending}
                 onPress={() => {
                   setPickerVisible(false);
-                  run(() => dispatchMutation.mutateAsync({ id: orderId, deliveryPartnerId: partner.id }));
+                  if (pickerMode === 'reassign') {
+                    run(() => reassignMutation.mutateAsync({ id: orderId, deliveryPartnerId: partner.id }));
+                  } else {
+                    run(() => dispatchMutation.mutateAsync({ id: orderId, deliveryPartnerId: partner.id }));
+                  }
                 }}
               >
                 <View style={{ flex: 1 }}>
@@ -312,8 +374,10 @@ const styles = StyleSheet.create({
   },
   otpHint: { backgroundColor: 'rgba(212,168,83,0.15)', borderRadius: RADIUS.md, padding: 10, marginBottom: 10 },
   otpHintText: { fontSize: 12, color: COLORS.earth, fontWeight: '600', textAlign: 'center' },
+  partnerAssignedRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   partnerAssignedName: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
   partnerAssignedPhone: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
+  changeRiderText: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
   errorText: { fontSize: 13, color: COLORS.dangerDark, textAlign: 'center', marginBottom: 12 },
   cancelButton: { marginTop: 16, alignItems: 'center', paddingVertical: 10 },
   cancelText: { fontSize: 13, fontWeight: '700', color: COLORS.dangerDark },

@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
+import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { Mascot } from '../components/common/Mascot';
 import { TrustScoreGauge } from '../components/common/TrustScoreGauge';
@@ -38,12 +39,10 @@ export function NurseryStreakBadgesScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <LinearGradient
-        colors={[COLORS.nightForest, COLORS.forest, COLORS.forestDeep]}
+        colors={[COLORS.cream, COLORS.beigeLight]}
         style={StyleSheet.absoluteFill}
-        start={{ x: 0.2, y: 0 }}
-        end={{ x: 0.8, y: 1 }}
       />
 
       <ScrollView
@@ -52,7 +51,7 @@ export function NurseryStreakBadgesScreen({ navigation }: any) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.dismissButton}>
+          <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.dismissButton} activeOpacity={0.85}>
             <Text style={styles.dismissText}>← Back</Text>
           </TouchableOpacity>
         </View>
@@ -68,7 +67,7 @@ export function NurseryStreakBadgesScreen({ navigation }: any) {
 
         <BorderCard style={styles.card}>
           <View style={styles.growthRow}>
-            <GrowthLevelBadge level={growthLevel} />
+            <GrowthLevelBadge level={growthLevel} variant="light" />
             {nextMeta && reputation && (
               <Text style={styles.growthProgressText}>
                 {(reputation.growthProgress.suppliedToNext ?? 0) > 0
@@ -81,7 +80,7 @@ export function NurseryStreakBadgesScreen({ navigation }: any) {
         </BorderCard>
 
         <BorderCard style={styles.card}>
-          <TrustScoreGauge score={reputation?.trustScore ?? null} factors={reputation?.trustScoreFactors} />
+          <TrustScoreGauge score={reputation?.trustScore ?? null} factors={reputation?.trustScoreFactors} variant="light" />
         </BorderCard>
 
         {reputation && (
@@ -93,6 +92,7 @@ export function NurseryStreakBadgesScreen({ navigation }: any) {
               current={reputation.streaks.supply.current}
               longest={reputation.streaks.supply.longest}
               weeks={reputation.streaks.supply.weeks}
+              variant="light"
             />
             <ContributionStreakCard
               icon="🌿"
@@ -101,6 +101,7 @@ export function NurseryStreakBadgesScreen({ navigation }: any) {
               current={reputation.streaks.inventoryFreshness.current}
               longest={reputation.streaks.inventoryFreshness.longest}
               weeks={reputation.streaks.inventoryFreshness.weeks}
+              variant="light"
             />
             <ContributionStreakCard
               icon="🌍"
@@ -109,6 +110,7 @@ export function NurseryStreakBadgesScreen({ navigation }: any) {
               current={reputation.streaks.arthContribution.current}
               longest={reputation.streaks.arthContribution.longest}
               weeks={reputation.streaks.arthContribution.weeks}
+              variant="light"
             />
             <ContributionStreakCard
               icon="🤝"
@@ -117,6 +119,7 @@ export function NurseryStreakBadgesScreen({ navigation }: any) {
               current={reputation.fulfilmentStreak.current}
               longest={reputation.fulfilmentStreak.max}
               unit="orders"
+              variant="light"
             />
           </View>
         )}
@@ -138,15 +141,25 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, gap: 16 },
   header: { flexDirection: 'row' },
-  dismissButton: { padding: 8, marginLeft: -8 },
-  dismissText: { fontSize: 14, color: COLORS.white, fontWeight: '600' },
+  // The one real "button" on this page — sage green fill, matching the requested palette
+  // (beige page, sage buttons, brown used sparingly for card borders/accents).
+  dismissButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.sage,
+    marginLeft: -4,
+  },
+  dismissText: { fontSize: 13, color: COLORS.white, fontWeight: '700' },
   mascotSection: { alignItems: 'center', marginTop: 4 },
-  title: { fontSize: 26, fontWeight: '800', color: COLORS.white, textAlign: 'center', letterSpacing: -0.5 },
-  subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.85)', textAlign: 'center', lineHeight: 20, marginTop: -6 },
+  title: { fontSize: 26, fontWeight: '800', color: COLORS.textPrimary, textAlign: 'center', letterSpacing: -0.5 },
+  subtitle: { fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 20, marginTop: -6 },
   card: { gap: 8 },
   growthRow: { gap: 6 },
-  growthProgressText: { fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: '600' },
+  growthProgressText: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
   streaksWrap: { gap: 12 },
   badgesWrap: { marginTop: 8, gap: 8 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: COLORS.white, marginLeft: 4 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: COLORS.textPrimary, marginLeft: 4 },
 });

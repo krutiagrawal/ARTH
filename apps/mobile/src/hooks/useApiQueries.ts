@@ -154,6 +154,7 @@ import {
   fetchNurseryOrder,
   packOrder,
   dispatchOrder,
+  reassignDeliveryPartner,
   deliverOrder,
   readyForPickupOrder,
   pickedUpOrder,
@@ -1993,6 +1994,14 @@ export function useDispatchOrder() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, deliveryPartnerId }: { id: string; deliveryPartnerId: string }) => dispatchOrder(id, deliveryPartnerId),
+    onSuccess: () => invalidateNurseryOrders(queryClient),
+  });
+}
+
+export function useReassignDeliveryPartner() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, deliveryPartnerId }: { id: string; deliveryPartnerId: string }) => reassignDeliveryPartner(id, deliveryPartnerId),
     onSuccess: () => invalidateNurseryOrders(queryClient),
   });
 }

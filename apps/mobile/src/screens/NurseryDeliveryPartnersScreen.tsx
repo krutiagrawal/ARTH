@@ -26,8 +26,17 @@ import type { ApiDeliveryPartner } from '../api/deliveryPartners';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { useEmailField } from '../hooks/useEmailField';
 import { usePhoneField } from '../hooks/usePhoneField';
+import { isValidPhone } from '../utils/validation';
 
-function PartnerRow({ partner, onToggle }: { partner: ApiDeliveryPartner; onToggle: () => void }) {
+function PartnerRow({
+  partner,
+  onToggle,
+  onEdit,
+}: {
+  partner: ApiDeliveryPartner;
+  onToggle: () => void;
+  onEdit: () => void;
+}) {
   return (
     <BorderCard style={styles.row}>
       <View style={{ flex: 1 }}>
@@ -41,11 +50,16 @@ function PartnerRow({ partner, onToggle }: { partner: ApiDeliveryPartner; onTogg
           {!partner.isActive && <Text style={styles.inactiveTag}>Deactivated</Text>}
         </View>
       </View>
-      <TouchableOpacity onPress={onToggle} style={[styles.toggleButton, !partner.isActive && styles.toggleButtonInactive]}>
-        <Text style={[styles.toggleButtonText, !partner.isActive && styles.toggleButtonTextInactive]}>
-          {partner.isActive ? 'Deactivate' : 'Reactivate'}
-        </Text>
-      </TouchableOpacity>
+      <View style={styles.rowActions}>
+        <TouchableOpacity onPress={onEdit} style={styles.editButton}>
+          <Text style={styles.editButtonText}>Edit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onToggle} style={[styles.toggleButton, !partner.isActive && styles.toggleButtonInactive]}>
+          <Text style={[styles.toggleButtonText, !partner.isActive && styles.toggleButtonTextInactive]}>
+            {partner.isActive ? 'Deactivate' : 'Reactivate'}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </BorderCard>
   );
 }
@@ -68,6 +82,40 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
   const phone = usePhoneField('', true);
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Editing an existing partner's name/phone — separate from the create form above, since it
+  // pre-fills from a partner that's already registered (running the create form's "is this phone
+  // already taken" check against its own current number would always false-flag it as taken).
+  const [editingPartner, setEditingPartner] = useState<ApiDeliveryPartner | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const openEdit = (partner: ApiDeliveryPartner) => {
+    setEditingPartner(partner);
+    setEditName(partner.name);
+    setEditPhone(partner.phone);
+    setEditError(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingPartner) return;
+    setEditError(null);
+    if (!editName.trim()) {
+      setEditError('Enter a name');
+      return;
+    }
+    if (!isValidPhone(editPhone)) {
+      setEditError('Enter a valid 10-digit mobile number');
+      return;
+    }
+    try {
+      await updateMutation.mutateAsync({ id: editingPartner.id, name: editName.trim(), phone: editPhone });
+      setEditingPartner(null);
+    } catch (e) {
+      setEditError(e instanceof ApiError ? e.message : 'Could not save these changes. Please try again.');
+    }
+  };
 
   const handleCreate = async () => {
     setError(null);
@@ -156,7 +204,7 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           {partners.map((p) => (
-            <PartnerRow key={p.id} partner={p} onToggle={() => handleToggle(p)} />
+            <PartnerRow key={p.id} partner={p} onToggle={() => handleToggle(p)} onEdit={() => openEdit(p)} />
           ))}
         </ScrollView>
       )}
@@ -204,6 +252,23 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
           />
         </View>
       </Sheet>
+
+      <Sheet visible={!!editingPartner} onClose={() => setEditingPartner(null)} title="Edit delivery partner" scrollable>
+        <View style={{ gap: 4 }}>
+          <FormField dark={isNightMode} label="Name" value={editName} onChangeText={setEditName} placeholder="eg - Rider's full name" />
+          <PhoneField dark={isNightMode} label="Phone" value={editPhone} onChangeText={setEditPhone} />
+          {editError && <Text style={styles.errorText}>{editError}</Text>}
+          <AnimatedButton
+            label={updateMutation.isPending ? 'Saving…' : 'Save changes'}
+            onPress={handleSaveEdit}
+            disabled={updateMutation.isPending}
+            variant="primary"
+            size="lg"
+            fullWidth
+            style={{ marginTop: 8 }}
+          />
+        </View>
+      </Sheet>
     </View>
   );
 }
@@ -221,6 +286,9 @@ const styles = StyleSheet.create({
   queueBadgeText: { fontSize: 11, fontWeight: '700', color: COLORS.forest },
   rating: { fontSize: 12, fontWeight: '700', color: COLORS.earth },
   inactiveTag: { fontSize: 11, fontWeight: '700', color: COLORS.dangerDark },
+  rowActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  editButton: { borderWidth: 1.5, borderColor: COLORS.forest, borderRadius: RADIUS.md, paddingHorizontal: 10, paddingVertical: 6 },
+  editButtonText: { fontSize: 11, fontWeight: '700', color: COLORS.forest },
   toggleButton: { borderWidth: 1.5, borderColor: COLORS.dangerDark, borderRadius: RADIUS.md, paddingHorizontal: 10, paddingVertical: 6 },
   toggleButtonInactive: { borderColor: COLORS.forest },
   toggleButtonText: { fontSize: 11, fontWeight: '700', color: COLORS.dangerDark },

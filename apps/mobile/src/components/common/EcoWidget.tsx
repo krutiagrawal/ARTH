@@ -47,6 +47,15 @@ interface EcoWidgetProps {
    * card itself, or the row's `alignItems: 'stretch'` has nothing to equalise and the tiles come
    * out content-sized at different heights. */
   fill?: boolean;
+  /** Only applies with `fill`. `fill`'s width always comes from `flex: 1` (an equal share of the
+   * row), never from padding — so a `fill` tile's height, which IS content/padding-driven, ends
+   * up shorter than that flex-assigned width on typical phone screens, reading as a wide
+   * horizontal capsule instead of a tile. Pass an explicit floor here to force the card taller
+   * than it is wide regardless of how much icon/value/label content it holds. */
+  fillMinHeight?: number;
+  /** Shrinks the icon/value/label text a step down from the default 'glass' sizing — for small
+   * tiles (e.g. a short `fillMinHeight`) where the default sizing reads as oversized/cramped. */
+  compact?: boolean;
 }
 
 export function EcoWidget({
@@ -69,6 +78,8 @@ export function EcoWidget({
   blurTarget,
   style,
   fill = false,
+  fillMinHeight,
+  compact = false,
 }: EcoWidgetProps) {
   const slideStyle = useSlideUp(delay, 20);
   const breathStyle = useBreathing(0.96, 1.04, 3500);
@@ -76,14 +87,28 @@ export function EcoWidget({
   // The card itself needs more than `flex: 1`: `minWidth: 0` releases the 90px floor that would
   // otherwise overflow a three-across grid on a narrow phone, and the tighter horizontal padding
   // keeps two-word labels ("Upcoming drives") on two lines instead of three.
-  const fillCardStyle = fill ? styles.fillCard : null;
+  const fillCardStyle = fill ? [styles.fillCard, fillMinHeight != null && { minHeight: fillMinHeight }] : null;
 
   if (variant === 'glass') {
     const glassContent = (
       <>
-        <Animated.Text style={[styles.glassIcon, breathStyle]}>{icon}</Animated.Text>
-        <Text style={[styles.glassValue, { color }]}>{value}</Text>
-        <Text style={[styles.glassLabel, dark && styles.glassLabelDark, textColor && { color: textColor }]}>{label}</Text>
+        <Animated.Text style={[styles.glassIcon, compact && styles.glassIconCompact, breathStyle]}>{icon}</Animated.Text>
+        <Text
+          style={[styles.glassValue, compact && styles.glassValueCompact, { color }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.6}
+        >
+          {value}
+        </Text>
+        <Text
+          style={[styles.glassLabel, compact && styles.glassLabelCompact, dark && styles.glassLabelDark, textColor && { color: textColor }]}
+          numberOfLines={compact ? 1 : undefined}
+          adjustsFontSizeToFit={compact}
+          minimumFontScale={0.7}
+        >
+          {label}
+        </Text>
         {sublabel && (
           <Text style={[styles.glassSublabel, dark && styles.glassSublabelDark, subTextColor && { color: subTextColor }]}>
             {sublabel}
@@ -257,6 +282,10 @@ const styles = StyleSheet.create({
     fontSize: 26,
     marginBottom: 6,
   },
+  glassIconCompact: {
+    fontSize: 18,
+    marginBottom: 2,
+  },
   minimalIcon: {
     fontSize: 28,
   },
@@ -275,6 +304,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 2,
+  },
+  glassValueCompact: {
+    fontSize: 14,
+    marginBottom: 0,
   },
   minimalValue: {
     fontSize: 18,
@@ -306,6 +339,10 @@ const styles = StyleSheet.create({
   },
   glassLabelDark: {
     color: COLORS.white,
+  },
+  glassLabelCompact: {
+    fontSize: 9,
+    letterSpacing: 0.3,
   },
   minimalLabel: {
     fontSize: 12,

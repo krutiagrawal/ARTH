@@ -74,7 +74,27 @@ export type NotificationType =
   | 'streak_at_risk'
   | 'streak_broken'
   | 'reengagement_nudge'
-  | 'cart_abandoned';
+  | 'cart_abandoned'
+  // ---- Marketplace order lifecycle (planter-facing) ----
+  | 'order_placed'
+  | 'order_confirmed'
+  | 'order_out_for_delivery'
+  | 'order_delivered'
+  | 'order_cancelled'
+  | 'order_ready_for_pickup'
+  | 'order_picked_up'
+  | 'order_plantation_verified'
+  | 'order_fulfillment_today'
+  | 'wishlist_back_in_stock'
+  // ---- Nursery-flow (nursery-received) ----
+  | 'stock_low'
+  | 'stock_out_of_stock'
+  | 'bulk_requirement_nearby'
+  | 'bulk_requirement_response_received'
+  | 'bulk_requirement_response_accepted'
+  | 'sapling_planted'
+  | 'nursery_tree_milestone'
+  | 'nursery_impact_milestone';
 
 export interface ApiNotification {
   id: string;
@@ -85,7 +105,7 @@ export interface ApiNotification {
   read: boolean;
   createdAt: string;
   actor: {
-    kind: 'user' | 'ngo';
+    kind: 'user' | 'ngo' | 'nursery';
     id: string;
     name: string;
     imageUrl: string | null;

@@ -583,18 +583,32 @@ function NurseryMainApp({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<NurseryTabName>('Home');
   const dashboardTheme = useTimeTheme();
 
+  // Stock/Orders are reached via the bottom tab bar, not a stack push, so the real
+  // `navigation.canGoBack()` is false there and their ScreenHeader's back button never shows.
+  // This wrapper gives those two tabs a working "back" that returns to the Home tab, while Home
+  // itself keeps using the real navigation object (and stays back-button-less, like every other
+  // role's Home tab).
+  const tabBackNavigation = useCallback(
+    (targetTab: NurseryTabName) => ({
+      ...navigation,
+      canGoBack: () => true,
+      goBack: () => setActiveTab(targetTab),
+    }),
+    [navigation],
+  );
+
   const renderScreen = useCallback(() => {
     switch (activeTab) {
       case 'Home':
         return <NurseryDashboardScreen navigation={navigation} />;
       case 'Stock':
-        return <NurseryStockScreen navigation={navigation} />;
+        return <NurseryStockScreen navigation={tabBackNavigation('Home')} />;
       case 'Orders':
-        return <NurseryOrdersScreen navigation={navigation} />;
+        return <NurseryOrdersScreen navigation={tabBackNavigation('Home')} />;
       default:
         return <NurseryDashboardScreen navigation={navigation} />;
     }
-  }, [activeTab, navigation]);
+  }, [activeTab, navigation, tabBackNavigation]);
 
   return (
     <View style={styles.mainContainer}>

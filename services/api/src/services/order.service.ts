@@ -632,6 +632,40 @@ export async function markOrderOutForDelivery(prisma: PrismaClient, nurseryId: s
   return updated;
 }
 
+// Lets the nursery assign or swap the delivery partner any time between order confirmation and
+// the order actually being handed off — same partner validation as dispatch, but never touches
+// order.status/outForDeliveryAt, since a partner can be picked well before the order is packed
+// or dispatched (the DeliveryTracking row already exists from order confirmation onward, see
+// finalizeConfirmedOrder). Not allowed once the order has left the nursery's hands (picked up,
+// delivered, cancelled, etc.) — there's no rider left to (re)assign at that point.
+export async function reassignDeliveryPartner(prisma: PrismaClient, nurseryId: string, orderId: string, deliveryPartnerId: string) {
+  const order = await findNurseryOrderOrThrow(prisma, nurseryId, orderId);
+  if (order.fulfillmentType !== 'delivery') throw new BadRequestError('Only a delivery order has a delivery partner');
+  if (!['confirmed', 'packed', 'out_for_delivery'].includes(order.status)) {
+    throw new BadRequestError('This order can no longer have its delivery partner changed');
+  }
+
+  const partner = await prisma.deliveryPartnerProfile.findFirst({
+    where: { id: deliveryPartnerId, nurseryId },
+    include: { user: true },
+  });
+  if (!partner) throw new NotFoundError('Delivery partner not found');
+  if (!partner.isActive) throw new BadRequestError('This delivery partner is deactivated');
+
+  await prisma.deliveryTracking.update({
+    where: { orderId },
+    data: {
+      deliveryPartnerId: partner.id,
+      riderName: partner.user.name,
+      riderPhone: partner.phone,
+      provider: 'nursery_staff',
+      updatedAt: new Date(),
+    },
+  });
+
+  return prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+}
+
 export async function markOrderDelivered(prisma: PrismaClient, nurseryId: string, orderId: string, code?: string) {
   const order = await findNurseryOrderOrThrow(prisma, nurseryId, orderId);
   if (order.status !== 'out_for_delivery') throw new BadRequestError('Only a dispatched order can be marked delivered');

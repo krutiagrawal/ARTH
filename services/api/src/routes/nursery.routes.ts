@@ -283,6 +283,19 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
     },
   );
 
+  fastify.post<{ Params: { id: string }; Body: { deliveryPartnerId: string } }>(
+    '/orders/:id/reassign-delivery-partner',
+    async (request, reply) => {
+      const parsed = dispatchOrderSchema.safeParse(request.body);
+      if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+      const profile = await nurseryService.getOwnProfile(fastify.prisma, request.user!.id);
+      reply.send(
+        await orderService.reassignDeliveryPartner(fastify.prisma, profile.id, request.params.id, parsed.data.deliveryPartnerId),
+      );
+    },
+  );
+
   fastify.post<{ Params: { id: string }; Body: { otp?: string; code?: string } }>('/orders/:id/deliver', async (request, reply) => {
     const profile = await nurseryService.getOwnProfile(fastify.prisma, request.user!.id);
     reply.send(
