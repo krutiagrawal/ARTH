@@ -22,6 +22,11 @@ function ReviewRow({ review, guard }: { review: ApiNurseryReview; guard: <A exte
   const [responding, setResponding] = useState(false);
   const [text, setText] = useState('');
 
+  const startEditing = () => {
+    setText(review.nurseryResponse ?? '');
+    setResponding(true);
+  };
+
   return (
     <BorderCard noPadding style={styles.row}>
       <View style={styles.rowHeader}>
@@ -34,25 +39,35 @@ function ReviewRow({ review, guard }: { review: ApiNurseryReview; guard: <A exte
       </View>
       {review.comment ? <Text style={styles.comment}>"{review.comment}"</Text> : null}
 
-      {review.nurseryResponse ? (
-        <View style={styles.responseBox}>
-          <Text style={styles.responseLabel}>Your response</Text>
-          <Text style={styles.responseText}>{review.nurseryResponse}</Text>
-        </View>
-      ) : responding ? (
+      {responding ? (
         <View style={styles.responseForm}>
           <TextInput style={styles.input} value={text} onChangeText={setText} placeholder="eg - Write a response…" placeholderTextColor={COLORS.textLight} multiline />
-          <TouchableOpacity
-            style={styles.sendButton}
-            disabled={!text.trim() || respondMutation.isPending}
-            onPress={guard(async () => {
-              await respondMutation.mutateAsync({ id: review.id, response: text.trim() });
-              success();
-              setResponding(false);
-            })}
-          >
-            <Text style={styles.sendText}>{respondMutation.isPending ? 'Sending…' : 'Send response'}</Text>
-          </TouchableOpacity>
+          <View style={styles.responseFormActions}>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => setResponding(false)}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.sendButton}
+              disabled={!text.trim() || respondMutation.isPending}
+              onPress={guard(async () => {
+                await respondMutation.mutateAsync({ id: review.id, response: text.trim() });
+                success();
+                setResponding(false);
+              })}
+            >
+              <Text style={styles.sendText}>{respondMutation.isPending ? 'Saving…' : 'Send response'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : review.nurseryResponse ? (
+        <View style={styles.responseBox}>
+          <View style={styles.responseBoxHeader}>
+            <Text style={styles.responseLabel}>Your response</Text>
+            <TouchableOpacity onPress={guard(startEditing)}>
+              <Text style={styles.editResponseText}>Edit</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.responseText}>{review.nurseryResponse}</Text>
         </View>
       ) : (
         <TouchableOpacity onPress={guard(() => setResponding(true))} style={styles.respondButton}>
@@ -109,7 +124,9 @@ const styles = StyleSheet.create({
   date: { fontSize: 11, color: COLORS.textMuted },
   comment: { fontSize: 13, color: COLORS.textSecondary, fontStyle: 'italic' },
   responseBox: { backgroundColor: 'rgba(94,133,80,0.08)', borderRadius: RADIUS.md, padding: 10 },
+  responseBoxHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   responseLabel: { fontSize: 11, fontWeight: '700', color: COLORS.forest, textTransform: 'uppercase', letterSpacing: 0.3 },
+  editResponseText: { fontSize: 11, fontWeight: '700', color: COLORS.forest },
   responseText: { fontSize: 13, color: COLORS.textPrimary, marginTop: 4 },
   respondButton: { alignSelf: 'flex-start' },
   respondText: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
@@ -125,6 +142,9 @@ const styles = StyleSheet.create({
     minHeight: 60,
     textAlignVertical: 'top',
   },
+  responseFormActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
+  cancelButton: { alignSelf: 'center', paddingHorizontal: 10, paddingVertical: 8 },
+  cancelText: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
   sendButton: { alignSelf: 'flex-end', backgroundColor: COLORS.forest, paddingHorizontal: 14, paddingVertical: 8, borderRadius: RADIUS.md },
   sendText: { fontSize: 12, fontWeight: '700', color: COLORS.white },
 });

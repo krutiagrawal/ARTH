@@ -1,5 +1,5 @@
 import React, { useRef, type RefObject } from 'react';
-import { View, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions, RefreshControl } from 'react-native';
+import { View, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions, RefreshControl, Linking } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -34,25 +34,63 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 const { width: SW, height: SH } = Dimensions.get('window');
 const HERO_HEIGHT = SH * 0.5;
 
-const STATUS_COPY: Record<string, { title: string; body: string }> = {
+function formatRupees(cents: number) {
+  return `₹${(cents / 100).toLocaleString('en-IN')}`;
+}
+
+const STATUS_COPY: Record<string, { title: string; body: string; action?: string }> = {
   pending: { title: 'Under review', body: "We're reviewing your nursery. Your stock will go live once approved." },
-  rejected: { title: 'Application rejected', body: 'Update your details and resubmit from your Nursery Profile.' },
-  suspended: { title: 'Account suspended', body: 'Contact support for details.' },
+  rejected: { title: 'Application rejected', body: 'Update your details and resubmit from your Nursery Profile.', action: 'Fix and resubmit →' },
+  suspended: { title: 'Account suspended', body: 'Contact support for details.', action: 'Email support →' },
 };
 
-function StatusBanner({ status, seamText }: { status: string; seamText: { primary: string; secondary: string } }) {
+const SUPPORT_EMAIL_URL = 'mailto:support@plantapp.example?subject=ARTH%20nursery%20account%20suspended';
+
+function StatusBanner({
+  status,
+  seamText,
+  navigation,
+}: {
+  status: string;
+  seamText: { primary: string; secondary: string };
+  navigation: any;
+}) {
   if (status === 'approved') return null;
   const copy = STATUS_COPY[status];
   if (!copy) return null;
   const isDanger = status === 'rejected' || status === 'suspended';
-  return (
-    <BorderCard
-      noPadding
-      style={[styles.statusBanner, { borderLeftWidth: 4, borderLeftColor: isDanger ? COLORS.coral : COLORS.golden }]}
-    >
+
+  const onPress =
+    status === 'rejected'
+      ? () => navigation.navigate('EditNurseryProfile')
+      : status === 'suspended'
+        ? () => Linking.openURL(SUPPORT_EMAIL_URL).catch(() => {})
+        : undefined;
+
+  const content = (
+    <>
       <Text style={[styles.statusTitle, { color: seamText.primary }]}>{copy.title}</Text>
       <Text style={[styles.statusBody, { color: seamText.secondary }]}>{copy.body}</Text>
-    </BorderCard>
+      {copy.action && <Text style={[styles.statusAction, { color: isDanger ? COLORS.coral : COLORS.golden }]}>{copy.action}</Text>}
+    </>
+  );
+
+  const bannerStyle = [styles.statusBanner, { borderLeftWidth: 4, borderLeftColor: isDanger ? COLORS.coral : COLORS.golden }];
+
+  if (!onPress) {
+    return (
+      <BorderCard noPadding style={bannerStyle}>
+        {content}
+      </BorderCard>
+    );
+  }
+
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+      <BorderCard noPadding style={bannerStyle}>
+        {content}
+      </BorderCard>
+    </TouchableOpacity>
   );
 }
 
@@ -398,7 +436,7 @@ export function NurseryDashboardScreen({ navigation }: NurseryDashboardScreenPro
           </View>
         </View>
 
-        {profile && <StatusBanner status={profile.status} seamText={seamText} />}
+        {profile && <StatusBanner status={profile.status} seamText={seamText} navigation={navigation} />}
 
         {today && (
           <>
@@ -469,6 +507,13 @@ export function NurseryDashboardScreen({ navigation }: NurseryDashboardScreenPro
                 delay={240}
                 onPress={() => navigation.navigate('NurseryStreakBadges')}
               />
+              <EcoWidget
+                {...tileProps}
+                icon="💰"
+                value={today ? formatRupees(today.revenueViaArthCents) : '—'}
+                label="Revenue via ARTH"
+                delay={300}
+              />
             </View>
           </>
         )}
@@ -518,6 +563,7 @@ const styles = StyleSheet.create({
   statusBanner: { padding: 14, marginTop: 4, marginBottom: 8 },
   statusTitle: { fontSize: 14, fontWeight: '700' },
   statusBody: { fontSize: 12, marginTop: 2 },
+  statusAction: { fontSize: 12, fontWeight: '700', marginTop: 6 },
   gridRow: { flexDirection: 'row', alignItems: 'stretch', gap: 10, marginBottom: 10 },
   gridTile: { flex: 1 },
   sectionTitle: { fontFamily: FONTS.display, fontSize: 20, lineHeight: 27, marginTop: 20 },

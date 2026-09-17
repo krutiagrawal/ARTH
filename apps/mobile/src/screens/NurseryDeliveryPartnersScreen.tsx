@@ -13,6 +13,7 @@ import { FormField } from '../components/common/FormField';
 import { PhoneField } from '../components/common/PhoneField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { Sheet } from '../components/common/Sheet';
+import { StatusModal } from '../components/common/StatusModal';
 import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import {
@@ -20,7 +21,9 @@ import {
   useCreateDeliveryPartner,
   useUpdateDeliveryPartner,
   useDeactivateDeliveryPartner,
+  useNurseryProfile,
 } from '../hooks/useApiQueries';
+import { useApprovalGate } from '../hooks/useApprovalGate';
 import { ApiError } from '../api/client';
 import type { ApiDeliveryPartner } from '../api/deliveryPartners';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -74,6 +77,8 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
   const { period } = useTimeTheme();
   const isNightMode = isNightlikePeriod(period);
+  const { data: profile } = useNurseryProfile();
+  const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
 
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState('');
@@ -164,10 +169,10 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
     if (partner.isActive) {
       confirm('Deactivate this delivery partner?', 'They will no longer be assignable to new orders, but any delivery already in progress keeps working.', [
         { text: 'Back', style: 'cancel' },
-        { text: 'Deactivate', style: 'destructive', onPress: () => deactivateMutation.mutate(partner.id) },
+        { text: 'Deactivate', style: 'destructive', onPress: guard(() => deactivateMutation.mutate(partner.id)) },
       ]);
     } else {
-      updateMutation.mutate({ id: partner.id, isActive: true });
+      guard(() => updateMutation.mutate({ id: partner.id, isActive: true }))();
     }
   };
 
@@ -181,7 +186,7 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
         subtitle="Riders who deliver your orders"
         onBack={navigation?.canGoBack?.() ? () => navigation.goBack() : undefined}
         right={
-          <TouchableOpacity onPress={() => setShowCreate(true)} style={styles.newButton}>
+          <TouchableOpacity onPress={guard(() => setShowCreate(true))} style={styles.newButton}>
             <Text style={styles.newButtonText}>+ New</Text>
           </TouchableOpacity>
         }
@@ -195,7 +200,7 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
           title="No delivery partners yet"
           body="Add a rider so you can assign deliveries to them and let customers track their sapling live."
           actionLabel="Add a delivery partner"
-          onAction={() => setShowCreate(true)}
+          onAction={guard(() => setShowCreate(true))}
         />
       ) : (
         <ScrollView
@@ -204,7 +209,7 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           {partners.map((p) => (
-            <PartnerRow key={p.id} partner={p} onToggle={() => handleToggle(p)} onEdit={() => openEdit(p)} />
+            <PartnerRow key={p.id} partner={p} onToggle={() => handleToggle(p)} onEdit={guard(() => openEdit(p))} />
           ))}
         </ScrollView>
       )}
@@ -243,7 +248,7 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
           </Text>
           <AnimatedButton
             label={createMutation.isPending ? 'Adding…' : 'Add delivery partner'}
-            onPress={handleCreate}
+            onPress={guard(handleCreate)}
             disabled={createMutation.isPending}
             variant="primary"
             size="lg"
@@ -260,7 +265,7 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
           {editError && <Text style={styles.errorText}>{editError}</Text>}
           <AnimatedButton
             label={updateMutation.isPending ? 'Saving…' : 'Save changes'}
-            onPress={handleSaveEdit}
+            onPress={guard(handleSaveEdit)}
             disabled={updateMutation.isPending}
             variant="primary"
             size="lg"
@@ -269,6 +274,8 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
           />
         </View>
       </Sheet>
+
+      <StatusModal {...statusModalProps} />
     </View>
   );
 }

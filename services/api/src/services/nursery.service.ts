@@ -346,12 +346,12 @@ export async function updateStock(prisma: PrismaClient, userId: string, stockId:
   return withAvailability(updated);
 }
 
-/** Nursery responds once to a review left on one of their orders. */
+/** Nursery responds to a review left on one of their orders — calling this again on a review
+ * that already has a response edits it in place (nurseryRespondedAt moves to the edit time). */
 export async function respondToReview(prisma: PrismaClient, userId: string, reviewId: string, response: string) {
   const profile = await getOwnProfile(prisma, userId);
   const review = await prisma.orderReview.findFirst({ where: { id: reviewId, nurseryId: profile.id } });
   if (!review) throw new NotFoundError('Review not found');
-  if (review.nurseryResponse) throw new BadRequestError('You already responded to this review');
 
   return prisma.orderReview.update({
     where: { id: reviewId },
