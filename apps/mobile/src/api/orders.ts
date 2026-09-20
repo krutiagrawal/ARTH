@@ -14,10 +14,26 @@ export type OrderStatus =
   | 'plantation_verified'
   | 'cancelled';
 
+/** Per-item "how to plant this" detail, joined from the shared species catalog plus the
+ * nursery's own suitable-environments tagging on that stock listing. Null when neither resolves
+ * (the nursery deleted the stock listing, or the item predates the species catalog link). */
+export interface ApiPlantingGuide {
+  scientificName: string | null;
+  localName: string | null;
+  isNative: boolean | null;
+  sunlightNeeds: 'full_sun' | 'partial_shade' | 'shade' | null;
+  waterNeeds: 'low' | 'medium' | 'high' | null;
+  soilNeeds: string | null;
+  matureHeightLabel: string | null;
+  plantingSeasons: string[];
+  suitableEnvironments: string[];
+}
+
 export interface ApiOrderItem {
   species: string;
   quantity: number;
   unitPriceCents: number;
+  plantingGuide: ApiPlantingGuide | null;
 }
 
 export interface ApiOrderTracking {

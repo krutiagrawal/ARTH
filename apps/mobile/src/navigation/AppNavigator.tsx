@@ -81,7 +81,6 @@ import { EcoInsightsScreen } from '../screens/EcoInsightsScreen';
 import { CampaignsListScreen } from '../screens/CampaignsListScreen';
 import { NgoDashboardScreen } from '../screens/NgoDashboardScreen';
 import { NgoProfileScreen } from '../screens/NgoProfileScreen';
-import { NgoMoreScreen } from '../screens/NgoMoreScreen';
 import { NgoManageScreen } from '../screens/NgoManageScreen';
 import { NgoCreateDriveScreen } from '../screens/NgoCreateDriveScreen';
 import { NgoCreateAdoptableTreeScreen } from '../screens/NgoCreateAdoptableTreeScreen';
@@ -129,7 +128,7 @@ import { BottomNav, NavSurface, TabName, TabItem, USER_TABS } from '../component
 import { useTimeTheme } from '../hooks/useTimeTheme';
 import { usePushRegistration } from '../hooks/usePushRegistration';
 
-export type NgoTabName = 'Home' | 'Community' | 'Post' | 'Manage' | 'More';
+export type NgoTabName = 'Home' | 'Manage' | 'Map' | 'Community';
 export type AdminTabName = 'Overview' | 'NGOs' | 'Reports' | 'AuditLog' | 'More';
 export type GroupTabName = 'Home' | 'Manage' | 'Activity' | 'Settings';
 
@@ -174,15 +173,15 @@ const CORPORATE_TABS: TabItem[] = [
   { name: 'Settings', icon: '⚙️', label: 'Settings' },
 ];
 
-// Post takes the centre as a raised FAB, mirroring the user app's Plant button — posting is the
-// action an NGO repeats most, and its weekly streak depends on it. Map moved into More: an NGO
-// browsing the map is rare next to managing its own drives and community.
+// No "More" tab: every item that used to live there is already reachable from the dashboard's
+// Quick Actions dock (or, for Posts/Followers, from the Community tab), so a fifth catch-all tab
+// was pure duplication. Post also dropped its own raised-FAB tab for the same reason — composing
+// an update is reachable from the Community tab's Posts segment.
 const NGO_TABS: TabItem[] = [
   { name: 'Home', icon: '🏡', label: 'Home' },
-  { name: 'Community', icon: '👥', label: 'Community' },
-  { name: 'Post', icon: '➕', label: 'Post', raised: true },
   { name: 'Manage', icon: '📋', label: 'Manage' },
-  { name: 'More', icon: '⚙️', label: 'More' },
+  { name: 'Map', icon: '🗺️', label: 'Map' },
+  { name: 'Community', icon: '👥', label: 'Community' },
 ];
 
 // NGO approvals is the action admins repeat most (AdminHomeScreen's own mascot line nags about
@@ -253,8 +252,9 @@ class DonateErrorBoundary extends React.Component<
   }
 }
 
-/** Pushable Map, for the NGO "More" menu now that Map no longer owns a tab slot. Wrapped in the
- * same lazy + boundary pair as the tab version, since react-native-maps has no Expo Go module. */
+/** NGO's own Map tab — 'ngo' mode hides the nurseries layer and keeps drives/planted trees front
+ * and centre. Wrapped in the same lazy + boundary pair as every other Map usage, since
+ * react-native-maps has no Expo Go module. */
 function NgoMapScreen({ navigation }: any) {
   return (
     <MapErrorBoundary>
@@ -519,26 +519,33 @@ function MainApp({ navigation }: any) {
 
 function NgoMainApp({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<NgoTabName>('Home');
+  // Which segment the Manage tab opens on — set alongside activeTab when the dashboard's Your
+  // Impact tiles (Drives/Trees/Campaigns) jump straight to their own data instead of always
+  // landing on Manage's default Drives segment.
+  const [manageSegment, setManageSegment] = useState<'drives' | 'campaigns' | 'trees'>('drives');
   // Same shape as MainApp: always called (Rules of Hooks), only handed to BottomNav on the
   // dashboard tab, which is the one screen here that paints itself from the time-of-day theme.
   const dashboardTheme = useTimeTheme();
 
+  const navigateTab = useCallback((tab: NgoTabName, segment?: 'drives' | 'campaigns' | 'trees') => {
+    if (segment) setManageSegment(segment);
+    setActiveTab(tab);
+  }, []);
+
   const renderScreen = useCallback(() => {
     switch (activeTab) {
       case 'Home':
-        return <NgoDashboardScreen navigation={navigation} onNavigateTab={setActiveTab} />;
+        return <NgoDashboardScreen navigation={navigation} onNavigateTab={navigateTab} />;
+      case 'Manage':
+        return <NgoManageScreen navigation={navigation} initialSegment={manageSegment} />;
+      case 'Map':
+        return <NgoMapScreen navigation={navigation} />;
       case 'Community':
         return <NgoCommunityScreen navigation={navigation} />;
-      case 'Manage':
-        return <NgoManageScreen navigation={navigation} />;
-      case 'Post':
-        return <PostComposerScreen navigation={navigation} />;
-      case 'More':
-        return <NgoMoreScreen navigation={navigation} />;
       default:
-        return <NgoDashboardScreen navigation={navigation} onNavigateTab={setActiveTab} />;
+        return <NgoDashboardScreen navigation={navigation} onNavigateTab={navigateTab} />;
     }
-  }, [activeTab, navigation]);
+  }, [activeTab, navigation, manageSegment, navigateTab]);
 
   return (
     <View style={styles.mainContainer}>

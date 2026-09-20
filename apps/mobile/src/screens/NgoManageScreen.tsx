@@ -24,9 +24,9 @@ const SEGMENTS: { key: Segment; label: string; createRoute: string; newLabel: st
   { key: 'trees', label: 'Trees', createRoute: 'NgoCreateAdoptableTree', newLabel: '+ New Tree' },
 ];
 
-export function NgoManageScreen({ navigation }: any) {
+export function NgoManageScreen({ navigation, initialSegment }: { navigation: any; initialSegment?: Segment }) {
   const insets = useSafeAreaInsets();
-  const [segment, setSegment] = useState<Segment>('drives');
+  const [segment, setSegment] = useState<Segment>(initialSegment ?? 'drives');
   const active = SEGMENTS.find((s) => s.key === segment)!;
   const { data: profile } = useNgoProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);

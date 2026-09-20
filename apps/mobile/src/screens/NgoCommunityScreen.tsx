@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { FONTS } from '../constants/typography';
 import { RADIUS } from '../constants/theme';
+import { AnimatedButton } from '../components/common/AnimatedButton';
 import { LeafBranch } from '../components/common/LeafBranch';
 import { NotificationBell } from '../components/social/NotificationBell';
 import { NgoOwnPostsScreen } from './NgoOwnPostsScreen';
@@ -63,6 +64,19 @@ export function NgoCommunityScreen({ navigation }: any) {
           <NotificationBell onPress={() => navigation.navigate('Notifications')} />
         </View>
       </View>
+
+      {/* Posting lost its own bottom-tab FAB when Post was folded into this screen — this is now
+          the only entry point for composing an update once an NGO already has at least one post
+          (the empty-state CTA on NgoOwnPostsScreen only covers the zero-posts case). */}
+      {segment === 'posts' && (
+        <AnimatedButton
+          label="+ New post"
+          onPress={() => navigation.navigate('NgoPostUpdate')}
+          size="sm"
+          gradientColors={[COLORS.forest, COLORS.forestDeep]}
+          style={styles.newPostButton}
+        />
+      )}
 
       <View style={styles.segmentRow}>
         {SEGMENTS.map((s) => {
@@ -121,6 +135,7 @@ const styles = StyleSheet.create({
   // so a child that only sets a colour drops back to the body face mid-word.
   headerTitleAccent: { fontFamily: FONTS.displayBold, color: COLORS.forest },
   headerSubtitle: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
+  newPostButton: { alignSelf: 'flex-start', marginHorizontal: 20, marginBottom: 10 },
   segmentRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 4 },
   segment: {
     flex: 1,

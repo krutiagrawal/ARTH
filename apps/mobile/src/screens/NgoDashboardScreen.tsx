@@ -21,7 +21,6 @@ import { useTimeTheme, type TimeTheme } from '../hooks/useTimeTheme';
 import { useDeviceWeather } from '../hooks/useDeviceWeather';
 import { useAuth } from '../context/AuthContext';
 import { useNgoStats, useNgoStreakCalendar, useNgoProfile } from '../hooks/useApiQueries';
-import { useNgoFollowers } from '../hooks/useSocialQueries';
 import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -39,15 +38,6 @@ const STREAK_WEEKS_SHOWN = 5;
 /** Periods dark/saturated enough that the streak leaves need to switch off green — see StreakLeafIcon. */
 const EVENING_PERIODS = new Set(['sunset', 'blueHour', 'night', 'lateNight']);
 
-/** Same tier set as NgoStreakBadgesScreen's NGO_GROWTH_LEVEL_META, just the emoji/label this tile
- * needs — not worth importing the full badge-styled version for one stat tile. */
-const GROWTH_LEVEL_TILE_META: Record<string, { emoji: string; label: string }> = {
-  seedling: { emoji: '🌱', label: 'Seedling' },
-  growing: { emoji: '🪴', label: 'Growing' },
-  established: { emoji: '🌳', label: 'Established' },
-  evergreen: { emoji: '🌲', label: 'Evergreen' },
-};
-
 /**
  * One streak-day leaf, drawn as a vector path instead of the 🌿 emoji it replaces.
  *
@@ -63,9 +53,11 @@ function StreakLeafIcon({ color, opacity }: { color: string; opacity: number }) 
   );
 }
 
+type NgoManageSegment = 'drives' | 'campaigns' | 'trees';
+
 interface NgoDashboardScreenProps {
   navigation: any;
-  onNavigateTab: (tab: NgoTabName) => void;
+  onNavigateTab: (tab: NgoTabName, manageSegment?: NgoManageSegment) => void;
 }
 
 function StreakCard({
@@ -221,7 +213,6 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
   const { data: profile, refetch: refetchProfile } = useNgoProfile();
   const { data: stats, isLoading, refetch: refetchStats } = useNgoStats();
   const { data: streakData, refetch: refetchStreak } = useNgoStreakCalendar(8);
-  const { data: pendingFollowers } = useNgoFollowers({ status: 'pending' });
   const { refreshing, onRefresh } = usePullToRefresh([refetchStats, refetchStreak, refetchProfile]);
   const streakCurrent = streakData ? currentStreakFromWeeks(streakData.weeks) : 0;
   const recentWeeks = (streakData?.weeks ?? []).slice(-STREAK_WEEKS_SHOWN);
@@ -255,27 +246,19 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
   };
 
   // Drives/Campaigns/Trees creation stays on the Manage tab, which already has its own bottom-tab
-  // entry — same reasoning nursery uses to keep Orders/Edit Profile out of its dock.
+  // entry — same reasoning nursery uses to keep Orders/Edit Profile out of its dock. Post an
+  // update, Followers and View on Map are likewise left out: Post/Followers already live under
+  // the Community tab, and Map now has its own bottom-tab entry.
   const dockActions: DockActionSpec[] = [
-    { key: 'post', emoji: '📸', color: COLORS.golden, title: 'Post an update', onPress: () => navigation.navigate('NgoPostUpdate') },
     { key: 'survival', emoji: '🩺', color: COLORS.sage, title: 'Survival & impact', onPress: () => navigation.navigate('NgoHealthCheck') },
     { key: 'plantedTrees', emoji: '🌳', color: COLORS.forest, title: 'Log planted trees', onPress: () => navigation.navigate('NgoLogPlantedTrees') },
     { key: 'bulkRequirements', emoji: '🤝', color: COLORS.amber, title: 'Bulk requirements', onPress: () => navigation.navigate('NgoBulkRequirements') },
-    {
-      key: 'followers',
-      emoji: '👥',
-      color: COLORS.xpBlue,
-      title: 'Followers',
-      badge: pendingFollowers?.pendingCount,
-      onPress: () => navigation.navigate('NgoFollowers'),
-    },
     { key: 'streak', emoji: '🔥', color: COLORS.sage, title: 'Growth & Trust', onPress: () => navigation.navigate('NgoStreakBadges') },
     { key: 'volunteers', emoji: '🙋', color: COLORS.coral, title: 'Volunteers', onPress: () => navigation.navigate('NgoVolunteers') },
     { key: 'staff', emoji: '🧑‍🤝‍🧑', color: COLORS.warmBrown, title: 'Staff roster', onPress: () => navigation.navigate('NgoStaff') },
     { key: 'donations', emoji: '💸', color: COLORS.sageDark, title: 'Donations', onPress: () => navigation.navigate('NgoDonations') },
     { key: 'reports', emoji: '📊', color: COLORS.streakGold, title: 'Reports', onPress: () => navigation.navigate('NgoReports') },
     { key: 'portfolio', emoji: '📚', color: COLORS.earth, title: 'Past work', onPress: () => navigation.navigate('NgoPortfolio') },
-    { key: 'map', emoji: '🗺️', color: COLORS.skyDay, title: 'View on Map', onPress: () => navigation.navigate('Map') },
   ];
 
   const dockRows: DockActionSpec[][] = [];
@@ -337,27 +320,45 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
               textColor={theme.textSecondaryOnCard}
               subTextColor={theme.textSecondaryOnCard}
               borderColor={theme.cardBorder}
-              delay={100}
+              delay={0}
               onPress={() => onNavigateTab('Manage')}
               blurTarget={blurTargetRef}
             />
-            <EcoWidget
-              icon="🔥"
-              value={streakCurrent}
-              label="Streak"
-              variant="glass"
-              dark
-              color={theme.accentColor}
-              cardBackground={theme.cardBackground}
-              cardBackgroundAlt={theme.cardBackgroundAlt}
-              cardOverlayAlpha={theme.cardOverlayAlpha}
-              textColor={theme.textSecondaryOnCard}
-              subTextColor={theme.textSecondaryOnCard}
-              borderColor={theme.cardBorder}
-              delay={200}
-              onPress={() => navigation.navigate('NgoStreakBadges')}
-              blurTarget={blurTargetRef}
-            />
+            <View style={styles.statsRight}>
+              <EcoWidget
+                icon="🔥"
+                value={streakCurrent}
+                label="Streak"
+                variant="glass"
+                dark
+                color={theme.accentColor}
+                cardBackground={theme.cardBackground}
+                cardBackgroundAlt={theme.cardBackgroundAlt}
+                cardOverlayAlpha={theme.cardOverlayAlpha}
+                textColor={theme.textSecondaryOnCard}
+                subTextColor={theme.textSecondaryOnCard}
+                borderColor={theme.cardBorder}
+                delay={100}
+                onPress={() => navigation.navigate('NgoStreakBadges')}
+                blurTarget={blurTargetRef}
+              />
+              <EcoWidget
+                icon="🌍"
+                value={`${stats?.co2AbsorptionKg ?? 0}kg`}
+                label="CO₂"
+                variant="glass"
+                dark
+                color={theme.accentColor}
+                cardBackground={theme.cardBackground}
+                cardBackgroundAlt={theme.cardBackgroundAlt}
+                cardOverlayAlpha={theme.cardOverlayAlpha}
+                textColor={theme.textSecondaryOnCard}
+                subTextColor={theme.textSecondaryOnCard}
+                borderColor={theme.cardBorder}
+                delay={200}
+                blurTarget={blurTargetRef}
+              />
+            </View>
           </View>
         </View>
 
@@ -377,38 +378,45 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
             <Text style={[styles.sectionSubtitle, { color: seamText.secondary }]}>
               This is what you have achieved so far
             </Text>
-            {/* Two explicit rows of three rather than one wrapping container: with `flexWrap` the
-                tiles are content-sized, so six labels of differing length wrapped 3/2/1 at uneven
-                widths. Fixed rows of `flex: 1` tiles guarantee six equal cards. */}
+            {/* 2x2 grid of `flex: 1` tiles — two explicit rows rather than a wrapping container,
+                same reasoning as the hero row: guarantees four equal-size cards regardless of
+                label length. Every tile is tappable through to where its underlying data lives. */}
             <Animated.View style={statsAnim}>
-              <View style={styles.gridRow}>
-                <EcoWidget {...tileProps} icon="🤝" value={String(stats.upcomingDrives)} label="Upcoming drives" delay={0} />
-                <EcoWidget {...tileProps} icon="📢" value={String(stats.activeCampaigns)} label="Active campaigns" delay={60} />
-                <EcoWidget {...tileProps} icon="🌳" value={String(stats.treesAdopted)} label="Trees adopted" delay={120} />
-              </View>
-              <View style={styles.gridRow}>
-                <EcoWidget {...tileProps} icon="💰" value={`₹${(stats.totalRaisedCents / 100).toLocaleString()}`} label="Raised" delay={180} />
-                <EcoWidget {...tileProps} icon="👥" value={String(stats.volunteersInvolved)} label="Volunteers" delay={240} />
-                <EcoWidget {...tileProps} icon="🌍" value={`${stats.co2AbsorptionKg}kg`} label="CO₂ potential" delay={300} />
-              </View>
               <View style={styles.gridRow}>
                 <EcoWidget
                   {...tileProps}
                   icon="🤝"
-                  value={stats.trustScore != null ? String(stats.trustScore) : '—'}
-                  label="ARTH Trust Score"
-                  delay={360}
-                  onPress={() => navigation.navigate('NgoStreakBadges')}
+                  value={String(stats.upcomingDrives)}
+                  label="Drives"
+                  delay={0}
+                  onPress={() => onNavigateTab('Manage', 'drives')}
                 />
                 <EcoWidget
                   {...tileProps}
-                  icon={GROWTH_LEVEL_TILE_META[stats.growthLevel].emoji}
-                  value={GROWTH_LEVEL_TILE_META[stats.growthLevel].label}
-                  label="Growth Level"
-                  delay={420}
-                  onPress={() => navigation.navigate('NgoStreakBadges')}
+                  icon="🌳"
+                  value={String(stats.treesAdopted)}
+                  label="Trees"
+                  delay={60}
+                  onPress={() => onNavigateTab('Manage', 'trees')}
                 />
-                <EcoWidget {...tileProps} icon="📋" value={String(stats.totalDrives)} label="Total drives" delay={480} />
+              </View>
+              <View style={styles.gridRow}>
+                <EcoWidget
+                  {...tileProps}
+                  icon="💰"
+                  value={`₹${(stats.totalRaisedCents / 100).toLocaleString()}`}
+                  label="Raised"
+                  delay={120}
+                  onPress={() => navigation.navigate('NgoDonations')}
+                />
+                <EcoWidget
+                  {...tileProps}
+                  icon="📢"
+                  value={String(stats.activeCampaigns)}
+                  label="Campaigns"
+                  delay={180}
+                  onPress={() => onNavigateTab('Manage', 'campaigns')}
+                />
               </View>
             </Animated.View>
           </>
@@ -455,7 +463,10 @@ const styles = StyleSheet.create({
   avatarButton: {},
   avatar: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', ...SHADOWS.sage },
   avatarText: { fontSize: 22 },
-  statsRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginTop: 4, marginBottom: 20 },
+  // Same shape as Home's hero stat row: one card standalone, the other two wrapped in a `flex: 1`
+  // row so all three read as the same natural-sized glass card, not stretched pills.
+  statsRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', paddingHorizontal: 20, marginTop: 4, marginBottom: 20 },
+  statsRight: { flex: 1, flexDirection: 'row', gap: 8 },
   loader: { marginTop: 20, marginBottom: 8 },
 
   // `alignItems: 'stretch'` is what equalises tile heights — without it the shortest label sets

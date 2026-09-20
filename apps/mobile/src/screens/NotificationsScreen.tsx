@@ -70,13 +70,13 @@ function describe(n: ApiNotification): string {
     case 'order_out_for_delivery':
       return 'Your order is on its way';
     case 'order_delivered':
-      return 'Your order was delivered';
+      return 'Your order has arrived — view your planting guide 🌱';
     case 'order_cancelled':
       return 'Your order was cancelled and refunded';
     case 'order_ready_for_pickup':
       return 'Your order is ready for pickup';
     case 'order_picked_up':
-      return 'Your order pickup was confirmed';
+      return 'Your order is ready — view your planting guide 🌱';
     case 'order_plantation_verified':
       return "This order's saplings are now verified ARTH Trees 🌳";
     case 'order_fulfillment_today':
@@ -156,13 +156,13 @@ function iconFor(n: ApiNotification): string {
     case 'order_out_for_delivery':
       return '🚴';
     case 'order_delivered':
-      return '🚚';
+      return '🌱';
     case 'order_cancelled':
       return '🚫';
     case 'order_ready_for_pickup':
       return '📦';
     case 'order_picked_up':
-      return '🎉';
+      return '🌱';
     case 'order_plantation_verified':
       return '🌳';
     case 'order_fulfillment_today':

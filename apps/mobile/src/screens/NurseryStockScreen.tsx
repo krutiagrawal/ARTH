@@ -14,12 +14,11 @@ import { FormField } from '../components/common/FormField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { StatusModal } from '../components/common/StatusModal';
 import { Toggle } from '../components/common/Toggle';
-import { Sheet } from '../components/common/Sheet';
+import { StockDetailSheet } from '../components/nursery/StockDetailSheet';
 import type { PickedPhoto } from '../components/common/PhotoPickerField';
 import {
   useSaplingStock,
   useCreateSaplingStock,
-  useUpdateSaplingStock,
   useDeleteSaplingStock,
   useNurseryProfile,
   useSpecies,
@@ -55,7 +54,7 @@ function Chip({ label, selected, onPress }: { label: string; selected: boolean; 
   );
 }
 
-function StockRow({ item, onEdit, onDelete }: { item: ApiSaplingStock; onEdit: () => void; onDelete: () => void }) {
+function StockRow({ item, onPress, onDelete }: { item: ApiSaplingStock; onPress: () => void; onDelete: () => void }) {
   const photoUri = resolveMediaUrl(item.photoUrl);
   const metaBits = [
     `${item.quantity} in stock`,
@@ -64,22 +63,19 @@ function StockRow({ item, onEdit, onDelete }: { item: ApiSaplingStock; onEdit: (
   if (item.ageLabel) metaBits.push(item.ageLabel);
   return (
     <BorderCard noPadding style={styles.row}>
-      {photoUri ? <Image source={{ uri: photoUri }} style={styles.thumb} /> : <View style={styles.thumbPlaceholder}><Text style={{ fontSize: 18 }}>{item.speciesRef?.emoji ?? '🌱'}</Text></View>}
-      <View style={styles.rowText}>
-        <Text style={styles.species}>{item.speciesRef?.commonName ?? item.species}</Text>
-        <Text style={styles.meta}>{metaBits.join(' · ')}</Text>
-        <View style={[styles.availBadge, { backgroundColor: `${AVAILABILITY_COLOR[item.availabilityStatus]}22` }]}>
-          <Text style={[styles.availBadgeText, { color: AVAILABILITY_COLOR[item.availabilityStatus] }]}>{AVAILABILITY_LABEL[item.availabilityStatus]}</Text>
+      <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.rowTouchable}>
+        {photoUri ? <Image source={{ uri: photoUri }} style={styles.thumb} /> : <View style={styles.thumbPlaceholder}><Text style={{ fontSize: 18 }}>{item.speciesRef?.emoji ?? '🌱'}</Text></View>}
+        <View style={styles.rowText}>
+          <Text style={styles.species}>{item.speciesRef?.commonName ?? item.species}</Text>
+          <Text style={styles.meta}>{metaBits.join(' · ')}</Text>
+          <View style={[styles.availBadge, { backgroundColor: `${AVAILABILITY_COLOR[item.availabilityStatus]}22` }]}>
+            <Text style={[styles.availBadgeText, { color: AVAILABILITY_COLOR[item.availabilityStatus] }]}>{AVAILABILITY_LABEL[item.availabilityStatus]}</Text>
+          </View>
         </View>
-      </View>
-      <View style={styles.rowActions}>
-        <TouchableOpacity onPress={onEdit} accessibilityRole="button" accessibilityLabel={`Edit ${item.species}`}>
-          <Text style={styles.editIcon}>✏️</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={onDelete} accessibilityRole="button" accessibilityLabel={`Remove ${item.species}`}>
-          <Text style={styles.deleteIcon}>🗑</Text>
-        </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={onDelete} accessibilityRole="button" accessibilityLabel={`Remove ${item.species}`} hitSlop={8}>
+        <Text style={styles.deleteIcon}>🗑</Text>
+      </TouchableOpacity>
     </BorderCard>
   );
 }
@@ -89,61 +85,8 @@ export function NurseryStockScreen({ navigation }: any) {
   const { data: stock = [], isLoading, refetch } = useSaplingStock();
   const { data: speciesCatalog = [] } = useSpecies();
   const createMutation = useCreateSaplingStock();
-  const updateMutation = useUpdateSaplingStock();
   const deleteMutation = useDeleteSaplingStock();
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
-
-  // Editing an existing stock item — quantity/price/age/etc., not the species itself (that's
-  // fixed once the listing exists; wrong species means delete-and-re-add, same as before).
-  const [editingItem, setEditingItem] = useState<ApiSaplingStock | null>(null);
-  const [editQuantity, setEditQuantity] = useState('');
-  const [editPriceCents, setEditPriceCents] = useState('');
-  const [editAgeLabel, setEditAgeLabel] = useState('');
-  const [editHeightLabel, setEditHeightLabel] = useState('');
-  const [editPotSize, setEditPotSize] = useState('');
-  const [editLowStockThreshold, setEditLowStockThreshold] = useState('');
-  const [editNotes, setEditNotes] = useState('');
-  const [editError, setEditError] = useState<string | null>(null);
-
-  const openEdit = (item: ApiSaplingStock) => {
-    setEditingItem(item);
-    setEditQuantity(String(item.quantity));
-    setEditPriceCents(item.isFree || item.priceCents == null ? '' : String(item.priceCents / 100));
-    setEditAgeLabel(item.ageLabel ?? '');
-    setEditHeightLabel(item.heightLabel ?? '');
-    setEditPotSize(item.potSize ?? '');
-    setEditLowStockThreshold(item.lowStockThreshold != null ? String(item.lowStockThreshold) : '');
-    setEditNotes(item.nurseryNotes ?? '');
-    setEditError(null);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingItem) return;
-    setEditError(null);
-    const qty = Number(editQuantity);
-    if (!Number.isFinite(qty) || qty < 0) {
-      setEditError('Enter a valid quantity.');
-      return;
-    }
-    try {
-      await updateMutation.mutateAsync({
-        id: editingItem.id,
-        input: {
-          quantity: qty,
-          isFree: !editPriceCents.trim(),
-          priceCents: editPriceCents.trim() ? Number(editPriceCents) * 100 : undefined,
-          ageLabel: editAgeLabel.trim() || undefined,
-          heightLabel: editHeightLabel.trim() || undefined,
-          potSize: editPotSize.trim() || undefined,
-          nurseryNotes: editNotes.trim() || undefined,
-          lowStockThreshold: editLowStockThreshold.trim() ? Number(editLowStockThreshold) : undefined,
-        },
-      });
-      setEditingItem(null);
-    } catch (e) {
-      setEditError(e instanceof ApiError ? e.message : 'Could not save these changes. Please try again.');
-    }
-  };
 
   // ---- Fast path: species picker + quantity + price ----
   const [speciesQuery, setSpeciesQuery] = useState('');
@@ -179,6 +122,7 @@ export function NurseryStockScreen({ navigation }: any) {
   const confirm = useConfirm();
   const { data: profile } = useNurseryProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
+  const [selectedItem, setSelectedItem] = useState<ApiSaplingStock | null>(null);
 
   const speciesMatches = useMemo(() => {
     const q = speciesQuery.trim().toLowerCase();
@@ -297,7 +241,7 @@ export function NurseryStockScreen({ navigation }: any) {
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
         refreshing={refreshing}
         onRefresh={onRefresh}
-        renderItem={({ item }) => <StockRow item={item} onEdit={guard(() => openEdit(item))} onDelete={() => handleDelete(item)} />}
+        renderItem={({ item }) => <StockRow item={item} onPress={() => setSelectedItem(item)} onDelete={() => handleDelete(item)} />}
         ListHeaderComponent={
           <View style={styles.addCard}>
             <Text style={styles.formLabel}>Species</Text>
@@ -466,49 +410,12 @@ export function NurseryStockScreen({ navigation }: any) {
         }
       />
 
-      <Sheet visible={!!editingItem} onClose={() => setEditingItem(null)} title="Edit stock item" scrollable>
-        {editingItem && (
-          <View style={{ gap: 4 }}>
-            <Text style={styles.editSpeciesName}>{editingItem.speciesRef?.commonName ?? editingItem.species}</Text>
-            <View style={styles.inlineRow}>
-              <View style={styles.inlineField}>
-                <FormField label="Quantity" value={editQuantity} onChangeText={setEditQuantity} placeholder="eg - 0" keyboardType="number-pad" />
-              </View>
-              <View style={styles.inlineField}>
-                <FormField label="Price ₹ (blank = free)" value={editPriceCents} onChangeText={setEditPriceCents} placeholder="eg - 0" keyboardType="number-pad" />
-              </View>
-            </View>
-            <View style={styles.inlineRow}>
-              <View style={styles.inlineField}>
-                <FormField label="Age" value={editAgeLabel} onChangeText={setEditAgeLabel} placeholder="eg - 6 months" />
-              </View>
-              <View style={styles.inlineField}>
-                <FormField label="Height" value={editHeightLabel} onChangeText={setEditHeightLabel} placeholder="eg - 2 ft" />
-              </View>
-            </View>
-            <View style={styles.inlineRow}>
-              <View style={styles.inlineField}>
-                <FormField label="Pot size" value={editPotSize} onChangeText={setEditPotSize} placeholder="eg - 10 inch" />
-              </View>
-              <View style={styles.inlineField}>
-                <FormField label="Low stock alert below" value={editLowStockThreshold} onChangeText={setEditLowStockThreshold} placeholder="eg - 5" keyboardType="number-pad" />
-              </View>
-            </View>
-            <FormField label="Notes (visible to you only)" value={editNotes} onChangeText={setEditNotes} placeholder="eg - Internal notes" multiline />
-            {editError && <Text style={styles.error}>{editError}</Text>}
-            <AnimatedButton
-              label={updateMutation.isPending ? 'Saving…' : 'Save changes'}
-              onPress={handleSaveEdit}
-              disabled={updateMutation.isPending}
-              fullWidth
-              gradientColors={[COLORS.forest, COLORS.forestDeep]}
-              style={{ marginTop: 8 }}
-            />
-          </View>
-        )}
-      </Sheet>
-
       <StatusModal {...statusModalProps} />
+      <StockDetailSheet
+        item={selectedItem ? stock.find((s) => s.id === selectedItem.id) ?? selectedItem : null}
+        visible={!!selectedItem}
+        onClose={() => setSelectedItem(null)}
+      />
     </View>
   );
 }
@@ -597,6 +504,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
   },
+  rowTouchable: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   thumb: { width: 40, height: 40, borderRadius: 8 },
   thumbPlaceholder: { width: 40, height: 40, borderRadius: 8, backgroundColor: COLORS.beige, alignItems: 'center', justifyContent: 'center' },
   rowText: { flex: 1 },
@@ -604,8 +512,5 @@ const styles = StyleSheet.create({
   meta: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   availBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, marginTop: 4 },
   availBadgeText: { fontSize: 10, fontWeight: '700' },
-  rowActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  editIcon: { fontSize: 16 },
   deleteIcon: { fontSize: 18 },
-  editSpeciesName: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 4 },
 });

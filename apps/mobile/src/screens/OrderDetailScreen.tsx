@@ -13,7 +13,8 @@ import { useHaptics } from '../hooks/useHaptics';
 import { useMyOrder, useCancelOrder, useSubmitOrderReview } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ApiError } from '../api/client';
-import type { OrderFulfillmentType, OrderStatus } from '../api/orders';
+import type { ApiOrderItem, OrderFulfillmentType, OrderStatus } from '../api/orders';
+import { SUNLIGHT_LABEL, WATER_LABEL } from '../constants/plantingGuide';
 
 // This screen must never import react-native-maps directly (or anything re-exported from it,
 // like AnimatedRegion) — Metro evaluates the whole package on import, including its native
@@ -61,6 +62,35 @@ function StatusTimeline({ status, fulfillmentType }: { status: OrderStatus; fulf
         );
       })}
     </View>
+  );
+}
+
+// The guide only makes sense once the saplings are actually in the planter's hands.
+const HANDED_OFF_STATUSES: OrderStatus[] = ['picked_up', 'delivered', 'plantation_verified'];
+
+function PlantingGuideCard({ item }: { item: ApiOrderItem }) {
+  const guide = item.plantingGuide;
+  if (!guide) return null;
+
+  const lines: string[] = [];
+  if (guide.scientificName) lines.push(`🔬 ${guide.scientificName}`);
+  if (guide.localName) lines.push(`🗣 ${guide.localName}`);
+  if (guide.isNative != null) lines.push(guide.isNative ? '🌍 Native to your region' : '🌍 Non-native species');
+  if (guide.sunlightNeeds) lines.push(`☀️ ${SUNLIGHT_LABEL[guide.sunlightNeeds] ?? guide.sunlightNeeds}`);
+  if (guide.waterNeeds) lines.push(`💧 ${WATER_LABEL[guide.waterNeeds] ?? guide.waterNeeds}`);
+  if (guide.soilNeeds) lines.push(`🪴 Soil: ${guide.soilNeeds}`);
+  if (guide.matureHeightLabel) lines.push(`📏 Grows to ${guide.matureHeightLabel}`);
+  if (guide.plantingSeasons.length) lines.push(`📅 Best weather to plant: ${guide.plantingSeasons.join(', ')}`);
+  if (guide.suitableEnvironments.length) lines.push(`📍 Suitable spots: ${guide.suitableEnvironments.join(', ')}`);
+  if (lines.length === 0) return null;
+
+  return (
+    <BorderCard style={styles.card}>
+      <Text style={styles.guideHeading}>{item.species}</Text>
+      {lines.map((line) => (
+        <Text key={line} style={styles.guideLine}>{line}</Text>
+      ))}
+    </BorderCard>
   );
 }
 
@@ -240,6 +270,15 @@ export function OrderDetailScreen({ route, navigation }: any) {
             </View>
           </BorderCard>
 
+          {HANDED_OFF_STATUSES.includes(order.status) && order.items.some((i) => i.plantingGuide) && (
+            <>
+              <Text style={styles.sectionTitle}>🌱 Planting Guide</Text>
+              {order.items.map((item, idx) => (
+                <PlantingGuideCard key={idx} item={item} />
+              ))}
+            </>
+          )}
+
           {order.fulfillmentType === 'delivery' && order.address ? (
             <>
               <Text style={styles.sectionTitle}>Delivering to</Text>
@@ -320,6 +359,8 @@ const styles = StyleSheet.create({
   totalLabel: { fontSize: 15, color: COLORS.textPrimary, fontWeight: '700' },
   totalValue: { fontSize: 17, color: COLORS.textPrimary, fontWeight: '800' },
   addressText: { fontSize: 13, lineHeight: 19, color: COLORS.textPrimary },
+  guideHeading: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 6 },
+  guideLine: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 20 },
   cancelledBanner: { backgroundColor: COLORS.dangerLight, borderRadius: RADIUS.lg, padding: 16, marginBottom: 16 },
   cancelledText: { fontSize: 13, color: COLORS.dangerDark, fontWeight: '600', textAlign: 'center' },
   verifiedBanner: { backgroundColor: 'rgba(94,133,80,0.12)', borderRadius: RADIUS.lg, padding: 16, marginBottom: 16 },

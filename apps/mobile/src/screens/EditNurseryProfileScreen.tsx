@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
-import { useNurseryProfile, useUpdateNurseryProfile, useResubmitNurseryProfile } from '../hooks/useApiQueries';
+import { useNurseryProfile, useUpdateNurseryProfile, useResubmitNurseryProfile, useUpdateMe } from '../hooks/useApiQueries';
 import { BorderCard } from '../components/common/BorderCard';
 import { PickedPhoto } from '../components/common/PhotoPickerField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
@@ -23,6 +23,7 @@ import { Toggle } from '../components/common/Toggle';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useHaptics } from '../hooks/useHaptics';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { useAuth } from '../context/AuthContext';
 import { ApiError, resolveMediaUrl } from '../api/client';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { reverseGeocode } from '../api/geocode';
@@ -38,7 +39,10 @@ export function EditNurseryProfileScreen({ navigation }: any) {
   const updateMutation = useUpdateNurseryProfile();
   const resubmitMutation = useResubmitNurseryProfile();
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
+  const { user } = useAuth();
+  const updateMeMutation = useUpdateMe();
 
+  const [ownerName, setOwnerName] = useState('');
   const [nurseryName, setNurseryName] = useState('');
   const [description, setDescription] = useState('');
   const [line1, setLine1] = useState('');
@@ -57,6 +61,10 @@ export function EditNurseryProfileScreen({ navigation }: any) {
   const logoUri = logo?.uri ?? resolveMediaUrl(profile?.logoUrl) ?? null;
   const hasLocation = profile?.lat != null && profile?.lng != null;
   const statusCopy = profile && profile.status !== 'approved' && profile.status !== 'rejected' ? STATUS_COPY[profile.status] : undefined;
+
+  useEffect(() => {
+    if (user) setOwnerName(user.name);
+  }, [user]);
 
   useEffect(() => {
     if (!profile) return;
@@ -130,6 +138,9 @@ export function EditNurseryProfileScreen({ navigation }: any) {
       return;
     }
     try {
+      if (ownerName.trim() && ownerName.trim() !== user?.name) {
+        await updateMeMutation.mutateAsync({ name: ownerName.trim() });
+      }
       await updateMutation.mutateAsync({
         nurseryName: nurseryName.trim(),
         description: description.trim(),
@@ -192,6 +203,7 @@ export function EditNurseryProfileScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
 
+            <FormField label="Owner Name" value={ownerName} onChangeText={setOwnerName} placeholder="Your name" />
             <FormField label="Nursery Name" value={nurseryName} onChangeText={setNurseryName} placeholder="eg - Your nursery" />
             <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What does your nursery grow?" />
             <AddressSearchField
@@ -246,9 +258,9 @@ export function EditNurseryProfileScreen({ navigation }: any) {
             {error && <Text style={styles.error}>{error}</Text>}
 
             <AnimatedButton
-              label={updateMutation.isPending ? 'Saving…' : 'Save Changes'}
+              label={updateMutation.isPending || updateMeMutation.isPending ? 'Saving…' : 'Save Changes'}
               onPress={handleSave}
-              disabled={updateMutation.isPending}
+              disabled={updateMutation.isPending || updateMeMutation.isPending}
               fullWidth
               gradientColors={[COLORS.forest, COLORS.forestDeep]}
               style={styles.submitButton}
