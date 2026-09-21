@@ -1,0 +1,434 @@
+<!-- prettier-ignore -->
+<title>ARTH Launch Readiness</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  :root {
+    --bg: #FAF6EA;
+    --surface: #FFFFFF;
+    --surface-2: #F3EDDC;
+    --ink: #1E2A1B;
+    --ink-muted: #5B6355;
+    --line: rgba(45,90,39,0.16);
+    --forest: #2D5A27;
+    --forest-deep: #1A3A16;
+    --sage: #6E8F63;
+    --amber: #B8791A;
+    --amber-bg: #FCF0D9;
+    --danger: #A63A2E;
+    --danger-bg: #FBE9E5;
+    --done-strike: rgba(30,42,27,0.42);
+    --chip-bg: #EAF1E4;
+    --shadow: 0 1px 2px rgba(26,58,22,0.06), 0 8px 24px -12px rgba(26,58,22,0.18);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10190D;
+      --surface: #17230F;
+      --surface-2: #1D2C14;
+      --ink: #EAE6D6;
+      --ink-muted: #A7AD97;
+      --line: rgba(200,220,190,0.14);
+      --forest: #7FBF6E;
+      --forest-deep: #A7D89A;
+      --sage: #9BB78E;
+      --amber: #E3B054;
+      --amber-bg: #2E260F;
+      --danger: #E48B7C;
+      --danger-bg: #331815;
+      --done-strike: rgba(234,230,214,0.4);
+      --chip-bg: #22301A;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10190D;
+    --surface: #17230F;
+    --surface-2: #1D2C14;
+    --ink: #EAE6D6;
+    --ink-muted: #A7AD97;
+    --line: rgba(200,220,190,0.14);
+    --forest: #7FBF6E;
+    --forest-deep: #A7D89A;
+    --sage: #9BB78E;
+    --amber: #E3B054;
+    --amber-bg: #2E260F;
+    --danger: #E48B7C;
+    --danger-bg: #331815;
+    --done-strike: rgba(234,230,214,0.4);
+    --chip-bg: #22301A;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 0 16px 64px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+
+  h1, h2, .display {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  /* ---- sticky progress header ---- */
+  .topbar {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 10;
+    background: var(--bg);
+    padding-top: 20px;
+    padding-bottom: 12px;
+  }
+  .topbar-inner {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+  }
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sage);
+    font-weight: 600;
+  }
+  h1 { font-size: 22px; margin: 2px 0 10px; }
+  .progress-row { display: flex; align-items: center; gap: 12px; }
+  .progress-track {
+    flex: 1;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--sage), var(--forest));
+    width: 0%;
+    transition: width 0.35s ease;
+  }
+  .progress-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-muted);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .reset-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-muted);
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 5px 9px;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  .reset-btn:hover { color: var(--danger); border-color: var(--danger); }
+
+  p.lede { color: var(--ink-muted); font-size: 14.5px; margin: 14px 0 28px; }
+  p.lede strong { color: var(--ink); }
+
+  /* ---- risk callouts ---- */
+  .risks { display: flex; flex-direction: column; gap: 10px; margin-bottom: 32px; }
+  .risk {
+    display: flex;
+    gap: 12px;
+    padding: 13px 14px;
+    border-radius: 12px;
+    background: var(--danger-bg);
+    border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  }
+  .risk.amber { background: var(--amber-bg); border-color: color-mix(in srgb, var(--amber) 35%, transparent); }
+  .risk-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--danger);
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+  .risk.amber .risk-num { color: var(--amber); }
+  .risk p { margin: 0; font-size: 13.5px; }
+  .risk strong { display: block; font-size: 14px; margin-bottom: 2px; }
+
+  /* ---- section ---- */
+  section.role {
+    margin-bottom: 28px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .role-head {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .role-head h2 { font-size: 18px; margin: 0; }
+  .role-sub { font-size: 12.5px; color: var(--ink-muted); margin-top: 3px; }
+  .role-count {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-muted);
+    background: var(--chip-bg);
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .items { padding: 6px 8px 12px; }
+  .item {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .item:hover { background: var(--surface-2); }
+  .item input {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 19px;
+    height: 19px;
+    border-radius: 6px;
+    border: 1.5px solid var(--line);
+    background: var(--surface);
+    flex-shrink: 0;
+    margin-top: 1px;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .item input:checked {
+    background: var(--forest);
+    border-color: var(--forest);
+  }
+  .item input:checked::after {
+    content: "";
+    position: absolute;
+    left: 5.5px; top: 2px;
+    width: 5px; height: 9px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(40deg);
+  }
+  .item-text { font-size: 14px; flex: 1; }
+  .item input:checked ~ .item-text { color: var(--done-strike); text-decoration: line-through; text-decoration-thickness: 1px; }
+  .note {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--ink-muted);
+    margin-top: 3px;
+    line-height: 1.45;
+  }
+  .note.gap { color: var(--amber); }
+  .note.gap::before { content: "⚠ "; }
+
+  footer {
+    margin-top: 8px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--ink-muted);
+    padding: 12px 0 4px;
+  }
+
+  @media (max-width: 480px) {
+    h1 { font-size: 19px; }
+    .role-head { padding: 15px 15px 12px; }
+    .item { padding: 9px 8px; }
+  }
+</style>
+
+<div class="wrap">
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="eyebrow">Pre-launch · ARTH</div>
+      <h1>Launch readiness checklist</h1>
+      <div class="progress-row">
+        <div class="progress-track"><div class="progress-fill" id="fill"></div></div>
+        <div class="progress-label" id="label">0 / 0</div>
+      </div>
+      <button class="reset-btn" id="resetBtn">Reset progress</button>
+    </div>
+  </div>
+
+  <p class="lede">
+    A code-verified pass across <strong>Individual User</strong>, <strong>NGO</strong> and <strong>Nursery</strong> —
+    not a generic QA template. Checked items persist in this browser. Fix the risks below
+    <strong>before</strong> working through the flows; they'll make the flows fail regardless of how carefully you click through.
+  </p>
+
+  <div class="risks">
+    <div class="risk">
+      <div class="risk-num">01</div>
+      <p><strong>Stripe has no live key.</strong> <code>services/api/.env</code> has no <code>sk_...</code> secret set — every checkout will fail until one is added, in test mode is fine for now.</p>
+    </div>
+    <div class="risk">
+      <div class="risk-num">02</div>
+      <p><strong>Sapling QR/provenance is not built.</strong> The backend model (<code>ArthSaplingUnit</code>) exists, but there's no scan screen, no QR generator, and no <code>expo-camera</code>/QR package installed. Don't test for it — decide whether to build it or drop the "traceable sapling" claim from launch copy.</p>
+    </div>
+    <div class="risk amber">
+      <div class="risk-num">03</div>
+      <p><strong>Delivery tracking may be one-sided.</strong> The rider's live GPS write path is real, but no screen was found that shows that live location to the <em>buyer</em>. Confirm before promising "live tracking" anywhere in the app.</p>
+    </div>
+    <div class="risk amber">
+      <div class="risk-num">04</div>
+      <p><strong>Provenance silently drops.</strong> Neither a marketplace order nor an NGO bulk-requirement fulfillment attaches <code>nurseryId</code> to the <code>Tree</code> created when it's planted — the sapling's nursery origin is lost at the last step every time.</p>
+    </div>
+  </div>
+
+  <!-- SETUP -->
+  <section class="role" data-role="setup">
+    <div class="role-head">
+      <div><h2>Setup, before you touch a screen</h2><div class="role-sub">One-time prep so the rest of this list tests real behavior, not empty states</div></div>
+      <div class="role-count"><span class="done">0</span>/<span class="total">0</span></div>
+    </div>
+    <div class="items">
+      <label class="item"><input type="checkbox" data-id="setup-1"><span class="item-text">Run <code>services/api/scripts/seed_full_coverage_demo.ts</code> to populate linked demo data across all three roles<span class="note">this is the maintained script — ignore the stray <code>.local-backup</code> copy</span></span></label>
+      <label class="item"><input type="checkbox" data-id="setup-2"><span class="item-text">Set a real Stripe test-mode secret key in <code>services/api/.env</code><span class="note gap">currently unset — see risk 01</span></span></label>
+      <label class="item"><input type="checkbox" data-id="setup-3"><span class="item-text">Build a real dev-client (EAS or <code>expo-dev-client</code>) — plain <code>expo start --go</code> can't run Stripe or maps, test those two only on the dev-client build</span></label>
+      <label class="item"><input type="checkbox" data-id="setup-4"><span class="item-text">Prepare one approved test account per role (individual, NGO, nursery) plus one NGO or nursery left <em>pending</em>, to test the approval gate itself</span></label>
+    </div>
+  </section>
+
+  <!-- INDIVIDUAL USER -->
+  <section class="role" data-role="user">
+    <div class="role-head">
+      <div><h2>Individual User</h2><div class="role-sub">The core loop, confirmed wired — verify it end to end by hand</div></div>
+      <div class="role-count"><span class="done">0</span>/<span class="total">0</span></div>
+    </div>
+    <div class="items">
+      <label class="item"><input type="checkbox" data-id="user-1"><span class="item-text">Register → login → plant a tree with live camera + GPS<span class="note">camera-only is enforced here, gallery is correctly blocked</span></span></label>
+      <label class="item"><input type="checkbox" data-id="user-2"><span class="item-text">Planted tree appears in Forest and on the Map, and XP/streak/achievements update</span></label>
+      <label class="item"><input type="checkbox" data-id="user-3"><span class="item-text">Browse an approved nursery → reserve or order a sapling → complete Stripe checkout <em>(dev-client only)</em></span></label>
+      <label class="item"><input type="checkbox" data-id="user-4"><span class="item-text">Order status actually progresses (confirmed → prepared → out-for-delivery / ready-for-pickup → delivered / picked-up)</span></label>
+      <label class="item"><input type="checkbox" data-id="user-5"><span class="item-text">Follow an NGO → see its drives/campaigns on the map → join or attend a drive</span></label>
+      <label class="item"><input type="checkbox" data-id="user-6"><span class="item-text">Adopt a tree from an NGO</span></label>
+      <label class="item"><input type="checkbox" data-id="user-7"><span class="item-text">Post a photo with a caption, then confirm it shows up for an account that follows you<span class="note">this is the "/social/feed" feed — the separate personal activity feed is friends-only, don't mix the two up while testing</span></span></label>
+      <label class="item"><input type="checkbox" data-id="user-8"><span class="item-text">Trigger one of: order status change, drive reminder, follow request, achievement unlock — confirm a real notification appears</span></label>
+    </div>
+  </section>
+
+  <!-- NGO -->
+  <section class="role" data-role="ngo">
+    <div class="role-head">
+      <div><h2>NGO</h2><div class="role-sub">Approval gate confirmed real in code — everything past it needs a manual click-through</div></div>
+      <div class="role-count"><span class="done">0</span>/<span class="total">0</span></div>
+    </div>
+    <div class="items">
+      <label class="item"><input type="checkbox" data-id="ngo-1"><span class="item-text">Register a new NGO → confirm it does <strong>not</strong> appear in the public NGO directory or map while pending</span></label>
+      <label class="item"><input type="checkbox" data-id="ngo-2"><span class="item-text">Approve it from the admin console → confirm it now appears publicly</span></label>
+      <label class="item"><input type="checkbox" data-id="ngo-3"><span class="item-text">Create a drive or campaign → confirm an individual user can discover and join it</span></label>
+      <label class="item"><input type="checkbox" data-id="ngo-4"><span class="item-text">Log planted trees / a health check against that drive</span></label>
+      <label class="item"><input type="checkbox" data-id="ngo-5"><span class="item-text">Post an update from the centre Post button → confirm a follower sees it in their feed</span></label>
+      <label class="item"><input type="checkbox" data-id="ngo-6"><span class="item-text">Submit a bulk sapling requirement → confirm a nursery can see and respond to it<span class="note gap">not re-verified this pass, spot-check by hand</span></span></label>
+      <label class="item"><input type="checkbox" data-id="ngo-7"><span class="item-text">Confirm NGO streak / achievements / leaderboard actually move after the actions above<span class="note gap">not re-verified this pass, spot-check by hand</span></span></label>
+    </div>
+  </section>
+
+  <!-- NURSERY -->
+  <section class="role" data-role="nursery">
+    <div class="role-head">
+      <div><h2>Nursery</h2><div class="role-sub">Same approval-gate pattern as NGO, plus its own fulfillment machinery</div></div>
+      <div class="role-count"><span class="done">0</span>/<span class="total">0</span></div>
+    </div>
+    <div class="items">
+      <label class="item"><input type="checkbox" data-id="nursery-1"><span class="item-text">Register a new nursery → confirm hidden from the public listing while pending, visible once admin-approved</span></label>
+      <label class="item"><input type="checkbox" data-id="nursery-2"><span class="item-text">Add stock linked to a species → confirm it's browsable by individual users<span class="note gap">visibility to NGOs posting bulk requirements not re-verified this pass</span></span></label>
+      <label class="item"><input type="checkbox" data-id="nursery-3"><span class="item-text">Accept an order → assign a delivery partner → confirm the rider's app shows live GPS updating<span class="note gap">buyer-side live view unconfirmed — see risk 03</span></span></label>
+      <label class="item"><input type="checkbox" data-id="nursery-4"><span class="item-text">Run the pickup path end to end (handoff code) as the alternative to delivery</span></label>
+      <label class="item"><input type="checkbox" data-id="nursery-5"><span class="item-text">Confirm Trust Score, Growth Level and contribution streaks update after order / stock / bulk-requirement activity<span class="note gap">not re-verified this pass, spot-check by hand</span></span></label>
+    </div>
+  </section>
+
+  <!-- CROSS-ROLE -->
+  <section class="role" data-role="cross">
+    <div class="role-head">
+      <div><h2>Where the three actually meet</h2><div class="role-sub">These seams are where a demo breaks in front of a real user — test them explicitly, not just each role alone</div></div>
+      <div class="role-count"><span class="done">0</span>/<span class="total">0</span></div>
+    </div>
+    <div class="items">
+      <label class="item"><input type="checkbox" data-id="cross-1"><span class="item-text">NGO bulk requirement → nursery fulfills it → check what the resulting sapling record actually looks like<span class="note gap">it will not carry nursery provenance onto the eventual Tree — see risk 04</span></span></label>
+      <label class="item"><input type="checkbox" data-id="cross-2"><span class="item-text">Marketplace order delivered/picked up → plant that exact sapling → same provenance gap applies here too</span></label>
+      <label class="item"><input type="checkbox" data-id="cross-3"><span class="item-text">Test admin approval for <strong>both</strong> an NGO and a nursery separately — they're two independently-filtered queries, passing one doesn't guarantee the other</span></label>
+      <label class="item"><input type="checkbox" data-id="cross-4"><span class="item-text">Confirm an action by one role notifies the <em>other</em> role correctly: order status → buyer, bulk-requirement response → NGO, follow → the followed account</span></label>
+    </div>
+  </section>
+
+  <footer>Built from a direct read of the codebase, not the feature specs — re-run this audit after any major merge.</footer>
+</div>
+
+<script>
+(function () {
+  var STORAGE_KEY = 'arth-launch-checklist-v1';
+  var state = {};
+  try {
+    state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  } catch (e) { state = {}; }
+
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('.item input[type="checkbox"]'));
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  function updateSectionCounts() {
+    document.querySelectorAll('section.role').forEach(function (section) {
+      var secBoxes = section.querySelectorAll('.item input[type="checkbox"]');
+      var done = 0;
+      secBoxes.forEach(function (b) { if (b.checked) done++; });
+      section.querySelector('.done').textContent = done;
+      section.querySelector('.total').textContent = secBoxes.length;
+    });
+  }
+
+  function updateTotal() {
+    var done = 0;
+    boxes.forEach(function (b) { if (b.checked) done++; });
+    var total = boxes.length;
+    var pct = total ? Math.round((done / total) * 100) : 0;
+    document.getElementById('fill').style.width = pct + '%';
+    document.getElementById('label').textContent = done + ' / ' + total;
+    updateSectionCounts();
+  }
+
+  boxes.forEach(function (box) {
+    var id = box.getAttribute('data-id');
+    if (state[id]) box.checked = true;
+    box.addEventListener('change', function () {
+      state[id] = box.checked;
+      save();
+      updateTotal();
+    });
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', function () {
+    state = {};
+    save();
+    boxes.forEach(function (b) { b.checked = false; });
+    updateTotal();
+  });
+
+  updateTotal();
+})();
+</script>

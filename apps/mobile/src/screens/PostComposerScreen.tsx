@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
-import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
@@ -12,7 +11,6 @@ import { FormField } from '../components/common/FormField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { MultiPhotoPickerField } from '../components/social/MultiPhotoPickerField';
 import type { PickedPhoto } from '../components/common/PhotoPickerField';
-import { useSlideUp } from '../hooks/useAnimations';
 import { useMyDrives, useNgoProfile, useNurseryProfile } from '../hooks/useApiQueries';
 import { useCreatePost } from '../hooks/useSocialQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -62,7 +60,6 @@ export function PostComposerScreen({ navigation, route }: any) {
   const [driveId, setDriveId] = useState<string | undefined>(undefined);
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const cardAnim = useSlideUp(0, 24);
 
   const reset = () => {
     setPhotos([]);
@@ -151,7 +148,7 @@ export function PostComposerScreen({ navigation, route }: any) {
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
-        <Animated.View style={cardAnim}>
+        <View>
           <View style={styles.modeRow}>
             {availableModes.map((m) => (
               <TouchableOpacity
@@ -248,7 +245,7 @@ export function PostComposerScreen({ navigation, route }: any) {
             gradientColors={[COLORS.forest, COLORS.forestDeep]}
             style={styles.submitButton}
           />
-        </Animated.View>
+        </View>
       </ScrollView>
     </View>
   );

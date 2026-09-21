@@ -174,14 +174,17 @@ const CORPORATE_TABS: TabItem[] = [
 ];
 
 // No "More" tab: every item that used to live there is already reachable from the dashboard's
-// Quick Actions dock (or, for Posts/Followers, from the Community tab), so a fifth catch-all tab
-// was pure duplication. Post also dropped its own raised-FAB tab for the same reason — composing
-// an update is reachable from the Community tab's Posts segment.
+// Quick Actions dock (or, for Followers, from the Community tab), so a fifth catch-all tab was
+// pure duplication. Post keeps the raised centre FAB, matching User/Nursery/Admin/Group/Corporate —
+// its onPress is special-cased in NgoMainApp to push the NgoPostUpdate stack screen rather than
+// switch tabs, since PostComposerScreen calls navigation.goBack() on submit/back, which would pop
+// NgoMain itself off the stack if 'Post' were ever a real activeTab value.
 const NGO_TABS: TabItem[] = [
   { name: 'Home', icon: '🏡', label: 'Home' },
+  { name: 'Community', icon: '👥', label: 'Community' },
+  { name: 'Post', icon: '➕', label: 'Post', raised: true },
   { name: 'Manage', icon: '📋', label: 'Manage' },
   { name: 'Map', icon: '🗺️', label: 'Map' },
-  { name: 'Community', icon: '👥', label: 'Community' },
 ];
 
 // NGO approvals is the action admins repeat most (AdminHomeScreen's own mascot line nags about
@@ -532,6 +535,16 @@ function NgoMainApp({ navigation }: any) {
     setActiveTab(tab);
   }, []);
 
+  // 'Post' is a raised FAB, not a real tab — see the NGO_TABS comment on why it pushes the stack
+  // screen instead of ever becoming `activeTab`.
+  const handleTabPress = useCallback((tab: TabName) => {
+    if (tab === 'Post') {
+      navigation.navigate('NgoPostUpdate');
+      return;
+    }
+    setActiveTab(tab as NgoTabName);
+  }, [navigation]);
+
   const renderScreen = useCallback(() => {
     switch (activeTab) {
       case 'Home':
@@ -553,7 +566,7 @@ function NgoMainApp({ navigation }: any) {
       <BottomNav
         tabs={NGO_TABS}
         activeTab={activeTab}
-        onTabPress={setActiveTab as (t: TabName) => void}
+        onTabPress={handleTabPress}
         theme={activeTab === 'Home' ? dashboardTheme : null}
       />
     </View>
