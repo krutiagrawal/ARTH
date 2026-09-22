@@ -7,7 +7,7 @@ import { RADIUS, SPACING } from '../../constants/theme';
 import { FONTS } from '../../constants/typography';
 import { useHaptics } from '../../hooks/useHaptics';
 import { useConfirm } from '../../context/ConfirmDialogContext';
-import type { PickedPhoto } from '../common/PhotoPickerField';
+import { assetToPhoto, usePhotoPreviewUri, type PickedPhoto } from '../common/PhotoPickerField';
 
 interface MultiPhotoPickerFieldProps {
   photos: PickedPhoto[];
@@ -19,12 +19,11 @@ interface MultiPhotoPickerFieldProps {
   hint?: string;
 }
 
-function assetToPhoto(asset: ImagePicker.ImagePickerAsset): PickedPhoto {
-  return {
-    uri: asset.uri,
-    name: asset.fileName ?? `photo-${Date.now()}.jpg`,
-    type: asset.mimeType ?? 'image/jpeg',
-  };
+/** Renders one thumbnail's small resized preview via `usePhotoPreviewUri` — a hook, so it needs
+ * its own component rather than being inlined in the `.map` below. */
+function Thumb({ photo }: { photo: PickedPhoto }) {
+  const previewUri = usePhotoPreviewUri(photo);
+  return previewUri ? <Image key={previewUri} source={{ uri: previewUri }} style={styles.thumb} resizeMode="cover" /> : null;
 }
 
 /**
@@ -114,7 +113,7 @@ export function MultiPhotoPickerField({
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>
           {photos.map((photo, index) => (
             <View key={`${photo.uri}-${index}`} style={styles.thumbWrap}>
-              <Image source={{ uri: photo.uri }} style={styles.thumb} />
+              <Thumb photo={photo} />
               <View style={styles.orderBadge}>
                 <Text style={styles.orderText}>{index + 1}</Text>
               </View>
@@ -189,7 +188,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: 'rgba(0,0,0,0.06)',
   },
-  thumb: { width: '100%', height: '100%' },
+  thumb: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   orderBadge: {
     position: 'absolute',
     top: 5,

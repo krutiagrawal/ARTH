@@ -1,7 +1,8 @@
-import React, { useCallback } from 'react';
-import { TouchableOpacity, Image, StyleSheet } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { TouchableOpacity, Image, View, StyleSheet } from 'react-native';
 import { Text } from './AppText';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { COLORS } from '../../constants/colors';
 import { RADIUS } from '../../constants/theme';
 import { useHaptics } from '../../hooks/useHaptics';
@@ -27,12 +28,46 @@ interface PhotoPickerFieldProps {
   dark?: boolean;
 }
 
-function assetToPhoto(asset: ImagePicker.ImagePickerAsset): PickedPhoto {
+export function assetToPhoto(asset: ImagePicker.ImagePickerAsset): PickedPhoto {
   return {
     uri: asset.uri,
     name: asset.fileName ?? 'photo.jpg',
     type: asset.mimeType ?? 'image/jpeg',
   };
+}
+
+/**
+ * Renders a resized, low-weight `data:` preview of a locally-picked photo (the full-resolution
+ * `file://` original stays untouched for upload). On some devices `<Image>` never resolves the
+ * full-resolution local URI at all, so previewing a small copy sidesteps that instead of relying
+ * on it directly.
+ */
+export function usePhotoPreviewUri(photo: PickedPhoto | null): string | undefined {
+  const [previewUri, setPreviewUri] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!photo) {
+      setPreviewUri(undefined);
+      return;
+    }
+    let cancelled = false;
+    ImageManipulator.manipulateAsync(photo.uri, [{ resize: { width: 480 } }], {
+      compress: 0.5,
+      format: ImageManipulator.SaveFormat.JPEG,
+      base64: true,
+    })
+      .then((result) => {
+        if (!cancelled && result.base64) setPreviewUri(`data:image/jpeg;base64,${result.base64}`);
+      })
+      .catch(() => {
+        if (!cancelled) setPreviewUri(undefined);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [photo?.uri]);
+
+  return previewUri;
 }
 
 /**
@@ -45,6 +80,7 @@ function assetToPhoto(asset: ImagePicker.ImagePickerAsset): PickedPhoto {
 export function PhotoPickerField({ photo, onChange, mode = 'gallery', label, hint, icon, aspect = [1, 1], dark }: PhotoPickerFieldProps) {
   const { medium } = useHaptics();
   const glyph = icon ?? (mode === 'camera' ? '📸' : '🖼️');
+  const previewUri = usePhotoPreviewUri(photo);
 
   const pickFromGallery = useCallback(async () => {
     medium();
@@ -70,43 +106,33 @@ export function PhotoPickerField({ photo, onChange, mode = 'gallery', label, hin
   const emptyStyle = dark ? styles.pickerEmptyDark : styles.pickerEmpty;
   const textStyle = dark ? styles.pickerTextDark : styles.pickerText;
   const hintStyle = dark ? styles.pickerHintDark : styles.pickerHint;
+  const onPress = mode === 'camera' ? captureFromCamera : pickFromGallery;
+  const onLongPress = mode === 'both' ? captureFromCamera : undefined;
 
-  if (mode === 'both') {
+  // A picked photo renders as a plain View holding the Image, with a transparent touchable
+  // overlaid on top (rather than the Image nested inside the TouchableOpacity itself) — on some
+  // devices an Image nested directly inside this TouchableOpacity never draws at all, even with a
+  // guaranteed-valid, small source; the same Image as a sibling of the touchable renders fine.
+  if (photo) {
     return (
-      <TouchableOpacity
-        style={[styles.picker, photo ? styles.pickerFilled : emptyStyle]}
-        onPress={pickFromGallery}
-        onLongPress={captureFromCamera}
-      >
-        {photo ? (
-          <Image source={{ uri: photo.uri }} style={styles.preview} />
-        ) : (
-          <>
-            <Text style={styles.pickerIcon}>{glyph}</Text>
-            <Text style={textStyle}>{label ?? 'Add Photo'}</Text>
-            <Text style={hintStyle}>{hint ?? 'Tap for gallery, hold for camera'}</Text>
-          </>
-        )}
-      </TouchableOpacity>
+      <View style={[styles.picker, styles.pickerFilled]}>
+        {previewUri && <Image source={{ uri: previewUri }} style={styles.preview} resizeMode="cover" />}
+        <TouchableOpacity style={styles.pressOverlay} onPress={onPress} onLongPress={onLongPress} activeOpacity={0.85} />
+      </View>
     );
   }
 
-  const onPress = mode === 'camera' ? captureFromCamera : pickFromGallery;
-
   return (
     <TouchableOpacity
-      style={[styles.picker, photo ? styles.pickerFilled : emptyStyle]}
+      style={[styles.picker, emptyStyle]}
       onPress={onPress}
+      onLongPress={onLongPress}
     >
-      {photo ? (
-        <Image source={{ uri: photo.uri }} style={styles.preview} />
-      ) : (
-        <>
-          <Text style={styles.pickerIcon}>{glyph}</Text>
-          <Text style={textStyle}>{label ?? 'Add Photo'}</Text>
-          {hint ? <Text style={hintStyle}>{hint}</Text> : null}
-        </>
-      )}
+      <Text style={styles.pickerIcon}>{glyph}</Text>
+      <Text style={textStyle}>{label ?? 'Add Photo'}</Text>
+      {hint || mode === 'both' ? (
+        <Text style={hintStyle}>{hint ?? 'Tap for gallery, hold for camera'}</Text>
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -114,7 +140,7 @@ export function PhotoPickerField({ photo, onChange, mode = 'gallery', label, hin
 const styles = StyleSheet.create({
   picker: {
     marginTop: 6,
-    height: 140,
+    height: 220,
     borderRadius: RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -138,7 +164,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.35)',
   },
   pickerFilled: { backgroundColor: 'transparent' },
-  preview: { width: '100%', height: '100%' },
+  preview: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  pressOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   pickerIcon: { fontSize: 26 },
   pickerText: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '700' },
   pickerHint: { color: COLORS.textMuted, fontSize: 12 },

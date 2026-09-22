@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
-import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -13,7 +12,6 @@ import { FormField } from '../components/common/FormField';
 import { AddressSearchField } from '../components/common/AddressSearchField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { StatusModal } from '../components/common/StatusModal';
-import { useSlideUp } from '../hooks/useAnimations';
 import { useMyDrives, useBulkCreatePlantedTrees, useNgoProfile } from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import { ApiError } from '../api/client';
@@ -35,7 +33,6 @@ export function NgoLogPlantedTreesScreen({ navigation }: any) {
   const [locationLabel, setLocationLabel] = useState('');
   const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const cardAnim = useSlideUp(0, 24);
 
   const handleSubmit = async () => {
     setError(null);
@@ -72,9 +69,10 @@ export function NgoLogPlantedTreesScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
-        <Animated.View style={cardAnim}>
+        <View>
           <Text style={styles.hint}>Log how many trees were actually planted so you can track their survival over time.</Text>
 
           <Text style={styles.sectionLabel}>Drive (optional)</Text>
@@ -129,7 +127,7 @@ export function NgoLogPlantedTreesScreen({ navigation }: any) {
             gradientColors={[COLORS.forest, COLORS.forestDeep]}
             style={styles.submitButton}
           />
-        </Animated.View>
+        </View>
       </ScrollView>
 
       <StatusModal {...statusModalProps} />
@@ -148,5 +146,5 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 12, color: COLORS.textSecondary },
   chipTextSelected: { color: COLORS.forest, fontWeight: '700' },
   error: { fontSize: 13, color: COLORS.coral, marginTop: 12 },
-  submitButton: { marginTop: 20 },
+  submitButton: { marginTop: 36 },
 });

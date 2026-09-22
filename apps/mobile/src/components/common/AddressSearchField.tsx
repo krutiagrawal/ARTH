@@ -17,6 +17,8 @@ interface AddressSearchFieldProps {
    * just the free-text label. */
   onSelectSuggestion?: (suggestion: ApiAddressSuggestion) => void;
   placeholder?: string;
+  /** Wraps the value across multiple lines instead of clipping/horizontally-scrolling a single
+   * line — on, by default, since a resolved address is usually too long for one line. */
   multiline?: boolean;
   dark?: boolean;
 }
@@ -34,15 +36,24 @@ export function AddressSearchField({
   onChangeText,
   onSelectSuggestion,
   placeholder,
-  multiline,
+  multiline = true,
   dark,
 }: AddressSearchFieldProps) {
   const [suggestions, setSuggestions] = useState<ApiAddressSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState(false);
   const requestIdRef = useRef(0);
+  const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+  // Selecting a suggestion changes `value` programmatically — without this guard, the effect
+  // below (which treats any `value` change while focused as a fresh search query) would
+  // immediately re-search for the address text itself and reopen the dropdown right under it.
+  const justSelectedRef = useRef(false);
 
   useEffect(() => {
+    if (justSelectedRef.current) {
+      justSelectedRef.current = false;
+      return;
+    }
     const query = value.trim();
     if (!focused || query.length < MIN_QUERY_LENGTH) {
       setSuggestions([]);
@@ -68,9 +79,16 @@ export function AddressSearchField({
 
   const handleSelect = (suggestion: ApiAddressSuggestion) => {
     requestIdRef.current += 1; // invalidate any in-flight search so its response can't reopen the list
+    justSelectedRef.current = true;
     setSuggestions([]);
     onChangeText(suggestion.label);
     onSelectSuggestion?.(suggestion);
+    // The TextInput is still focused at this point (the tap landed before the delayed blur
+    // below runs) — on Android, a controlled TextInput that still holds native focus can ignore
+    // a programmatic `value` update entirely, silently keeping whatever the user last typed on
+    // screen. Blurring it releases native ownership of the text so the new `value` actually
+    // renders.
+    inputRef.current?.blur();
   };
 
   return (
@@ -81,6 +99,7 @@ export function AddressSearchField({
         rightAccessory={loading ? <ActivityIndicator size="small" color={dark ? COLORS.white : COLORS.sage} /> : undefined}
       >
         <TextInput
+          ref={inputRef}
           style={[FORM_FIELD_VALUE_STYLE, dark && styles.inputDark, multiline && styles.multiline]}
           placeholderTextColor={dark ? ON_DARK_SURFACE.muted : COLORS.textLight}
           value={value}
