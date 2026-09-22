@@ -159,6 +159,27 @@ export async function deleteZone(zoneId: string): Promise<void> {
   await apiFetch(`/api/ngo/planted-trees/zones/${zoneId}`, { method: 'DELETE' });
 }
 
+export interface ApiPlantingMapZone {
+  name: string;
+  total: number;
+  survivalRate: number;
+}
+
+export interface ApiPlantingMapEntry {
+  driveId: string;
+  driveTitle: string;
+  lat: number;
+  lng: number;
+  total: number;
+  survivalRate: number;
+  zones: ApiPlantingMapZone[];
+}
+
+/** Public, zone-level "trees planted here" pins for one NGO's profile map. */
+export async function fetchNgoPlantingMap(ngoId: string): Promise<ApiPlantingMapEntry[]> {
+  return apiFetch(`/api/ngos/${ngoId}/planting-map`);
+}
+
 export async function bulkMarkZoneHealth(
   zoneId: string,
   status: ActionableHealthStatus,

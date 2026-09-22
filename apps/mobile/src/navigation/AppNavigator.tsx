@@ -287,6 +287,19 @@ function NurseryMapScreen({ navigation, route }: any) {
   );
 }
 
+/** Pushable Map scoped to one NGO — reached from NgoProfileScreen's "View on map" button
+ * ({ ngoId, ngoName } route params). Same default ('user') mode as NurseryMapScreen; MapScreen
+ * itself reads route.params.ngoId to filter drives/adoptable-trees and show planting-map pins. */
+function NgoScopedMapScreen({ navigation, route }: any) {
+  return (
+    <MapErrorBoundary>
+      <Suspense fallback={<View style={styles.mainContainer} />}>
+        <MapScreen navigation={navigation} route={route} />
+      </Suspense>
+    </MapErrorBoundary>
+  );
+}
+
 function CampaignDetailScreen(props: any) {
   return (
     <DonateErrorBoundary>
@@ -357,6 +370,7 @@ export type RootStackParamList = {
   NurseryReservations: undefined;
   NurseryStockAnalytics: undefined;
   NurseryMap: { nurseryId?: string } | undefined;
+  NgoMap: { ngoId: string; ngoName?: string };
   NurseryDirectory: undefined;
   NurseryPublicProfile: { nurseryId: string };
   SaplingReservation: { nurseryId: string; stockId: string };
@@ -823,6 +837,7 @@ export function AppNavigator() {
         <Stack.Screen name="NurseryReservations" component={NurseryReservationsScreen} />
         <Stack.Screen name="NurseryStockAnalytics" component={NurseryStockAnalyticsScreen} />
         <Stack.Screen name="NurseryMap" component={NurseryMapScreen} />
+        <Stack.Screen name="NgoMap" component={NgoScopedMapScreen} />
         <Stack.Screen name="CorporateRegister" component={CorporateRegisterScreen} />
         <Stack.Screen name="CorporateMain" component={CorporateMainApp} />
         <Stack.Screen name="CorporateSponsorships" component={CorporateSponsorshipsScreen} />

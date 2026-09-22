@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { TouchableOpacity } from 'react-native';
 import { StoryRing, type StoryRingStatus } from './StoryRing';
 import { StoryViewer } from '../stories/StoryViewer';
-import { useUserStories } from '../../hooks/useApiQueries';
+import { useUserStories, useNgoStories } from '../../hooks/useApiQueries';
 import { useMarkStoryViewed } from '../../hooks/useSocialQueries';
 
 interface StoryAvatarProps {
-  /** Only 'user' actually opens a story right now — NGO/nursery/group avatars fall through to
-   * `onPress` unchanged, since there's no per-author story fetch for those kinds yet. */
+  /** 'user' and 'ngo' open a story; nursery/group avatars fall through to `onPress` unchanged,
+   * since there's no per-author story fetch for those kinds yet. */
   authorKind: 'user' | 'ngo' | 'nursery' | 'group';
   authorId: string;
   authorName: string;
@@ -43,11 +43,14 @@ export function StoryAvatar({
   disabled,
 }: StoryAvatarProps) {
   const [open, setOpen] = useState(false);
-  const canOpenStory = authorKind === 'user' && !!status?.hasStory;
+  const canOpenStory = (authorKind === 'user' || authorKind === 'ngo') && !!status?.hasStory;
 
   // Only fetches once actually tapped open — not on mount — so a screen full of avatars doesn't
-  // fire a story request per row.
-  const { data: stories = [] } = useUserStories(authorKind === 'user' && open ? authorId : null);
+  // fire a story request per row. Both hooks are always called (Rules of Hooks); each is gated by
+  // its own `enabled` so only the one matching this avatar's kind actually fires.
+  const { data: userStories = [] } = useUserStories(authorKind === 'user' && open ? authorId : null);
+  const { data: ngoStories = [] } = useNgoStories(authorKind === 'ngo' && open ? authorId : null);
+  const stories = authorKind === 'ngo' ? ngoStories : userStories;
   const markViewed = useMarkStoryViewed();
 
   const handlePress = () => {

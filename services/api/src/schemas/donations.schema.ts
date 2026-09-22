@@ -17,6 +17,10 @@ export const createDonationSchema = z.object({
   currency: z.string().length(3).optional(),
 });
 
+export const listCampaignsQuerySchema = z.object({
+  ngoId: z.string().uuid().optional(),
+});
+
 export const ownedListQuerySchema = z.object({
   q: z.string().max(200).optional(),
   page: z.coerce.number().int().min(1).optional(),

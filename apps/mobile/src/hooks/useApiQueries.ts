@@ -45,6 +45,7 @@ import {
   fetchMyStories,
   fetchStoryFeed,
   fetchUserStories,
+  fetchNgoStories,
   fetchStoryViewers,
   fetchRingStatus,
   postStory,
@@ -134,6 +135,7 @@ import {
   renameZone,
   deleteZone,
   bulkMarkZoneHealth,
+  fetchNgoPlantingMap,
   ListPlantedTreesFilter,
   BulkCreatePlantedTreesInput,
   ActionableHealthStatus,
@@ -722,6 +724,15 @@ export function useUserStories(userId: string | null) {
   });
 }
 
+export function useNgoStories(ngoId: string | null) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['stories', 'ngo', ngoId],
+    queryFn: () => fetchNgoStories(ngoId!),
+    enabled: isAuthenticated && !!ngoId,
+  });
+}
+
 /**
  * Batch seen/unseen story-ring lookup for a screen's visible avatars — call once per list with
  * every id on it (profile header, a page of leaderboard rows, a followers list, ...) rather than
@@ -786,11 +797,11 @@ export function useToggleStoryLike() {
   });
 }
 
-export function useDrives(lat?: number, lng?: number, enabled: boolean = true) {
+export function useDrives(lat?: number, lng?: number, enabled: boolean = true, ngoId?: string) {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: ['drives', lat, lng],
-    queryFn: () => fetchDrives({ lat, lng }),
+    queryKey: ['drives', lat, lng, ngoId],
+    queryFn: () => fetchDrives({ lat, lng, ngoId }),
     enabled: isAuthenticated && enabled,
   });
 }
@@ -856,11 +867,11 @@ export function useLeaveDrive() {
   });
 }
 
-export function useAdoptableTrees(lat?: number, lng?: number, enabled: boolean = true) {
+export function useAdoptableTrees(lat?: number, lng?: number, enabled: boolean = true, ngoId?: string) {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: ['adoptable-trees', lat, lng],
-    queryFn: () => fetchAdoptableTrees({ lat, lng }),
+    queryKey: ['adoptable-trees', lat, lng, ngoId],
+    queryFn: () => fetchAdoptableTrees({ lat, lng, ngoId }),
     enabled: isAuthenticated && enabled,
   });
 }
@@ -965,11 +976,11 @@ export function useCreateAdoptableTree() {
   });
 }
 
-export function useCampaigns() {
+export function useCampaigns(ngoId?: string) {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: ['campaigns'],
-    queryFn: fetchCampaigns,
+    queryKey: ['campaigns', ngoId],
+    queryFn: () => fetchCampaigns({ ngoId }),
     enabled: isAuthenticated,
   });
 }
@@ -1268,6 +1279,16 @@ export function useDeleteZone() {
       queryClient.invalidateQueries({ queryKey: ['ngo', 'plantations'] });
       queryClient.invalidateQueries({ queryKey: ['ngo', 'planted-trees'] });
     },
+  });
+}
+
+/** Zone-level "trees planted here" map pins for one NGO's public profile. */
+export function useNgoPlantingMap(ngoId: string | null) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'planting-map', ngoId],
+    queryFn: () => fetchNgoPlantingMap(ngoId!),
+    enabled: isAuthenticated && !!ngoId,
   });
 }
 

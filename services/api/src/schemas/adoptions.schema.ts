@@ -27,6 +27,7 @@ export const nearbyQuerySchema = z.object({
   lng: z.coerce.number().min(-180).max(180).optional(),
   radiusKm: z.coerce.number().min(0.1).max(20000).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
+  ngoId: z.string().uuid().optional(),
 });
 
 export const ownedListQuerySchema = z.object({

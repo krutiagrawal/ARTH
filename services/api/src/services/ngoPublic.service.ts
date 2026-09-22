@@ -3,6 +3,8 @@ import { NotFoundError } from '../utils/errors';
 import { computeSurvivalStats } from './plantedTree.service';
 import { serializePost, viewerInclude } from './post.service';
 import { getPortfolioImpact, listPublicPortfolio } from './portfolio.service';
+import { listCampaigns } from './donation.service';
+import { listAdoptableTrees } from './adoption.service';
 
 interface BrowseFilter {
   q?: string;
@@ -50,8 +52,19 @@ export async function getAdminNgoProfile(prisma: PrismaClient, ngoId: string) {
 }
 
 async function assembleNgoProfile(prisma: PrismaClient, ngo: { id: string } & Record<string, any>, viewerUserId?: string) {
-  const [followersCount, follow, featuredDrives, recentPosts, impact, staff, portfolio, portfolioImpact] =
-    await Promise.all([
+  const [
+    followersCount,
+    follow,
+    featuredDrives,
+    upcomingDrives,
+    recentPosts,
+    impact,
+    staff,
+    portfolio,
+    portfolioImpact,
+    campaigns,
+    adoptableTrees,
+  ] = await Promise.all([
       // Pending requests are not followers yet, so they must not inflate the public count.
       prisma.follow.count({ where: { ngoId: ngo.id, status: 'accepted' } }),
       viewerUserId
@@ -60,9 +73,17 @@ async function assembleNgoProfile(prisma: PrismaClient, ngo: { id: string } & Re
             select: { status: true },
           })
         : Promise.resolve(null),
+      // "Past drives" showcase — completed only, featured ones first.
       prisma.drive.findMany({
         where: { ngoId: ngo.id, status: 'completed' },
         orderBy: [{ featured: 'desc' }, { startsAt: 'desc' }],
+        take: 12,
+        select: { id: true, title: true, photoUrl: true, city: true, startsAt: true, featured: true },
+      }),
+      // What's coming up to join — a freshly-created drive lands here, not in featuredDrives.
+      prisma.drive.findMany({
+        where: { ngoId: ngo.id, status: 'upcoming' },
+        orderBy: { startsAt: 'asc' },
         take: 12,
         select: { id: true, title: true, photoUrl: true, city: true, startsAt: true, featured: true },
       }),
@@ -80,6 +101,8 @@ async function assembleNgoProfile(prisma: PrismaClient, ngo: { id: string } & Re
       }),
       listPublicPortfolio(prisma, ngo.id, viewerUserId),
       getPortfolioImpact(prisma, ngo.id),
+      listCampaigns(prisma, { ngoId: ngo.id }),
+      listAdoptableTrees(prisma, { ngoId: ngo.id }),
     ]);
 
   const recentUpdates = recentPosts.map((p) => serializePost(p as any, viewerUserId));
@@ -100,6 +123,7 @@ async function assembleNgoProfile(prisma: PrismaClient, ngo: { id: string } & Re
     // Distinct from isFollowing so the button can read "Requested" on an approval-gated NGO.
     followStatus: follow?.status ?? null,
     featuredDrives,
+    upcomingDrives,
     recentUpdates,
     staff,
     portfolio,
@@ -107,6 +131,8 @@ async function assembleNgoProfile(prisma: PrismaClient, ngo: { id: string } & Re
     // Self-reported historical totals, kept separate from `impact` (which is backed by
     // PlantedTree health checks) so the survival rate stays trustworthy.
     priorImpact: portfolioImpact,
+    campaigns,
+    adoptableTrees,
   };
 }
 

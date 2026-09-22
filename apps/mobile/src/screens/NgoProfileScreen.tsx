@@ -16,6 +16,8 @@ import { ProfileTabBar, type ProfileTabKey } from '../components/profile/Profile
 import { PostGrid } from '../components/profile/PostGrid';
 import { AchievementsTabContent } from '../components/profile/AchievementsTabContent';
 import { DrivesTabContent } from '../components/profile/DrivesTabContent';
+import { CampaignsTabContent } from '../components/profile/CampaignsTabContent';
+import { AdoptableTreesTabContent } from '../components/profile/AdoptableTreesTabContent';
 import { useAuth } from '../context/AuthContext';
 import { useBlockTarget, useNgoPosts } from '../hooks/useSocialQueries';
 import {
@@ -38,6 +40,8 @@ import { resolveMediaUrl } from '../api/client';
 import type { ApiPost } from '../api/posts';
 import type { ApiPortfolioEntry } from '../api/portfolio';
 import type { NgoStreakWeek } from '../api/ngoStreaks';
+import type { ApiCampaign } from '../api/donations';
+import type { ApiAdoptableTree } from '../api/adoptions';
 
 function formatPastWorkDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
@@ -210,13 +214,19 @@ export function NgoProfileScreen({ route, navigation }: any) {
 
   const drives = isOwn
     ? ownDrives.data ?? []
-    : (publicProfile.data?.featuredDrives ?? []).map((d: any) => ({
-        id: d.id,
-        title: d.title,
-        photoUri: d.photoUrl,
-        city: d.city,
-        startsAt: d.startsAt,
-      }));
+    : [...(publicProfile.data?.upcomingDrives ?? []), ...(publicProfile.data?.featuredDrives ?? [])]
+        .sort((a: any, b: any) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime())
+        .map((d: any) => ({
+          id: d.id,
+          title: d.title,
+          photoUri: d.photoUrl,
+          city: d.city,
+          startsAt: d.startsAt,
+        }));
+
+  // NGOs manage these via their own dashboard, not this profile screen — nothing to show here yet.
+  const campaigns: ApiCampaign[] = isOwn ? [] : publicProfile.data?.campaigns ?? [];
+  const adoptableTrees: ApiAdoptableTree[] = isOwn ? [] : publicProfile.data?.adoptableTrees ?? [];
 
   const toggleFollow = () => {
     if (!ngoId) return;
@@ -283,6 +293,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
                 avatarUrl={logoUrl}
                 avatarEmoji="🌿"
                 storyRing={effectiveNgoId ? ringStatus.data?.ngos[effectiveNgoId] : null}
+                storyAuthor={effectiveNgoId ? { kind: 'ngo', id: effectiveNgoId, name, avatarEmoji: '🌿' } : null}
                 name={name}
                 meta={city ? `📍 ${city}` : null}
                 bio={bio}
@@ -320,7 +331,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
                     : null
                 }
               />
-              <ProfileTabBar activeTab={tab} onChange={setTab} />
+              <ProfileTabBar activeTab={tab} onChange={setTab} role="ngo" />
               {tab === 'contributions' && (
                 <View style={styles.tabBody}>
                   <BorderCard style={styles.contributionsCard}>
@@ -346,6 +357,16 @@ export function NgoProfileScreen({ route, navigation }: any) {
                       </View>
                     </View>
                   </BorderCard>
+
+                  {!isOwn && (publicProfile.data?.impact?.total ?? 0) > 0 && effectiveNgoId && (
+                    <TouchableOpacity
+                      style={styles.viewOnMapBtn}
+                      activeOpacity={0.8}
+                      onPress={() => navigation.navigate('NgoMap', { ngoId: effectiveNgoId, ngoName: name })}
+                    >
+                      <Text style={styles.viewOnMapBtnText}>🗺️ View on map</Text>
+                    </TouchableOpacity>
+                  )}
 
                   {pastWork.length > 0 && (
                     <>
@@ -373,6 +394,18 @@ export function NgoProfileScreen({ route, navigation }: any) {
                   role="ngo"
                   drives={drives}
                   onPressDrive={(d) => navigation.navigate('DriveDetail', { driveId: d.id })}
+                />
+              )}
+              {tab === 'campaigns' && (
+                <CampaignsTabContent
+                  campaigns={campaigns}
+                  onPressCampaign={(c) => navigation.navigate('CampaignDetail', { campaignId: c.id })}
+                />
+              )}
+              {tab === 'adopt' && (
+                <AdoptableTreesTabContent
+                  trees={adoptableTrees}
+                  onPressTree={(t) => navigation.navigate('AdoptTreeDetail', { treeId: t.id })}
                 />
               )}
             </>
@@ -421,6 +454,15 @@ const styles = StyleSheet.create({
   contributionsStat: { alignItems: 'center' },
   contributionsNum: { fontSize: 22, fontWeight: '800', color: COLORS.textPrimary },
   contributionsLabel: { fontSize: 10, color: COLORS.textSecondary, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.4 },
+  viewOnMapBtn: {
+    alignSelf: 'flex-start',
+    borderRadius: RADIUS.full,
+    borderWidth: 1.5,
+    borderColor: COLORS.sage,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  viewOnMapBtnText: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
   streakCard: { gap: 12, marginBottom: 16 },
   streakHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   streakTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },

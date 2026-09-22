@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
-import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -12,7 +11,6 @@ import { FormField } from '../components/common/FormField';
 import { AddressSearchField } from '../components/common/AddressSearchField';
 import { CityPickerField } from '../components/common/CityPickerField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
-import { useSlideUp } from '../hooks/useAnimations';
 import { useCreateAdoptableTree } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import { useConfirm } from '../context/ConfirmDialogContext';
@@ -32,7 +30,6 @@ export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
   const [city, setCity] = useState('Pune');
   const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const cardAnim = useSlideUp(0, 24);
 
   const handleSubmit = async () => {
     setError(null);
@@ -74,7 +71,7 @@ export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
-        <Animated.View style={cardAnim}>
+        <View>
           <PhotoPickerField
             photo={photo}
             onChange={setPhoto}
@@ -132,7 +129,7 @@ export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
             gradientColors={[COLORS.forest, COLORS.forestDeep]}
             style={styles.submitButton}
           />
-        </Animated.View>
+        </View>
       </ScrollView>
     </View>
   );

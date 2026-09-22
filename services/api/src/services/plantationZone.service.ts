@@ -193,6 +193,51 @@ export async function getPlantationsOverview(prisma: PrismaClient, ngoUserId: st
   );
 }
 
+// Public, read-only "trees planted here" map data for an NGO's profile — one pin per drive that
+// has logged trees (using the drive's own lat/lng, since zones have no coordinates of their own),
+// with a per-zone survival breakdown for that pin's info sheet. No ownership check: this only
+// exposes what's already shown in aggregate on the public profile, plus zone names/counts.
+export async function listPublicPlantingSummary(prisma: PrismaClient, ngoId: string) {
+  const drives = await prisma.drive.findMany({
+    where: { ngoId, plantedTrees: { some: {} } },
+    select: { id: true, title: true, lat: true, lng: true },
+  });
+
+  const summaries = await Promise.all(
+    drives.map(async (drive) => {
+      const [zones, { byZone, statusByTree, lastCheckedByTree }] = await Promise.all([
+        prisma.plantationZone.findMany({ where: { driveId: drive.id }, orderBy: { createdAt: 'asc' } }),
+        rollupsByZone(prisma, drive.id),
+      ]);
+
+      const zoneRows = zones.map((zone) => {
+        const rollup = rollupGroup(byZone.get(zone.id) ?? [], statusByTree, lastCheckedByTree);
+        return { name: zone.name, total: rollup.total, survivalRate: rollup.survivalRate };
+      });
+      const unzonedTrees = byZone.get('unzoned') ?? [];
+      if (unzonedTrees.length > 0) {
+        const rollup = rollupGroup(unzonedTrees, statusByTree, lastCheckedByTree);
+        zoneRows.push({ name: 'Unzoned', total: rollup.total, survivalRate: rollup.survivalRate });
+      }
+
+      const overall = rollupGroup(Array.from(byZone.values()).flat(), statusByTree, lastCheckedByTree);
+
+      return {
+        driveId: drive.id,
+        driveTitle: drive.title,
+        lat: drive.lat != null ? Number(drive.lat) : null,
+        lng: drive.lng != null ? Number(drive.lng) : null,
+        total: overall.total,
+        survivalRate: overall.survivalRate,
+        zones: zoneRows,
+      };
+    }),
+  );
+
+  // Only pins with real coordinates are useful on a map.
+  return summaries.filter((s) => s.lat != null && s.lng != null);
+}
+
 // Marks every tree currently in a zone with one health status in a single bulk write — the
 // primary "check 500 trees in one tap" action. Delegates to the existing per-tree-id bulk
 // endpoint so the exception-flow and zone-flow write through the exact same code path.

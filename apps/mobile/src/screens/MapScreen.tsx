@@ -29,6 +29,7 @@ import {
   useApprovedPlantingLocations,
   useCheckPlantingEligibility,
   useSettings,
+  useNgoPlantingMap,
 } from '../hooks/useApiQueries';
 import { EmptyState } from '../components/common/EmptyState';
 import { StatDisplay } from '../components/common/StatDisplay';
@@ -37,6 +38,7 @@ import type { ApiTree } from '../api/trees';
 import type { ApiAdoptableTree } from '../api/adoptions';
 import type { ApiDrive } from '../api/drives';
 import type { ApiApprovedLocation } from '../api/plantingLocations';
+import type { ApiPlantingMapEntry } from '../api/plantedTrees';
 import { NOT_APPROVED_MESSAGE } from '../constants/plantingLocation';
 import { getCurrentPositionWithTimeout } from '../utils/location';
 
@@ -221,6 +223,24 @@ function NgoDriveMarker({ drive, onPress }: { drive: ApiDrive & { lat: number; l
   );
 }
 
+/** One pin per plantation drive that has logged trees, shown when the map is scoped to a single
+ * NGO (via `route.params.ngoId`) — tapping opens an in-map info card with the zone breakdown,
+ * since there's no public detail screen for a plantation's survival stats to navigate to. */
+function PlantingMarker({ entry, onPress }: { entry: ApiPlantingMapEntry; onPress: () => void }) {
+  return (
+    <Marker id={`planting-${entry.driveId}`} lngLat={[entry.lng, entry.lat]} anchor="bottom">
+      <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+        <View style={styles.markerContainer}>
+          <View style={[styles.markerBubble, styles.plantingBubble]}>
+            <Text style={styles.markerEmoji}>🌲</Text>
+          </View>
+          <View style={[styles.markerPin, { borderTopColor: COLORS.forest }]} />
+        </View>
+      </TouchableOpacity>
+    </Marker>
+  );
+}
+
 function NurseryMarker({ nursery, onPress }: { nursery: { id: string; nurseryName: string; lat: number; lng: number }; onPress: () => void }) {
   return (
     <Marker id={`nursery-${nursery.id}`} lngLat={[nursery.lng, nursery.lat]} anchor="bottom">
@@ -345,12 +365,81 @@ function TreeInfoCard({ tree, onClose, isNight }: {
   );
 }
 
+/** In-map info card for a `PlantingMarker` tap — there's no public detail screen for a
+ * plantation's survival stats, so this mirrors TreeInfoCard's bottom-sheet treatment instead of
+ * navigating away. */
+function PlantingInfoCard({ entry, onClose, isNight }: {
+  entry: ApiPlantingMapEntry | null;
+  onClose: () => void;
+  isNight: boolean;
+}) {
+  const translateY = useSharedValue(300);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    if (entry) {
+      translateY.value = withSpring(0, { damping: 18, stiffness: 200 });
+      opacity.value = withTiming(1, { duration: 200 });
+    } else {
+      translateY.value = withSpring(300, { damping: 18, stiffness: 200 });
+      opacity.value = withTiming(0, { duration: 150 });
+    }
+  }, [entry]);
+
+  const cardStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+    opacity: opacity.value,
+  }));
+
+  if (!entry) return null;
+
+  return (
+    <Animated.View style={[styles.infoCardWrap, cardStyle]}>
+      <BlurView intensity={isNight ? 70 : 55} tint={isNight ? 'dark' : 'light'} style={styles.infoCard}>
+        <View style={[styles.infoCardHandle, isNight && styles.infoCardHandleDark]} />
+        <TouchableOpacity
+          style={[styles.infoCardClose, isNight && styles.infoCardCloseDark]}
+          onPress={onClose}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="Close plantation details"
+        >
+          <Text style={[styles.infoCardCloseText, isNight && styles.lightText]}>✕</Text>
+        </TouchableOpacity>
+
+        <View style={styles.infoCardHeader}>
+          <View style={[styles.infoCardIcon, { backgroundColor: COLORS.forest + '22' }]}>
+            <Text style={styles.infoCardEmoji}>🌲</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.infoCardNickname, isNight && styles.lightText]} numberOfLines={1}>{entry.driveTitle}</Text>
+            <Text style={[styles.infoCardSpecies, isNight && styles.lightSubText]}>{entry.total} trees planted</Text>
+          </View>
+          <View style={[styles.infoCardStageBadge, { backgroundColor: COLORS.forest + '22' }]}>
+            <Text style={[styles.infoCardStageText, { color: COLORS.forest }]}>{entry.survivalRate}% survival</Text>
+          </View>
+        </View>
+
+        <ScrollView style={styles.plantingZoneList} showsVerticalScrollIndicator={false}>
+          {entry.zones.map((zone) => (
+            <View key={zone.name} style={[styles.plantingZoneRow, isNight && styles.plantingZoneRowDark]}>
+              <Text style={[styles.plantingZoneName, isNight && styles.lightText]} numberOfLines={1}>{zone.name}</Text>
+              <Text style={[styles.plantingZoneMeta, isNight && styles.lightSubText]}>{zone.total} trees · {zone.survivalRate}%</Text>
+            </View>
+          ))}
+        </ScrollView>
+      </BlurView>
+    </Animated.View>
+  );
+}
+
 export function MapScreen({ navigation, route, mode = 'user' }: any) {
   const insets = useSafeAreaInsets();
   const theme = useTimeTheme();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [locationPending, setLocationPending] = useState(true);
   const [selectedTree, setSelectedTree] = useState<ApiTree | null>(null);
+  const [selectedPlanting, setSelectedPlanting] = useState<ApiPlantingMapEntry | null>(null);
   const cameraRef = useRef<CameraRef>(null);
   const fadeStyle = useFadeIn(0, 400);
   const headerSlide = useSlideUp(0, 20, 350);
@@ -360,18 +449,23 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
   // layer shows only that nursery's sourced trees (via /trees/map?nurseryId=) instead of the
   // viewer's own personal forest.
   const scopeNurseryId: string | undefined = route?.params?.nurseryId;
+  // An NGO scoped in from NgoProfileScreen's "View on map" button — when present, drives and
+  // adoptable trees are filtered to just this NGO, and its zone-level planting pins appear.
+  const scopeNgoId: string | undefined = route?.params?.ngoId;
+  const scopeNgoName: string | undefined = route?.params?.ngoName;
   // Both public and NGO-owned feeds are always fetched (stable per-mount `mode` prop, never
   // toggles) so this never has to call hooks conditionally — whichever pair isn't relevant for
   // this mode is simply not used below. NGO mode has no personal "planted trees" concept at all.
   const { data: rawTrees = [] } = useTrees(undefined, !isNgo && !scopeNurseryId);
   const { data: nurseryScopedTrees = [] } = useTreesMap({ scope: 'global', nurseryId: scopeNurseryId }, !!scopeNurseryId);
   const trees = isNgo ? [] : scopeNurseryId ? nurseryScopedTrees : rawTrees;
-  const { data: publicAdoptableTrees = [] } = useAdoptableTrees(undefined, undefined, !isNgo);
+  const { data: publicAdoptableTrees = [] } = useAdoptableTrees(undefined, undefined, !isNgo, scopeNgoId);
   const { data: myAdoptableTrees = [] } = useMyAdoptableTrees(isNgo);
   const adoptableTrees = isNgo ? myAdoptableTrees : publicAdoptableTrees;
-  const { data: publicDrives = [] } = useDrives(undefined, undefined, !isNgo);
+  const { data: publicDrives = [] } = useDrives(undefined, undefined, !isNgo, scopeNgoId);
   const { data: myDrives = [] } = useMyDrives(isNgo);
   const drives = isNgo ? myDrives : publicDrives;
+  const { data: plantingPins = [] } = useNgoPlantingMap(!isNgo && scopeNgoId ? scopeNgoId : null);
   const { data: nurseriesData } = useBrowseNurseries();
   const nurseries = isNgo ? [] : nurseriesData?.nurseries ?? [];
   const { data: approvedLocations = [] } = useApprovedPlantingLocations(!isNgo);
@@ -404,8 +498,8 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
     })();
   }, [locationTrackingEnabled]);
 
-  const ngoPoints = isNgo
-    ? ([...drives, ...adoptableTrees] as Array<{ lat: number | null; lng: number | null }>)
+  const ngoPoints = isNgo || scopeNgoId
+    ? ([...drives, ...adoptableTrees, ...plantingPins] as Array<{ lat: number | null; lng: number | null }>)
         .filter((p) => p.lat != null && p.lng != null)
         .map((p) => ({ lat: p.lat as number, lng: p.lng as number }))
     : [];
@@ -431,6 +525,7 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
       cameraRef.current?.flyTo({ center: INDIA_CENTER, zoom: INDIA_ZOOM, duration: 800 });
     }
     setSelectedTree(null);
+    setSelectedPlanting(null);
   }, [trees, ngoPoints, location]);
 
   const hasAutoFitRef = useRef(false);
@@ -579,6 +674,14 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
               />
             ))}
 
+          {!isNgo && scopeNgoId && plantingPins.map(entry => (
+            <PlantingMarker
+              key={`planting_${entry.driveId}`}
+              entry={entry}
+              onPress={() => setSelectedPlanting(entry)}
+            />
+          ))}
+
           {nurseries
             .filter((n) => n.lat != null && n.lng != null)
             .map((n) => (
@@ -605,15 +708,27 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
       <Animated.View style={[styles.header, { paddingTop: insets.top + 8 }, headerSlide]}>
         <BlurView intensity={isNight ? 65 : 50} tint={isNight ? 'dark' : 'light'} style={styles.headerBlur}>
           <View style={styles.headerContent}>
-            <View>
-              <Text style={[styles.headerTitle, isNight && styles.lightText]}>
-                {isNgo ? '🗺️ Your Drives & Trees' : '🗺️ Tree Map'}
-              </Text>
-              <Text style={[styles.headerSub, isNight && styles.lightSubText]}>
-                {isNgo
-                  ? `${drives.length} ${drives.length === 1 ? 'drive' : 'drives'} · ${adoptableTrees.length} ${adoptableTrees.length === 1 ? 'tree' : 'trees'}`
-                  : `${trees.length} ${trees.length === 1 ? 'tree' : 'trees'} planted`}
-              </Text>
+            <View style={styles.headerTitleRow}>
+              {!isNgo && scopeNgoId && (
+                <TouchableOpacity
+                  onPress={() => navigation.goBack()}
+                  style={styles.mapBackBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="Go back"
+                >
+                  <Text style={[styles.mapBackBtnText, isNight && styles.lightText]}>←</Text>
+                </TouchableOpacity>
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.headerTitle, isNight && styles.lightText]} numberOfLines={1}>
+                  {isNgo ? '🗺️ Your Drives & Trees' : scopeNgoId ? `🗺️ ${scopeNgoName ?? 'NGO'} on the map` : '🗺️ Tree Map'}
+                </Text>
+                <Text style={[styles.headerSub, isNight && styles.lightSubText]}>
+                  {isNgo || scopeNgoId
+                    ? `${drives.length} ${drives.length === 1 ? 'drive' : 'drives'} · ${adoptableTrees.length} ${adoptableTrees.length === 1 ? 'tree' : 'trees'}${scopeNgoId ? ` · ${plantingPins.length} ${plantingPins.length === 1 ? 'plantation' : 'plantations'}` : ''}`
+                    : `${trees.length} ${trees.length === 1 ? 'tree' : 'trees'} planted`}
+                </Text>
+              </View>
             </View>
             <TouchableOpacity style={styles.indiaBtn} onPress={fitToOverview}>
               <Text style={styles.indiaBtnText}>🌍 Overview</Text>
@@ -716,6 +831,9 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
       {/* Tree info card */}
       <TreeInfoCard tree={selectedTree} onClose={() => setSelectedTree(null)} isNight={isNight} />
 
+      {/* Plantation planting-map info card */}
+      <PlantingInfoCard entry={selectedPlanting} onClose={() => setSelectedPlanting(null)} isNight={isNight} />
+
       {statusModal && (
         <StatusModal
           visible
@@ -748,6 +866,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12,
   },
+  headerTitleRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, marginRight: 8 },
+  mapBackBtn: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  mapBackBtnText: { fontSize: 20, fontWeight: '700', color: COLORS.textPrimary },
   headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary },
   headerSub: { fontSize: 12, color: COLORS.textPrimary, marginTop: 2 },
   indiaBtn: { backgroundColor: COLORS.sage, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 },
@@ -778,6 +899,18 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.forest,
     borderColor: 'rgba(255,255,255,0.85)',
   },
+  plantingBubble: {
+    backgroundColor: COLORS.forest,
+    borderColor: 'rgba(255,255,255,0.85)',
+  },
+  plantingZoneList: { maxHeight: 160, marginTop: 4 },
+  plantingZoneRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(0,0,0,0.08)',
+  },
+  plantingZoneRowDark: { borderBottomColor: 'rgba(255,255,255,0.15)' },
+  plantingZoneName: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary, flexShrink: 1, marginRight: 8 },
+  plantingZoneMeta: { fontSize: 12, color: COLORS.textSecondary },
   markerPin: {
     width: 0, height: 0,
     borderLeftWidth: 5, borderRightWidth: 5, borderTopWidth: 9,

@@ -442,3 +442,12 @@ export async function listActiveUserStories(prisma: PrismaClient, userId: string
   });
   return stories.map((s) => serializeStory(s));
 }
+
+/** Public stories for one NGO's profile — active only, mirrors listActiveUserStories. */
+export async function listActiveNgoStories(prisma: PrismaClient, ngoId: string) {
+  const stories = await prisma.story.findMany({
+    where: { ngoId, authorType: 'ngo', expiresAt: { gt: new Date() } },
+    orderBy: { createdAt: 'asc' },
+  });
+  return stories.map((s) => serializeStory(s));
+}

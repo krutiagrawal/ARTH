@@ -13,8 +13,9 @@ export interface ApiCampaign {
   createdAt: string;
 }
 
-export async function fetchCampaigns(): Promise<ApiCampaign[]> {
-  return apiFetch<ApiCampaign[]>('/api/campaigns');
+export async function fetchCampaigns(params: { ngoId?: string } = {}): Promise<ApiCampaign[]> {
+  const qs = params.ngoId ? `?ngoId=${params.ngoId}` : '';
+  return apiFetch<ApiCampaign[]>(`/api/campaigns${qs}`);
 }
 
 export async function fetchCampaign(id: string): Promise<ApiCampaign> {

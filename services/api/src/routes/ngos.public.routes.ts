@@ -1,9 +1,13 @@
 import { FastifyInstance } from 'fastify';
 import * as ngoPublicService from '../services/ngoPublic.service';
 import * as followService from '../services/follow.service';
+import { listActiveNgoStories } from '../services/story.service';
+import { listPublicPlantingSummary } from '../services/plantationZone.service';
 import { browseQuerySchema, paginationQuerySchema } from '../schemas/ngosPublic.schema';
 import { BadRequestError } from '../utils/errors';
 import { listPublicPortfolio } from '../services/portfolio.service';
+import { serializeCampaign } from './donations.routes';
+import { serializeAdoptableTree } from './adoptions.routes';
 
 interface NgoLeaderboardRow {
   id: string;
@@ -69,7 +73,13 @@ export default async function ngosPublicRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const profile = await ngoPublicService.getPublicProfile(fastify.prisma, request.params.id, request.user?.id);
       // recentUpdates / portfolio / staff arrive already serialized from the service.
-      reply.send({ ...profile, featuredDrives: profile.featuredDrives.map(serializeDrive) });
+      reply.send({
+        ...profile,
+        featuredDrives: profile.featuredDrives.map(serializeDrive),
+        upcomingDrives: profile.upcomingDrives.map(serializeDrive),
+        campaigns: profile.campaigns.map(serializeCampaign),
+        adoptableTrees: profile.adoptableTrees.map((t) => serializeAdoptableTree(t)),
+      });
     },
   );
 
@@ -89,6 +99,17 @@ export default async function ngosPublicRoutes(fastify: FastifyInstance) {
       reply.send(await listPublicPortfolio(fastify.prisma, request.params.id, request.user?.id));
     },
   );
+
+  // Active stories for this NGO's profile — mirrors GET /api/users/:id/stories.
+  fastify.get<{ Params: { id: string } }>('/:id/stories', async (request, reply) => {
+    reply.send(await listActiveNgoStories(fastify.prisma, request.params.id));
+  });
+
+  // Zone-level "trees planted here" pins for the NGO-scoped map — one entry per drive with
+  // logged trees, each carrying its own zone/survival breakdown.
+  fastify.get<{ Params: { id: string } }>('/:id/planting-map', async (request, reply) => {
+    reply.send(await listPublicPlantingSummary(fastify.prisma, request.params.id));
+  });
 
   fastify.get<{ Params: { id: string } }>('/:id/achievements', async (request, reply) => {
     const achievements = await fastify.prisma.ngoAchievement.findMany({

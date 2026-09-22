@@ -3,6 +3,8 @@ import type { Award } from './ngo';
 import type { ApiPost } from './posts';
 import type { ApiPortfolioEntry } from './portfolio';
 import type { FollowPolicy, FollowStatus } from './ngoFollowers';
+import type { ApiCampaign } from './donations';
+import type { ApiAdoptableTree } from './adoptions';
 
 export interface ApiNgoSummary {
   id: string;
@@ -46,16 +48,21 @@ export interface ApiPublicNgoProfile {
   /** Distinct from `isFollowing` so the button can read "Requested". */
   followStatus: FollowStatus | null;
   featuredDrives: ApiFeaturedDrive[];
+  /** Drives still to come — a freshly-created drive shows up here, not in `featuredDrives`
+   * (which is completed-only, the "past work" showcase). */
+  upcomingDrives: ApiFeaturedDrive[];
   recentUpdates: ApiPost[];
   staff: { id: string; name: string; role: string; photoUrl: string | null }[];
   portfolio: ApiPortfolioEntry[];
   impact: {
     total: number;
-    counts: Record<'healthy' | 'struggling' | 'dead' | 'removed', number>;
+    counts: Record<'not_checked' | 'healthy' | 'struggling' | 'dead' | 'removed', number>;
     survivalRate: number;
   };
   /** Self-reported totals from archived past work, kept apart from the verified `impact`. */
   priorImpact: { entries: number; treesPlanted: number; volunteersInvolved: number };
+  campaigns: ApiCampaign[];
+  adoptableTrees: ApiAdoptableTree[];
 }
 
 export async function fetchNgoPublicProfile(id: string): Promise<ApiPublicNgoProfile> {

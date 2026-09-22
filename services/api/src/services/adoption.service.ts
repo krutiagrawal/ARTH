@@ -30,6 +30,7 @@ interface NearbyFilter {
   lng?: number;
   radiusKm?: number;
   limit?: number;
+  ngoId?: string;
 }
 
 interface OwnedListFilter {
@@ -90,7 +91,7 @@ export async function removeAdoptableTree(prisma: PrismaClient, ngoUserId: strin
 
 export async function listAdoptableTrees(prisma: PrismaClient, filter: NearbyFilter) {
   const trees = await prisma.adoptableTree.findMany({
-    where: { status: 'available', ngo: { status: 'approved' } },
+    where: { status: 'available', ngo: { status: 'approved' }, ...(filter.ngoId ? { ngoId: filter.ngoId } : {}) },
     include: adoptableTreeInclude,
     orderBy: { createdAt: 'desc' },
     take: 500,

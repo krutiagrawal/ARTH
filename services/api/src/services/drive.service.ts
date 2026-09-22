@@ -53,6 +53,7 @@ interface NearbyFilter {
   lng?: number;
   radiusKm?: number;
   limit?: number;
+  ngoId?: string;
 }
 
 interface OwnedListFilter {
@@ -243,7 +244,7 @@ export async function completeDrive(prisma: PrismaClient, ngoUserId: string, dri
 
 export async function listDrives(prisma: PrismaClient, filter: NearbyFilter, userId?: string) {
   const drives = await prisma.drive.findMany({
-    where: { status: 'upcoming', ngo: { status: 'approved' } },
+    where: { status: 'upcoming', ngo: { status: 'approved' }, ...(filter.ngoId ? { ngoId: filter.ngoId } : {}) },
     include: driveInclude,
     orderBy: { startsAt: 'asc' },
     take: 500,

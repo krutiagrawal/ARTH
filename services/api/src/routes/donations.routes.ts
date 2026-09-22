@@ -4,6 +4,7 @@ import {
   createCampaignSchema,
   updateCampaignSchema,
   createDonationSchema,
+  listCampaignsQuerySchema,
   ownedListQuerySchema,
   paginationQuerySchema,
 } from '../schemas/donations.schema';
@@ -12,7 +13,7 @@ import { splitMultipartBody } from '../utils/multipart';
 import * as donationService from '../services/donation.service';
 import { BadRequestError } from '../utils/errors';
 
-function serializeCampaign(c: any) {
+export function serializeCampaign(c: any) {
   return {
     id: c.id,
     ngoId: c.ngoId,
@@ -28,8 +29,11 @@ function serializeCampaign(c: any) {
 }
 
 export default async function donationsRoutes(fastify: FastifyInstance) {
-  fastify.get('/', async (_request, reply) => {
-    const campaigns = await donationService.listCampaigns(fastify.prisma);
+  fastify.get('/', async (request, reply) => {
+    const parsed = listCampaignsQuerySchema.safeParse(request.query);
+    if (!parsed.success) throw new BadRequestError('Invalid query parameters');
+
+    const campaigns = await donationService.listCampaigns(fastify.prisma, parsed.data);
     reply.send(campaigns.map(serializeCampaign));
   });
 

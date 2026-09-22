@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
-import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -10,7 +9,6 @@ import { PhotoPickerField, PickedPhoto } from '../components/common/PhotoPickerF
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
-import { useSlideUp } from '../hooks/useAnimations';
 import { useCreateCampaign } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import { useConfirm } from '../context/ConfirmDialogContext';
@@ -27,7 +25,6 @@ export function NgoCreateCampaignScreen({ navigation }: any) {
   const [goalRupees, setGoalRupees] = useState('');
   const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const cardAnim = useSlideUp(0, 24);
 
   const handleSubmit = async () => {
     setError(null);
@@ -65,7 +62,7 @@ export function NgoCreateCampaignScreen({ navigation }: any) {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
-        <Animated.View style={cardAnim}>
+        <View>
           <PhotoPickerField
             photo={photo}
             onChange={setPhoto}
@@ -107,7 +104,7 @@ export function NgoCreateCampaignScreen({ navigation }: any) {
             gradientColors={[COLORS.forest, COLORS.forestDeep]}
             style={styles.submitButton}
           />
-        </Animated.View>
+        </View>
       </ScrollView>
     </View>
   );

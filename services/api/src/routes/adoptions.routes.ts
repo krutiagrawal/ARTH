@@ -18,7 +18,7 @@ import { BadRequestError } from '../utils/errors';
 // identity to anonymous callers, only the NGO that owns the tree gets to
 // see who adopted it (name + handle only, never email — see the supporter
 // PII rule this dashboard redesign follows throughout).
-function serializeAdoptableTree(entry: any, opts: { includeAdopter?: boolean } = {}) {
+export function serializeAdoptableTree(entry: any, opts: { includeAdopter?: boolean } = {}) {
   const t = entry.tree ?? entry;
   return {
     id: t.id,

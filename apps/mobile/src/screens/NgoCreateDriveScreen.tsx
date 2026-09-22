@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Platform, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
-import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -10,7 +9,6 @@ import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { useCreateDrive } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
-import { useSlideUp } from '../hooks/useAnimations';
 import { PhotoPickerField, PickedPhoto } from '../components/common/PhotoPickerField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField, FormFieldShell } from '../components/common/FormField';
@@ -98,7 +96,6 @@ export function NgoCreateDriveScreen({ navigation }: any) {
   const [capacity, setCapacity] = useState('');
   const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const cardAnim = useSlideUp(0, 24);
 
   const addPickupPoint = () => setPickupPoints((prev) => [...prev, { address: '', arrivalBy: new Date(startsAt) }]);
   const removePickupPoint = (index: number) => setPickupPoints((prev) => prev.filter((_, i) => i !== index));
@@ -165,7 +162,7 @@ export function NgoCreateDriveScreen({ navigation }: any) {
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
-        <Animated.View style={cardAnim}>
+        <View>
           <PhotoPickerField
             photo={photo}
             onChange={setPhoto}
@@ -283,7 +280,7 @@ export function NgoCreateDriveScreen({ navigation }: any) {
             gradientColors={[COLORS.forest, COLORS.forestDeep]}
             style={styles.submitButton}
           />
-        </Animated.View>
+        </View>
       </ScrollView>
     </View>
   );

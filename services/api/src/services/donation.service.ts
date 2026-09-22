@@ -102,9 +102,9 @@ export async function reopenCampaign(prisma: PrismaClient, ngoUserId: string, ca
   return withRaisedAmount(updated);
 }
 
-export async function listCampaigns(prisma: PrismaClient) {
+export async function listCampaigns(prisma: PrismaClient, filter: { ngoId?: string } = {}) {
   const campaigns = await prisma.donationCampaign.findMany({
-    where: { status: 'active', ngo: { status: 'approved' } },
+    where: { status: 'active', ngo: { status: 'approved' }, ...(filter.ngoId ? { ngoId: filter.ngoId } : {}) },
     include: campaignInclude,
     orderBy: { createdAt: 'desc' },
     take: 500,

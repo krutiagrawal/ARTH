@@ -38,10 +38,11 @@ export interface ApiDrive {
   distanceKm?: number;
 }
 
-export async function fetchDrives(params: { lat?: number; lng?: number } = {}): Promise<ApiDrive[]> {
+export async function fetchDrives(params: { lat?: number; lng?: number; ngoId?: string } = {}): Promise<ApiDrive[]> {
   const query = new URLSearchParams();
   if (params.lat !== undefined) query.set('lat', String(params.lat));
   if (params.lng !== undefined) query.set('lng', String(params.lng));
+  if (params.ngoId) query.set('ngoId', params.ngoId);
   const qs = query.toString();
   return apiFetch<ApiDrive[]>(`/api/drives${qs ? `?${qs}` : ''}`);
 }

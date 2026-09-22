@@ -57,6 +57,10 @@ export async function fetchUserStories(userId: string): Promise<ApiStory[]> {
   return apiFetch<ApiStory[]>(`/api/users/${userId}/stories`);
 }
 
+export async function fetchNgoStories(ngoId: string): Promise<ApiStory[]> {
+  return apiFetch<ApiStory[]>(`/api/ngos/${ngoId}/stories`);
+}
+
 export async function postStory(input: {
   imageBase64: string;
   caption?: string;

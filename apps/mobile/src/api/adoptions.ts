@@ -19,10 +19,11 @@ export interface ApiAdoptableTree {
   adopter?: { name: string; handle: string; message: string | null; adoptedAt: string };
 }
 
-export async function fetchAdoptableTrees(params: { lat?: number; lng?: number } = {}): Promise<ApiAdoptableTree[]> {
+export async function fetchAdoptableTrees(params: { lat?: number; lng?: number; ngoId?: string } = {}): Promise<ApiAdoptableTree[]> {
   const query = new URLSearchParams();
   if (params.lat !== undefined) query.set('lat', String(params.lat));
   if (params.lng !== undefined) query.set('lng', String(params.lng));
+  if (params.ngoId) query.set('ngoId', params.ngoId);
   const qs = query.toString();
   return apiFetch<ApiAdoptableTree[]>(`/api/adoptable-trees${qs ? `?${qs}` : ''}`);
 }
