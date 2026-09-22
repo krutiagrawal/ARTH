@@ -10,6 +10,7 @@ import { BorderCard } from '../components/common/BorderCard';
 import { PasswordInput } from '../components/common/PasswordInput';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { CityPickerField } from '../components/common/CityPickerField';
+import { AddressSearchField } from '../components/common/AddressSearchField';
 import { SelectField, SelectOption } from '../components/common/SelectField';
 import { PhoneField } from '../components/common/PhoneField';
 import { Toggle } from '../components/common/Toggle';
@@ -405,13 +406,14 @@ export function NgoRegisterScreen({ navigation }: any) {
 
           {step === 'addressContact' && (
             <>
-              <TextInput
-                style={[styles.input, styles.multiline]}
-                placeholder="Full registered address"
-                placeholderTextColor={ON_DARK_SURFACE.muted}
+              <AddressSearchField
+                dark
+                label="Full registered address"
                 value={line1}
                 onChangeText={setLine1}
+                placeholder="Street / area / landmark"
                 multiline
+                onSelectSuggestion={(s) => setLine1(s.label)}
               />
               <CityPickerField value={city} onChange={setCity} variant="dark" />
               <ChipListField dark label="Cities you operate in" placeholder="Add a city" values={operatingCities} onChange={setOperatingCities} />

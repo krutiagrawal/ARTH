@@ -242,7 +242,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
       <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
 
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        {!isOwn ? (
+        {navigation.canGoBack() ? (
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
             <View style={styles.iconBlur}>
               <Text style={styles.iconText}>←</Text>
@@ -253,7 +253,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
         )}
         <Text style={styles.topBarTitle} numberOfLines={1}>{name}</Text>
         {isOwn ? (
-          <TouchableOpacity onPress={() => navigation.navigate('NgoSettings')} style={styles.iconButton}>
+          <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.iconButton}>
             <View style={styles.iconBlur}>
               <Text style={styles.iconText}>⚙️</Text>
             </View>

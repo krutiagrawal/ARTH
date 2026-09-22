@@ -1,8 +1,9 @@
 ﻿import React, { useState, useCallback, useEffect, useRef, Suspense } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text } from '../components/common/AppText';
-import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { navigationRef } from './navigationRef';
 import { useAuth } from '../context/AuthContext';
 import { COLORS } from '../constants/colors';
 import { IS_TABLET, CONTENT_MAX_WIDTH } from '../utils/responsive';
@@ -443,8 +444,6 @@ export type RootStackParamList = {
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
-
-export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 /**
  * Resets the stack back to Login whenever `logout()` actually finishes — nothing else does. The

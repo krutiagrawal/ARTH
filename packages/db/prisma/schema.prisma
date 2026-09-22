@@ -2108,11 +2108,14 @@ model Post {
   tree    Tree?           @relation(fields: [treeId], references: [id], onDelete: SetNull)
   group   GroupProfile?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
-  media         PostMedia[]
-  likes         PostLike[]
-  saves         SavedPost[]
-  reports       ContentReport[]
-  notifications Notification[]
+  media          PostMedia[]
+  likes          PostLike[]
+  saves          SavedPost[]
+  reports        ContentReport[]
+  notifications  Notification[]
+  // Set when this post was auto-created from an NgoPortfolioEntry (see createPortfolioEntry) so
+  // past work shows up in the Posts feed alongside regular updates.
+  portfolioEntry NgoPortfolioEntry?
 
   @@index([ngoId, createdAt(sort: Desc)])
   @@index([nurseryId, createdAt(sort: Desc)])
@@ -2185,7 +2188,12 @@ model NgoPortfolioEntry {
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
+  // Mirrors this entry into the NGO's Posts feed — see createPortfolioEntry. Nullable so entries
+  // created before this existed, or ones whose mirrored post got removed, don't dangle.
+  postId String? @unique @map("post_id")
+
   ngo   NgoProfile          @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  post  Post?               @relation(fields: [postId], references: [id], onDelete: SetNull)
   media NgoPortfolioMedia[]
   likes NgoPortfolioLike[]
 

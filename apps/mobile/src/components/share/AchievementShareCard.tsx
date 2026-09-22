@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, GRADIENTS } from '../../constants/colors';
 import { SPACING, RADIUS } from '../../constants/theme';
 import { TYPOGRAPHY } from '../../constants/typography';
-import { RARITY_COLORS } from '../common/AchievementGrid';
+import { RARITY_COLORS } from '../../constants/achievementRarity';
 import type { ApiAchievement } from '../../api/achievements';
 
 export function AchievementShareCard({ achievement }: { achievement: ApiAchievement | null }) {

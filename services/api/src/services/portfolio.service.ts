@@ -1,6 +1,7 @@
 import { PrismaClient } from '@plant/db';
 import { BadRequestError, NotFoundError } from '../utils/errors';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
+import { createPost, deletePost, updatePostCaption } from './post.service';
 
 export const MAX_PORTFOLIO_MEDIA = 6;
 
@@ -102,6 +103,10 @@ export async function getPortfolioImpact(prisma: PrismaClient, ngoId: string) {
   };
 }
 
+function portfolioCaption(title: string, description?: string | null) {
+  return description ? `${title}\n\n${description}` : title;
+}
+
 interface PortfolioInput {
   title: string;
   description?: string;
@@ -142,7 +147,22 @@ export async function createPortfolioEntry(prisma: PrismaClient, ngoUserId: stri
     include: portfolioInclude,
   });
 
-  return serializePortfolioEntry(entry);
+  // Past work also shows up in the NGO's Posts feed, like any other update — see post.service.ts.
+  // Dated by happenedOn rather than "now" so old work slots into the feed by when it actually
+  // happened instead of jumping to the top the day it's archived.
+  const post = await createPost(prisma, ngoUserId, {
+    caption: portfolioCaption(input.title, input.description),
+    mediaUrls: input.mediaUrls ?? [],
+    asNgo: true,
+  });
+  await prisma.post.update({ where: { id: post.id }, data: { createdAt: input.happenedOn } });
+  const linked = await prisma.ngoPortfolioEntry.update({
+    where: { id: entry.id },
+    data: { postId: post.id },
+    include: portfolioInclude,
+  });
+
+  return serializePortfolioEntry(linked);
 }
 
 async function requireOwnEntry(prisma: PrismaClient, ngoUserId: string, entryId: string) {
@@ -191,10 +211,17 @@ export async function updatePortfolioEntry(
     });
   });
 
+  // Keep the mirrored Post's caption in step with the entry's title/description.
+  if (entry.postId && (input.title !== undefined || input.description !== undefined)) {
+    await updatePostCaption(prisma, ngoUserId, entry.postId, portfolioCaption(updated.title, updated.description));
+  }
+
   return serializePortfolioEntry(updated);
 }
 
 export async function deletePortfolioEntry(prisma: PrismaClient, ngoUserId: string, entryId: string) {
   const entry = await requireOwnEntry(prisma, ngoUserId, entryId);
+  // The mirrored Post has no reason to survive its past-work entry being deleted.
+  if (entry.postId) await deletePost(prisma, ngoUserId, entry.postId);
   await prisma.ngoPortfolioEntry.delete({ where: { id: entry.id } });
 }

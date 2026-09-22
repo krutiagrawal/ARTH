@@ -12,6 +12,7 @@ import { ShareCardModal } from './ShareCardModal';
 import { AchievementShareCard } from '../share/AchievementShareCard';
 import { useScaleIn } from '../../hooks/useAnimations';
 import { useTimeTheme, isNightlikePeriod } from '../../hooks/useTimeTheme';
+import { RARITY_COLORS } from '../../constants/achievementRarity';
 import type { ApiAchievement } from '../../api/achievements';
 
 /**
@@ -23,13 +24,6 @@ import type { ApiAchievement } from '../../api/achievements';
  */
 
 const { width: SW } = Dimensions.get('window');
-
-export const RARITY_COLORS: Record<string, [string, string]> = {
-  common: [COLORS.sage, COLORS.sageDark],
-  rare: [COLORS.xpBlue, COLORS.xpBlueDark],
-  epic: [COLORS.coral, '#C0392B'],
-  legendary: [COLORS.golden, COLORS.earth],
-};
 
 function AchievementItem({
   achievement,

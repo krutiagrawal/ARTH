@@ -10,6 +10,7 @@ import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { FormField } from '../components/common/FormField';
+import { AddressSearchField } from '../components/common/AddressSearchField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { Sheet } from '../components/common/Sheet';
 import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
@@ -216,7 +217,7 @@ export function NgoBulkRequirementsScreen({ navigation }: any) {
           <FormField dark={isNightMode} label="Species (optional description)" value={speciesNote} onChangeText={setSpeciesNote} placeholder="eg - Native shade trees" />
           <FormField dark={isNightMode} label="Quantity needed" value={quantityNeeded} onChangeText={setQuantityNeeded} placeholder="eg - 0" keyboardType="number-pad" />
           <FormField dark={isNightMode} label="Needed by (YYYY-MM-DD, optional)" value={neededByDate} onChangeText={setNeededByDate} placeholder="eg - 2026-10-01" />
-          <FormField dark={isNightMode} label="City (optional)" value={city} onChangeText={setCity} placeholder="eg - Pune" />
+          <AddressSearchField dark={isNightMode} label="City (optional)" value={city} onChangeText={setCity} placeholder="eg - Pune" />
           <FormField dark={isNightMode} label="Notes (optional)" value={notes} onChangeText={setNotes} placeholder="eg - Anything nurseries should know" multiline />
           {error && <Text style={styles.errorText}>{error}</Text>}
           <AnimatedButton

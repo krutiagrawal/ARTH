@@ -10,6 +10,7 @@ import { RADIUS } from '../constants/theme';
 import { PhotoPickerField, PickedPhoto } from '../components/common/PhotoPickerField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
+import { AddressSearchField } from '../components/common/AddressSearchField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { StatusModal } from '../components/common/StatusModal';
 import { useSlideUp } from '../hooks/useAnimations';
@@ -103,7 +104,7 @@ export function NgoLogPlantedTreesScreen({ navigation }: any) {
             keyboardType="number-pad"
           />
 
-          <FormField
+          <AddressSearchField
             label="Location (optional)"
             value={locationLabel}
             onChangeText={setLocationLabel}

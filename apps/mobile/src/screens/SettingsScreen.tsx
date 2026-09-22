@@ -140,7 +140,10 @@ export function SettingsScreen({ navigation }: any) {
               <Text style={styles.profileCardName}>{user?.name ?? 'Planter'}</Text>
               <Text style={styles.profileCardHandle}>@{user?.handle ?? ''}</Text>
             </View>
-            <TouchableOpacity style={styles.editProfileButton} onPress={() => navigation.navigate('EditProfile')}>
+            <TouchableOpacity
+              style={styles.editProfileButton}
+              onPress={() => navigation.navigate(user?.role === 'ngo' ? 'NgoSettings' : 'EditProfile')}
+            >
               <Text style={styles.editProfileText}>Edit</Text>
             </TouchableOpacity>
           </LinearGradient>

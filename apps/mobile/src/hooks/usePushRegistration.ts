@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { useAuth } from '../context/AuthContext';
 import { registerPushToken } from '../api/social';
-import { navigationRef } from '../navigation/AppNavigator';
+import { navigationRef } from '../navigation/navigationRef';
 
 /**
  * Routes a tapped push notification to the same screen its in-app notification-centre row would

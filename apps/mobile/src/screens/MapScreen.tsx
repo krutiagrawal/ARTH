@@ -55,6 +55,10 @@ const OSM_STYLE = {
       type: 'raster' as const,
       tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
       tileSize: 256,
+      // tile.openstreetmap.org only serves up to z19 — without this, zooming further sends
+      // requests for tiles that don't exist and the server answers with a 400.  MapLibre clamps
+      // to this automatically, oversampling the z19 tile instead of erroring past it.
+      maxzoom: 19,
       attribution: '© OpenStreetMap contributors',
     },
   },

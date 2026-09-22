@@ -9,6 +9,12 @@ const TIMEOUT_MS = 4000;
 const MIN_INTERVAL_MS = 1100;
 const USER_AGENT = 'PLANT-App/1.0 (tree planting platform; contact: support@plant.app)';
 
+// The product only launches in Pune right now (see CityPickerField.tsx), so address-field
+// search-as-you-type suggestions are boxed to Pune city plus its nearby villages/suburbs —
+// left,top,right,bottom in lon/lat — rather than surfacing same-named places anywhere on earth.
+// `bounded=1` makes Nominatim enforce this as a hard filter instead of just a ranking hint.
+const PUNE_VIEWBOX = '73.65,18.75,74.05,18.30';
+
 let queue: Promise<unknown> = Promise.resolve();
 let lastCallAt = 0;
 
@@ -72,7 +78,7 @@ export async function searchAddress(query: string): Promise<AddressSuggestion[]>
   const trimmed = query.trim();
   if (trimmed.length < 3) return [];
 
-  const url = `${NOMINATIM_URL}?format=json&addressdetails=1&limit=6&q=${encodeURIComponent(trimmed)}`;
+  const url = `${NOMINATIM_URL}?format=json&addressdetails=1&limit=6&viewbox=${PUNE_VIEWBOX}&bounded=1&q=${encodeURIComponent(trimmed)}`;
   const response = await throttledFetch(url);
   if (!response) return [];
 

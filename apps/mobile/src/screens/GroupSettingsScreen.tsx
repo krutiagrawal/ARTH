@@ -128,7 +128,7 @@ export function GroupSettingsScreen({ navigation }: any) {
   const pickLogo = useCallback(async () => {
     medium();
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.85,
