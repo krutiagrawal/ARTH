@@ -1,10 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Sprout, Plus, TreePine, HeartPulse, Skull, HelpCircle } from 'lucide-react'
+import { Sprout, Plus, TreePine, HeartPulse, Skull, HelpCircle, CircleDashed } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import DataTable from '@/components/dashboard/DataTable'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
@@ -14,8 +14,7 @@ import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
 import { useApprovalGate } from '@/components/dashboard/useApprovalGate'
 import { useNgoProfile } from '../NgoProfileContext'
 import { proxy } from '../proxy'
-
-const STATUS_VARIANT = { healthy: 'default', struggling: 'secondary', dead: 'destructive', removed: 'outline' }
+import { formatDueDate } from './survivalFormat'
 
 const bulkLogFields = [
   { name: 'speciesName', label: 'Species', required: true, section: 'Details' },
@@ -23,34 +22,25 @@ const bulkLogFields = [
   { name: 'locationLabel', label: 'Location (optional)', section: 'Details' },
 ]
 
-const HEALTH_OPTIONS = [
-  { value: 'healthy', label: 'Healthy' },
-  { value: 'struggling', label: 'Struggling' },
-  { value: 'dead', label: 'Dead' },
-  { value: 'removed', label: 'Removed' },
-]
-
 export default function SurvivalClient() {
+  const router = useRouter()
   const { profile } = useNgoProfile()
   const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
-  const [trees, setTrees] = useState([])
+  const [plantations, setPlantations] = useState([])
   const [stats, setStats] = useState(null)
   const [drives, setDrives] = useState([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [selectedTrees, setSelectedTrees] = useState([])
-  const [bulkStatus, setBulkStatus] = useState('healthy')
-  const [applying, setApplying] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [treesRes, statsRes] = await Promise.all([
-        proxy('/ngo/planted-trees'),
+      const [plantationsRes, statsRes] = await Promise.all([
+        proxy('/ngo/planted-trees/plantations'),
         proxy('/ngo/planted-trees/survival-stats'),
       ])
-      setTrees(treesRes.trees)
+      setPlantations(plantationsRes.plantations)
       setStats(statsRes)
     } catch (err) {
       toast.error(err.message || 'Could not load – please try again.')
@@ -69,7 +59,7 @@ export default function SurvivalClient() {
       ...bulkLogFields,
       {
         name: 'driveId',
-        label: 'Related drive (optional)',
+        label: 'Plantation drive (optional)',
         type: 'select',
         section: 'Details',
         placeholder: 'Not linked to a drive',
@@ -96,59 +86,31 @@ export default function SurvivalClient() {
     }
   }
 
-  const handleApplyBulkStatus = async () => {
-    if (selectedTrees.length === 0) return
-    setApplying(true)
-    try {
-      await proxy('/ngo/planted-trees/health-checks/bulk', {
-        method: 'POST',
-        body: { plantedTreeIds: selectedTrees.map((t) => t.id), status: bulkStatus },
-      })
-      toast.success(`Marked ${selectedTrees.length} trees as ${bulkStatus}.`)
-      setSelectedTrees([])
-      await load()
-    } catch (err) {
-      toast.error(err.message || 'Something went wrong.')
-    } finally {
-      setApplying(false)
-    }
-  }
-
   const columns = useMemo(
     () => [
       {
-        accessorKey: 'speciesName',
-        header: 'Species',
-        cell: ({ row }) => (
-          <div>
-            <p className="font-medium">{row.original.speciesName}</p>
-            {row.original.label && <p className="text-xs text-muted-foreground mt-0.5">{row.original.label}</p>}
-          </div>
-        ),
+        accessorKey: 'driveTitle',
+        header: 'Plantation',
+        cell: ({ row }) => <p className="font-medium">{row.original.driveTitle}</p>,
       },
       {
-        id: 'drive',
-        header: 'Drive',
-        cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.driveTitle || '–'}</span>,
+        id: 'zones',
+        header: 'Zones',
+        cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.zoneCount}</span>,
       },
       {
-        id: 'location',
-        header: 'Location',
-        cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.locationLabel || '–'}</span>,
+        accessorKey: 'total',
+        header: 'Trees',
       },
       {
-        accessorKey: 'plantedAt',
-        header: 'Planted',
-        cell: ({ row }) => <span className="text-xs text-muted-foreground">{new Date(row.original.plantedAt).toLocaleDateString()}</span>,
+        id: 'survivalRate',
+        header: 'Survival rate',
+        cell: ({ row }) => <span>{row.original.survivalRate}%</span>,
       },
       {
-        accessorKey: 'latestStatus',
-        header: 'Status',
-        cell: ({ row }) => (
-          <Badge variant={STATUS_VARIANT[row.original.latestStatus] || 'outline'} className="capitalize">
-            {row.original.latestStatus}
-          </Badge>
-        ),
+        id: 'nextCheckDue',
+        header: 'Next health check',
+        cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatDueDate(row.original.nextCheckDue)}</span>,
       },
     ],
     [],
@@ -160,15 +122,16 @@ export default function SurvivalClient() {
         <div>
           <p className="eyebrow text-primary">Survival & Impact</p>
           <h1 className="font-serif text-3xl md:text-4xl mt-2">Track what you&rsquo;ve planted</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Log trees after a drive, then check in on them over time.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Manage plantations by zone, then check in on individual trees when needed.</p>
         </div>
         <Button onClick={guard(() => setDialogOpen(true))} className="rounded-full shrink-0">
           <Plus className="h-4 w-4" /> Log planted trees
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
         <StatTile label="Total logged" value={stats?.total ?? 0} icon={TreePine} loading={loading} />
+        <StatTile label="Not checked" value={stats?.counts?.not_checked ?? 0} icon={CircleDashed} tone="sand" loading={loading} />
         <StatTile label="Healthy" value={stats?.counts?.healthy ?? 0} icon={HeartPulse} loading={loading} />
         <StatTile label="Struggling" value={stats?.counts?.struggling ?? 0} icon={HelpCircle} tone="sand" loading={loading} />
         <StatTile label="Dead / removed" value={(stats?.counts?.dead ?? 0) + (stats?.counts?.removed ?? 0)} icon={Skull} tone="sand" loading={loading} />
@@ -181,41 +144,20 @@ export default function SurvivalClient() {
           </span>
           <div>
             <p className="font-serif text-xl leading-none">{stats.survivalRate}%</p>
-            <p className="text-xs text-muted-foreground mt-1">Survival rate – healthy or struggling trees out of everything logged.</p>
+            <p className="text-xs text-muted-foreground mt-1">Survival rate – healthy or struggling trees out of everything logged, including not-yet-checked ones.</p>
           </div>
-        </div>
-      )}
-
-      {selectedTrees.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2.5 rounded-2xl border border-primary/30 bg-primary/5 p-3">
-          <span className="text-sm font-medium">{selectedTrees.length} selected</span>
-          <select
-            value={bulkStatus}
-            onChange={(e) => setBulkStatus(e.target.value)}
-            className="h-9 rounded-full border border-border/70 bg-background px-3 text-sm"
-          >
-            {HEALTH_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          <Button size="sm" className="rounded-full" disabled={applying} onClick={guard(handleApplyBulkStatus)}>
-            {applying ? 'Applying…' : `Mark as ${bulkStatus}`}
-          </Button>
         </div>
       )}
 
       <DataTable
         columns={columns}
-        data={trees}
+        data={plantations}
         loading={loading}
-        searchKey="speciesName"
-        searchPlaceholder="Search species…"
-        enableRowSelection
-        onSelectionChange={setSelectedTrees}
+        searchKey="driveTitle"
+        searchPlaceholder="Search plantations…"
+        onRowClick={(row) => router.push(`/ngo/dashboard/survival/${row.driveId}`)}
         emptyState={
-          <EmptyState icon={TreePine} title="No trees logged yet" body="After a drive, log how many trees you planted to start tracking survival." actionLabel="Log planted trees" onAction={guard(() => setDialogOpen(true))} />
+          <EmptyState icon={TreePine} title="No trees logged yet" body="After a drive, log how many trees you planted to start tracking survival by zone." actionLabel="Log planted trees" onAction={guard(() => setDialogOpen(true))} />
         }
       />
 
@@ -223,7 +165,7 @@ export default function SurvivalClient() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         title="Log planted trees"
-        description="Record trees planted after a drive – you can check in on their health later."
+        description="Record trees planted after a drive – open the plantation afterwards to organize them into zones."
         icon={TreePine}
         fields={fields}
         item={null}

@@ -93,7 +93,10 @@ import { NgoReportsScreen } from '../screens/NgoReportsScreen';
 import { NgoDonationsScreen } from '../screens/NgoDonationsScreen';
 import { NgoVolunteersScreen } from '../screens/NgoVolunteersScreen';
 import { NgoLogPlantedTreesScreen } from '../screens/NgoLogPlantedTreesScreen';
-import { NgoHealthCheckScreen } from '../screens/NgoHealthCheckScreen';
+import { NgoPlantationsScreen } from '../screens/NgoPlantationsScreen';
+import { NgoZonesScreen } from '../screens/NgoZonesScreen';
+import { NgoZoneTreesScreen } from '../screens/NgoZoneTreesScreen';
+import { NgoTreeDetailScreen } from '../screens/NgoTreeDetailScreen';
 import { NgoFollowersScreen } from '../screens/NgoFollowersScreen';
 import { NgoFollowerRequestsScreen } from '../screens/NgoFollowerRequestsScreen';
 import { NgoStreakBadgesScreen } from '../screens/NgoStreakBadgesScreen';
@@ -126,7 +129,8 @@ import { AdminTreeReviewScreen } from '../screens/AdminTreeReviewScreen';
 import { AdminCatalogScreen } from '../screens/AdminCatalogScreen';
 
 import { BottomNav, NavSurface, TabName, TabItem, USER_TABS } from '../components/navigation/BottomNav';
-import { useTimeTheme } from '../hooks/useTimeTheme';
+import { useTimeTheme, type TimePeriod } from '../hooks/useTimeTheme';
+import { useSettings } from '../hooks/useApiQueries';
 import { usePushRegistration } from '../hooks/usePushRegistration';
 
 export type NgoTabName = 'Home' | 'Manage' | 'Map' | 'Community';
@@ -411,8 +415,11 @@ export type RootStackParamList = {
   NgoReports: undefined;
   NgoDonations: undefined;
   NgoVolunteers: undefined;
-  NgoLogPlantedTrees: undefined;
-  NgoHealthCheck: undefined;
+  NgoLogPlantedTrees: { driveId?: string; driveTitle?: string } | undefined;
+  NgoPlantations: undefined;
+  NgoZones: { driveId: string; driveTitle: string };
+  NgoZoneTrees: { zoneId: string | null; zoneName: string; driveId: string };
+  NgoTreeDetail: { treeId: string };
   NgoFollowers: undefined;
   NgoFollowerRequests: undefined;
   NgoStreakBadges: undefined;
@@ -527,7 +534,10 @@ function NgoMainApp({ navigation }: any) {
   const [manageSegment, setManageSegment] = useState<'drives' | 'campaigns' | 'trees'>('drives');
   // Same shape as MainApp: always called (Rules of Hooks), only handed to BottomNav on the
   // dashboard tab, which is the one screen here that paints itself from the time-of-day theme.
-  const dashboardTheme = useTimeTheme();
+  // Reads the same pinned-theme setting NgoDashboardScreen reads, so a permanently-pinned theme
+  // colors the nav bar too instead of it silently following the live clock.
+  const { data: ngoNavSettings } = useSettings();
+  const dashboardTheme = useTimeTheme((ngoNavSettings?.pinnedTimeTheme ?? null) as TimePeriod | null);
 
   const navigateTab = useCallback((tab: NgoTabName, segment?: 'drives' | 'campaigns' | 'trees') => {
     if (segment) setManageSegment(segment);
@@ -903,7 +913,10 @@ export function AppNavigator() {
         <Stack.Screen name="NgoDonations" component={NgoDonationsScreen} />
         <Stack.Screen name="NgoVolunteers" component={NgoVolunteersScreen} />
         <Stack.Screen name="NgoLogPlantedTrees" component={NgoLogPlantedTreesScreen} />
-        <Stack.Screen name="NgoHealthCheck" component={NgoHealthCheckScreen} />
+        <Stack.Screen name="NgoPlantations" component={NgoPlantationsScreen} />
+        <Stack.Screen name="NgoZones" component={NgoZonesScreen} />
+        <Stack.Screen name="NgoZoneTrees" component={NgoZoneTreesScreen} />
+        <Stack.Screen name="NgoTreeDetail" component={NgoTreeDetailScreen} />
         <Stack.Screen name="NgoFollowers" component={NgoFollowersScreen} />
         <Stack.Screen name="NgoFollowerRequests" component={NgoFollowerRequestsScreen} />
         <Stack.Screen name="NgoStreakBadges" component={NgoStreakBadgesScreen} />

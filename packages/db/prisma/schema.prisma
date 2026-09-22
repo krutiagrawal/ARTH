@@ -170,6 +170,7 @@ enum DonationStatus {
 }
 
 enum TreeHealthStatus {
+  not_checked
   healthy
   struggling
   dead
@@ -401,6 +402,7 @@ enum NotificationType {
   ngo_tree_adopted
   ngo_streak_at_risk
   ngo_streak_broken
+  ngo_health_check_due
   ngo_impact_milestone
 }
 
@@ -1766,6 +1768,7 @@ model NgoProfile {
   notificationsTriggered Notification[]         @relation("NotificationActorNgo")
   staff                  StaffMember[]
   plantedTrees           PlantedTree[]
+  plantationZones        PlantationZone[]
   contributionStreaks    NgoContributionStreak[]
   achievementUnlocks     NgoAchievementUnlock[]
   bulkRequirements       BulkRequirement[]
@@ -1816,6 +1819,7 @@ model Drive {
   plants           DrivePlant[]
   posts            Post[]
   plantedTrees     PlantedTree[]
+  zones            PlantationZone[]
   csrSponsorships  CsrSponsorship[]
   bulkRequirements BulkRequirement[]
 
@@ -2343,6 +2347,7 @@ model PlantedTree {
   id            String   @id @default(uuid())
   ngoId         String   @map("ngo_id")
   driveId       String?  @map("drive_id")
+  zoneId        String?  @map("zone_id")
   speciesName   String   @map("species_name")
   label         String?
   plantedAt     DateTime @default(now()) @map("planted_at")
@@ -2354,10 +2359,12 @@ model PlantedTree {
 
   ngo          NgoProfile        @relation(fields: [ngoId], references: [id], onDelete: Cascade)
   drive        Drive?            @relation(fields: [driveId], references: [id], onDelete: SetNull)
+  zone         PlantationZone?   @relation(fields: [zoneId], references: [id], onDelete: SetNull)
   healthChecks TreeHealthCheck[]
 
   @@index([ngoId])
   @@index([driveId])
+  @@index([zoneId])
   @@index([plantedAt])
   @@map("planted_trees")
 }
@@ -2374,6 +2381,25 @@ model TreeHealthCheck {
 
   @@index([plantedTreeId, checkedAt(sort: Desc)])
   @@map("tree_health_checks")
+}
+
+// Organizational/UX grouping layer over PlantedTree so an NGO manages hundreds/thousands of
+// trees as "Zone A — 120 trees" rather than a flat list of individually-numbered rows. Purely
+// additive: never replaces the per-tree PlantedTree/TreeHealthCheck records.
+model PlantationZone {
+  id        String   @id @default(uuid())
+  ngoId     String   @map("ngo_id")
+  driveId   String   @map("drive_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  ngo   NgoProfile    @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  drive Drive         @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  trees PlantedTree[]
+
+  @@unique([driveId, name])
+  @@index([ngoId])
+  @@map("plantation_zones")
 }
 
 // ---------- NGO gamification (streak / achievements) ----------

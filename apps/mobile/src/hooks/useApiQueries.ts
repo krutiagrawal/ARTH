@@ -121,13 +121,22 @@ import {
 import { fetchStaff, createStaff, updateStaff, deleteStaff, CreateStaffInput, UpdateStaffInput } from '../api/staff';
 import {
   fetchPlantedTrees,
+  fetchPlantedTree,
+  fetchHealthCheckHistory,
   bulkCreatePlantedTrees,
   logHealthCheck,
   logBulkHealthChecks,
   fetchSurvivalStats,
+  fetchPlantations,
+  fetchZonesForDrive,
+  fetchZoneDetail,
+  createZone,
+  renameZone,
+  deleteZone,
+  bulkMarkZoneHealth,
   ListPlantedTreesFilter,
   BulkCreatePlantedTreesInput,
-  TreeHealthStatus,
+  ActionableHealthStatus,
 } from '../api/plantedTrees';
 import { fetchMyUpdates, createUpdate, deleteUpdate, CreateUpdateInput } from '../api/ngoUpdates';
 import { fetchNgoAchievements, fetchNgoPublicAchievements } from '../api/ngoAchievements';
@@ -1146,11 +1155,15 @@ export function useBulkCreatePlantedTrees() {
 export function useLogHealthCheck() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ plantedTreeId, status, notes }: { plantedTreeId: string; status: TreeHealthStatus; notes?: string }) =>
+    mutationFn: ({ plantedTreeId, status, notes }: { plantedTreeId: string; status: ActionableHealthStatus; notes?: string }) =>
       logHealthCheck(plantedTreeId, { status, notes }),
-    onSuccess: () => {
+    onSuccess: (_data, { plantedTreeId }) => {
       queryClient.invalidateQueries({ queryKey: ['ngo', 'planted-trees'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'planted-tree', plantedTreeId] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'health-check-history', plantedTreeId] });
       queryClient.invalidateQueries({ queryKey: ['ngo', 'survival-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'plantations'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'zones'] });
     },
   });
 }
@@ -1158,10 +1171,12 @@ export function useLogHealthCheck() {
 export function useLogBulkHealthChecks() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { plantedTreeIds: string[]; status: TreeHealthStatus; notes?: string }) => logBulkHealthChecks(input),
+    mutationFn: (input: { plantedTreeIds: string[]; status: ActionableHealthStatus; notes?: string }) => logBulkHealthChecks(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ngo', 'planted-trees'] });
       queryClient.invalidateQueries({ queryKey: ['ngo', 'survival-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'plantations'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'zones'] });
     },
   });
 }
@@ -1172,6 +1187,102 @@ export function useSurvivalStats(driveId?: string) {
     queryKey: ['ngo', 'survival-stats', driveId],
     queryFn: () => fetchSurvivalStats(driveId),
     enabled: isAuthenticated,
+  });
+}
+
+export function usePlantedTree(plantedTreeId: string | null) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'planted-tree', plantedTreeId],
+    queryFn: () => fetchPlantedTree(plantedTreeId!),
+    enabled: isAuthenticated && !!plantedTreeId,
+  });
+}
+
+export function useHealthCheckHistory(plantedTreeId: string | null) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'health-check-history', plantedTreeId],
+    queryFn: () => fetchHealthCheckHistory(plantedTreeId!),
+    enabled: isAuthenticated && !!plantedTreeId,
+  });
+}
+
+// ---------- Plantation zones ----------
+
+export function usePlantations() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'plantations'],
+    queryFn: fetchPlantations,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useZonesForDrive(driveId: string | null) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'zones', driveId],
+    queryFn: () => fetchZonesForDrive(driveId!),
+    enabled: isAuthenticated && !!driveId,
+  });
+}
+
+export function useZoneDetail(zoneId: string | null) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'zone', zoneId],
+    queryFn: () => fetchZoneDetail(zoneId!),
+    enabled: isAuthenticated && !!zoneId,
+  });
+}
+
+export function useCreateZone() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { driveId: string; name: string }) => createZone(input),
+    onSuccess: (_data, { driveId }) => {
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'zones', driveId] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'plantations'] });
+    },
+  });
+}
+
+export function useRenameZone() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ zoneId, name }: { zoneId: string; name: string }) => renameZone(zoneId, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'zones'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'zone'] });
+    },
+  });
+}
+
+export function useDeleteZone() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (zoneId: string) => deleteZone(zoneId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'zones'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'plantations'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'planted-trees'] });
+    },
+  });
+}
+
+export function useBulkMarkZoneHealth() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ zoneId, status, notes }: { zoneId: string; status: ActionableHealthStatus; notes?: string }) =>
+      bulkMarkZoneHealth(zoneId, status, notes),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'zones'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'zone'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'plantations'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'planted-trees'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'survival-stats'] });
+    },
   });
 }
 

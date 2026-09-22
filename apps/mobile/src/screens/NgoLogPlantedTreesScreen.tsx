@@ -12,14 +12,15 @@ import { FormField } from '../components/common/FormField';
 import { AddressSearchField } from '../components/common/AddressSearchField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { StatusModal } from '../components/common/StatusModal';
-import { useMyDrives, useBulkCreatePlantedTrees, useNgoProfile } from '../hooks/useApiQueries';
+import { useMyDrives, useBulkCreatePlantedTrees, useZonesForDrive, useNgoProfile } from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import { ApiError } from '../api/client';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
-export function NgoLogPlantedTreesScreen({ navigation }: any) {
+export function NgoLogPlantedTreesScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
+  const presetDriveId: string | undefined = route?.params?.driveId;
   const { data: drives = [], refetch } = useMyDrives();
   const bulkCreateMutation = useBulkCreatePlantedTrees();
   const confirm = useConfirm();
@@ -27,12 +28,16 @@ export function NgoLogPlantedTreesScreen({ navigation }: any) {
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
   const { refreshing, onRefresh } = usePullToRefresh([refetch, refetchProfile]);
 
-  const [driveId, setDriveId] = useState<string | undefined>(undefined);
+  const [driveId, setDriveId] = useState<string | undefined>(presetDriveId);
+  const [zoneId, setZoneId] = useState<string | undefined>(undefined);
   const [speciesName, setSpeciesName] = useState('');
   const [count, setCount] = useState('');
   const [locationLabel, setLocationLabel] = useState('');
   const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const { data: zonesData } = useZonesForDrive(driveId ?? null);
+  const zones = zonesData?.zones ?? [];
 
   const handleSubmit = async () => {
     setError(null);
@@ -43,6 +48,7 @@ export function NgoLogPlantedTreesScreen({ navigation }: any) {
     try {
       const result = await bulkCreateMutation.mutateAsync({
         driveId,
+        zoneId,
         speciesName: speciesName.trim(),
         count: Number(count),
         locationLabel: locationLabel.trim() || undefined,
@@ -77,15 +83,31 @@ export function NgoLogPlantedTreesScreen({ navigation }: any) {
 
           <Text style={styles.sectionLabel}>Drive (optional)</Text>
           <View style={styles.chipRow}>
-            <TouchableOpacity style={[styles.chip, !driveId && styles.chipSelected]} onPress={() => setDriveId(undefined)}>
+            <TouchableOpacity style={[styles.chip, !driveId && styles.chipSelected]} onPress={() => { setDriveId(undefined); setZoneId(undefined); }}>
               <Text style={[styles.chipText, !driveId && styles.chipTextSelected]}>None</Text>
             </TouchableOpacity>
             {drives.map((d) => (
-              <TouchableOpacity key={d.id} style={[styles.chip, driveId === d.id && styles.chipSelected]} onPress={() => setDriveId(d.id)}>
+              <TouchableOpacity key={d.id} style={[styles.chip, driveId === d.id && styles.chipSelected]} onPress={() => { setDriveId(d.id); setZoneId(undefined); }}>
                 <Text style={[styles.chipText, driveId === d.id && styles.chipTextSelected]} numberOfLines={1}>{d.title}</Text>
               </TouchableOpacity>
             ))}
           </View>
+
+          {driveId && zones.length > 0 && (
+            <>
+              <Text style={styles.sectionLabel}>Zone (optional)</Text>
+              <View style={styles.chipRow}>
+                <TouchableOpacity style={[styles.chip, !zoneId && styles.chipSelected]} onPress={() => setZoneId(undefined)}>
+                  <Text style={[styles.chipText, !zoneId && styles.chipTextSelected]}>Unzoned</Text>
+                </TouchableOpacity>
+                {zones.map((z) => (
+                  <TouchableOpacity key={z.id} style={[styles.chip, zoneId === z.id && styles.chipSelected]} onPress={() => setZoneId(z.id!)}>
+                    <Text style={[styles.chipText, zoneId === z.id && styles.chipTextSelected]} numberOfLines={1}>{z.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
 
           <FormField
             label="Species"

@@ -1,10 +1,15 @@
 import { PrismaClient, TreeHealthStatus } from '@plant/db';
+
+// 'not_checked' is a derived absence-of-check state, never something you can actually log a
+// health check as — the routes' zod schemas already restrict incoming status to these four.
+export type ActionableHealthStatus = Exclude<TreeHealthStatus, 'not_checked'>;
 import { NotFoundError } from '../utils/errors';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
 import { recordNgoContribution, recomputeReputation } from './ngoReputation.service';
 
 interface BulkCreateInput {
   driveId?: string;
+  zoneId?: string;
   speciesName: string;
   count: number;
   locationLabel?: string;
@@ -15,6 +20,8 @@ interface BulkCreateInput {
 
 interface ListFilter {
   driveId?: string;
+  /** undefined = no zone filter, null = only unzoned trees, string = a specific zone. */
+  zoneId?: string | null;
   speciesName?: string;
   page?: number;
   take?: number;
@@ -22,7 +29,7 @@ interface ListFilter {
 
 // Latest status per tree, in one query — orders all matching health checks by
 // recency and keeps only the first (most recent) row seen per plantedTreeId.
-async function getLatestStatusByTree(prisma: PrismaClient, plantedTreeIds: string[]) {
+export async function getLatestStatusByTree(prisma: PrismaClient, plantedTreeIds: string[]) {
   const map = new Map<string, TreeHealthStatus>();
   if (plantedTreeIds.length === 0) return map;
 
@@ -37,9 +44,10 @@ async function getLatestStatusByTree(prisma: PrismaClient, plantedTreeIds: strin
   return map;
 }
 
-// Creates `count` individual PlantedTree rows in one call (NGOs realistically
-// plant in the hundreds) and auto-creates one 'healthy' health-check per tree
-// at plant time, so every tree always has at least one status.
+// Creates `count` individual PlantedTree rows in one call (NGOs realistically plant in the
+// hundreds). Trees start with no health-check record at all — they read as 'not_checked' until
+// someone actually inspects them, rather than a fake auto-'healthy' check that used to make an
+// uninspected batch report 100% survival.
 export async function bulkCreatePlantedTrees(prisma: PrismaClient, ngoUserId: string, input: BulkCreateInput) {
   const ngo = await requireApprovedNgoProfile(prisma, ngoUserId);
 
@@ -48,21 +56,23 @@ export async function bulkCreatePlantedTrees(prisma: PrismaClient, ngoUserId: st
     if (!drive) throw new NotFoundError('Drive not found');
   }
 
+  if (input.zoneId) {
+    const zone = await prisma.plantationZone.findFirst({ where: { id: input.zoneId, ngoId: ngo.id, driveId: input.driveId } });
+    if (!zone) throw new NotFoundError('Zone not found');
+  }
+
   return prisma.$transaction(async (tx) => {
     const created = await tx.plantedTree.createManyAndReturn({
       data: Array.from({ length: input.count }, () => ({
         ngoId: ngo.id,
         driveId: input.driveId,
+        zoneId: input.zoneId,
         speciesName: input.speciesName,
         locationLabel: input.locationLabel,
         lat: input.lat,
         lng: input.lng,
         photoUrl: input.photoUrl,
       })),
-    });
-
-    await tx.treeHealthCheck.createMany({
-      data: created.map((t) => ({ plantedTreeId: t.id, status: 'healthy' as const })),
     });
 
     await recordNgoContribution(tx, ngo.id, ['impact_verification']);
@@ -77,32 +87,29 @@ export async function listOwnPlantedTrees(prisma: PrismaClient, ngoUserId: strin
   const take = Math.min(filter.take ?? 50, 200);
   const page = Math.max(filter.page ?? 1, 1);
 
+  const where = {
+    ngoId: ngo.id,
+    ...(filter.driveId ? { driveId: filter.driveId } : {}),
+    ...(filter.zoneId !== undefined ? { zoneId: filter.zoneId } : {}),
+    ...(filter.speciesName ? { speciesName: { contains: filter.speciesName, mode: 'insensitive' as const } } : {}),
+  };
+
   const [trees, total] = await Promise.all([
     prisma.plantedTree.findMany({
-      where: {
-        ngoId: ngo.id,
-        ...(filter.driveId ? { driveId: filter.driveId } : {}),
-        ...(filter.speciesName ? { speciesName: { contains: filter.speciesName, mode: 'insensitive' as const } } : {}),
-      },
+      where,
       orderBy: { plantedAt: 'desc' },
       take,
       skip: (page - 1) * take,
-      include: { drive: { select: { id: true, title: true } } },
+      include: { drive: { select: { id: true, title: true } }, zone: { select: { id: true, name: true } } },
     }),
-    prisma.plantedTree.count({
-      where: {
-        ngoId: ngo.id,
-        ...(filter.driveId ? { driveId: filter.driveId } : {}),
-        ...(filter.speciesName ? { speciesName: { contains: filter.speciesName, mode: 'insensitive' as const } } : {}),
-      },
-    }),
+    prisma.plantedTree.count({ where }),
   ]);
 
   const statusByTree = await getLatestStatusByTree(prisma, trees.map((t) => t.id));
 
   return {
     total,
-    trees: trees.map((t) => ({ ...t, latestStatus: statusByTree.get(t.id) ?? 'healthy' })),
+    trees: trees.map((t) => ({ ...t, latestStatus: statusByTree.get(t.id) ?? 'not_checked' })),
   };
 }
 
@@ -113,11 +120,37 @@ async function findOwnedPlantedTreeOrThrow(prisma: PrismaClient, ngoUserId: stri
   return tree;
 }
 
+// Read-only counterpart of findOwnedPlantedTreeOrThrow — detail/history views shouldn't be
+// gated behind NGO approval status the way logging a new check is.
+async function findOwnedPlantedTreeForRead(prisma: PrismaClient, ngoUserId: string, plantedTreeId: string) {
+  const ngo = await requireNgoProfile(prisma, ngoUserId);
+  const tree = await prisma.plantedTree.findFirst({
+    where: { id: plantedTreeId, ngoId: ngo.id },
+    include: { drive: { select: { id: true, title: true } }, zone: { select: { id: true, name: true } } },
+  });
+  if (!tree) throw new NotFoundError('Planted tree not found');
+  return tree;
+}
+
+export async function getPlantedTreeDetail(prisma: PrismaClient, ngoUserId: string, plantedTreeId: string) {
+  const tree = await findOwnedPlantedTreeForRead(prisma, ngoUserId, plantedTreeId);
+  const statusByTree = await getLatestStatusByTree(prisma, [tree.id]);
+  return { ...tree, latestStatus: statusByTree.get(tree.id) ?? 'not_checked' };
+}
+
+export async function listHealthChecksForTree(prisma: PrismaClient, ngoUserId: string, plantedTreeId: string) {
+  const tree = await findOwnedPlantedTreeForRead(prisma, ngoUserId, plantedTreeId);
+  return prisma.treeHealthCheck.findMany({
+    where: { plantedTreeId: tree.id },
+    orderBy: { checkedAt: 'desc' },
+  });
+}
+
 export async function logHealthCheck(
   prisma: PrismaClient,
   ngoUserId: string,
   plantedTreeId: string,
-  input: { status: TreeHealthStatus; notes?: string; photoUrl?: string },
+  input: { status: ActionableHealthStatus; notes?: string; photoUrl?: string },
 ) {
   const tree = await findOwnedPlantedTreeOrThrow(prisma, ngoUserId, plantedTreeId);
   return prisma.treeHealthCheck.create({
@@ -128,7 +161,7 @@ export async function logHealthCheck(
 export async function logBulkHealthChecks(
   prisma: PrismaClient,
   ngoUserId: string,
-  input: { plantedTreeIds: string[]; status: TreeHealthStatus; notes?: string },
+  input: { plantedTreeIds: string[]; status: ActionableHealthStatus; notes?: string },
 ) {
   const ngo = await requireApprovedNgoProfile(prisma, ngoUserId);
 
@@ -149,16 +182,24 @@ export async function logBulkHealthChecks(
 // rows (a tree can be checked many times), only each tree's most recent status.
 // Takes ngoId directly so it's reusable by both the owner dashboard route
 // (after resolving ngoId from the caller's userId) and the public profile route.
-export async function computeSurvivalStats(prisma: PrismaClient, ngoId: string, filter: { driveId?: string } = {}) {
+export async function computeSurvivalStats(
+  prisma: PrismaClient,
+  ngoId: string,
+  filter: { driveId?: string; zoneId?: string | null } = {},
+) {
   const trees = await prisma.plantedTree.findMany({
-    where: { ngoId, ...(filter.driveId ? { driveId: filter.driveId } : {}) },
+    where: {
+      ngoId,
+      ...(filter.driveId ? { driveId: filter.driveId } : {}),
+      ...(filter.zoneId !== undefined ? { zoneId: filter.zoneId } : {}),
+    },
     select: { id: true },
   });
 
   const statusByTree = await getLatestStatusByTree(prisma, trees.map((t) => t.id));
 
-  const counts: Record<TreeHealthStatus, number> = { healthy: 0, struggling: 0, dead: 0, removed: 0 };
-  for (const status of statusByTree.values()) counts[status] += 1;
+  const counts: Record<TreeHealthStatus, number> = { not_checked: 0, healthy: 0, struggling: 0, dead: 0, removed: 0 };
+  for (const tree of trees) counts[statusByTree.get(tree.id) ?? 'not_checked'] += 1;
 
   const total = trees.length;
   const survivalRate = total > 0 ? Math.round(((counts.healthy + counts.struggling) / total) * 1000) / 10 : 0;

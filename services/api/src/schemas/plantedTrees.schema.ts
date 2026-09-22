@@ -1,7 +1,10 @@
 import { z } from 'zod';
 
+const healthStatusEnum = z.enum(['healthy', 'struggling', 'dead', 'removed']);
+
 export const bulkCreatePlantedTreesSchema = z.object({
   driveId: z.string().uuid().optional(),
+  zoneId: z.string().uuid().optional(),
   speciesName: z.string().min(1).max(100),
   count: z.coerce.number().int().min(1).max(1000),
   locationLabel: z.string().max(300).optional(),
@@ -11,12 +14,31 @@ export const bulkCreatePlantedTreesSchema = z.object({
 
 export const listQuerySchema = z.object({
   driveId: z.string().uuid().optional(),
+  // 'unzoned' is a sentinel meaning "only trees with no zone" — a route-level concern since it
+  // isn't a real zone id, translated to a literal `null` filter before hitting the service.
+  zoneId: z.union([z.string().uuid(), z.literal('unzoned')]).optional(),
   speciesName: z.string().max(100).optional(),
   page: z.coerce.number().int().min(1).optional(),
   take: z.coerce.number().int().min(1).max(200).optional(),
 });
 
-const healthStatusEnum = z.enum(['healthy', 'struggling', 'dead', 'removed']);
+export const createZoneSchema = z.object({
+  driveId: z.string().uuid(),
+  name: z.string().min(1).max(100),
+});
+
+export const renameZoneSchema = z.object({
+  name: z.string().min(1).max(100),
+});
+
+export const listZonesQuerySchema = z.object({
+  driveId: z.string().uuid(),
+});
+
+export const zoneBulkHealthCheckSchema = z.object({
+  status: healthStatusEnum,
+  notes: z.string().max(1000).optional(),
+});
 
 export const singleHealthCheckSchema = z.object({
   status: healthStatusEnum,

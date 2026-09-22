@@ -17,10 +17,10 @@ import { Mascot } from '../components/common/Mascot';
 import { AmbientCreatures } from '../components/common/AmbientCreatures';
 import { FloatingParticles } from '../components/common/FloatingParticles';
 import { getSceneryMode, RainEffect, WindEffect } from '../components/common/WeatherEffects';
-import { useTimeTheme, type TimeTheme } from '../hooks/useTimeTheme';
+import { useTimeTheme, type TimeTheme, type TimePeriod } from '../hooks/useTimeTheme';
 import { useDeviceWeather } from '../hooks/useDeviceWeather';
 import { useAuth } from '../context/AuthContext';
-import { useNgoStats, useNgoStreakCalendar, useNgoProfile } from '../hooks/useApiQueries';
+import { useNgoStats, useNgoStreakCalendar, useNgoProfile, useSettings } from '../hooks/useApiQueries';
 import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -206,7 +206,8 @@ function DockRow({
 export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardScreenProps) {
   const insets = useSafeAreaInsets();
   const bottomClearance = useBottomNavClearance();
-  const theme = useTimeTheme();
+  const { data: settings } = useSettings();
+  const theme = useTimeTheme((settings?.pinnedTimeTheme ?? null) as TimePeriod | null);
   const { weather } = useDeviceWeather();
   const sceneryMode = getSceneryMode(weather);
   const { user } = useAuth();
@@ -250,7 +251,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardSc
   // update, Followers and View on Map are likewise left out: Post/Followers already live under
   // the Community tab, and Map now has its own bottom-tab entry.
   const dockActions: DockActionSpec[] = [
-    { key: 'survival', emoji: '🩺', color: COLORS.sage, title: 'Survival & impact', onPress: () => navigation.navigate('NgoHealthCheck') },
+    { key: 'survival', emoji: '🩺', color: COLORS.sage, title: 'Survival & impact', onPress: () => navigation.navigate('NgoPlantations') },
     { key: 'plantedTrees', emoji: '🌳', color: COLORS.forest, title: 'Log planted trees', onPress: () => navigation.navigate('NgoLogPlantedTrees') },
     { key: 'bulkRequirements', emoji: '🤝', color: COLORS.amber, title: 'Bulk requirements', onPress: () => navigation.navigate('NgoBulkRequirements') },
     { key: 'streak', emoji: '🔥', color: COLORS.sage, title: 'Growth & Trust', onPress: () => navigation.navigate('NgoStreakBadges') },

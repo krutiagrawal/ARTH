@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Platform } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
-import { FormField } from '../components/common/FormField';
+import { FormField, FormFieldShell } from '../components/common/FormField';
 import { AddressSearchField } from '../components/common/AddressSearchField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { Sheet } from '../components/common/Sheet';
@@ -138,7 +139,8 @@ export function NgoBulkRequirementsScreen({ navigation }: any) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [speciesNote, setSpeciesNote] = useState('');
   const [quantityNeeded, setQuantityNeeded] = useState('');
-  const [neededByDate, setNeededByDate] = useState('');
+  const [neededByDate, setNeededByDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [city, setCity] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -150,28 +152,17 @@ export function NgoBulkRequirementsScreen({ navigation }: any) {
       setError('Enter a valid quantity needed.');
       return;
     }
-    // The backend requires a full ISO 8601 datetime (z.string().datetime()) — the field only
-    // collects a plain date, so midnight UTC on that date is what actually goes over the wire.
-    let neededByIso: string | undefined;
-    if (neededByDate.trim()) {
-      const parsed = new Date(`${neededByDate.trim()}T00:00:00.000Z`);
-      if (Number.isNaN(parsed.getTime())) {
-        setError('Enter the date as YYYY-MM-DD.');
-        return;
-      }
-      neededByIso = parsed.toISOString();
-    }
     try {
       await createMutation.mutateAsync({
         speciesNote: speciesNote.trim() || undefined,
         quantityNeeded: qty,
-        neededByDate: neededByIso,
+        neededByDate: neededByDate ? neededByDate.toISOString() : undefined,
         city: city.trim() || undefined,
         notes: notes.trim() || undefined,
       });
       setSpeciesNote('');
       setQuantityNeeded('');
-      setNeededByDate('');
+      setNeededByDate(null);
       setCity('');
       setNotes('');
       setShowCreate(false);
@@ -217,7 +208,38 @@ export function NgoBulkRequirementsScreen({ navigation }: any) {
         <View style={{ gap: 4 }}>
           <FormField dark={isNightMode} label="Species (optional description)" value={speciesNote} onChangeText={setSpeciesNote} placeholder="eg - Native shade trees" />
           <FormField dark={isNightMode} label="Quantity needed" value={quantityNeeded} onChangeText={setQuantityNeeded} placeholder="eg - 0" keyboardType="number-pad" />
-          <FormField dark={isNightMode} label="Needed by (YYYY-MM-DD, optional)" value={neededByDate} onChangeText={setNeededByDate} placeholder="eg - 2026-10-01" />
+          <FormFieldShell dark={isNightMode} label="Needed by (optional)">
+            <TouchableOpacity onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
+              <Text style={[styles.dateValue, isNightMode && styles.dateValueDark, !neededByDate && styles.datePlaceholder]}>
+                {neededByDate
+                  ? neededByDate.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+                  : 'Select a date'}
+              </Text>
+            </TouchableOpacity>
+          </FormFieldShell>
+          {neededByDate && (
+            <TouchableOpacity onPress={() => setNeededByDate(null)} style={styles.clearDateBtn}>
+              <Text style={styles.clearDateText}>Clear date</Text>
+            </TouchableOpacity>
+          )}
+          {showDatePicker && (
+            <DateTimePicker
+              value={neededByDate ?? new Date()}
+              mode="date"
+              minimumDate={new Date()}
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={(_event, date) => {
+                // Android's dialog dismisses itself; iOS's spinner stays until told otherwise.
+                if (Platform.OS !== 'ios') setShowDatePicker(false);
+                if (date) setNeededByDate(date);
+              }}
+            />
+          )}
+          {Platform.OS === 'ios' && showDatePicker && (
+            <TouchableOpacity style={styles.doneBtn} onPress={() => setShowDatePicker(false)}>
+              <Text style={styles.doneText}>Done</Text>
+            </TouchableOpacity>
+          )}
           <AddressSearchField dark={isNightMode} label="City (optional)" value={city} onChangeText={setCity} placeholder="eg - Pune" />
           <FormField dark={isNightMode} label="Notes (optional)" value={notes} onChangeText={setNotes} placeholder="eg - Anything nurseries should know" multiline />
           {error && <Text style={styles.errorText}>{error}</Text>}
@@ -249,6 +271,13 @@ const styles = StyleSheet.create({
   statusBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, marginTop: 6 },
   statusBadgeText: { fontSize: 11, fontWeight: '700', color: COLORS.textPrimary, textTransform: 'capitalize' },
   errorText: { fontSize: 13, color: COLORS.coral, textAlign: 'center', marginTop: 4 },
+  dateValue: { fontSize: 15, color: COLORS.textPrimary, fontWeight: '600', paddingVertical: 2 },
+  dateValueDark: { color: ON_DARK_SURFACE.primary },
+  datePlaceholder: { color: COLORS.textLight, fontWeight: '500' },
+  clearDateBtn: { alignSelf: 'flex-start', paddingHorizontal: 4, paddingVertical: 4, marginTop: -6 },
+  clearDateText: { fontSize: 12, fontWeight: '700', color: COLORS.coral },
+  doneBtn: { alignSelf: 'flex-end', paddingHorizontal: 14, paddingVertical: 6 },
+  doneText: { fontSize: 14, fontWeight: '800', color: COLORS.forest },
   sheetSpecies: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary },
   sheetMeta: { fontSize: 13, color: COLORS.textSecondary },
   sheetNotes: { fontSize: 13, color: COLORS.textPrimary, lineHeight: 19 },
