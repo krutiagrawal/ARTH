@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { MapPin, Calendar, Users, Award, TreePine, HeartPulse } from 'lucide-react'
+import { MapPin, Calendar, Users, Award, TreePine, HeartPulse, Heart } from 'lucide-react'
 import { apiRequest, ApiError } from '@/lib/apiClient'
 import { resolveMediaUrl } from '@/lib/media'
 import FollowButton from './FollowButton'
@@ -97,6 +97,91 @@ export default async function NgoProfilePage({ params }) {
                 <p className="text-xs text-muted-foreground mt-1">
                   {[a.year, a.issuer].filter(Boolean).join(' · ')}
                 </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {ngo.upcomingDrives.length > 0 && (
+        <section className="container py-10">
+          <h2 className="font-serif text-2xl">Upcoming drives</h2>
+          <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {ngo.upcomingDrives.map((d) => (
+              <div key={d.id} className="rounded-3xl border border-border/70 bg-card soft-shadow overflow-hidden">
+                {d.photoUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={resolveMediaUrl(d.photoUrl)} alt={d.title} className="h-36 w-full object-cover" />
+                )}
+                <div className="p-4">
+                  <h3 className="font-serif text-lg">{d.title}</h3>
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <MapPin className="h-3 w-3" /> {d.city} · {new Date(d.startsAt).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {ngo.campaigns.length > 0 && (
+        <section className="container py-10">
+          <h2 className="font-serif text-2xl">Campaigns</h2>
+          <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {ngo.campaigns.map((c) => {
+              const raised = c.raisedAmountCents ?? 0
+              const goal = c.goalAmountCents
+              const pct = goal ? Math.min(100, Math.round((raised / goal) * 100)) : null
+              return (
+                <div key={c.id} className="rounded-3xl border border-border/70 bg-card soft-shadow overflow-hidden">
+                  {c.coverPhotoUri && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={resolveMediaUrl(c.coverPhotoUri)} alt={c.title} className="h-36 w-full object-cover" />
+                  )}
+                  <div className="p-4">
+                    <h3 className="font-serif text-lg">{c.title}</h3>
+                    {c.description && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{c.description}</p>
+                    )}
+                    <p className="text-sm mt-3 flex items-center gap-1">
+                      <Heart className="h-3.5 w-3.5 text-primary" />
+                      ₹{raised.toLocaleString('en-IN')}{goal ? ` of ₹${goal.toLocaleString('en-IN')} raised` : ' raised'}
+                    </p>
+                    {pct != null && (
+                      <div className="mt-2 h-1.5 w-full rounded-full bg-secondary/60 overflow-hidden">
+                        <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {ngo.adoptableTrees.length > 0 && (
+        <section className="container py-10">
+          <h2 className="font-serif text-2xl">Adoptable trees</h2>
+          <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {ngo.adoptableTrees.map((t) => (
+              <div key={t.id} className="rounded-3xl border border-border/70 bg-card soft-shadow overflow-hidden">
+                {t.photoUri && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={resolveMediaUrl(t.photoUri)} alt={t.nickname || t.speciesName} className="h-36 w-full object-cover" />
+                )}
+                <div className="p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="font-serif text-lg">{t.nickname || t.speciesName}</h3>
+                    {t.isAdopted && (
+                      <span className="shrink-0 rounded-full bg-primary/10 text-primary text-[10px] font-medium px-2.5 py-1">Adopted</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <TreePine className="h-3 w-3" /> {t.speciesName}{t.city ? ` · ${t.city}` : ''}
+                  </p>
+                </div>
               </div>
             ))}
           </div>

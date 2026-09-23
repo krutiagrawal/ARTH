@@ -77,8 +77,13 @@ export async function adminRefundDonation(prisma: PrismaClient, donationId: stri
   if (!donation) throw new NotFoundError('Donation not found');
   if (donation.status !== 'succeeded') throw new ForbiddenError('Only a succeeded donation can be refunded');
 
-  const stripe = getStripeClient();
-  await stripe.refunds.create({ payment_intent: donation.stripePaymentIntentId });
+  // No Stripe payment intent means this was auto-succeeded via the no-Stripe-configured bypass
+  // (see donation.service.ts's createDonationIntent) — nothing was actually charged, so there's
+  // nothing to refund through Stripe; just flip the status below.
+  if (donation.stripePaymentIntentId) {
+    const stripe = getStripeClient();
+    await stripe.refunds.create({ payment_intent: donation.stripePaymentIntentId });
+  }
 
   return prisma.$transaction(async (tx) => {
     const updated = await tx.donation.update({ where: { id: donationId }, data: { status: 'refunded' } });

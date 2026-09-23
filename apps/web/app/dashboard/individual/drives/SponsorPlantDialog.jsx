@@ -64,7 +64,13 @@ export default function SponsorPlantDialog({ driveId, plant, onOpenChange, onSpo
     setError('')
     setClientSecret(null)
     proxy(`/drives/${driveId}/plants/${plant.id}/sponsor`, { method: 'POST' })
-      .then((data) => setClientSecret(data.clientSecret))
+      .then((data) => {
+        if (data.clientSecret) {
+          setClientSecret(data.clientSecret)
+        } else {
+          onSponsored()
+        }
+      })
       .catch((err) => {
         setError(err.status === 503 ? 'Sponsorship payments aren’t live yet – please check back soon.' : err.message || 'Something went wrong.')
       })

@@ -59,7 +59,10 @@ export async function leaveDrive(id: string): Promise<void> {
   await apiFetch<void>(`/api/drives/${id}/rsvp`, { method: 'DELETE' });
 }
 
-export async function sponsorPlant(driveId: string, plantId: string): Promise<{ sponsorshipId: string; clientSecret: string }> {
+// clientSecret is null when the backend has no Stripe key configured (local/dev only — see
+// drive.service.ts's sponsorPlant()) — the sponsorship comes back already succeeded and there's
+// no payment sheet to present.
+export async function sponsorPlant(driveId: string, plantId: string): Promise<{ sponsorshipId: string; clientSecret: string | null }> {
   return apiFetch(`/api/drives/${driveId}/plants/${plantId}/sponsor`, { method: 'POST' });
 }
 

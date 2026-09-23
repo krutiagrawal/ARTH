@@ -76,7 +76,11 @@ export default function DonateClient() {
         method: 'POST',
         body: { amountCents: Math.round(amount * 100) },
       })
-      setClientSecret(data.clientSecret)
+      if (data.clientSecret) {
+        setClientSecret(data.clientSecret)
+      } else {
+        setDone(true)
+      }
     } catch (err) {
       setError(err.status === 503 ? 'Donations aren’t live on this deployment yet – please check back soon.' : err.message || 'Something went wrong.')
     } finally {
@@ -141,10 +145,9 @@ export default function DonateClient() {
               <p className="mt-3 text-xs text-muted-foreground">Your support helps with saplings, care, tools and field teams.</p>
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            {!stripePromise && <p className="text-xs text-muted-foreground">Donations aren't enabled on this deployment yet.</p>}
             <Button
               type="submit"
-              disabled={!campaignId || amount <= 0 || submitting || !stripePromise}
+              disabled={!campaignId || amount <= 0 || submitting}
               className="w-full rounded-full h-12 px-6 bg-foreground text-background hover:bg-foreground/90 shadow-none"
             >
               {submitting ? 'Preparing…' : <>Donate ₹{amount.toLocaleString('en-IN')} <ArrowRight className="h-4 w-4" /></>}

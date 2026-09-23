@@ -133,7 +133,14 @@ export default function CheckoutClient() {
     setPreparing(true)
     try {
       const result = await proxy('/orders/checkout', { method: 'POST', body: { addressId: selectedAddressId } })
-      setClientSecret(result.clientSecret)
+      if (result.clientSecret) {
+        setClientSecret(result.clientSecret)
+      } else {
+        // No Stripe key configured on the backend (local/dev only) — the order already came
+        // back confirmed, so there's no payment sheet to present. Skip straight to success.
+        toast.success('Order placed! We’ll email you a confirmation.')
+        router.push('/dashboard/individual/orders')
+      }
     } catch (err) {
       toast.error(err.status === 503 ? 'Payments aren’t live yet – please check back soon.' : err.message || 'Something went wrong.')
     } finally {

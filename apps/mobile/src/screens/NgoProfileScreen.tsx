@@ -151,11 +151,14 @@ export function NgoProfileScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
 
-  const ownProfile = useNgoProfile();
-  const ownStats = useNgoStats();
-  const ownStreak = useNgoStreakCalendar(8);
-  const ownAchievements = useNgoAchievements();
-  const ownLeaderboard = useNgoLeaderboard();
+  // Gated on `isOwn` — these hit NGO-owner-only endpoints, so an individual (or another NGO)
+  // viewing someone else's profile must never fire them: they'd only ever fail, and doing so
+  // anyway burns connection slots the real publicProfile/campaign/drive fetches are waiting on.
+  const ownProfile = useNgoProfile(isOwn);
+  const ownStats = useNgoStats(isOwn);
+  const ownStreak = useNgoStreakCalendar(8, isOwn);
+  const ownAchievements = useNgoAchievements(isOwn);
+  const ownLeaderboard = useNgoLeaderboard(50, isOwn);
   const ownDrives = useMyDrives(isOwn);
 
   const publicProfile = useNgoPublicProfile(isOwn ? null : ngoId ?? null);

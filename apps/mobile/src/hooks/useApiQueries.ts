@@ -1036,12 +1036,12 @@ export function useReopenCampaign() {
 
 // ---------- NGO profile / stats / reports / donations / volunteers ----------
 
-export function useNgoProfile() {
+export function useNgoProfile(enabled: boolean = true) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['ngo', 'profile'],
     queryFn: fetchNgoProfile,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && enabled,
   });
 }
 
@@ -1061,12 +1061,12 @@ export function useResubmitNgoProfile() {
   });
 }
 
-export function useNgoStats() {
+export function useNgoStats(enabled: boolean = true) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['ngo', 'stats'],
     queryFn: fetchNgoStats,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && enabled,
   });
 }
 
@@ -1331,12 +1331,12 @@ export function useCreateUpdate() {
   });
 }
 
-export function useNgoAchievements() {
+export function useNgoAchievements(enabled: boolean = true) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['ngo', 'achievements'],
     queryFn: fetchNgoAchievements,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && enabled,
   });
 }
 
@@ -1348,12 +1348,12 @@ export function useNgoPublicAchievements(ngoId: string | undefined) {
   });
 }
 
-export function useNgoStreakCalendar(weeks = 12) {
+export function useNgoStreakCalendar(weeks = 12, enabled: boolean = true) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['ngo', 'streaks', 'calendar', weeks],
     queryFn: () => fetchNgoStreakCalendar(weeks),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && enabled,
   });
 }
 
@@ -1366,12 +1366,12 @@ export function useNgoReputation(weeks = 12) {
   });
 }
 
-export function useNgoLeaderboard(limit = 50) {
+export function useNgoLeaderboard(limit = 50, enabled: boolean = true) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['ngo', 'leaderboard', limit],
     queryFn: () => fetchNgoLeaderboard(limit),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && enabled,
   });
 }
 

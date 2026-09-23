@@ -50,16 +50,20 @@ export function CampaignDetailScreen({ navigation, route }: any) {
     try {
       const intent = await createIntent.mutateAsync({ campaignId: campaign.id, amountCents });
 
-      const { error: initError } = await initPaymentSheet({
-        merchantDisplayName: 'ARTH',
-        paymentIntentClientSecret: intent.clientSecret,
-      });
-      if (initError) throw new Error(initError.message);
+      // No Stripe key configured on the backend (local/dev only) — the donation already came
+      // back succeeded, so there's no payment sheet to present. Skip straight to success.
+      if (intent.clientSecret) {
+        const { error: initError } = await initPaymentSheet({
+          merchantDisplayName: 'ARTH',
+          paymentIntentClientSecret: intent.clientSecret,
+        });
+        if (initError) throw new Error(initError.message);
 
-      const { error: presentError } = await presentPaymentSheet();
-      if (presentError) {
-        if (presentError.code !== 'Canceled') throw new Error(presentError.message);
-        return;
+        const { error: presentError } = await presentPaymentSheet();
+        if (presentError) {
+          if (presentError.code !== 'Canceled') throw new Error(presentError.message);
+          return;
+        }
       }
 
       success();

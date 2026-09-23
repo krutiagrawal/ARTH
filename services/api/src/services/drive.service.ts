@@ -1,6 +1,6 @@
 import { DriveStatus, DriveTransportMode, PrismaClient } from '@plant/db';
 import { getStripeClient } from '../lib/stripe';
-import { ConflictError, NotFoundError } from '../utils/errors';
+import { ConflictError, NotFoundError, ServiceUnavailableError } from '../utils/errors';
 import { geocodeAddress } from '../utils/geocode';
 import { haversineDistanceKm } from '../utils/geo';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
@@ -177,11 +177,20 @@ export async function cancelDrive(prisma: PrismaClient, ngoUserId: string, drive
   });
 
   if (sponsorships.length > 0) {
-    const stripe = getStripeClient();
-    for (const s of sponsorships) {
-      await stripe.refunds.create({ payment_intent: s.stripePaymentIntentId });
-      await prisma.drivePlantSponsorship.update({ where: { id: s.id }, data: { status: 'refunded' } });
+    // Sponsorships with no stripePaymentIntentId were auto-succeeded via the no-Stripe-configured
+    // bypass (see sponsorPlant above) — nothing was actually charged, so there's nothing to refund
+    // through Stripe; just flip their status below along with the real ones.
+    const paidSponsorships = sponsorships.filter((s) => s.stripePaymentIntentId);
+    if (paidSponsorships.length > 0) {
+      const stripe = getStripeClient();
+      for (const s of paidSponsorships) {
+        await stripe.refunds.create({ payment_intent: s.stripePaymentIntentId! });
+      }
     }
+    await prisma.drivePlantSponsorship.updateMany({
+      where: { id: { in: sponsorships.map((s) => s.id) } },
+      data: { status: 'refunded' },
+    });
   }
 
   const updated = await prisma.drive.update({
@@ -440,12 +449,26 @@ export async function sponsorPlant(prisma: PrismaClient, userId: string, driveId
   if (!plant) throw new NotFoundError('Plant not found');
   if (plant.drive.status !== 'upcoming') throw new ConflictError('This drive is no longer accepting sponsorships');
 
-  const stripe = getStripeClient();
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: plant.priceCents,
-    currency: 'inr',
-    metadata: { drivePlantId: plant.id, driveId: plant.driveId, userId },
-  });
+  // getStripeClient() throws ServiceUnavailableError when STRIPE_SECRET_KEY isn't configured —
+  // in a local/dev environment without Stripe set up, that's not a hard stop: skip creating a
+  // real PaymentIntent and record the sponsorship as already succeeded instead of returning a
+  // clientSecret for the client to present a payment form for. Mirrors the same bypass in
+  // order.service.ts's checkout() and donation.service.ts's createDonationIntent(). A real
+  // deployment always has STRIPE_SECRET_KEY set, so this path never triggers there.
+  let stripe: ReturnType<typeof getStripeClient> | null = null;
+  try {
+    stripe = getStripeClient();
+  } catch (e) {
+    if (!(e instanceof ServiceUnavailableError)) throw e;
+  }
+
+  const paymentIntent = stripe
+    ? await stripe.paymentIntents.create({
+        amount: plant.priceCents,
+        currency: 'inr',
+        metadata: { drivePlantId: plant.id, driveId: plant.driveId, userId },
+      })
+    : null;
 
   const sponsorship = await prisma.drivePlantSponsorship.create({
     data: {
@@ -453,10 +476,10 @@ export async function sponsorPlant(prisma: PrismaClient, userId: string, driveId
       userId,
       amountCents: plant.priceCents,
       currency: 'inr',
-      stripePaymentIntentId: paymentIntent.id,
-      status: 'pending',
+      stripePaymentIntentId: paymentIntent?.id,
+      status: paymentIntent ? 'pending' : 'succeeded',
     },
   });
 
-  return { sponsorship, clientSecret: paymentIntent.client_secret };
+  return { sponsorship, clientSecret: paymentIntent?.client_secret ?? null };
 }

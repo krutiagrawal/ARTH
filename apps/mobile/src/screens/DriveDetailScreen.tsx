@@ -28,7 +28,10 @@ export function DriveDetailScreen({ navigation, route }: any) {
   const { success, error: errorHaptic } = useHaptics();
   const { data: drive, isLoading, refetch } = useDrive(driveId);
   const { user } = useAuth();
-  const ngoProfile = useNgoProfile();
+  // Only NGO-role viewers can possibly own this drive — an individual/nursery/other-NGO viewer
+  // must never fire this (it hits an NGO-owner-only endpoint that would just fail for them,
+  // burning a connection slot this screen's own useDrive() fetch is competing for).
+  const ngoProfile = useNgoProfile(user?.role === 'ngo');
   const isOwnDrive = user?.role === 'ngo' && !!drive && ngoProfile.data?.id === drive.ngoId;
   const attendeesQuery = useDriveAttendees(driveId, isOwnDrive);
   const attendanceMutation = useSetDriveRsvpAttendance(driveId);
@@ -67,16 +70,20 @@ export function DriveDetailScreen({ navigation, route }: any) {
     try {
       const intent = await sponsorMutation.mutateAsync({ driveId: drive.id, plantId: plant.id });
 
-      const { error: initError } = await initPaymentSheet({
-        merchantDisplayName: 'ARTH',
-        paymentIntentClientSecret: intent.clientSecret,
-      });
-      if (initError) throw new Error(initError.message);
+      // No Stripe key configured on the backend (local/dev only) — the sponsorship already came
+      // back succeeded, so there's no payment sheet to present. Skip straight to success.
+      if (intent.clientSecret) {
+        const { error: initError } = await initPaymentSheet({
+          merchantDisplayName: 'ARTH',
+          paymentIntentClientSecret: intent.clientSecret,
+        });
+        if (initError) throw new Error(initError.message);
 
-      const { error: presentError } = await presentPaymentSheet();
-      if (presentError) {
-        if (presentError.code !== 'Canceled') throw new Error(presentError.message);
-        return;
+        const { error: presentError } = await presentPaymentSheet();
+        if (presentError) {
+          if (presentError.code !== 'Canceled') throw new Error(presentError.message);
+          return;
+        }
       }
 
       success();

@@ -1862,7 +1862,7 @@ model DrivePlantSponsorship {
   userId                String         @map("user_id")
   amountCents           Int            @map("amount_cents")
   currency              String         @default("inr")
-  stripePaymentIntentId String         @unique @map("stripe_payment_intent_id")
+  stripePaymentIntentId String?        @unique @map("stripe_payment_intent_id")
   status                DonationStatus @default(pending)
   createdAt             DateTime       @default(now()) @map("created_at")
 
@@ -2019,7 +2019,7 @@ model Donation {
   userId                String         @map("user_id")
   amountCents           Int            @map("amount_cents")
   currency              String         @default("inr")
-  stripePaymentIntentId String         @unique @map("stripe_payment_intent_id")
+  stripePaymentIntentId String?        @unique @map("stripe_payment_intent_id")
   status                DonationStatus @default(pending)
   // Set once, when the webhook first marks the donation `succeeded` — never regenerated, so the
   // same receipt number is stable across repeat views/emails. Null for pending/failed donations.

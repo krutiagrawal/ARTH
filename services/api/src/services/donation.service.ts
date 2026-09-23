@@ -1,7 +1,7 @@
 import { PrismaClient } from '@plant/db';
 import { randomUUID } from 'node:crypto';
 import { getStripeClient } from '../lib/stripe';
-import { ConflictError, ForbiddenError, NotFoundError } from '../utils/errors';
+import { ConflictError, ForbiddenError, NotFoundError, ServiceUnavailableError } from '../utils/errors';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
 import { confirmOrderPayment } from './order.service';
 import { notify } from './notification.service';
@@ -190,12 +190,26 @@ export async function createDonationIntent(
     throw new NotFoundError('Campaign not found');
   }
 
-  const stripe = getStripeClient();
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: amountCents,
-    currency,
-    metadata: { campaignId, userId },
-  });
+  // getStripeClient() throws ServiceUnavailableError when STRIPE_SECRET_KEY isn't configured —
+  // in a local/dev environment without Stripe set up, that's not a hard stop: skip creating a
+  // real PaymentIntent and record the donation as already succeeded instead of returning a
+  // clientSecret for the client to present a payment form for. Mirrors the same bypass in
+  // order.service.ts's checkout(). A real deployment always has STRIPE_SECRET_KEY set, so this
+  // path never triggers there.
+  let stripe: ReturnType<typeof getStripeClient> | null = null;
+  try {
+    stripe = getStripeClient();
+  } catch (e) {
+    if (!(e instanceof ServiceUnavailableError)) throw e;
+  }
+
+  const paymentIntent = stripe
+    ? await stripe.paymentIntents.create({
+        amount: amountCents,
+        currency,
+        metadata: { campaignId, userId },
+      })
+    : null;
 
   const donation = await prisma.donation.create({
     data: {
@@ -203,12 +217,44 @@ export async function createDonationIntent(
       userId,
       amountCents,
       currency,
-      stripePaymentIntentId: paymentIntent.id,
-      status: 'pending',
+      stripePaymentIntentId: paymentIntent?.id,
+      status: paymentIntent ? 'pending' : 'succeeded',
     },
   });
 
-  return { donation, clientSecret: paymentIntent.client_secret };
+  if (!paymentIntent) {
+    await finalizeSucceededDonation(prisma, donation.id);
+  }
+
+  return { donation, clientSecret: paymentIntent?.client_secret ?? null };
+}
+
+// Shared by the real Stripe-webhook path (handleStripeWebhookEvent) and the dev/test-mode
+// bypass in createDonationIntent above — everything that has to happen once a donation's
+// payment is settled (receipt number + email, NGO notification), regardless of which path
+// got it there.
+async function finalizeSucceededDonation(prisma: PrismaClient, donationId: string) {
+  const donation = await prisma.donation.findUnique({
+    where: { id: donationId },
+    include: { campaign: { include: { ngo: true } }, user: { select: { name: true } } },
+  });
+  if (!donation) return;
+
+  if (!donation.receiptNumber) {
+    await prisma.donation.update({ where: { id: donation.id }, data: { receiptNumber: generateReceiptNumber() } });
+    await sendDonationReceiptEmail(prisma, donation.id);
+  }
+
+  await notify(prisma, {
+    userId: donation.campaign.ngo.userId,
+    type: 'ngo_donation_received',
+    actorUserId: donation.userId,
+    data: { campaignId: donation.campaignId, campaignTitle: donation.campaign.title, amountCents: donation.amountCents },
+    push: {
+      title: donation.campaign.ngo.orgName,
+      body: `${donation.user.name} donated ₹${(donation.amountCents / 100).toLocaleString('en-IN')} to ${donation.campaign.title}`,
+    },
+  });
 }
 
 // ARTH-<year>-<8 uppercase hex chars> — stable once assigned (see Donation.receiptNumber),
@@ -347,26 +393,9 @@ export async function handleStripeWebhookEvent(
     await confirmOrderPayment(prisma, paymentIntent.id, status === 'succeeded');
 
     if (status === 'succeeded') {
-      const donation = await prisma.donation.findFirst({
-        where: { stripePaymentIntentId: paymentIntent.id },
-        include: { campaign: { include: { ngo: true } }, user: { select: { name: true } } },
-      });
+      const donation = await prisma.donation.findFirst({ where: { stripePaymentIntentId: paymentIntent.id } });
       if (donation) {
-        if (!donation.receiptNumber) {
-          await prisma.donation.update({ where: { id: donation.id }, data: { receiptNumber: generateReceiptNumber() } });
-          await sendDonationReceiptEmail(prisma, donation.id);
-        }
-
-        await notify(prisma, {
-          userId: donation.campaign.ngo.userId,
-          type: 'ngo_donation_received',
-          actorUserId: donation.userId,
-          data: { campaignId: donation.campaignId, campaignTitle: donation.campaign.title, amountCents: donation.amountCents },
-          push: {
-            title: donation.campaign.ngo.orgName,
-            body: `${donation.user.name} donated ₹${(donation.amountCents / 100).toLocaleString('en-IN')} to ${donation.campaign.title}`,
-          },
-        });
+        await finalizeSucceededDonation(prisma, donation.id);
       }
     }
   }
