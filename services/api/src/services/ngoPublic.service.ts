@@ -5,6 +5,7 @@ import { serializePost, viewerInclude } from './post.service';
 import { getPortfolioImpact, listPublicPortfolio } from './portfolio.service';
 import { listCampaigns } from './donation.service';
 import { listAdoptableTrees } from './adoption.service';
+import { driveInclude } from './drive.service';
 
 interface BrowseFilter {
   q?: string;
@@ -73,19 +74,21 @@ async function assembleNgoProfile(prisma: PrismaClient, ngo: { id: string } & Re
             select: { status: true },
           })
         : Promise.resolve(null),
-      // "Past drives" showcase — completed only, featured ones first.
+      // "Past drives" showcase — completed only, featured ones first. Full `driveInclude` (same
+      // shape `getDrive` returns), not a trimmed `select`, so the mobile client can seed its
+      // drive-detail cache straight from these list entries instead of re-fetching on tap.
       prisma.drive.findMany({
         where: { ngoId: ngo.id, status: 'completed' },
         orderBy: [{ featured: 'desc' }, { startsAt: 'desc' }],
         take: 12,
-        select: { id: true, title: true, photoUrl: true, city: true, startsAt: true, featured: true },
+        include: driveInclude,
       }),
       // What's coming up to join — a freshly-created drive lands here, not in featuredDrives.
       prisma.drive.findMany({
         where: { ngoId: ngo.id, status: 'upcoming' },
         orderBy: { startsAt: 'asc' },
         take: 12,
-        select: { id: true, title: true, photoUrl: true, city: true, startsAt: true, featured: true },
+        include: driveInclude,
       }),
       prisma.post.findMany({
         where: { ngoId: ngo.id, isHidden: false },
@@ -107,6 +110,19 @@ async function assembleNgoProfile(prisma: PrismaClient, ngo: { id: string } & Re
 
   const recentUpdates = recentPosts.map((p) => serializePost(p as any, viewerUserId));
 
+  // Same per-viewer isRsvped flag `getDrive`/`listDrives` attach — needed so a seeded cache entry
+  // is indistinguishable from what `getDrive` would have returned for this same viewer.
+  let rsvpedDriveIds = new Set<string>();
+  const driveIds = [...featuredDrives, ...upcomingDrives].map((d) => d.id);
+  if (viewerUserId && driveIds.length > 0) {
+    const rsvps = await prisma.driveRsvp.findMany({
+      where: { userId: viewerUserId, status: 'confirmed', driveId: { in: driveIds } },
+      select: { driveId: true },
+    });
+    rsvpedDriveIds = new Set(rsvps.map((r) => r.driveId));
+  }
+  const withRsvpFlag = (d: { id: string } & Record<string, any>) => ({ ...d, isRsvped: rsvpedDriveIds.has(d.id) });
+
   return {
     id: ngo.id,
     orgName: ngo.orgName,
@@ -122,8 +138,8 @@ async function assembleNgoProfile(prisma: PrismaClient, ngo: { id: string } & Re
     isFollowing: follow?.status === 'accepted',
     // Distinct from isFollowing so the button can read "Requested" on an approval-gated NGO.
     followStatus: follow?.status ?? null,
-    featuredDrives,
-    upcomingDrives,
+    featuredDrives: featuredDrives.map(withRsvpFlag),
+    upcomingDrives: upcomingDrives.map(withRsvpFlag),
     recentUpdates,
     staff,
     portfolio,

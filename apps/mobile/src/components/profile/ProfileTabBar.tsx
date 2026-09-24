@@ -6,7 +6,7 @@ import { COLORS } from '../../constants/colors';
 export type ProfileTabKey = 'posts' | 'contributions' | 'achievements' | 'drives' | 'campaigns' | 'adopt';
 
 const TABS: { key: ProfileTabKey; icon: string; label: string }[] = [
-  { key: 'posts', icon: '▦', label: 'Posts' },
+  { key: 'posts', icon: '🖼️', label: 'Posts' },
   { key: 'contributions', icon: '🌍', label: 'Contributions' },
   { key: 'achievements', icon: '🏅', label: 'Achievements' },
   { key: 'drives', icon: '🤝', label: 'Drives' },

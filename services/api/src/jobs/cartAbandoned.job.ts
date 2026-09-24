@@ -1,11 +1,13 @@
 import { PrismaClient } from '@plant/db';
 import { notify } from '../services/notification.service';
-import { hasRecentNotification } from './dedupe';
+import { countNotificationsSince, hasRecentNotification } from './dedupe';
 
 const STALE_AFTER_MS = 6 * 60 * 60 * 1000;
-// Re-nag once a day while the cart is still sitting there, rather than a one-shot — matches how
-// Swiggy/Zomato-style abandoned-cart pushes behave.
+// Re-nag once a day while the cart is still sitting there — matches how Swiggy/Zomato-style
+// abandoned-cart pushes behave — but only up to MAX_REMINDERS total per cart. Without a cap this
+// repeated forever for any cart left untouched for weeks, which read as spam rather than a nudge.
 const RENAG_WINDOW_MS = 24 * 60 * 60 * 1000;
+const MAX_REMINDERS = 3;
 
 /**
  * `CartItem` is a real persisted table (packages/db/prisma/schema.prisma), scoped to one nursery
@@ -47,6 +49,12 @@ export async function runCartAbandonedJob(prisma: PrismaClient): Promise<void> {
       if (checkedOut) continue;
 
       if (await hasRecentNotification(prisma, userId, 'cart_abandoned', since)) continue;
+
+      // Counted from when this cart's oldest stale item was last touched, so adding or updating
+      // an item (which moves that timestamp forward) naturally resets the count for the new
+      // "session" instead of needing a separate counter field to reset by hand.
+      const reminderCount = await countNotificationsSince(prisma, userId, 'cart_abandoned', cart.oldestUpdatedAt);
+      if (reminderCount >= MAX_REMINDERS) continue;
 
       await notify(prisma, {
         userId,

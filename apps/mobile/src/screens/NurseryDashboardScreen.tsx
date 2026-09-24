@@ -18,10 +18,10 @@ import { ForestHeroCanvas } from '../components/common/ForestHeroCanvas';
 import { AmbientCreatures } from '../components/common/AmbientCreatures';
 import { FloatingParticles } from '../components/common/FloatingParticles';
 import { getSceneryMode, RainEffect, WindEffect } from '../components/common/WeatherEffects';
-import { useTimeTheme, type TimeTheme } from '../hooks/useTimeTheme';
+import { useTimeTheme, type TimeTheme, type TimePeriod } from '../hooks/useTimeTheme';
 import { useDeviceWeather } from '../hooks/useDeviceWeather';
 import { useAuth } from '../context/AuthContext';
-import { useNurseryProfile, useNurseryStats, useNurseryReservations, useNurseryDashboardToday } from '../hooks/useApiQueries';
+import { useNurseryProfile, useNurseryStats, useNurseryReservations, useNurseryDashboardToday, useSettings } from '../hooks/useApiQueries';
 import type { ApiNurseryActivityItem } from '../api/nursery';
 import { GROWTH_LEVEL_META } from '../components/common/GrowthLevelBadge';
 import { useUnreadNotificationCount } from '../hooks/useSocialQueries';
@@ -251,12 +251,14 @@ function ActivityRow({
 
 interface NurseryDashboardScreenProps {
   navigation: any;
+  previewPeriod?: TimePeriod | null;
 }
 
-export function NurseryDashboardScreen({ navigation }: NurseryDashboardScreenProps) {
+export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDashboardScreenProps) {
   const insets = useSafeAreaInsets();
   const bottomClearance = useBottomNavClearance();
-  const theme = useTimeTheme();
+  const { data: settings } = useSettings();
+  const theme = useTimeTheme((previewPeriod !== undefined ? previewPeriod : (settings?.pinnedTimeTheme ?? null)) as TimePeriod | null);
   const { weather } = useDeviceWeather();
   const sceneryMode = getSceneryMode(weather);
   const { user } = useAuth();

@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { useStripe } from '@stripe/stripe-react-native';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
@@ -14,6 +13,10 @@ import { useCampaign, useCreateDonationIntent } from '../hooks/useApiQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '../api/client';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+
+// Loaded only once a donation is actually in flight — see PaymentSheetRunner's own comment for
+// why this keeps `@stripe/stripe-react-native` out of this screen's own module-scope imports.
+const LazyPaymentSheetRunner = React.lazy(() => import('../components/payments/PaymentSheetRunner'));
 
 const AMOUNT_CHIPS = [100, 500, 1500, 5000];
 
@@ -27,7 +30,6 @@ export function CampaignDetailScreen({ navigation, route }: any) {
   const { success, error: errorHaptic } = useHaptics();
   const { data: campaign, isLoading, refetch } = useCampaign(campaignId);
   const createIntent = useCreateDonationIntent();
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const queryClient = useQueryClient();
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
@@ -36,6 +38,8 @@ export function CampaignDetailScreen({ navigation, route }: any) {
   const [paying, setPaying] = useState(false);
   const [donationError, setDonationError] = useState('');
   const [donated, setDonated] = useState(false);
+  // Non-null only while a real payment sheet is in flight — mounts LazyPaymentSheetRunner below.
+  const [activeClientSecret, setActiveClientSecret] = useState<string | null>(null);
 
   const amountRupees = customAmount ? Number(customAmount) : selectedAmount;
   const amountCents = amountRupees ? Math.round(amountRupees * 100) : 0;
@@ -53,22 +57,17 @@ export function CampaignDetailScreen({ navigation, route }: any) {
       // No Stripe key configured on the backend (local/dev only) — the donation already came
       // back succeeded, so there's no payment sheet to present. Skip straight to success.
       if (intent.clientSecret) {
-        const { error: initError } = await initPaymentSheet({
-          merchantDisplayName: 'ARTH',
-          paymentIntentClientSecret: intent.clientSecret,
-        });
-        if (initError) throw new Error(initError.message);
-
-        const { error: presentError } = await presentPaymentSheet();
-        if (presentError) {
-          if (presentError.code !== 'Canceled') throw new Error(presentError.message);
-          return;
-        }
+        setActiveClientSecret(intent.clientSecret);
+        return;
       }
 
       success();
       setDonated(true);
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      // The Campaigns tab on an NGO's public profile embeds its own campaign snapshots inside
+      // this separate query — never invalidated otherwise, so it kept showing the pre-donation total.
+      queryClient.invalidateQueries({ queryKey: ['ngos', 'public'] });
+      setPaying(false);
     } catch (e) {
       errorHaptic();
       if (e instanceof ApiError && e.code === 'SERVICE_UNAVAILABLE') {
@@ -76,9 +75,29 @@ export function CampaignDetailScreen({ navigation, route }: any) {
       } else {
         setDonationError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
       }
-    } finally {
       setPaying(false);
     }
+  };
+
+  const handlePaymentSuccess = () => {
+    success();
+    setDonated(true);
+    queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+    queryClient.invalidateQueries({ queryKey: ['ngos', 'public'] });
+    setActiveClientSecret(null);
+    setPaying(false);
+  };
+
+  const handlePaymentCancel = () => {
+    setActiveClientSecret(null);
+    setPaying(false);
+  };
+
+  const handlePaymentError = (message: string) => {
+    errorHaptic();
+    setDonationError(message);
+    setActiveClientSecret(null);
+    setPaying(false);
   };
 
   return (
@@ -168,6 +187,17 @@ export function CampaignDetailScreen({ navigation, route }: any) {
             </>
           )}
         </ScrollView>
+      )}
+
+      {activeClientSecret && (
+        <Suspense fallback={null}>
+          <LazyPaymentSheetRunner
+            clientSecret={activeClientSecret}
+            onSuccess={handlePaymentSuccess}
+            onCancel={handlePaymentCancel}
+            onError={handlePaymentError}
+          />
+        </Suspense>
       )}
     </View>
   );

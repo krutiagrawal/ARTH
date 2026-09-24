@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { useStripe } from '@stripe/stripe-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
@@ -17,6 +16,11 @@ import { useDrive, useDriveAttendees, useJoinDrive, useLeaveDrive, useNgoProfile
 import { ApiError } from '../api/client';
 import type { ApiDrivePlant } from '../api/drives';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+
+// Loaded only once a sponsorship payment is actually in flight — see PaymentSheetRunner's own
+// comment for why this keeps `@stripe/stripe-react-native` out of this screen's own module-scope
+// imports.
+const LazyPaymentSheetRunner = React.lazy(() => import('../components/payments/PaymentSheetRunner'));
 
 function formatRupees(cents: number) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`;
@@ -38,11 +42,12 @@ export function DriveDetailScreen({ navigation, route }: any) {
   const joinMutation = useJoinDrive();
   const leaveMutation = useLeaveDrive();
   const sponsorMutation = useSponsorPlant();
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const queryClient = useQueryClient();
   const { refreshing, onRefresh } = usePullToRefresh(isOwnDrive ? [refetch, attendeesQuery.refetch] : refetch);
   const [actionError, setActionError] = useState('');
   const [sponsoringId, setSponsoringId] = useState<string | null>(null);
+  // Non-null only while a real payment sheet is in flight — mounts LazyPaymentSheetRunner below.
+  const [activeClientSecret, setActiveClientSecret] = useState<string | null>(null);
 
   const isFull = !!drive && drive.capacity != null && drive.confirmedCount >= drive.capacity && !drive.isRsvped;
   const isCancelled = drive?.status === 'cancelled';
@@ -73,21 +78,16 @@ export function DriveDetailScreen({ navigation, route }: any) {
       // No Stripe key configured on the backend (local/dev only) — the sponsorship already came
       // back succeeded, so there's no payment sheet to present. Skip straight to success.
       if (intent.clientSecret) {
-        const { error: initError } = await initPaymentSheet({
-          merchantDisplayName: 'ARTH',
-          paymentIntentClientSecret: intent.clientSecret,
-        });
-        if (initError) throw new Error(initError.message);
-
-        const { error: presentError } = await presentPaymentSheet();
-        if (presentError) {
-          if (presentError.code !== 'Canceled') throw new Error(presentError.message);
-          return;
-        }
+        setActiveClientSecret(intent.clientSecret);
+        return;
       }
 
       success();
       queryClient.invalidateQueries({ queryKey: ['drives', driveId] });
+      // The Drives tab on an NGO's public profile embeds its own drive snapshots inside this
+      // separate query — never invalidated otherwise, so it kept showing pre-sponsorship counts.
+      queryClient.invalidateQueries({ queryKey: ['ngos', 'public'] });
+      setSponsoringId(null);
     } catch (e) {
       errorHaptic();
       if (e instanceof ApiError && e.code === 'SERVICE_UNAVAILABLE') {
@@ -95,9 +95,28 @@ export function DriveDetailScreen({ navigation, route }: any) {
       } else {
         setActionError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
       }
-    } finally {
       setSponsoringId(null);
     }
+  };
+
+  const handlePaymentSuccess = () => {
+    success();
+    queryClient.invalidateQueries({ queryKey: ['drives', driveId] });
+    queryClient.invalidateQueries({ queryKey: ['ngos', 'public'] });
+    setActiveClientSecret(null);
+    setSponsoringId(null);
+  };
+
+  const handlePaymentCancel = () => {
+    setActiveClientSecret(null);
+    setSponsoringId(null);
+  };
+
+  const handlePaymentError = (message: string) => {
+    errorHaptic();
+    setActionError(message);
+    setActiveClientSecret(null);
+    setSponsoringId(null);
   };
 
   return (
@@ -256,6 +275,17 @@ export function DriveDetailScreen({ navigation, route }: any) {
             />
           )}
         </ScrollView>
+      )}
+
+      {activeClientSecret && (
+        <Suspense fallback={null}>
+          <LazyPaymentSheetRunner
+            clientSecret={activeClientSecret}
+            onSuccess={handlePaymentSuccess}
+            onCancel={handlePaymentCancel}
+            onError={handlePaymentError}
+          />
+        </Suspense>
       )}
     </View>
   );

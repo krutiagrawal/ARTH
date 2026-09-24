@@ -4,6 +4,7 @@ import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { useQueryClient } from '@tanstack/react-query';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
@@ -19,6 +20,7 @@ function formatRupees(cents: number) {
 export function CampaignsListScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { selection } = useHaptics();
+  const queryClient = useQueryClient();
   const { data: campaigns = [], isLoading, refetch } = useCampaigns();
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
@@ -54,6 +56,9 @@ export function CampaignsListScreen({ navigation }: any) {
               activeOpacity={0.85}
               onPress={() => {
                 selection();
+                // Same shape `getCampaign` returns, so the detail screen paints instantly instead
+                // of re-fetching data this list screen already has.
+                queryClient.setQueryData(['campaigns', c.id], c);
                 navigation.navigate('CampaignDetail', { campaignId: c.id });
               }}
             >

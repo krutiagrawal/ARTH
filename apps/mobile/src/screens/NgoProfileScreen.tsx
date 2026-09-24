@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -42,6 +43,7 @@ import type { ApiPortfolioEntry } from '../api/portfolio';
 import type { NgoStreakWeek } from '../api/ngoStreaks';
 import type { ApiCampaign } from '../api/donations';
 import type { ApiAdoptableTree } from '../api/adoptions';
+import type { ApiDrive } from '../api/drives';
 
 function formatPastWorkDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
@@ -150,6 +152,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
   const isOwn = !ngoId;
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   // Gated on `isOwn` — these hit NGO-owner-only endpoints, so an individual (or another NGO)
   // viewing someone else's profile must never fire them: they'd only ever fail, and doing so
@@ -215,17 +218,13 @@ export function NgoProfileScreen({ route, navigation }: any) {
   const isFollowingOrPending = followStatus === 'accepted' || followStatus === 'pending';
   const followersCount = isOwn ? undefined : publicProfile.data?.followersCount ?? 0;
 
-  const drives = isOwn
+  // Full `ApiDrive` shape now (same as `useDrive` returns), not a trimmed summary — lets
+  // onPressDrive below seed the drive-detail cache instead of forcing a re-fetch on tap.
+  const drives: ApiDrive[] = isOwn
     ? ownDrives.data ?? []
-    : [...(publicProfile.data?.upcomingDrives ?? []), ...(publicProfile.data?.featuredDrives ?? [])]
-        .sort((a: any, b: any) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime())
-        .map((d: any) => ({
-          id: d.id,
-          title: d.title,
-          photoUri: d.photoUrl,
-          city: d.city,
-          startsAt: d.startsAt,
-        }));
+    : [...(publicProfile.data?.upcomingDrives ?? []), ...(publicProfile.data?.featuredDrives ?? [])].sort(
+        (a: ApiDrive, b: ApiDrive) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime(),
+      );
 
   // NGOs manage these via their own dashboard, not this profile screen — nothing to show here yet.
   const campaigns: ApiCampaign[] = isOwn ? [] : publicProfile.data?.campaigns ?? [];
@@ -396,13 +395,24 @@ export function NgoProfileScreen({ route, navigation }: any) {
                 <DrivesTabContent
                   role="ngo"
                   drives={drives}
-                  onPressDrive={(d) => navigation.navigate('DriveDetail', { driveId: d.id })}
+                  onPressDrive={(d) => {
+                    // Same shape `getDrive` returns, so the detail screen paints instantly
+                    // instead of re-fetching data this profile already has.
+                    queryClient.setQueryData(['drives', d.id], d);
+                    navigation.navigate('DriveDetail', { driveId: d.id });
+                  }}
                 />
               )}
               {tab === 'campaigns' && (
                 <CampaignsTabContent
                   campaigns={campaigns}
-                  onPressCampaign={(c) => navigation.navigate('CampaignDetail', { campaignId: c.id })}
+                  onPressCampaign={(c) => {
+                    // Same shape `getCampaign` returns (both share `campaignInclude`), so seeding
+                    // it here lets CampaignDetailScreen paint instantly instead of showing its own
+                    // spinner for a second full round trip of data it already has.
+                    queryClient.setQueryData(['campaigns', c.id], c);
+                    navigation.navigate('CampaignDetail', { campaignId: c.id });
+                  }}
                 />
               )}
               {tab === 'adopt' && (

@@ -58,6 +58,7 @@ type NgoManageSegment = 'drives' | 'campaigns' | 'trees';
 interface NgoDashboardScreenProps {
   navigation: any;
   onNavigateTab: (tab: NgoTabName, manageSegment?: NgoManageSegment) => void;
+  previewPeriod?: TimePeriod | null;
 }
 
 function StreakCard({
@@ -203,11 +204,11 @@ function DockRow({
   );
 }
 
-export function NgoDashboardScreen({ navigation, onNavigateTab }: NgoDashboardScreenProps) {
+export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }: NgoDashboardScreenProps) {
   const insets = useSafeAreaInsets();
   const bottomClearance = useBottomNavClearance();
   const { data: settings } = useSettings();
-  const theme = useTimeTheme((settings?.pinnedTimeTheme ?? null) as TimePeriod | null);
+  const theme = useTimeTheme((previewPeriod !== undefined ? previewPeriod : (settings?.pinnedTimeTheme ?? null)) as TimePeriod | null);
   const { weather } = useDeviceWeather();
   const sceneryMode = getSceneryMode(weather);
   const { user } = useAuth();

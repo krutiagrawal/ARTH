@@ -91,9 +91,11 @@ export async function removeAdoptableTree(prisma: PrismaClient, ngoUserId: strin
 
 export async function listAdoptableTrees(prisma: PrismaClient, filter: NearbyFilter) {
   const trees = await prisma.adoptableTree.findMany({
-    where: { status: 'available', ngo: { status: 'approved' }, ...(filter.ngoId ? { ngoId: filter.ngoId } : {}) },
+    // Adopted trees stay listed (status: 'available' | 'adopted') so people can still see what's
+    // already been claimed — only a genuinely retracted ('removed') tree is hidden.
+    where: { status: { not: 'removed' }, ngo: { status: 'approved' }, ...(filter.ngoId ? { ngoId: filter.ngoId } : {}) },
     include: adoptableTreeInclude,
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
     take: 500,
   });
 

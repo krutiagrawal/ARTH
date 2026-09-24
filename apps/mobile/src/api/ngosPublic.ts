@@ -5,6 +5,7 @@ import type { ApiPortfolioEntry } from './portfolio';
 import type { FollowPolicy, FollowStatus } from './ngoFollowers';
 import type { ApiCampaign } from './donations';
 import type { ApiAdoptableTree } from './adoptions';
+import type { ApiDrive } from './drives';
 
 export interface ApiNgoSummary {
   id: string;
@@ -20,15 +21,6 @@ export async function browseNgos(params: { q?: string; city?: string } = {}): Pr
   if (params.city) query.set('city', params.city);
   const qs = query.toString();
   return apiFetch(`/api/ngos${qs ? `?${qs}` : ''}`);
-}
-
-export interface ApiFeaturedDrive {
-  id: string;
-  title: string;
-  photoUrl: string | null;
-  city: string | null;
-  startsAt: string;
-  featured: boolean;
 }
 
 export interface ApiPublicNgoProfile {
@@ -47,10 +39,12 @@ export interface ApiPublicNgoProfile {
   isFollowing: boolean;
   /** Distinct from `isFollowing` so the button can read "Requested". */
   followStatus: FollowStatus | null;
-  featuredDrives: ApiFeaturedDrive[];
+  // Full ApiDrive shape (same as GET /api/drives/:id returns), not a trimmed summary — lets the
+  // client seed its drive-detail cache from these list entries instead of re-fetching on tap.
+  featuredDrives: ApiDrive[];
   /** Drives still to come — a freshly-created drive shows up here, not in `featuredDrives`
    * (which is completed-only, the "past work" showcase). */
-  upcomingDrives: ApiFeaturedDrive[];
+  upcomingDrives: ApiDrive[];
   recentUpdates: ApiPost[];
   staff: { id: string; name: string; role: string; photoUrl: string | null }[];
   portfolio: ApiPortfolioEntry[];

@@ -62,7 +62,7 @@ interface OwnedListFilter {
   take?: number;
 }
 
-const driveInclude = {
+export const driveInclude = {
   ngo: true,
   _count: { select: { rsvps: { where: { status: 'confirmed' as const } } } },
   pickupPoints: { orderBy: { order: 'asc' as const } },
@@ -288,16 +288,15 @@ export async function listDrives(prisma: PrismaClient, filter: NearbyFilter, use
 }
 
 export async function getDrive(prisma: PrismaClient, driveId: string, userId?: string) {
-  const drive = await prisma.drive.findUnique({ where: { id: driveId }, include: driveInclude });
+  // Independent of each other (the rsvp lookup only needs driveId/userId, not the drive row
+  // itself), so run them concurrently instead of paying two sequential DB round trips.
+  const [drive, rsvp] = await Promise.all([
+    prisma.drive.findUnique({ where: { id: driveId }, include: driveInclude }),
+    userId ? prisma.driveRsvp.findUnique({ where: { driveId_userId: { driveId, userId } } }) : Promise.resolve(null),
+  ]);
   if (!drive) throw new NotFoundError('Drive not found');
 
-  let isRsvped = false;
-  if (userId) {
-    const rsvp = await prisma.driveRsvp.findUnique({ where: { driveId_userId: { driveId, userId } } });
-    isRsvped = rsvp?.status === 'confirmed';
-  }
-
-  return { ...drive, isRsvped };
+  return { ...drive, isRsvped: rsvp?.status === 'confirmed' };
 }
 
 /** Drives a regular user has RSVP'd to — for their profile's Drives tab. */

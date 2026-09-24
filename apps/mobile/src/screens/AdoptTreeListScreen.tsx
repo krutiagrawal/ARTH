@@ -53,7 +53,14 @@ export function AdoptTreeListScreen({ navigation }: any) {
             }}
           >
             <BorderCard style={styles.card}>
-              <Text style={styles.cardTitle}>{tree.nickname}</Text>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardTitle}>{tree.nickname}</Text>
+                {tree.isAdopted && (
+                  <View style={styles.adoptedBadge}>
+                    <Text style={styles.adoptedBadgeText}>Adopted</Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.cardSubtitle}>{tree.speciesName} · {tree.ngoName}</Text>
               <View style={styles.metaRow}>
                 <Text style={styles.metaText} numberOfLines={1}>
@@ -79,7 +86,10 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 20 },
   loader: { marginTop: 40 },
   card: { marginBottom: 12 },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   cardTitle: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary },
+  adoptedBadge: { backgroundColor: COLORS.sand, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
+  adoptedBadgeText: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted },
   cardSubtitle: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, gap: 8 },
   metaText: { fontSize: 12, color: COLORS.textSecondary, flexShrink: 1 },

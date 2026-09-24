@@ -15,3 +15,15 @@ export async function hasRecentNotification(
   });
   return existing !== null;
 }
+
+/** How many notifications of `type` has `userId` received since `since`? For jobs that need to
+ * cap a repeating nudge (e.g. stop re-nagging after N reminders) rather than just throttle it to
+ * once per tick. */
+export async function countNotificationsSince(
+  prisma: PrismaClient,
+  userId: string,
+  type: NotificationType,
+  since: Date,
+): Promise<number> {
+  return prisma.notification.count({ where: { userId, type, createdAt: { gte: since } } });
+}

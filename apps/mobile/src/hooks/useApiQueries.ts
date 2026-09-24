@@ -840,7 +840,12 @@ export function useJoinDrive() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => joinDrive(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['drives'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['drives'] });
+      // The Drives tab on an NGO's public profile embeds its own drive snapshots inside this
+      // separate query — never invalidated otherwise, so it kept showing the pre-RSVP count.
+      queryClient.invalidateQueries({ queryKey: ['ngos', 'public'] });
+    },
   });
 }
 
@@ -863,7 +868,10 @@ export function useLeaveDrive() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => leaveDrive(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['drives'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['drives'] });
+      queryClient.invalidateQueries({ queryKey: ['ngos', 'public'] });
+    },
   });
 }
 
@@ -889,7 +897,12 @@ export function useAdoptTree() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, message }: { id: string; message?: string }) => adoptTree(id, message),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] });
+      // The Adopt tab on an NGO's public profile embeds its own tree snapshots inside this
+      // separate query — never invalidated otherwise, so it kept showing the pre-adoption state.
+      queryClient.invalidateQueries({ queryKey: ['ngos', 'public'] });
+    },
   });
 }
 

@@ -8,7 +8,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
-import { useNgoProfile, useUpdateNgoProfile } from '../hooks/useApiQueries';
+import { useNgoProfile, useUpdateNgoProfile, useSettings } from '../hooks/useApiQueries';
+import { getThemeForHour, PERIOD_HOUR, type TimePeriod } from '../hooks/useTimeTheme';
+import { SettingsRow } from '../components/common/SettingsRow';
+import { BorderCard } from '../components/common/BorderCard';
 import { PickedPhoto } from '../components/common/PhotoPickerField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
@@ -28,6 +31,7 @@ export function NgoSettingsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { data: profile, isLoading, refetch } = useNgoProfile();
   const updateMutation = useUpdateNgoProfile();
+  const { data: settings } = useSettings();
   const confirm = useConfirm();
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
@@ -178,6 +182,22 @@ export function NgoSettingsScreen({ navigation }: any) {
               <Toggle value={approvalRequired} onValueChange={handleToggleApprovalRequired} />
             </View>
 
+            <Text style={styles.sectionLabel}>Appearance</Text>
+            <BorderCard noPadding style={styles.appearanceCard}>
+              <SettingsRow
+                variant="light"
+                icon="🎨"
+                label="Homepage Theme"
+                sublabel={
+                  settings?.pinnedTimeTheme
+                    ? `${getThemeForHour(PERIOD_HOUR[settings.pinnedTimeTheme as TimePeriod]).label} – always`
+                    : 'Auto – changes with time of day'
+                }
+                accent={COLORS.golden}
+                onPress={() => navigation.navigate('HomeThemePicker', { current: settings?.pinnedTimeTheme ?? null, role: 'ngo' })}
+              />
+            </BorderCard>
+
             <FormField label="Organization Name" value={orgName} onChangeText={setOrgName} placeholder="eg - Your organization" />
             <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - We plant. We protect. We inspire." />
             <FormField
@@ -314,6 +334,7 @@ const styles = StyleSheet.create({
   logoEditIcon: { fontSize: 13, color: COLORS.white, fontWeight: '700' },
 
   sectionLabel: { fontSize: 13, fontWeight: '700', color: COLORS.textSecondary, marginTop: 20 },
+  appearanceCard: { marginTop: 8 },
   // Transparent too: this only groups a run of FormFields, and a beige panel sitting directly
   // behind now-transparent fields would put the light block straight back where it was removed.
   subCard: { borderRadius: RADIUS.md, paddingHorizontal: 0, paddingVertical: 4, marginTop: 4, gap: 8 },

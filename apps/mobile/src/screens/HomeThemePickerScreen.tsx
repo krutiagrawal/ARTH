@@ -2,17 +2,22 @@ import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { RADIUS, SPACING } from '../constants/theme';
+import { RADIUS, SPACING, SHADOWS } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { ForestHeroCanvas } from '../components/common/ForestHeroCanvas';
 import { HomeScreen } from './HomeScreen';
+import { NgoDashboardScreen } from './NgoDashboardScreen';
+import { NurseryDashboardScreen } from './NurseryDashboardScreen';
 import { useTimeTheme, getThemeForHour, PERIOD_HOUR, type TimePeriod } from '../hooks/useTimeTheme';
 import { useUpdateSettings } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+
+export type HomeThemePickerRole = 'user' | 'ngo' | 'nursery';
 
 /** Swallows any navigation attempted from inside the full-homepage preview (tapping a mission,
  * a tree, the grow CTA, etc.) — the preview is a look-only sandbox, not a real live Home. */
@@ -32,10 +37,12 @@ const PERIOD_ORDER: TimePeriod[] = ['dawn', 'morning', 'afternoon', 'goldenHour'
  */
 export function HomeThemePickerScreen({ navigation, route }: any) {
   const initial: TimePeriod | null = route?.params?.current ?? null;
+  const role: HomeThemePickerRole = route?.params?.role ?? 'user';
   const [selected, setSelected] = useState<TimePeriod | null>(initial);
   const [previewOpen, setPreviewOpen] = useState(false);
   const updateSettingsMutation = useUpdateSettings();
   const { refreshing, onRefresh } = usePullToRefresh();
+  const insets = useSafeAreaInsets();
 
   // Same hook every homepage card uses — passing `selected` previews exactly what pinning that
   // period would look like (greeting/emoji still live), and passing `null` previews "Auto".
@@ -125,12 +132,40 @@ export function HomeThemePickerScreen({ navigation, route }: any) {
       </ScrollView>
 
       <Modal visible={previewOpen} animationType="slide" onRequestClose={() => setPreviewOpen(false)}>
-        <HomeScreen
-          navigation={NOOP_NAVIGATION}
-          onNavigateTab={() => {}}
-          previewPeriod={selected}
-          onClosePreview={() => setPreviewOpen(false)}
-        />
+        {role === 'ngo' ? (
+          <View style={styles.previewModalFill}>
+            <NgoDashboardScreen navigation={NOOP_NAVIGATION} onNavigateTab={() => {}} previewPeriod={selected} />
+            <TouchableOpacity
+              style={[styles.closePreviewButton, { top: insets.top + 12 }]}
+              activeOpacity={0.85}
+              onPress={() => setPreviewOpen(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Close preview"
+            >
+              <Text style={styles.closePreviewText}>✕ Close preview</Text>
+            </TouchableOpacity>
+          </View>
+        ) : role === 'nursery' ? (
+          <View style={styles.previewModalFill}>
+            <NurseryDashboardScreen navigation={NOOP_NAVIGATION} previewPeriod={selected} />
+            <TouchableOpacity
+              style={[styles.closePreviewButton, { top: insets.top + 12 }]}
+              activeOpacity={0.85}
+              onPress={() => setPreviewOpen(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Close preview"
+            >
+              <Text style={styles.closePreviewText}>✕ Close preview</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <HomeScreen
+            navigation={NOOP_NAVIGATION}
+            onNavigateTab={() => {}}
+            previewPeriod={selected}
+            onClosePreview={() => setPreviewOpen(false)}
+          />
+        )}
       </Modal>
     </View>
   );
@@ -138,6 +173,22 @@ export function HomeThemePickerScreen({ navigation, route }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  previewModalFill: { flex: 1 },
+  closePreviewButton: {
+    position: 'absolute',
+    alignSelf: 'center',
+    backgroundColor: COLORS.textPrimary,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    zIndex: 50,
+    ...SHADOWS.sage,
+  },
+  closePreviewText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: '700',
+  },
   scrollContent: { paddingHorizontal: SPACING.md, paddingBottom: 40, gap: 16 },
   previewWrap: {
     height: PREVIEW_HEIGHT,

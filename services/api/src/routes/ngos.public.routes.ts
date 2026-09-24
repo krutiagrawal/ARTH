@@ -8,6 +8,7 @@ import { BadRequestError } from '../utils/errors';
 import { listPublicPortfolio } from '../services/portfolio.service';
 import { serializeCampaign } from './donations.routes';
 import { serializeAdoptableTree } from './adoptions.routes';
+import { serializeDrive } from './drives.routes';
 
 interface NgoLeaderboardRow {
   id: string;
@@ -19,10 +20,6 @@ interface NgoLeaderboardRow {
 
 function serializeNgoSummary(n: any) {
   return { id: n.id, orgName: n.orgName, description: n.description, logoUrl: n.logoUrl, city: n.city };
-}
-
-function serializeDrive(d: any) {
-  return { id: d.id, title: d.title, photoUrl: d.photoUrl, city: d.city, startsAt: d.startsAt, featured: d.featured };
 }
 
 export default async function ngosPublicRoutes(fastify: FastifyInstance) {

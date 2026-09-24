@@ -22,6 +22,7 @@ import { resolveMediaUrl } from '../api/client';
 import type { ApiUserSettings } from '../api/settings';
 import { PRIVACY_POLICY_TEXT, TERMS_OF_SERVICE_TEXT } from '../constants/legalContent';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { getThemeForHour, PERIOD_HOUR, type TimePeriod } from '../hooks/useTimeTheme';
 
 const DEFAULT_SETTINGS: ApiUserSettings = {
   haptics: true,
@@ -197,6 +198,23 @@ export function NurserySettingsScreen({ navigation }: any) {
                   onColor={COLORS.textMuted}
                 />
               }
+            />
+          </BorderCard>
+
+          {/* Appearance */}
+          <SettingsSectionHeader title="Appearance" />
+          <BorderCard noPadding>
+            <SettingsRow
+              variant="light"
+              icon="🎨"
+              label="Homepage Theme"
+              sublabel={
+                settings.pinnedTimeTheme
+                  ? `${getThemeForHour(PERIOD_HOUR[settings.pinnedTimeTheme as TimePeriod]).label} – always`
+                  : 'Auto – changes with time of day'
+              }
+              accent={COLORS.golden}
+              onPress={() => navigation.navigate('HomeThemePicker', { current: settings.pinnedTimeTheme ?? null, role: 'nursery' })}
             />
           </BorderCard>
 

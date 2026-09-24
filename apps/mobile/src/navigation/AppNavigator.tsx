@@ -1,5 +1,5 @@
 ﻿import React, { useState, useCallback, useEffect, useRef, Suspense } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -76,10 +76,12 @@ import { EmojiPickerScreen } from '../screens/EmojiPickerScreen';
 import { HomeThemePickerScreen } from '../screens/HomeThemePickerScreen';
 import { FriendsListScreen } from '../screens/FriendsListScreen';
 import { DrivesListScreen } from '../screens/DrivesListScreen';
+import { DriveDetailScreen } from '../screens/DriveDetailScreen';
 import { AdoptTreeListScreen } from '../screens/AdoptTreeListScreen';
 import { AdoptTreeDetailScreen } from '../screens/AdoptTreeDetailScreen';
 import { EcoInsightsScreen } from '../screens/EcoInsightsScreen';
 import { CampaignsListScreen } from '../screens/CampaignsListScreen';
+import { CampaignDetailScreen } from '../screens/CampaignDetailScreen';
 import { NgoDashboardScreen } from '../screens/NgoDashboardScreen';
 import { NgoProfileScreen } from '../screens/NgoProfileScreen';
 import { NgoManageScreen } from '../screens/NgoManageScreen';
@@ -202,6 +204,17 @@ const ADMIN_TABS: TabItem[] = [
   { name: 'More', icon: '⚙️', label: 'More' },
 ];
 
+// The Suspense fallback shown while a lazily-imported screen's chunk (and any native-module
+// shim it drags in, e.g. @stripe/stripe-react-native) is still loading. Without a spinner here
+// this gap renders as a plain empty white view — easy to mistake for the app hanging.
+function LazyFallback() {
+  return (
+    <View style={[styles.mainContainer, styles.lazyFallback]}>
+      <ActivityIndicator color={COLORS.sage} />
+    </View>
+  );
+}
+
 // react-native-maps has no Android native module in Expo Go, so it must load
 // lazily behind a Suspense/error boundary instead of App.tsx's eager import chain
 // crashing the whole app on boot.
@@ -231,13 +244,6 @@ class MapErrorBoundary extends React.Component<
   }
 }
 
-// Same problem, same fix as MapScreen above: @stripe/stripe-react-native has native
-// code Expo Go doesn't include, so this screen's import of it must be deferred until
-// the user actually navigates here, not evaluated eagerly as part of the nav stack.
-const LazyCampaignDetailScreen = React.lazy(() =>
-  import('../screens/CampaignDetailScreen').then((m) => ({ default: m.CampaignDetailScreen }))
-);
-
 class DonateErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { hasError: boolean }
@@ -266,7 +272,7 @@ class DonateErrorBoundary extends React.Component<
 function NgoMapScreen({ navigation }: any) {
   return (
     <MapErrorBoundary>
-      <Suspense fallback={<View style={styles.mainContainer} />}>
+      <Suspense fallback={<LazyFallback />}>
         <MapScreen navigation={navigation} mode="ngo" />
       </Suspense>
     </MapErrorBoundary>
@@ -280,7 +286,7 @@ function NgoMapScreen({ navigation }: any) {
 function NurseryMapScreen({ navigation, route }: any) {
   return (
     <MapErrorBoundary>
-      <Suspense fallback={<View style={styles.mainContainer} />}>
+      <Suspense fallback={<LazyFallback />}>
         <MapScreen navigation={navigation} route={route} />
       </Suspense>
     </MapErrorBoundary>
@@ -293,36 +299,10 @@ function NurseryMapScreen({ navigation, route }: any) {
 function NgoScopedMapScreen({ navigation, route }: any) {
   return (
     <MapErrorBoundary>
-      <Suspense fallback={<View style={styles.mainContainer} />}>
+      <Suspense fallback={<LazyFallback />}>
         <MapScreen navigation={navigation} route={route} />
       </Suspense>
     </MapErrorBoundary>
-  );
-}
-
-function CampaignDetailScreen(props: any) {
-  return (
-    <DonateErrorBoundary>
-      <Suspense fallback={<View style={styles.mainContainer} />}>
-        <LazyCampaignDetailScreen {...props} />
-      </Suspense>
-    </DonateErrorBoundary>
-  );
-}
-
-// DriveDetailScreen now also uses @stripe/stripe-react-native (plant
-// sponsorship) — same Expo-Go-native-module problem, same lazy + boundary fix.
-const LazyDriveDetailScreen = React.lazy(() =>
-  import('../screens/DriveDetailScreen').then((m) => ({ default: m.DriveDetailScreen }))
-);
-
-function DriveDetailScreen(props: any) {
-  return (
-    <DonateErrorBoundary>
-      <Suspense fallback={<View style={styles.mainContainer} />}>
-        <LazyDriveDetailScreen {...props} />
-      </Suspense>
-    </DonateErrorBoundary>
   );
 }
 
@@ -334,7 +314,7 @@ const LazyCheckoutScreen = React.lazy(() =>
 function CheckoutScreen(props: any) {
   return (
     <DonateErrorBoundary>
-      <Suspense fallback={<View style={styles.mainContainer} />}>
+      <Suspense fallback={<LazyFallback />}>
         <LazyCheckoutScreen {...props} />
       </Suspense>
     </DonateErrorBoundary>
@@ -410,7 +390,7 @@ export type RootStackParamList = {
   EcoInsights: undefined;
   EditProfile: undefined;
   EmojiPicker: { selected?: string; onSelect: (emoji: string) => void } | undefined;
-  HomeThemePicker: { current: string | null } | undefined;
+  HomeThemePicker: { current: string | null; role?: 'user' | 'ngo' | 'nursery' } | undefined;
   FriendsList: { mode: 'requests' | 'squad' };
   Drives: undefined;
   DriveDetail: { driveId: string };
@@ -507,7 +487,10 @@ function MainApp({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<TabName>('Home');
   // Always called (Rules of Hooks) — only actually handed to BottomNav while Home is active, so
   // every other tab keeps the static beige/green look untouched.
-  const homeTheme = useTimeTheme();
+  // Reads the same pinned-theme setting HomeScreen reads, so a permanently-pinned theme colors
+  // the nav bar too instead of it silently following the live clock.
+  const { data: homeNavSettings } = useSettings();
+  const homeTheme = useTimeTheme((homeNavSettings?.pinnedTimeTheme ?? null) as TimePeriod | null);
 
   const renderScreen = useCallback(() => {
     switch (activeTab) {
@@ -520,7 +503,7 @@ function MainApp({ navigation }: any) {
       case 'Map':
         return (
           <MapErrorBoundary>
-            <Suspense fallback={<View style={styles.mainContainer} />}>
+            <Suspense fallback={<LazyFallback />}>
               <MapScreen navigation={navigation} />
             </Suspense>
           </MapErrorBoundary>
@@ -630,7 +613,10 @@ function GroupMainApp({ navigation }: any) {
 
 function NurseryMainApp({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<NurseryTabName>('Home');
-  const dashboardTheme = useTimeTheme();
+  // Reads the same pinned-theme setting NurseryDashboardScreen reads, so a permanently-pinned
+  // theme colors the nav bar too instead of it silently following the live clock.
+  const { data: nurseryNavSettings } = useSettings();
+  const dashboardTheme = useTimeTheme((nurseryNavSettings?.pinnedTimeTheme ?? null) as TimePeriod | null);
 
   // Stock/Orders are reached via the bottom tab bar, not a stack push, so the real
   // `navigation.canGoBack()` is false there and their ScreenHeader's back button never shows.
@@ -1024,6 +1010,11 @@ const styles = StyleSheet.create({
   },
   mainContainer: {
     flex: 1,
+  },
+  lazyFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.beigeLight,
   },
   mapFallback: {
     flex: 1,
