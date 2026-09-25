@@ -307,6 +307,49 @@ export function NurserySettingsScreen({ navigation }: any) {
             />
           </BorderCard>
 
+          {/* My Activity */}
+          <SettingsSectionHeader title="My Activity" />
+          <BorderCard noPadding>
+            <SettingsRow
+              variant="light"
+              icon="🤝"
+              label="My Responses"
+              sublabel="Offers you've made to NGOs' bulk requirements"
+              accent={COLORS.golden}
+              onPress={() => navigation.navigate('MyBulkResponses')}
+            />
+            <SettingsDivider variant="light" />
+            <SettingsRow
+              variant="light"
+              icon="🧭"
+              label="Following"
+              sublabel="NGOs and nurseries you follow"
+              accent={COLORS.sage}
+              onPress={() => navigation.navigate('Following')}
+            />
+            <SettingsDivider variant="light" />
+            <SettingsRow variant="light" icon="💗" label="Liked Posts" accent={COLORS.coral} onPress={() => navigation.navigate('LikedPosts')} />
+            <SettingsDivider variant="light" />
+            <SettingsRow variant="light" icon="🔖" label="Saved Posts" accent={COLORS.xpBlue} onPress={() => navigation.navigate('SavedPosts')} />
+            <SettingsDivider variant="light" />
+            <SettingsRow
+              variant="light"
+              icon="🚩"
+              label="My Reports"
+              sublabel="Content and accounts you've reported"
+              accent={COLORS.textMuted}
+              onPress={() => navigation.navigate('MyReports')}
+            />
+          </BorderCard>
+
+          {/* Browse */}
+          <SettingsSectionHeader title="Browse" />
+          <BorderCard noPadding>
+            <SettingsRow variant="light" icon="🌿" label="Browse NGOs" accent={COLORS.forest} onPress={() => navigation.navigate('NgoDirectory')} />
+            <SettingsDivider variant="light" />
+            <SettingsRow variant="light" icon="🌳" label="Browse Nurseries" accent={COLORS.earth} onPress={() => navigation.navigate('NurseryDirectory')} />
+          </BorderCard>
+
           {/* Safety */}
           <SettingsSectionHeader title="Safety" />
           <BorderCard noPadding>

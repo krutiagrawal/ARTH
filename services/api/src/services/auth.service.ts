@@ -210,7 +210,6 @@ export async function register(prisma: PrismaClient, input: RegisterInput) {
       data: {
         email: input.email,
         passwordHash,
-        passwordPlain: input.password,
         name: input.name,
         handle: input.handle,
       },
@@ -253,6 +252,37 @@ export async function register(prisma: PrismaClient, input: RegisterInput) {
   return { user: toPublicUser(user), ...tokens };
 }
 
+// Two different accounts submitting the same real-world registration document (the same NGO
+// darpan id, PAN, etc.) is impersonation/duplicate-registration worth catching automatically
+// rather than relying entirely on an admin noticing across separate approval-queue rows.
+async function assertNoDuplicateNgoRegistration(prisma: PrismaClient, input: RegisterNgoInput) {
+  const checks: { field: string; value: string | undefined; label: string }[] = [
+    { field: 'registrationNumber', value: input.registrationNumber, label: 'registration number' },
+    { field: 'panNumber', value: input.panNumber, label: 'PAN' },
+    { field: 'ngoDarpanId', value: input.ngoDarpanId, label: 'NGO Darpan ID' },
+    { field: 'fcraRegistrationNumber', value: input.fcraRegistrationNumber, label: 'FCRA registration number' },
+  ];
+  for (const { field, value, label } of checks) {
+    if (!value) continue;
+    const existing = await prisma.ngoProfile.findFirst({ where: { [field]: value } });
+    if (existing) throw new ConflictError(`This ${label} is already registered to another NGO account.`);
+  }
+}
+
+async function assertNoDuplicateNurseryRegistration(prisma: PrismaClient, input: RegisterNurseryInput) {
+  const checks: { field: string; value: string | undefined; label: string }[] = [
+    { field: 'gstin', value: input.gstin, label: 'GSTIN' },
+    { field: 'businessRegistrationNumber', value: input.businessRegistrationNumber, label: 'business registration number' },
+    { field: 'tradeLicenseNumber', value: input.tradeLicenseNumber, label: 'trade license number' },
+    { field: 'governmentNurseryId', value: input.governmentNurseryId, label: 'government nursery ID' },
+  ];
+  for (const { field, value, label } of checks) {
+    if (!value) continue;
+    const existing = await prisma.nurseryProfile.findFirst({ where: { [field]: value } });
+    if (existing) throw new ConflictError(`This ${label} is already registered to another nursery account.`);
+  }
+}
+
 export async function registerNgo(prisma: PrismaClient, input: RegisterNgoInput) {
   const existingEmail = await prisma.user.findUnique({ where: { email: input.email } });
   if (existingEmail) throw new ConflictError('Email is already registered');
@@ -265,6 +295,8 @@ export async function registerNgo(prisma: PrismaClient, input: RegisterNgoInput)
     if (existingPhone) throw new ConflictError('Phone number is already registered');
   }
 
+  await assertNoDuplicateNgoRegistration(prisma, input);
+
   const passwordHash = await hashPassword(input.password);
 
   const user = await prisma.$transaction(async (tx) => {
@@ -274,7 +306,6 @@ export async function registerNgo(prisma: PrismaClient, input: RegisterNgoInput)
         email: input.email,
         phone: input.contactPhone,
         passwordHash,
-        passwordPlain: input.password,
         name: input.name,
         handle: input.handle,
       },
@@ -345,8 +376,11 @@ export async function registerNgo(prisma: PrismaClient, input: RegisterNgoInput)
   return { user: toPublicUser(user), ...tokens };
 }
 
-// Groups are self-serve (no admin approval, see GroupProfile's schema comment),
-// so this can create both the User and GroupProfile in one step, no pending state.
+// Creates both the User and GroupProfile in one step, same as the other role registrations —
+// but unlike the comment this used to carry, a group is NOT instantly public: it's created
+// 'pending' (see GroupStatus) and only becomes joinable/discoverable/leaderboard-eligible once
+// an admin approves it, matching NGO/Nursery/Corporate instead of granting instant public reach
+// to an unvetted account. The owner can still fully manage their own group immediately.
 export async function registerGroup(prisma: PrismaClient, input: RegisterGroupInput) {
   const existingEmail = await prisma.user.findUnique({ where: { email: input.email } });
   if (existingEmail) throw new ConflictError('Email is already registered');
@@ -362,7 +396,6 @@ export async function registerGroup(prisma: PrismaClient, input: RegisterGroupIn
         role: 'group',
         email: input.email,
         passwordHash,
-        passwordPlain: input.password,
         name: input.name,
         handle: input.handle,
       },
@@ -377,6 +410,7 @@ export async function registerGroup(prisma: PrismaClient, input: RegisterGroupIn
         groupType: input.groupType,
         description: input.description,
         inviteCode: generateInviteCode(),
+        status: 'pending',
       },
     });
 
@@ -423,6 +457,8 @@ export async function registerNursery(prisma: PrismaClient, input: RegisterNurse
     if (existingPhone) throw new ConflictError('Phone number is already registered');
   }
 
+  await assertNoDuplicateNurseryRegistration(prisma, input);
+
   const passwordHash = await hashPassword(input.password);
 
   const user = await prisma.$transaction(async (tx) => {
@@ -432,7 +468,6 @@ export async function registerNursery(prisma: PrismaClient, input: RegisterNurse
         email: input.email,
         phone: input.contactPhone,
         passwordHash,
-        passwordPlain: input.password,
         name: input.name,
         handle: input.handle,
       },
@@ -491,7 +526,6 @@ export async function registerCorporate(prisma: PrismaClient, input: RegisterCor
         role: 'corporate',
         email: input.email,
         passwordHash,
-        passwordPlain: input.password,
         name: input.name,
         handle: input.handle,
       },

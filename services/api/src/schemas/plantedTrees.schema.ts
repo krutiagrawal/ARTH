@@ -6,7 +6,10 @@ export const bulkCreatePlantedTreesSchema = z.object({
   driveId: z.string().uuid().optional(),
   zoneId: z.string().uuid().optional(),
   speciesName: z.string().min(1).max(100),
-  count: z.coerce.number().int().min(1).max(1000),
+  // Capped well below the growth-level tier thresholds (see ngoReputation.service.ts) so a
+  // single self-reported batch — even with a photo — can't alone vault an NGO into a higher
+  // tier; a real large planting gets logged (and photographed) across several batches.
+  count: z.coerce.number().int().min(1).max(200),
   locationLabel: z.string().max(300).optional(),
   lat: z.coerce.number().min(-90).max(90).optional(),
   lng: z.coerce.number().min(-180).max(180).optional(),

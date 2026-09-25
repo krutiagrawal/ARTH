@@ -70,6 +70,11 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
     reply.send(drives.map(serializeDrive));
   });
 
+  // Plants the calling user has sponsored, across every drive — for the activity hub.
+  fastify.get('/sponsorships/mine', async (request, reply) => {
+    reply.send(await driveService.listMySponsorships(fastify.prisma, request.user!.id));
+  });
+
   fastify.get<{ Params: { id: string } }>(
     '/:id/attendees',
     { preHandler: [fastify.requireRole(...ORG_ROLES)] },
@@ -95,6 +100,15 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
           role: a.role,
         })),
       });
+    },
+  );
+
+  fastify.get<{ Params: { id: string } }>(
+    '/:id/sponsors',
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
+    async (request, reply) => {
+      const plants = await driveService.listDriveSponsors(fastify.prisma, request.user!.id, request.params.id);
+      reply.send({ plants });
     },
   );
 

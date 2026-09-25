@@ -178,6 +178,7 @@ interface CheckoutInput {
 
 export async function checkout(prisma: PrismaClient, userId: string, input: CheckoutInput) {
   const { items, nurseryId, nursery } = await requireCheckoutableCart(prisma, userId);
+  if (nursery.userId === userId) throw new ForbiddenError('You cannot buy from your own nursery');
 
   let addressId: string | undefined;
   if (input.fulfillmentType === 'delivery') {
@@ -452,8 +453,12 @@ export async function submitOrderReview(
   orderId: string,
   input: { nurseryRating: number; deliveryRating?: number; comment?: string },
 ) {
-  const order = await prisma.order.findFirst({ where: { id: orderId, userId }, include: { tracking: true } });
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, userId },
+    include: { tracking: true, nursery: { select: { userId: true } } },
+  });
   if (!order) throw new NotFoundError('Order not found');
+  if (order.nursery.userId === userId) throw new ForbiddenError('You cannot review your own nursery');
   // A review is about "did you get your saplings", which for a pickup order means picked_up
   // (there's no separate 'delivered' state on that branch) — allow either terminal handoff
   // state, plus the fully-verified state reached afterwards.
@@ -493,6 +498,27 @@ export async function submitOrderReview(
 
     return review;
   });
+}
+
+/** Reviews the caller has written — a flat list, unlike getMyOrder's per-order access. */
+export async function listMyReviews(prisma: PrismaClient, userId: string) {
+  const reviews = await prisma.orderReview.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    include: { nursery: { select: { id: true, nurseryName: true, logoUrl: true } } },
+  });
+
+  return reviews.map((r) => ({
+    id: r.id,
+    orderId: r.orderId,
+    nurseryId: r.nurseryId,
+    nurseryName: r.nursery.nurseryName,
+    nurseryLogoUrl: r.nursery.logoUrl,
+    nurseryRating: r.nurseryRating,
+    deliveryRating: r.deliveryRating,
+    comment: r.comment,
+    createdAt: r.createdAt,
+  }));
 }
 
 // ---------- Nursery-side order management (mirrors reservation fulfil/decline in nursery.service.ts) ----------

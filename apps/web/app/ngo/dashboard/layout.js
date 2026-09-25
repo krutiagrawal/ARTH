@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Home, CalendarDays, TreePine, HeartHandshake, Settings as SettingsIcon, LogOut, Leaf, ChevronDown, BarChart3, HandCoins, Users, UserPlus, Trophy, WifiOff, Sprout, Newspaper } from 'lucide-react'
+import { Home, CalendarDays, TreePine, HeartHandshake, Settings as SettingsIcon, LogOut, Leaf, ChevronDown, BarChart3, HandCoins, Users, UserPlus, Trophy, WifiOff, Sprout, Newspaper, ClipboardList, Compass, Flag, ShieldOff } from 'lucide-react'
 import AppSidebar from '@/components/dashboard/AppSidebar'
 import SidebarScenery from '@/components/dashboard/SidebarScenery'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,7 @@ const SECTIONS = [
       { label: 'Drives', href: '/ngo/dashboard/drives', icon: CalendarDays },
       { label: 'Adoptable Trees', href: '/ngo/dashboard/trees', icon: TreePine },
       { label: 'Campaigns', href: '/ngo/dashboard/campaigns', icon: HeartHandshake },
+      { label: 'Bulk Requirements', href: '/ngo/dashboard/requirements', icon: ClipboardList },
       { label: 'Updates', href: '/ngo/dashboard/updates', icon: Newspaper },
       { label: 'Survival & Impact', href: '/ngo/dashboard/survival', icon: Sprout },
       { label: 'Growth & Trust', href: '/ngo/dashboard/growth', icon: Trophy },
@@ -23,6 +24,9 @@ const SECTIONS = [
       { label: 'Volunteers', href: '/ngo/dashboard/volunteers', icon: Users },
       { label: 'Followers', href: '/ngo/dashboard/followers', icon: UserPlus },
       { label: 'Staff', href: '/ngo/dashboard/staff', icon: Users },
+      { label: 'Browse', href: '/ngo/dashboard/browse', icon: Compass },
+      { label: 'My Reports', href: '/ngo/dashboard/my-reports', icon: Flag },
+      { label: 'Blocked Accounts', href: '/ngo/dashboard/blocked', icon: ShieldOff },
       { label: 'Settings', href: '/ngo/dashboard/settings', icon: SettingsIcon },
     ],
   },

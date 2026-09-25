@@ -17,6 +17,7 @@ export async function createReservation(
     include: { nursery: true },
   });
   if (!stock || stock.nursery.status !== 'approved') throw new NotFoundError('Sapling stock not found');
+  if (stock.nursery.userId === userId) throw new ForbiddenError('You cannot reserve stock from your own nursery');
   if (quantity < 1) throw new BadRequestError('Quantity must be at least 1');
   if (quantity > stock.quantity) throw new BadRequestError('Not enough stock available');
 

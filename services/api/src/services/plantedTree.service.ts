@@ -3,7 +3,7 @@ import { PrismaClient, TreeHealthStatus } from '@plant/db';
 // 'not_checked' is a derived absence-of-check state, never something you can actually log a
 // health check as — the routes' zod schemas already restrict incoming status to these four.
 export type ActionableHealthStatus = Exclude<TreeHealthStatus, 'not_checked'>;
-import { NotFoundError } from '../utils/errors';
+import { BadRequestError, NotFoundError } from '../utils/errors';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
 import { recordNgoContribution, recomputeReputation } from './ngoReputation.service';
 
@@ -50,6 +50,10 @@ export async function getLatestStatusByTree(prisma: PrismaClient, plantedTreeIds
 // uninspected batch report 100% survival.
 export async function bulkCreatePlantedTrees(prisma: PrismaClient, ngoUserId: string, input: BulkCreateInput) {
   const ngo = await requireApprovedNgoProfile(prisma, ngoUserId);
+  // A bare self-reported count with no evidence at all fed straight into the NGO's own Growth
+  // Level tier (see ngoReputation.service.ts's lifetimeTreesPlanted) — require at least a
+  // representative photo of the batch, same evidence bar as an individual tree planting.
+  if (!input.photoUrl) throw new BadRequestError('A photo of the planting is required to log trees.');
 
   if (input.driveId) {
     const drive = await prisma.drive.findFirst({ where: { id: input.driveId, ngoId: ngo.id } });

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { MoreHorizontal, Users, ShieldAlert, ShieldQuestion } from 'lucide-react'
+import { MoreHorizontal, Users, ShieldAlert, ShieldQuestion, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -12,7 +12,7 @@ import EmptyState from '@/components/dashboard/EmptyState'
 import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
 import { proxy } from '@/lib/adminProxyClient'
 
-const STATUS_VARIANT = { active: 'default', suspended: 'secondary' }
+const STATUS_VARIANT = { pending: 'secondary', active: 'default', suspended: 'destructive' }
 
 export default function AdminGroupsClient() {
   const [groups, setGroups] = useState([])
@@ -95,11 +95,17 @@ export default function AdminGroupsClient() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {row.original.status === 'active' ? (
+              {row.original.status === 'pending' && (
+                <DropdownMenuItem onClick={() => setConfirm({ group: row.original, nextStatus: 'active' })}>
+                  <ShieldCheck className="h-4 w-4" /> Approve
+                </DropdownMenuItem>
+              )}
+              {row.original.status === 'active' && (
                 <DropdownMenuItem onClick={() => setConfirm({ group: row.original, nextStatus: 'suspended' })}>
                   <ShieldAlert className="h-4 w-4" /> Suspend
                 </DropdownMenuItem>
-              ) : (
+              )}
+              {row.original.status === 'suspended' && (
                 <DropdownMenuItem onClick={() => setConfirm({ group: row.original, nextStatus: 'active' })}>
                   <ShieldQuestion className="h-4 w-4" /> Reinstate
                 </DropdownMenuItem>
@@ -117,7 +123,7 @@ export default function AdminGroupsClient() {
       <div>
         <p className="eyebrow text-primary">Groups</p>
         <h1 className="font-serif text-3xl md:text-4xl mt-2">Groups</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Groups are self-serve – no approval queue. Suspend one if it needs moderating.</p>
+        <p className="mt-2 text-sm text-muted-foreground">New groups start pending – approve one to make it joinable and public, or suspend one that needs moderating.</p>
       </div>
 
       <DataTable
@@ -132,13 +138,21 @@ export default function AdminGroupsClient() {
       <ConfirmDialog
         open={Boolean(confirm)}
         onOpenChange={(open) => !open && setConfirm(null)}
-        title={confirm?.nextStatus === 'suspended' ? 'Suspend this group?' : 'Reinstate this group?'}
+        title={
+          confirm?.nextStatus === 'suspended'
+            ? 'Suspend this group?'
+            : confirm?.group?.status === 'pending'
+              ? 'Approve this group?'
+              : 'Reinstate this group?'
+        }
         description={
           confirm?.nextStatus === 'suspended'
             ? "Members keep read access but the group can't be used until reinstated."
-            : 'The group regains full access.'
+            : confirm?.group?.status === 'pending'
+              ? 'The group becomes joinable, discoverable, and leaderboard-eligible.'
+              : 'The group regains full access.'
         }
-        confirmLabel={confirm?.nextStatus === 'suspended' ? 'Suspend' : 'Reinstate'}
+        confirmLabel={confirm?.nextStatus === 'suspended' ? 'Suspend' : confirm?.group?.status === 'pending' ? 'Approve' : 'Reinstate'}
         destructive={confirm?.nextStatus === 'suspended'}
         loading={working}
         onConfirm={runAction}

@@ -38,7 +38,6 @@ async function findOrCreateUser(opts: {
         role: opts.role,
         email: opts.email,
         passwordHash,
-        passwordPlain: DEMO_PASSWORD,
         name: opts.name,
         handle: opts.handle,
         isBlocked: opts.isBlocked ?? false,

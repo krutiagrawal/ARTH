@@ -10,8 +10,9 @@ import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { LocationActions } from '../components/common/LocationActions';
 import { useHaptics } from '../hooks/useHaptics';
-import { useAdoptableTree, useAdoptTree } from '../hooks/useApiQueries';
+import { useAdoptableTree, useAdoptTree, useNgoProfile } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
 
 export function AdoptTreeDetailScreen({ navigation, route }: any) {
@@ -19,6 +20,9 @@ export function AdoptTreeDetailScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
   const { success, error: errorHaptic } = useHaptics();
   const { data: tree, isLoading, refetch } = useAdoptableTree(treeId);
+  const { user } = useAuth();
+  const ngoProfile = useNgoProfile(user?.role === 'ngo');
+  const isOwnTree = user?.role === 'ngo' && !!tree && ngoProfile.data?.id === tree.ngoId;
   const adoptMutation = useAdoptTree();
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
   const [message, setMessage] = useState('');
@@ -81,7 +85,19 @@ export function AdoptTreeDetailScreen({ navigation, route }: any) {
             </View>
           )}
 
-          {adopted ? (
+          {isOwnTree ? (
+            <View style={styles.instructionsCard}>
+              <Text style={styles.instructionsLabel}>Adoption activity</Text>
+              {tree.adopter ? (
+                <Text style={styles.instructionsText}>
+                  Adopted by {tree.adopter.name} (@{tree.adopter.handle}) on {new Date(tree.adopter.adoptedAt).toLocaleDateString()}
+                  {tree.adopter.message ? `\n\n"${tree.adopter.message}"` : ''}
+                </Text>
+              ) : (
+                <Text style={styles.instructionsText}>Not adopted yet.</Text>
+              )}
+            </View>
+          ) : adopted ? (
             <View style={styles.successBanner}>
               <Text style={styles.successText}>🌳 You've adopted {tree.nickname}! Thank you for caring for it.</Text>
             </View>

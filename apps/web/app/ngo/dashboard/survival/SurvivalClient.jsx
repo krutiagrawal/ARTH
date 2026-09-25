@@ -18,7 +18,7 @@ import { formatDueDate } from './survivalFormat'
 
 const bulkLogFields = [
   { name: 'speciesName', label: 'Species', required: true, section: 'Details' },
-  { name: 'count', label: 'Number of trees', type: 'number', required: true, section: 'Details' },
+  { name: 'count', label: 'Number of trees (max 200 per batch)', type: 'number', required: true, section: 'Details' },
   { name: 'locationLabel', label: 'Location (optional)', section: 'Details' },
 ]
 
@@ -70,6 +70,10 @@ export default function SurvivalClient() {
   )
 
   const handleBulkLog = async (payload, photoFile) => {
+    if (!photoFile) {
+      toast.error('A photo of the planting is required.')
+      return
+    }
     setSubmitting(true)
     try {
       const body = new FormData()
@@ -169,7 +173,7 @@ export default function SurvivalClient() {
         icon={TreePine}
         fields={fields}
         item={null}
-        photoLabel="Photo (optional)"
+        photoLabel="Photo (required)"
         submitting={submitting}
         onSubmit={handleBulkLog}
       />

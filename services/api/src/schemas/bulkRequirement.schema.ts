@@ -20,3 +20,7 @@ export const respondToBulkRequirementSchema = z.object({
   canPickup: z.boolean().optional(),
   message: z.string().max(500).optional(),
 });
+
+export const confirmBulkRequirementResponseSchema = z.object({
+  code: z.string().min(1).max(20),
+});

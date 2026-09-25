@@ -8,10 +8,13 @@ export const plantTreeSchema = z.object({
   locationLabel: z.string().max(200).optional(),
   // The post caption shown alongside the planting on the planter's profile feed.
   caption: z.string().max(2200).optional(),
-  accuracy: z.coerce.number().nonnegative().optional(),
+  // Both required — a submission that omits either used to be silently trusted (accuracy
+  // treated as "unknown, allow", mocked defaulted to false), which let a raw API call skip the
+  // anti-cheat check entirely. The app always has both by the time it submits (a fresh
+  // high-accuracy GPS read is taken right before submit — see PlantTreeScreen.tsx).
+  accuracy: z.coerce.number().nonnegative(),
   // Not z.coerce.boolean() — that treats any non-empty string, including "false", as truthy.
-  // This also conveniently defaults a missing field to plain `false` via the transform.
-  mocked: z.enum(['true', 'false']).optional().transform((v) => v === 'true'),
+  mocked: z.enum(['true', 'false']).transform((v) => v === 'true'),
 });
 
 export const updateTreeSchema = z.object({

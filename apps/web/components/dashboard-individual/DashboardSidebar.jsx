@@ -18,6 +18,9 @@ import {
   Compass,
   Settings,
   Menu,
+  Star,
+  Flag,
+  ShieldOff,
 } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
@@ -30,11 +33,15 @@ const NAV = [
   { href: '/dashboard/individual/drives', label: 'Drives', icon: CalendarDays },
   { href: '/dashboard/individual/donations', label: 'Donations', icon: HeartHandshake },
   { href: '/dashboard/individual/orders', label: 'Orders', icon: Package },
+  { href: '/dashboard/individual/sponsorships', label: 'Sponsorships', icon: Sprout },
+  { href: '/dashboard/individual/reviews', label: 'Reviews', icon: Star },
   { href: '/dashboard/individual/nurseries', label: 'Nurseries', icon: Store },
   { href: '/dashboard/individual/groups', label: 'Groups', icon: Users },
   { href: '/dashboard/individual/community', label: 'Community', icon: Newspaper },
   { href: '/dashboard/individual/competitions', label: 'Competitions', icon: Trophy },
   { href: '/dashboard/individual/achievements', label: 'Achievements', icon: Award },
+  { href: '/dashboard/individual/reports', label: 'My Reports', icon: Flag },
+  { href: '/dashboard/individual/blocked', label: 'Blocked Accounts', icon: ShieldOff },
 ]
 
 const SETTINGS_ITEM = { href: '/dashboard/individual/settings', label: 'Settings', icon: Settings }

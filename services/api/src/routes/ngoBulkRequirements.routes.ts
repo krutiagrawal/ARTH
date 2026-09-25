@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import * as bulkRequirementService from '../services/bulkRequirement.service';
-import { createBulkRequirementSchema } from '../schemas/bulkRequirement.schema';
+import { createBulkRequirementSchema, confirmBulkRequirementResponseSchema } from '../schemas/bulkRequirement.schema';
 import { BadRequestError } from '../utils/errors';
 
 // NGO side of section 10 (NGO<->Nursery bulk requirements). Nursery side lives in
@@ -35,5 +35,12 @@ export default async function ngoBulkRequirementsRoutes(fastify: FastifyInstance
 
   fastify.post<{ Params: { id: string } }>('/responses/:id/decline', async (request, reply) => {
     reply.send(await bulkRequirementService.declineResponse(fastify.prisma, request.user!.id, request.params.id));
+  });
+
+  fastify.post<{ Params: { id: string } }>('/responses/:id/confirm-received', async (request, reply) => {
+    const parsed = confirmBulkRequirementResponseSchema.safeParse(request.body);
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    reply.send(await bulkRequirementService.confirmResponseReceived(fastify.prisma, request.user!.id, request.params.id, parsed.data.code));
   });
 }

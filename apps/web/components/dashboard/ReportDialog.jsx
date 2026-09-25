@@ -6,7 +6,7 @@ import { Flag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { proxy } from '@/lib/memberProxy'
+import { proxy as memberProxy } from '@/lib/memberProxy'
 
 const REASONS = [
   { value: 'spam', label: 'Spam' },
@@ -19,9 +19,10 @@ const REASONS = [
 ]
 
 // Generic report-submission dialog for any reportable target (post, story,
-// user, ngo, nursery, corporate) — posts through the member proxy to
-// POST /api/reports (services/api/src/routes/social.routes.ts).
-export default function ReportDialog({ open, onOpenChange, targetType, targetId, targetLabel }) {
+// user, ngo, nursery, corporate) — posts through the caller's session proxy
+// (member by default; pass `proxy` to submit as the NGO/Nursery/Group's own
+// session instead) to POST /api/reports (services/api/src/routes/social.routes.ts).
+export default function ReportDialog({ open, onOpenChange, targetType, targetId, targetLabel, proxy = memberProxy }) {
   const [reason, setReason] = useState('spam')
   const [details, setDetails] = useState('')
   const [submitting, setSubmitting] = useState(false)

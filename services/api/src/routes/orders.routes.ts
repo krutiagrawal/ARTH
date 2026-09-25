@@ -16,6 +16,10 @@ export default async function ordersRoutes(fastify: FastifyInstance) {
     reply.status(201).send(result);
   });
 
+  fastify.get('/reviews/mine', async (request, reply) => {
+    reply.send(await orderService.listMyReviews(fastify.prisma, request.user!.id));
+  });
+
   fastify.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
     reply.send(await orderService.getMyOrder(fastify.prisma, request.user!.id, request.params.id));
   });

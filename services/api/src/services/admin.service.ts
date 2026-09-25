@@ -273,13 +273,21 @@ interface ListGroupsFilter {
   take?: number;
 }
 
-// Groups have no approval workflow (see GroupProfile's schema comment) — admin's
-// only lever is suspend/reinstate, logged the same way as NGO status changes.
-export async function listGroups(prisma: PrismaClient, filter: ListGroupsFilter = {}) {
+interface ListGroupsFilterWithStatus extends ListGroupsFilter {
+  status?: 'pending' | 'active' | 'suspended';
+}
+
+// A group starts 'pending' at registration (see auth.service.ts's registerGroup) and needs the
+// same approve/suspend lever NGO/Nursery/Corporate get, logged the same way as their status
+// changes.
+export async function listGroups(prisma: PrismaClient, filter: ListGroupsFilterWithStatus = {}) {
   const take = Math.min(filter.take ?? 50, 50);
   const page = Math.max(filter.page ?? 1, 1);
 
-  const where = filter.q ? { groupName: { contains: filter.q, mode: 'insensitive' as const } } : {};
+  const where = {
+    ...(filter.status ? { status: filter.status } : {}),
+    ...(filter.q ? { groupName: { contains: filter.q, mode: 'insensitive' as const } } : {}),
+  };
 
   const [groups, total] = await Promise.all([
     prisma.groupProfile.findMany({
@@ -298,9 +306,17 @@ export async function listGroups(prisma: PrismaClient, filter: ListGroupsFilter 
   return { groups, total };
 }
 
-export async function setGroupStatus(prisma: PrismaClient, groupId: string, status: 'active' | 'suspended', adminUserId: string) {
+export async function setGroupStatus(
+  prisma: PrismaClient,
+  groupId: string,
+  status: 'pending' | 'active' | 'suspended',
+  adminUserId: string,
+) {
   const group = await prisma.groupProfile.findUnique({ where: { id: groupId } });
   if (!group) throw new NotFoundError('Group not found');
+
+  const action =
+    status === 'suspended' ? 'group.suspended' : status === 'active' && group.status === 'pending' ? 'group.approved' : 'group.reinstated';
 
   return prisma.$transaction(async (tx) => {
     const updated = await tx.groupProfile.update({
@@ -312,7 +328,7 @@ export async function setGroupStatus(prisma: PrismaClient, groupId: string, stat
     await tx.adminActionLog.create({
       data: {
         actorUserId: adminUserId,
-        action: status === 'suspended' ? 'group.suspended' : 'group.reinstated',
+        action,
         targetType: 'GroupProfile',
         targetId: groupId,
       },
@@ -682,11 +698,13 @@ export async function reviewTree(
   const tree = await prisma.tree.findUnique({ where: { id: treeId } });
   if (!tree) throw new NotFoundError('Tree not found');
   if (tree.reviewedAt) throw new ForbiddenError('This submission has already been reviewed');
+  if (tree.userId === input.adminUserId) throw new ForbiddenError('You cannot review your own planted tree');
 
-  // 'unverified'/'verified' trees already received XP at creation time
-  // (plantTree() awards it unconditionally). Only a 'rejected' tree had its
-  // XP withheld — approving one now is the one case that must award it.
-  const shouldAwardWithheldXp = input.decision === 'approve' && tree.aiVerificationStatus === 'rejected';
+  // Only a 'verified' tree received XP at creation time (plantTree() withholds it for both
+  // 'rejected' and 'unverified' — see tree.service.ts). Approving either of those now is the
+  // one case that must award the XP it was missing.
+  const shouldAwardWithheldXp =
+    input.decision === 'approve' && (tree.aiVerificationStatus === 'rejected' || tree.aiVerificationStatus === 'unverified');
 
   const { updated, provenanceFollowUp } = await prisma.$transaction(async (tx) => {
     const updated = await tx.tree.update({

@@ -1,5 +1,5 @@
 import { PrismaClient } from '@plant/db';
-import { ConflictError, NotFoundError } from '../utils/errors';
+import { ConflictError, ForbiddenError, NotFoundError } from '../utils/errors';
 import { geocodeAddress } from '../utils/geocode';
 import { haversineDistanceKm } from '../utils/geo';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
@@ -183,6 +183,7 @@ export async function adoptTree(prisma: PrismaClient, userId: string, treeId: st
   const adoption = await prisma.$transaction(async (tx) => {
     const tree = await tx.adoptableTree.findUnique({ where: { id: treeId }, include: { ngo: { select: { userId: true, orgName: true } } } });
     if (!tree || tree.status !== 'available') throw new ConflictError('This tree is no longer available for adoption');
+    if (tree.ngo.userId === userId) throw new ForbiddenError('You cannot adopt your own listed tree');
 
     await tx.adoptableTree.update({ where: { id: treeId }, data: { status: 'adopted' } });
 

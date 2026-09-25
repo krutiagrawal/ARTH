@@ -1,5 +1,5 @@
 import { PrismaClient } from '@plant/db';
-import { NotFoundError } from '../utils/errors';
+import { ForbiddenError, NotFoundError } from '../utils/errors';
 import { notify } from './notification.service';
 import { getSocialFeed } from './post.service';
 
@@ -23,6 +23,7 @@ export async function countAcceptedFollowers(prisma: PrismaClient, ngoId: string
  */
 export async function followNgo(prisma: PrismaClient, userId: string, ngoId: string) {
   const ngo = await requireApprovedNgo(prisma, ngoId);
+  if (ngo.userId === userId) throw new ForbiddenError('You cannot follow your own NGO profile');
   const status = ngo.followPolicy === 'approval' ? 'pending' : 'accepted';
 
   const follow = await prisma.follow.upsert({

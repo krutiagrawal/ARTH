@@ -114,3 +114,19 @@ export async function submitOrderReview(
 ): Promise<ApiOrderReview> {
   return apiFetch<ApiOrderReview>(`/api/orders/${id}/review`, { method: 'POST', body: input });
 }
+
+export interface ApiMyReview {
+  id: string;
+  orderId: string;
+  nurseryId: string;
+  nurseryName: string;
+  nurseryLogoUrl: string | null;
+  nurseryRating: number;
+  deliveryRating: number | null;
+  comment: string | null;
+  createdAt: string;
+}
+
+export async function fetchMyReviews(): Promise<ApiMyReview[]> {
+  return apiFetch<ApiMyReview[]>('/api/orders/reviews/mine');
+}

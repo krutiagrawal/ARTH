@@ -59,7 +59,6 @@ export async function createDeliveryPartner(prisma: PrismaClient, nurseryUserId:
         email: input.email,
         phone: input.phone,
         passwordHash,
-        passwordPlain: input.password,
         name: input.name,
         handle: input.handle,
       },

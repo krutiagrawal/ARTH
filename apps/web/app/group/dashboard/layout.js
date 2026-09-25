@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Home, Users, Trophy, Settings as SettingsIcon, LogOut, ChevronDown, WifiOff } from 'lucide-react'
+import { Home, Users, Trophy, Settings as SettingsIcon, LogOut, ChevronDown, WifiOff, Compass, Flag, ShieldOff } from 'lucide-react'
 import AppSidebar from '@/components/dashboard/AppSidebar'
 import SidebarScenery from '@/components/dashboard/SidebarScenery'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,9 @@ const SECTIONS = [
       { label: 'Overview', href: '/group/dashboard', icon: Home, exact: true },
       { label: 'Members', href: '/group/dashboard/members', icon: Users },
       { label: 'Challenges', href: '/group/dashboard/challenges', icon: Trophy },
+      { label: 'Browse', href: '/group/dashboard/browse', icon: Compass },
+      { label: 'My Reports', href: '/group/dashboard/reports', icon: Flag },
+      { label: 'Blocked Accounts', href: '/group/dashboard/blocked', icon: ShieldOff },
       { label: 'Settings', href: '/group/dashboard/settings', icon: SettingsIcon },
     ],
   },

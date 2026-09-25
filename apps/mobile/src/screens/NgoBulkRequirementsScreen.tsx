@@ -23,6 +23,7 @@ import {
   useCancelNgoBulkRequirement,
   useAcceptNgoBulkResponse,
   useDeclineNgoBulkResponse,
+  useConfirmNgoBulkResponseReceived,
 } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import type { ApiNgoBulkRequirement } from '../api/ngoBulkRequirements';
@@ -56,7 +57,9 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
   const cancelMutation = useCancelNgoBulkRequirement();
   const acceptMutation = useAcceptNgoBulkResponse();
   const declineMutation = useDeclineNgoBulkResponse();
+  const confirmReceivedMutation = useConfirmNgoBulkResponseReceived();
   const confirm = useConfirm();
+  const [codeDrafts, setCodeDrafts] = useState<Record<string, string>>({});
   // Sheet switches to a dark navy surface at night (see Sheet.tsx's isNightMode) but has no way
   // to tell its children — every text color below is applied inline off this instead of the
   // fixed light-mode style colors.
@@ -102,6 +105,31 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
                     <TouchableOpacity onPress={() => declineMutation.mutate(r.id)} style={styles.offerDeclineButton}>
                       <Text style={styles.offerDeclineText}>Decline</Text>
                     </TouchableOpacity>
+                  </View>
+                )}
+                {r.status === 'handed_off' && (
+                  <View style={styles.confirmReceiptRow}>
+                    <Text style={[styles.offerMessage, { color: primary }]}>
+                      Ask the nursery for their handoff code, then enter it below to confirm you received the saplings.
+                    </Text>
+                    <FormField
+                      dark={isNightMode}
+                      label="Handoff code"
+                      value={codeDrafts[r.id] ?? ''}
+                      onChangeText={(v) => setCodeDrafts((prev) => ({ ...prev, [r.id]: v }))}
+                      placeholder="eg - 1234"
+                      keyboardType="number-pad"
+                    />
+                    <TouchableOpacity
+                      onPress={() => confirmReceivedMutation.mutate({ responseId: r.id, code: (codeDrafts[r.id] ?? '').trim() })}
+                      style={styles.offerAcceptButton}
+                      disabled={confirmReceivedMutation.isPending}
+                    >
+                      <Text style={styles.offerAcceptText}>{confirmReceivedMutation.isPending ? 'Confirming…' : 'Confirm receipt'}</Text>
+                    </TouchableOpacity>
+                    {confirmReceivedMutation.isError && (
+                      <Text style={styles.errorText}>{confirmReceivedMutation.error instanceof ApiError ? confirmReceivedMutation.error.message : 'Could not confirm receipt.'}</Text>
+                    )}
                   </View>
                 )}
               </BorderCard>
@@ -291,6 +319,7 @@ const styles = StyleSheet.create({
   offerMeta: { fontSize: 12, color: COLORS.textSecondary },
   offerMessage: { fontSize: 12, color: COLORS.textPrimary, fontStyle: 'italic' },
   offerActions: { flexDirection: 'row', gap: 8, marginTop: 6 },
+  confirmReceiptRow: { gap: 6, marginTop: 6 },
   offerAcceptButton: { flex: 1, backgroundColor: COLORS.forest, borderRadius: RADIUS.md, paddingVertical: 8, alignItems: 'center' },
   offerAcceptText: { fontSize: 12, fontWeight: '700', color: COLORS.white },
   offerDeclineButton: { flex: 1, borderWidth: 1.5, borderColor: COLORS.dangerDark, borderRadius: RADIUS.md, paddingVertical: 8, alignItems: 'center' },

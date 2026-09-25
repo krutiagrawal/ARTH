@@ -50,10 +50,10 @@ const SPECIES_GRID_GAP = 8;
 const SPECIES_CHIP_WIDTH = (EFFECTIVE_WIDTH - SPECIES_GRID_PADDING * 2 - SPECIES_GRID_GAP * 2) / 3;
 const INITIAL_SPECIES_COUNT = 9;
 
-// TEMP: "ARTH approved planting spot" gating disabled for indoor testing — flip back to true to
-// restore it. Also gate it server-side (tree.service.ts's assertEligiblePlantingLocation call)
-// since the real enforcement lives there; this flag only controls the frontend's pre-check/warning.
-const ARTH_APPROVED_LOCATION_CHECK_ENABLED = false;
+// The real enforcement lives server-side (tree.service.ts's assertEligiblePlantingLocation call)
+// — this flag only controls whether the frontend shows the pre-check/warning before submit
+// instead of letting the user find out from a rejected submission.
+const ARTH_APPROVED_LOCATION_CHECK_ENABLED = true;
 
 type Stage = 'upload' | 'scanning' | 'details' | 'success';
 

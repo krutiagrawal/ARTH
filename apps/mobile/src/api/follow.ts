@@ -29,6 +29,18 @@ export async function fetchFollowedNgos(): Promise<ApiFollowedNgo[]> {
   return apiFetch<ApiFollowedNgo[]>('/api/follows');
 }
 
+export interface ApiFollowedNursery {
+  id: string;
+  nurseryName: string;
+  logoUrl: string | null;
+  city: string | null;
+  followStatus: FollowStatus;
+}
+
+export async function fetchFollowedNurseries(): Promise<ApiFollowedNursery[]> {
+  return apiFetch<ApiFollowedNursery[]>('/api/follows/nurseries');
+}
+
 /**
  * Legacy endpoint. The feed screen uses `fetchSocialFeed` from api/posts instead — that one is
  * cursor-paginated and includes friends' posts, not just followed NGOs.

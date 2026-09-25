@@ -114,6 +114,14 @@ import { PostLikesScreen } from '../screens/PostLikesScreen';
 import { BlockedAccountsScreen } from '../screens/BlockedAccountsScreen';
 import { NgoDirectoryScreen } from '../screens/NgoDirectoryScreen';
 import { FollowingFeedScreen } from '../screens/FollowingFeedScreen';
+import { LikedPostsScreen } from '../screens/LikedPostsScreen';
+import { SavedPostsScreen } from '../screens/SavedPostsScreen';
+import { MyReportsScreen } from '../screens/MyReportsScreen';
+import { FollowingScreen } from '../screens/FollowingScreen';
+import { MySponsorshipsScreen } from '../screens/MySponsorshipsScreen';
+import { MyReviewsScreen } from '../screens/MyReviewsScreen';
+import { MyDonationsScreen } from '../screens/MyDonationsScreen';
+import { MyBulkResponsesScreen } from '../screens/MyBulkResponsesScreen';
 import { AdminHomeScreen, PANEL_BG } from '../screens/AdminHomeScreen';
 import { AdminNgoApprovalsScreen } from '../screens/AdminNgoApprovalsScreen';
 import { AdminNgoApprovalDetailScreen } from '../screens/AdminNgoApprovalDetailScreen';
@@ -428,6 +436,14 @@ export type RootStackParamList = {
   PublicFollowers: { kind: 'ngo' | 'nursery'; id: string; name: string };
   PostLikes: { postId: string };
   BlockedAccounts: undefined;
+  LikedPosts: undefined;
+  SavedPosts: undefined;
+  MyReports: undefined;
+  Following: undefined;
+  MySponsorships: undefined;
+  MyReviews: undefined;
+  MyDonations: undefined;
+  MyBulkResponses: undefined;
   NgoDirectory: undefined;
   NgoPublicProfile: { ngoId: string };
   FollowingFeed: undefined;
@@ -932,6 +948,14 @@ export function AppNavigator() {
         <Stack.Screen name="PublicFollowers" component={PublicFollowersScreen} />
         <Stack.Screen name="PostLikes" component={PostLikesScreen} />
         <Stack.Screen name="BlockedAccounts" component={BlockedAccountsScreen} />
+        <Stack.Screen name="LikedPosts" component={LikedPostsScreen} />
+        <Stack.Screen name="SavedPosts" component={SavedPostsScreen} />
+        <Stack.Screen name="MyReports" component={MyReportsScreen} />
+        <Stack.Screen name="Following" component={FollowingScreen} />
+        <Stack.Screen name="MySponsorships" component={MySponsorshipsScreen} />
+        <Stack.Screen name="MyReviews" component={MyReviewsScreen} />
+        <Stack.Screen name="MyDonations" component={MyDonationsScreen} />
+        <Stack.Screen name="MyBulkResponses" component={MyBulkResponsesScreen} />
         <Stack.Screen name="NgoDirectory" component={NgoDirectoryScreen} />
         <Stack.Screen name="NgoPublicProfile" component={NgoProfileScreen} />
         <Stack.Screen name="NurseryDirectory" component={NurseryDirectoryScreen} />

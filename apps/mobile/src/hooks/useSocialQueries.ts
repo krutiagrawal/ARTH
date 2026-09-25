@@ -9,6 +9,7 @@ import {
   createPost,
   deletePost,
   fetchGroupPosts,
+  fetchLikedPosts,
   fetchNgoPosts,
   fetchNurseryPosts,
   fetchPost,
@@ -49,6 +50,7 @@ import {
 import {
   blockTarget,
   fetchBlocks,
+  fetchMyReports,
   fetchNotifications,
   fetchUnreadCount,
   markNotificationsRead,
@@ -66,6 +68,8 @@ import { markStoryViewed } from '../api/stories';
 export const socialKeys = {
   feed: ['social', 'feed'] as const,
   saved: ['social', 'saved'] as const,
+  liked: ['social', 'liked'] as const,
+  myReports: ['social', 'myReports'] as const,
   post: (id: string) => ['social', 'post', id] as const,
   likers: (id: string) => ['social', 'likers', id] as const,
   ngoPosts: (ngoId: string) => ['social', 'posts', 'ngo', ngoId] as const,
@@ -110,6 +114,16 @@ export function useSavedPosts() {
   return useInfiniteQuery({
     queryKey: socialKeys.saved,
     queryFn: ({ pageParam }) => fetchSavedPosts(pageParam),
+    enabled: isAuthenticated,
+    ...cursorPageParams<ApiPost>(),
+  });
+}
+
+export function useLikedPosts() {
+  const { isAuthenticated } = useAuth();
+  return useInfiniteQuery({
+    queryKey: socialKeys.liked,
+    queryFn: ({ pageParam }) => fetchLikedPosts(pageParam),
     enabled: isAuthenticated,
     ...cursorPageParams<ApiPost>(),
   });
@@ -284,6 +298,9 @@ export function useToggleLike() {
         likeCount: result.likeCount,
       }));
       queryClient.invalidateQueries({ queryKey: socialKeys.likers(id) });
+      // Membership in the Liked Posts list itself (not just the flag) only changes on the server —
+      // refetch so an unlike actually drops the post from that list.
+      queryClient.invalidateQueries({ queryKey: socialKeys.liked });
     },
   });
 }
@@ -447,7 +464,16 @@ export function useMarkNotificationsRead() {
 // ---------------------------------------------------------------- Moderation
 
 export function useReportContent() {
-  return useMutation({ mutationFn: reportContent });
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: reportContent,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: socialKeys.myReports }),
+  });
+}
+
+export function useMyReports() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({ queryKey: socialKeys.myReports, queryFn: fetchMyReports, enabled: isAuthenticated });
 }
 
 export function useBlocks() {

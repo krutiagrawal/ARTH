@@ -24,10 +24,9 @@ interface PlantTreeInput {
 }
 
 export async function plantTree(prisma: PrismaClient, input: PlantTreeInput) {
-  // TEMP: "ARTH approved planting spot" gating disabled for indoor testing — uncomment to
-  // restore. Mirrors the ARTH_APPROVED_LOCATION_CHECK_ENABLED flag in PlantTreeScreen.tsx, which
-  // only controls the frontend's pre-check/warning; this is the actual enforcement.
-  // await assertEligiblePlantingLocation(prisma, { lat: input.lat, lng: input.lng });
+  // Mirrors the ARTH_APPROVED_LOCATION_CHECK_ENABLED flag in PlantTreeScreen.tsx, which controls
+  // the frontend's pre-check/warning; this is the actual enforcement.
+  await assertEligiblePlantingLocation(prisma, { lat: input.lat, lng: input.lng });
   await assertNoNearbyOwnPlanting(prisma, input.userId, { lat: input.lat, lng: input.lng });
 
   const tree = await prisma.$transaction(async (tx) => {
@@ -53,11 +52,13 @@ export async function plantTree(prisma: PrismaClient, input: PlantTreeInput) {
       include: { species: true },
     });
 
-    // A photo the AI rejected is persisted (so an admin can review it — see
-    // admin.service.ts's reviewTree) but none of the rewards below fire until
-    // that review approves it, so a bad submission can't earn XP in the
-    // meantime. reviewTree() awards this same set (XP + counters) on approval.
-    if (input.aiVerificationStatus === 'rejected') {
+    // A photo the AI rejected, or a submission with no photo at all (status stays 'unverified'
+    // — see trees.routes.ts), is persisted so an admin can review it (see admin.service.ts's
+    // reviewTree) but none of the rewards below fire until that review approves it, so a bad or
+    // unverifiable submission can't earn XP in the meantime. reviewTree() awards this same set
+    // (XP + counters) on approval — advertising "live camera only" tree photos means a tree with
+    // no photo must not get full credit either.
+    if (input.aiVerificationStatus === 'rejected' || input.aiVerificationStatus === 'unverified') {
       return tree;
     }
 

@@ -65,7 +65,6 @@ async function findOrCreateUser(opts: {
         role: opts.role ?? 'user',
         email: opts.email,
         passwordHash,
-        passwordPlain: DEMO_PASSWORD,
         name: opts.name,
         handle: opts.handle,
         avatarEmoji: '🌱',

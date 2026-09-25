@@ -534,7 +534,7 @@ export async function respondToReview(id: string, response: string): Promise<Api
 // ---------- Bulk requirements (NGO <-> Nursery sapling matching, nursery side) ----------
 
 export type BulkRequirementStatus = 'open' | 'partially_fulfilled' | 'fulfilled' | 'cancelled' | 'expired';
-export type BulkResponseStatus = 'proposed' | 'accepted' | 'declined' | 'fulfilled' | 'withdrawn';
+export type BulkResponseStatus = 'proposed' | 'accepted' | 'handed_off' | 'declined' | 'fulfilled' | 'withdrawn';
 
 export interface ApiBulkResponse {
   id: string;
@@ -544,6 +544,10 @@ export interface ApiBulkResponse {
   canPickup: boolean;
   message: string | null;
   status: BulkResponseStatus;
+  // Only populated once handed off — share this with the NGO in person so they can confirm
+  // receipt; never trust "fulfilled" on this response until they do (see confirmResponseReceived
+  // in bulkRequirement.service.ts).
+  handoffCode: string | null;
 }
 
 export interface ApiBulkRequirement {
@@ -591,6 +595,27 @@ export async function withdrawBulkResponse(responseId: string): Promise<ApiBulkR
   return apiFetch<ApiBulkResponse>(`/api/nursery/bulk-requirements/responses/${responseId}/withdraw`, { method: 'POST' });
 }
 
-export async function markBulkResponseFulfilled(responseId: string): Promise<ApiBulkResponse> {
-  return apiFetch<ApiBulkResponse>(`/api/nursery/bulk-requirements/responses/${responseId}/fulfilled`, { method: 'POST' });
+export interface ApiMyBulkResponse {
+  id: string;
+  status: BulkResponseStatus;
+  quantityOffered: number;
+  priceCents: number | null;
+  createdAt: string;
+  respondedAt: string | null;
+  requirementId: string;
+  ngoName: string;
+  species: string;
+}
+
+/** The nursery's full response history across every requirement status — the activity-hub view,
+ * unlike fetchNurseryBulkRequirements which only returns still-open requirements. */
+export async function fetchMyBulkResponses(): Promise<ApiMyBulkResponse[]> {
+  return apiFetch<ApiMyBulkResponse[]>('/api/nursery/bulk-requirements/responses/mine');
+}
+
+/** Nursery declares the physical handoff happened — not yet "fulfilled" on its own; the NGO must
+ * confirm receipt with the returned handoffCode (see confirmNgoBulkResponseReceived) before this
+ * mints traceable sapling units or counts toward the nursery's reputation. */
+export async function markBulkResponseHandedOff(responseId: string): Promise<ApiBulkResponse> {
+  return apiFetch<ApiBulkResponse>(`/api/nursery/bulk-requirements/responses/${responseId}/handoff`, { method: 'POST' });
 }

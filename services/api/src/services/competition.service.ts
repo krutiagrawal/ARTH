@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from '@plant/db';
-import { ConflictError, NotFoundError } from '../utils/errors';
+import { ConflictError, ForbiddenError, NotFoundError } from '../utils/errors';
 
 export function listCompetitions(prisma: PrismaClient) {
   return prisma.competition.findMany({ orderBy: { deadline: 'asc' } });
@@ -59,6 +59,10 @@ export function listMyVotes(prisma: PrismaClient, userId: string) {
 }
 
 export async function voteForEntry(prisma: PrismaClient, entryId: string, userId: string) {
+  const entryOwner = await prisma.competitionEntry.findUnique({ where: { id: entryId }, select: { userId: true } });
+  if (!entryOwner) throw new NotFoundError('Entry not found');
+  if (entryOwner.userId === userId) throw new ForbiddenError('You cannot vote for your own entry');
+
   try {
     const [, entry] = await prisma.$transaction([
       prisma.competitionEntryVote.create({ data: { entryId, userId } }),

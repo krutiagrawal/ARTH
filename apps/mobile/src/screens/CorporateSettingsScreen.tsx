@@ -365,6 +365,38 @@ export function CorporateSettingsScreen({ navigation }: any) {
             />
           </BorderCard>
 
+          {/* My Activity */}
+          <SettingsSectionHeader title="My Activity" />
+          <BorderCard noPadding>
+            <SettingsRow
+              icon="🧭"
+              label="Following"
+              sublabel="NGOs and nurseries you follow"
+              accent={COLORS.sage}
+              onPress={() => navigation.navigate('Following')}
+            />
+            <SettingsDivider />
+            <SettingsRow icon="💗" label="Liked Posts" accent={COLORS.coral} onPress={() => navigation.navigate('LikedPosts')} />
+            <SettingsDivider />
+            <SettingsRow icon="🔖" label="Saved Posts" accent={COLORS.xpBlue} onPress={() => navigation.navigate('SavedPosts')} />
+            <SettingsDivider />
+            <SettingsRow
+              icon="🚩"
+              label="My Reports"
+              sublabel="Content and accounts you've reported"
+              accent={COLORS.textMuted}
+              onPress={() => navigation.navigate('MyReports')}
+            />
+          </BorderCard>
+
+          {/* Browse */}
+          <SettingsSectionHeader title="Browse" />
+          <BorderCard noPadding>
+            <SettingsRow icon="🌿" label="Browse NGOs" accent={COLORS.forest} onPress={() => navigation.navigate('NgoDirectory')} />
+            <SettingsDivider />
+            <SettingsRow icon="🌳" label="Browse Nurseries" accent={COLORS.earth} onPress={() => navigation.navigate('NurseryDirectory')} />
+          </BorderCard>
+
           {/* Safety */}
           <SettingsSectionHeader title="Safety" />
           <BorderCard noPadding>

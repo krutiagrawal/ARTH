@@ -49,6 +49,12 @@ export default async function socialRoutes(fastify: FastifyInstance) {
     reply.send(await postService.listSavedPosts(fastify.prisma, request.user!.id, parsed.data));
   });
 
+  fastify.get('/social/liked', async (request, reply) => {
+    const parsed = cursorQuerySchema.safeParse(request.query);
+    if (!parsed.success) throw new BadRequestError('Invalid query parameters');
+    reply.send(await postService.listLikedPosts(fastify.prisma, request.user!.id, parsed.data));
+  });
+
   fastify.get<{ Params: { id: string } }>('/users/:id/posts', async (request, reply) => {
     const parsed = cursorQuerySchema.safeParse(request.query);
     if (!parsed.success) throw new BadRequestError('Invalid query parameters');
@@ -110,6 +116,12 @@ export default async function socialRoutes(fastify: FastifyInstance) {
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
     await reportService.createReport(fastify.prisma, request.user!.id, parsed.data);
     reply.status(201).send({ ok: true });
+  });
+
+  fastify.get('/reports/mine', async (request, reply) => {
+    const parsed = z.object({ page: z.coerce.number().int().min(1).optional(), take: z.coerce.number().int().min(1).max(50).optional() }).safeParse(request.query);
+    if (!parsed.success) throw new BadRequestError('Invalid query parameters');
+    reply.send(await reportService.listMyReports(fastify.prisma, request.user!.id, parsed.data));
   });
 
   fastify.get('/blocks', async (request, reply) => {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Home, Boxes, PackageSearch, Truck, ClipboardList, Leaf, Settings as SettingsIcon, LogOut, ChevronDown, Star, Users, WifiOff, Sprout, ShieldCheck, BarChart3, Bell, Bike } from 'lucide-react'
+import { Home, Boxes, PackageSearch, Truck, ClipboardList, Leaf, Settings as SettingsIcon, LogOut, ChevronDown, Star, Users, WifiOff, Sprout, ShieldCheck, BarChart3, Bell, Bike, Compass, Handshake, Flag, ShieldOff } from 'lucide-react'
 import AppSidebar from '@/components/dashboard/AppSidebar'
 import SidebarScenery from '@/components/dashboard/SidebarScenery'
 import { Button } from '@/components/ui/button'
@@ -19,10 +19,14 @@ const SECTIONS = [
       { label: 'Pickup & Delivery', href: '/nursery/dashboard/pickup-delivery', icon: Truck },
       { label: 'Delivery Partners', href: '/nursery/dashboard/delivery-partners', icon: Bike },
       { label: 'Bulk Requirements', href: '/nursery/dashboard/requirements', icon: ClipboardList },
+      { label: 'My Responses', href: '/nursery/dashboard/responses', icon: Handshake },
       { label: 'Impact', href: '/nursery/dashboard/impact', icon: Leaf },
       { label: 'Growth & Trust', href: '/nursery/dashboard/reputation', icon: ShieldCheck },
       { label: 'Reviews', href: '/nursery/dashboard/reviews', icon: Star },
       { label: 'Followers', href: '/nursery/dashboard/followers', icon: Users },
+      { label: 'Browse', href: '/nursery/dashboard/browse', icon: Compass },
+      { label: 'My Reports', href: '/nursery/dashboard/reports', icon: Flag },
+      { label: 'Blocked Accounts', href: '/nursery/dashboard/blocked', icon: ShieldOff },
       { label: 'Settings', href: '/nursery/dashboard/settings', icon: SettingsIcon },
     ],
   },

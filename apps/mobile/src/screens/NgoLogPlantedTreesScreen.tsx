@@ -41,8 +41,12 @@ export function NgoLogPlantedTreesScreen({ navigation, route }: any) {
 
   const handleSubmit = async () => {
     setError(null);
-    if (!speciesName.trim() || !count || Number(count) < 1) {
-      setError('Species and a valid count are required.');
+    if (!speciesName.trim() || !count || Number(count) < 1 || Number(count) > 200) {
+      setError('Species and a valid count (1–200) are required.');
+      return;
+    }
+    if (!photo) {
+      setError('A photo of the planting is required.');
       return;
     }
     try {
@@ -117,7 +121,7 @@ export function NgoLogPlantedTreesScreen({ navigation, route }: any) {
           />
 
           <FormField
-            label="Number of trees"
+            label="Number of trees (max 200 per batch)"
             value={count}
             onChangeText={(v: string) => setCount(v.replace(/[^0-9]/g, ''))}
             placeholder="eg - 100"
@@ -136,7 +140,7 @@ export function NgoLogPlantedTreesScreen({ navigation, route }: any) {
             onChange={setPhoto}
             mode="gallery"
             label="Add Photo"
-            hint="Optional – show what you planted"
+            hint="Required – show what you planted"
           />
 
           {error && <Text style={styles.error}>{error}</Text>}

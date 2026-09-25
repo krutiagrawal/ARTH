@@ -73,3 +73,13 @@ export async function acceptNgoBulkResponse(responseId: string): Promise<ApiNgoB
 export async function declineNgoBulkResponse(responseId: string): Promise<ApiNgoBulkResponse> {
   return apiFetch<ApiNgoBulkResponse>(`/api/ngo/bulk-requirements/responses/${responseId}/decline`, { method: 'POST' });
 }
+
+/** Confirms the NGO actually received the handed-off saplings — the code is the one the nursery
+ * shared in person. Only this call (not the nursery's own handoff) mints traceable sapling units
+ * and updates the nursery's reputation, so fulfilment is never nursery-self-attested alone. */
+export async function confirmNgoBulkResponseReceived(responseId: string, code: string): Promise<ApiNgoBulkResponse> {
+  return apiFetch<ApiNgoBulkResponse>(`/api/ngo/bulk-requirements/responses/${responseId}/confirm-received`, {
+    method: 'POST',
+    body: { code },
+  });
+}

@@ -361,6 +361,29 @@ export async function listSavedPosts(
   };
 }
 
+/** Posts the viewer has liked — the activity-hub counterpart to listSavedPosts above. */
+export async function listLikedPosts(
+  prisma: PrismaClient,
+  viewerId: string,
+  filter: { cursor?: string; take?: number } = {},
+) {
+  const take = Math.min(filter.take ?? 20, 50);
+  const rows = await prisma.postLike.findMany({
+    where: { userId: viewerId },
+    orderBy: { createdAt: 'desc' },
+    take: take + 1,
+    ...(filter.cursor ? { cursor: { id: filter.cursor }, skip: 1 } : {}),
+    include: { post: { include: viewerInclude(viewerId) } },
+  });
+
+  const hasMore = rows.length > take;
+  const page = hasMore ? rows.slice(0, take) : rows;
+  return {
+    posts: page.map((r) => serializePost(r.post as PostWithRelations, viewerId)),
+    nextCursor: hasMore ? page[page.length - 1].id : null,
+  };
+}
+
 /**
  * The main social feed: everything from the NGOs the viewer follows (accepted follows only) plus
  * their friends' public posts, plus their own.

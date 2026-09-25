@@ -1,5 +1,5 @@
 import { PrismaClient } from '@plant/db';
-import { NotFoundError } from '../utils/errors';
+import { ForbiddenError, NotFoundError } from '../utils/errors';
 import { notify } from './notification.service';
 
 async function requireApprovedNursery(prisma: PrismaClient, nurseryId: string) {
@@ -15,6 +15,7 @@ export async function countAcceptedFollowers(prisma: PrismaClient, nurseryId: st
 /** User-facing sibling of follow.service.ts's followNgo — same open/approval policy semantics. */
 export async function followNursery(prisma: PrismaClient, userId: string, nurseryId: string) {
   const nursery = await requireApprovedNursery(prisma, nurseryId);
+  if (nursery.userId === userId) throw new ForbiddenError('You cannot follow your own nursery profile');
   const status = nursery.followPolicy === 'approval' ? 'pending' : 'accepted';
 
   const follow = await prisma.follow.upsert({

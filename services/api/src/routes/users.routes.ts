@@ -41,7 +41,7 @@ export default async function usersRoutes(fastify: FastifyInstance) {
     const passwordHash = await hashPassword(parsed.data.newPassword);
     const updated = await fastify.prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash, passwordPlain: parsed.data.newPassword },
+      data: { passwordHash },
     });
 
     // Revoke every other session for safety, then hand this device a fresh pair so it isn't

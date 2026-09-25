@@ -1,5 +1,5 @@
 import { PrismaClient } from '@plant/db';
-import { BadRequestError, ConflictError, NotFoundError } from '../utils/errors';
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../utils/errors';
 
 const cartInclude = {
   stock: { select: { id: true, species: true, priceCents: true, isFree: true, quantity: true } },
@@ -33,6 +33,7 @@ export async function getMyCart(prisma: PrismaClient, userId: string) {
 export async function addCartItem(prisma: PrismaClient, userId: string, stockId: string, quantity: number) {
   const stock = await prisma.saplingStock.findUnique({ where: { id: stockId }, include: { nursery: true } });
   if (!stock || stock.nursery.status !== 'approved' || stock.isFree) throw new NotFoundError('Sapling not found');
+  if (stock.nursery.userId === userId) throw new ForbiddenError('You cannot buy from your own nursery');
   if (quantity > stock.quantity) throw new BadRequestError('Not enough stock available');
 
   const existingFromOtherNursery = await prisma.cartItem.findFirst({

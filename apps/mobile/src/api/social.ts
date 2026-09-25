@@ -32,6 +32,22 @@ export async function reportContent(input: {
   await apiFetch<void>('/api/reports', { method: 'POST', body: input });
 }
 
+export type ReportStatus = 'open' | 'actioned' | 'dismissed';
+
+export interface ApiMyReport {
+  id: string;
+  targetType: ReportTargetType | 'order_review';
+  targetId: string;
+  reason: ReportReason;
+  details: string | null;
+  status: ReportStatus;
+  createdAt: string;
+}
+
+export async function fetchMyReports(): Promise<{ total: number; reports: ApiMyReport[] }> {
+  return apiFetch('/api/reports/mine');
+}
+
 export interface ApiBlock {
   id: string;
   createdAt: string;

@@ -17,7 +17,7 @@ import {
   useNurseryBulkRequirement,
   useRespondToBulkRequirement,
   useWithdrawBulkResponse,
-  useMarkBulkResponseFulfilled,
+  useMarkBulkResponseHandedOff,
   useNurseryProfile,
 } from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
@@ -31,7 +31,7 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
   const { data: req, isLoading, refetch } = useNurseryBulkRequirement(requirementId);
   const respondMutation = useRespondToBulkRequirement();
   const withdrawMutation = useWithdrawBulkResponse();
-  const fulfilledMutation = useMarkBulkResponseFulfilled();
+  const handoffMutation = useMarkBulkResponseHandedOff();
   const { data: profile } = useNurseryProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
@@ -84,12 +84,16 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
     ]);
   };
 
-  const handleMarkFulfilled = () => {
+  const handleMarkHandedOff = () => {
     if (!req?.myResponse) return;
-    confirm('Confirm handoff?', 'This issues traceable sapling units for this order — only confirm once the handoff has actually happened.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Confirm handoff', onPress: guard(() => fulfilledMutation.mutate(req.myResponse!.id)) },
-    ]);
+    confirm(
+      'Mark as handed off?',
+      'Only mark this once the saplings have actually left your nursery. Share the handoff code with the NGO — they need it to confirm receipt before this counts as fulfilled.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Mark handed off', onPress: guard(() => handoffMutation.mutate(req.myResponse!.id)) },
+      ],
+    );
   };
 
   return (
@@ -168,14 +172,21 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
                 )}
                 {req.myResponse.status === 'accepted' && (
                   <AnimatedButton
-                    label={fulfilledMutation.isPending ? 'Confirming…' : 'Confirm handoff (mark fulfilled)'}
-                    onPress={handleMarkFulfilled}
-                    disabled={fulfilledMutation.isPending}
+                    label={handoffMutation.isPending ? 'Marking…' : 'Mark handed off'}
+                    onPress={handleMarkHandedOff}
+                    disabled={handoffMutation.isPending}
                     variant="primary"
                     size="md"
                     fullWidth
                     style={{ marginTop: 10 }}
                   />
+                )}
+                {req.myResponse.status === 'handed_off' && req.myResponse.handoffCode && (
+                  <View style={styles.handoffCodeBox}>
+                    <Text style={styles.handoffCodeLabel}>Handoff code — share this with the NGO</Text>
+                    <Text style={styles.handoffCodeValue}>{req.myResponse.handoffCode}</Text>
+                    <Text style={styles.handoffCodeHint}>This offer will count as fulfilled once the NGO confirms receipt with this code.</Text>
+                  </View>
                 )}
               </BorderCard>
             </>
@@ -229,6 +240,8 @@ function pillColor(status: string) {
   return { backgroundColor: 'rgba(212,168,83,0.18)' };
 }
 
+
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: SPACING.md, paddingTop: 4 },
@@ -251,4 +264,8 @@ const styles = StyleSheet.create({
   statusPillText: { fontSize: 11, fontWeight: '700', color: COLORS.textPrimary, textTransform: 'capitalize' },
   linkButton: { marginTop: 10, alignItems: 'center', paddingVertical: 8 },
   linkButtonDanger: { fontSize: 13, fontWeight: '700', color: COLORS.dangerDark },
+  handoffCodeBox: { marginTop: 10, padding: 12, borderRadius: RADIUS.md, backgroundColor: 'rgba(94,133,80,0.1)', alignItems: 'center' },
+  handoffCodeLabel: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary },
+  handoffCodeValue: { fontSize: 28, fontWeight: '800', color: COLORS.forest, letterSpacing: 4, marginTop: 4 },
+  handoffCodeHint: { fontSize: 11, color: COLORS.textMuted, marginTop: 6, textAlign: 'center' },
 });

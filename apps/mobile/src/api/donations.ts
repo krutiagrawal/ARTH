@@ -37,6 +37,21 @@ export async function createDonationIntent(campaignId: string, amountCents: numb
   });
 }
 
+export interface ApiMyDonation {
+  id: string;
+  amountCents: number;
+  currency: string;
+  status: 'pending' | 'succeeded' | 'failed' | 'refunded';
+  donatedAt: string;
+  campaignId: string;
+  campaignTitle: string;
+  ngoName: string;
+}
+
+export async function fetchMyDonations(): Promise<{ total: number; donations: ApiMyDonation[] }> {
+  return apiFetch('/api/campaigns/mine-donations');
+}
+
 // ---------- NGO-facing ----------
 
 export async function fetchMyCampaigns(): Promise<ApiCampaign[]> {

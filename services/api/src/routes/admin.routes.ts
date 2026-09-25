@@ -234,13 +234,14 @@ function serializeGroup(group: any) {
 }
 
 const listGroupsQuerySchema = z.object({
+  status: z.enum(['pending', 'active', 'suspended']).optional(),
   q: z.string().max(200).optional(),
   page: z.coerce.number().int().min(1).optional(),
   take: z.coerce.number().int().min(1).max(50).optional(),
 });
 
 const setGroupStatusSchema = z.object({
-  status: z.enum(['active', 'suspended']),
+  status: z.enum(['pending', 'active', 'suspended']),
 });
 
 export default async function adminRoutes(fastify: FastifyInstance) {
@@ -326,7 +327,7 @@ export default async function adminRoutes(fastify: FastifyInstance) {
     reply.send(serializeCorporate(profile));
   });
 
-  // ---------- Groups (no approval workflow — see admin.service.ts) ----------
+  // ---------- Groups (pending/active/suspended — see admin.service.ts) ----------
 
   fastify.get('/groups', async (request, reply) => {
     const parsed = listGroupsQuerySchema.safeParse(request.query);

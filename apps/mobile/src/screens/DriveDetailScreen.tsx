@@ -12,7 +12,7 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { LocationActions } from '../components/common/LocationActions';
 import { useHaptics } from '../hooks/useHaptics';
 import { useAuth } from '../context/AuthContext';
-import { useDrive, useDriveAttendees, useJoinDrive, useLeaveDrive, useNgoProfile, useSponsorPlant, useSetDriveRsvpAttendance } from '../hooks/useApiQueries';
+import { useDrive, useDriveAttendees, useDriveSponsors, useJoinDrive, useLeaveDrive, useNgoProfile, useSponsorPlant, useSetDriveRsvpAttendance } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import type { ApiDrivePlant } from '../api/drives';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -38,12 +38,13 @@ export function DriveDetailScreen({ navigation, route }: any) {
   const ngoProfile = useNgoProfile(user?.role === 'ngo');
   const isOwnDrive = user?.role === 'ngo' && !!drive && ngoProfile.data?.id === drive.ngoId;
   const attendeesQuery = useDriveAttendees(driveId, isOwnDrive);
+  const sponsorsQuery = useDriveSponsors(driveId, isOwnDrive);
   const attendanceMutation = useSetDriveRsvpAttendance(driveId);
   const joinMutation = useJoinDrive();
   const leaveMutation = useLeaveDrive();
   const sponsorMutation = useSponsorPlant();
   const queryClient = useQueryClient();
-  const { refreshing, onRefresh } = usePullToRefresh(isOwnDrive ? [refetch, attendeesQuery.refetch] : refetch);
+  const { refreshing, onRefresh } = usePullToRefresh(isOwnDrive ? [refetch, attendeesQuery.refetch, sponsorsQuery.refetch] : refetch);
   const [actionError, setActionError] = useState('');
   const [sponsoringId, setSponsoringId] = useState<string | null>(null);
   // Non-null only while a real payment sheet is in flight — mounts LazyPaymentSheetRunner below.
@@ -190,7 +191,7 @@ export function DriveDetailScreen({ navigation, route }: any) {
             </View>
           )}
 
-          {drive.plants.length > 0 && (
+          {drive.plants.length > 0 && !isOwnDrive && (
             <>
               <Text style={styles.sectionLabel}>Sponsor a plant</Text>
               {drive.plants.map((plant) => (
@@ -211,6 +212,33 @@ export function DriveDetailScreen({ navigation, route }: any) {
                   </TouchableOpacity>
                 </View>
               ))}
+            </>
+          )}
+
+          {drive.plants.length > 0 && isOwnDrive && (
+            <>
+              <Text style={styles.sectionLabel}>Sponsors</Text>
+              {sponsorsQuery.isLoading ? (
+                <ActivityIndicator color={COLORS.sage} style={{ marginVertical: 12 }} />
+              ) : (
+                (sponsorsQuery.data?.plants ?? drive.plants).map((plant: any) => (
+                  <View key={plant.id} style={styles.plantRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.plantName}>{plant.speciesName}</Text>
+                      <Text style={styles.plantMeta}>{formatRupees(plant.priceCents)}</Text>
+                      {plant.sponsors?.length ? (
+                        plant.sponsors.map((s: any) => (
+                          <Text key={s.id} style={styles.sponsorEntry}>
+                            {s.name} (@{s.handle}) · {formatRupees(s.amountCents)}
+                          </Text>
+                        ))
+                      ) : (
+                        <Text style={styles.plantMeta}>Not sponsored yet</Text>
+                      )}
+                    </View>
+                  </View>
+                ))
+              )}
             </>
           )}
 
@@ -325,6 +353,7 @@ const styles = StyleSheet.create({
   },
   plantName: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary },
   plantMeta: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+  sponsorEntry: { fontSize: 12, color: COLORS.textPrimary, marginTop: 4 },
   sponsorButton: { borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.sage, paddingHorizontal: 14, paddingVertical: 8 },
   sponsorButtonText: { fontSize: 12, fontWeight: '700', color: COLORS.forest },
   errorText: { fontSize: 13, color: COLORS.dangerDark, textAlign: 'center', marginBottom: 12 },

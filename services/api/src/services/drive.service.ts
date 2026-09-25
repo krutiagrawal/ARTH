@@ -1,6 +1,6 @@
 import { DriveStatus, DriveTransportMode, PrismaClient } from '@plant/db';
 import { getStripeClient } from '../lib/stripe';
-import { ConflictError, NotFoundError, ServiceUnavailableError } from '../utils/errors';
+import { ConflictError, ForbiddenError, NotFoundError, ServiceUnavailableError } from '../utils/errors';
 import { geocodeAddress } from '../utils/geocode';
 import { haversineDistanceKm } from '../utils/geo';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
@@ -407,6 +407,7 @@ export async function rsvp(prisma: PrismaClient, userId: string, driveId: string
   const result = await prisma.$transaction(async (tx) => {
     const drive = await tx.drive.findUnique({ where: { id: driveId }, include: { ngo: { select: { userId: true, orgName: true } } } });
     if (!drive || drive.status !== 'upcoming') throw new NotFoundError('Drive not found');
+    if (drive.ngo.userId === userId) throw new ForbiddenError('You cannot RSVP to your own drive');
 
     const existing = await tx.driveRsvp.findUnique({ where: { driveId_userId: { driveId, userId } } });
     if (existing?.status === 'confirmed') throw new ConflictError('Already RSVP’d to this drive');
@@ -443,10 +444,73 @@ export async function cancelRsvp(prisma: PrismaClient, userId: string, driveId: 
   if (result.count === 0) throw new NotFoundError('RSVP not found');
 }
 
+/** Owner-only view of who sponsored what on this drive — the NGO can't sponsor its own drive
+ * (see sponsorPlant's ownership check), so this is what its detail screen shows instead of a
+ * "Sponsor" button. */
+export async function listDriveSponsors(prisma: PrismaClient, ngoUserId: string, driveId: string) {
+  const drive = await findOwnedDriveReadOnly(prisma, ngoUserId, driveId);
+
+  const plants = await prisma.drivePlant.findMany({
+    where: { driveId: drive.id },
+    orderBy: { order: 'asc' },
+    include: {
+      sponsorships: {
+        where: { status: 'succeeded' },
+        orderBy: { createdAt: 'desc' },
+        include: { user: { select: { name: true, handle: true } } },
+      },
+    },
+  });
+
+  return plants.map((plant) => ({
+    id: plant.id,
+    speciesName: plant.speciesName,
+    priceCents: plant.priceCents,
+    sponsors: plant.sponsorships.map((s) => ({
+      id: s.id,
+      name: s.user.name,
+      handle: s.user.handle,
+      amountCents: s.amountCents,
+      sponsoredAt: s.createdAt,
+    })),
+  }));
+}
+
+/** Plants the caller has sponsored, across every drive — the activity-hub counterpart to
+ * listDriveSponsors above (that one is per-drive and NGO-owner-only; this one is cross-drive and
+ * scoped to the sponsoring user). */
+export async function listMySponsorships(prisma: PrismaClient, userId: string) {
+  const sponsorships = await prisma.drivePlantSponsorship.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      drivePlant: {
+        include: { drive: { select: { id: true, title: true, ngo: { select: { orgName: true } } } } },
+      },
+    },
+  });
+
+  return sponsorships.map((s) => ({
+    id: s.id,
+    status: s.status,
+    amountCents: s.amountCents,
+    currency: s.currency,
+    sponsoredAt: s.createdAt,
+    speciesName: s.drivePlant.speciesName,
+    driveId: s.drivePlant.drive.id,
+    driveTitle: s.drivePlant.drive.title,
+    ngoName: s.drivePlant.drive.ngo.orgName,
+  }));
+}
+
 export async function sponsorPlant(prisma: PrismaClient, userId: string, driveId: string, plantId: string) {
-  const plant = await prisma.drivePlant.findFirst({ where: { id: plantId, driveId }, include: { drive: true } });
+  const plant = await prisma.drivePlant.findFirst({
+    where: { id: plantId, driveId },
+    include: { drive: { include: { ngo: { select: { userId: true } } } } },
+  });
   if (!plant) throw new NotFoundError('Plant not found');
   if (plant.drive.status !== 'upcoming') throw new ConflictError('This drive is no longer accepting sponsorships');
+  if (plant.drive.ngo.userId === userId) throw new ForbiddenError('You cannot sponsor a plant on your own drive');
 
   // getStripeClient() throws ServiceUnavailableError when STRIPE_SECRET_KEY isn't configured —
   // in a local/dev environment without Stripe set up, that's not a hard stop: skip creating a

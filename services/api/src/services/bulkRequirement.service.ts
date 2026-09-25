@@ -189,6 +189,34 @@ export async function listRelevantForNursery(
   }));
 }
 
+/** The nursery's full response history, every status — unlike listRelevantForNursery (which only
+ * returns still-open/partially-fulfilled requirements with the nursery's response attached), this
+ * is the activity-hub view: every offer this nursery has ever made, regardless of what happened
+ * to the requirement since. */
+export async function listMyResponses(prisma: PrismaClient, nurseryUserId: string) {
+  const nursery = await getOwnNurseryProfile(prisma, nurseryUserId);
+
+  const responses = await prisma.bulkRequirementResponse.findMany({
+    where: { nurseryId: nursery.id },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      requirement: { include: { species: { select: { commonName: true } }, ngo: { select: { orgName: true } } } },
+    },
+  });
+
+  return responses.map((r) => ({
+    id: r.id,
+    status: r.status,
+    quantityOffered: r.quantityOffered,
+    priceCents: r.priceCents,
+    createdAt: r.createdAt,
+    respondedAt: r.respondedAt,
+    requirementId: r.requirementId,
+    ngoName: r.requirement.ngo.orgName,
+    species: r.requirement.species?.commonName ?? r.requirement.speciesNote ?? 'Any species',
+  }));
+}
+
 interface RespondInput {
   quantityOffered: number;
   priceCents?: number;
@@ -237,20 +265,57 @@ export async function withdrawResponse(prisma: PrismaClient, nurseryUserId: stri
   return prisma.bulkRequirementResponse.update({ where: { id: responseId }, data: { status: 'withdrawn' } });
 }
 
-// Nursery confirms the physical handoff actually happened — the point at which a bulk-requirement
-// supply becomes real: quantityFulfilled rolls up, the requirement's status recomputes, the
-// nursery's achievements are re-evaluated, and (decision 8) real ArthSaplingUnit rows are issued
-// so each sapling gets the same QR/Tree-passport treatment as a marketplace purchase. Whichever
-// logged-in volunteer later scans+plants one becomes that Tree's owner — no new ownership concept
-// needed, since Tree ownership is already always "whoever verified the plant."
-export async function markResponseFulfilled(prisma: PrismaClient, nurseryUserId: string, responseId: string) {
+function generateHandoffCode() {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+// Nursery declares the physical handoff has happened — but this alone must never be enough to
+// count as fulfilled (a nursery self-attesting its own delivery with nothing to check it was the
+// exact same gap this flow used to have). Mirrors Order's handoffCode: the code goes to the NGO
+// out of band, and only confirmResponseReceived (below) — called by the NGO — actually mints
+// units and updates reputation.
+export async function markResponseHandedOff(prisma: PrismaClient, nurseryUserId: string, responseId: string) {
   const nursery = await getOwnNurseryProfile(prisma, nurseryUserId);
   const response = await prisma.bulkRequirementResponse.findFirst({
     where: { id: responseId, nurseryId: nursery.id },
-    include: { requirement: { include: { species: true } } },
+    include: { requirement: { include: { ngo: { select: { userId: true } } } } },
   });
   if (!response) throw new NotFoundError('Response not found');
-  if (response.status !== 'accepted') throw new BadRequestError('Only an accepted offer can be marked fulfilled');
+  if (response.status !== 'accepted') throw new BadRequestError('Only an accepted offer can be marked handed off');
+
+  const handoffCode = generateHandoffCode();
+  const updated = await prisma.bulkRequirementResponse.update({
+    where: { id: responseId },
+    data: { status: 'handed_off', handoffCode, respondedAt: new Date() },
+  });
+
+  await notify(prisma, {
+    userId: response.requirement.ngo.userId,
+    type: 'bulk_requirement_response_received',
+    data: { requirementId: response.requirementId, quantityOffered: response.quantityOffered },
+    push: { title: nursery.nurseryName, body: `Handed off ${response.quantityOffered} saplings — confirm receipt with the handoff code to complete it.` },
+  });
+
+  return updated;
+}
+
+// NGO confirms it actually received the saplings — the point at which a bulk-requirement supply
+// becomes real: quantityFulfilled rolls up, the requirement's status recomputes, the nursery's
+// achievements are re-evaluated, and (decision 8) real ArthSaplingUnit rows are issued so each
+// sapling gets the same QR/Tree-passport treatment as a marketplace purchase. Whichever logged-in
+// volunteer later scans+plants one becomes that Tree's owner — no new ownership concept needed,
+// since Tree ownership is already always "whoever verified the plant."
+export async function confirmResponseReceived(prisma: PrismaClient, ngoUserId: string, responseId: string, code: string) {
+  const ngo = await getOwnNgoProfile(prisma, ngoUserId);
+  const response = await prisma.bulkRequirementResponse.findFirst({
+    where: { id: responseId, requirement: { ngoId: ngo.id } },
+    include: { requirement: { include: { species: true } }, nursery: { select: { id: true, userId: true, nurseryName: true } } },
+  });
+  if (!response) throw new NotFoundError('Response not found');
+  if (response.status !== 'handed_off') throw new BadRequestError('This offer has not been handed off yet');
+  if (response.handoffCode !== code) throw new BadRequestError('Incorrect handoff code');
+
+  const nursery = response.nursery;
 
   await prisma.$transaction(async (tx) => {
     await tx.bulkRequirementResponse.update({ where: { id: responseId }, data: { status: 'fulfilled', respondedAt: new Date() } });
@@ -302,6 +367,13 @@ export async function markResponseFulfilled(prisma: PrismaClient, nurseryUserId:
     await recordNurseryContribution(tx, nursery.id, ['arth_contribution']);
     await evaluateNurseryAchievements(tx, nursery.id);
     await recomputeReputation(tx, nursery.id);
+  });
+
+  await notify(prisma, {
+    userId: nursery.userId,
+    type: 'bulk_requirement_response_fulfilled',
+    data: { requirementId: response.requirementId, quantityOffered: response.quantityOffered },
+    push: { title: 'Receipt confirmed', body: `The NGO confirmed receipt of ${response.quantityOffered} saplings.` },
   });
 
   return prisma.bulkRequirementResponse.findUniqueOrThrow({ where: { id: responseId } });

@@ -34,7 +34,7 @@ async function upsertUser({
   const passwordHash = await hashPassword(password);
   return prisma.$transaction(async (tx) => {
     const created = await tx.user.create({
-      data: { role, email, passwordHash, passwordPlain: password, name, handle },
+      data: { role, email, passwordHash, name, handle },
     });
     await tx.userSettings.create({ data: { userId: created.id } });
     return created;

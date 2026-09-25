@@ -189,6 +189,7 @@ export async function createDonationIntent(
   if (!campaign || campaign.status !== 'active' || campaign.ngo.status !== 'approved') {
     throw new NotFoundError('Campaign not found');
   }
+  if (campaign.ngo.userId === userId) throw new ForbiddenError('You cannot donate to your own campaign');
 
   // getStripeClient() throws ServiceUnavailableError when STRIPE_SECRET_KEY isn't configured —
   // in a local/dev environment without Stripe set up, that's not a hard stop: skip creating a

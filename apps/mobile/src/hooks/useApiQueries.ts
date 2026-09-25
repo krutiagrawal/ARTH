@@ -66,6 +66,8 @@ import {
   createDrive,
   CreateDriveInput,
   fetchDriveAttendees,
+  fetchDriveSponsors,
+  fetchMySponsorships,
   setDriveRsvpAttendance,
 } from '../api/drives';
 import {
@@ -86,6 +88,7 @@ import {
   createCampaign,
   closeCampaign,
   reopenCampaign,
+  fetchMyDonations,
   CreateCampaignInput,
 } from '../api/donations';
 import {
@@ -179,7 +182,8 @@ import {
   fetchNurseryBulkRequirements,
   respondToBulkRequirement,
   withdrawBulkResponse,
-  markBulkResponseFulfilled,
+  markBulkResponseHandedOff,
+  fetchMyBulkResponses,
   UpdateNurseryProfileInput,
   SaplingStockInput,
   StockFilter,
@@ -205,6 +209,7 @@ import {
   cancelNgoBulkRequirement,
   acceptNgoBulkResponse,
   declineNgoBulkResponse,
+  confirmNgoBulkResponseReceived,
   CreateNgoBulkRequirementInput,
 } from '../api/ngoBulkRequirements';
 import { fetchNurseryReputation } from '../api/nurseryReputation';
@@ -234,7 +239,7 @@ import { fetchGroupThemes, selectGroupTheme } from '../api/groupThemes';
 import { browseNgos, fetchNgoPublicProfile } from '../api/ngosPublic';
 import { likePortfolioEntry, unlikePortfolioEntry } from '../api/portfolio';
 import type { ApiPublicNgoProfile } from '../api/ngosPublic';
-import { followNgo, unfollowNgo, fetchFollowedNgos, fetchFollowingFeed } from '../api/follow';
+import { followNgo, unfollowNgo, fetchFollowedNgos, fetchFollowedNurseries, fetchFollowingFeed } from '../api/follow';
 import {
   fetchAdminOverview,
   fetchAdminNgos,
@@ -270,7 +275,7 @@ import {
 } from '../api/admin';
 import { fetchAddresses, createAddress, updateAddress, deleteAddress, UpsertAddressInput } from '../api/addresses';
 import { fetchCart, addCartItem, updateCartItem, removeCartItem, clearCart } from '../api/cart';
-import { fetchMyOrders, fetchMyOrder, checkout, cancelOrder, submitOrderReview } from '../api/orders';
+import { fetchMyOrders, fetchMyOrder, checkout, cancelOrder, submitOrderReview, fetchMyReviews } from '../api/orders';
 import { fetchWishlist, addWishlistItem, removeWishlistItem } from '../api/wishlist';
 
 export function useTrees(limit?: number, enabled: boolean = true) {
@@ -825,6 +830,17 @@ export function useDriveAttendees(id: string | null, enabled: boolean) {
   });
 }
 
+/** For the NGO that owns a drive, viewing who sponsored which plant — shown instead of a
+ * "Sponsor" button, since the NGO can't sponsor its own drive. */
+export function useDriveSponsors(id: string | null, enabled: boolean) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['drives', id, 'sponsors'],
+    queryFn: () => fetchDriveSponsors(id as string),
+    enabled: isAuthenticated && !!id && enabled,
+  });
+}
+
 export function useSetDriveRsvpAttendance(driveId: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -936,6 +952,15 @@ export function useJoinedDrives() {
   });
 }
 
+export function useMySponsorships() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['drives', 'sponsorships', 'mine'],
+    queryFn: fetchMySponsorships,
+    enabled: isAuthenticated,
+  });
+}
+
 export function useUserJoinedDrives(userId: string | undefined) {
   return useQuery({
     queryKey: ['users', userId, 'drives', 'joined'],
@@ -1023,6 +1048,15 @@ export function useMyCampaigns() {
   });
 }
 
+export function useMyDonations() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['campaigns', 'mine-donations'],
+    queryFn: fetchMyDonations,
+    enabled: isAuthenticated,
+  });
+}
+
 export function useCreateCampaign() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -1092,12 +1126,12 @@ export function useNgoReports() {
   });
 }
 
-export function useNgoDonations(filter: DonationsFilter = {}) {
+export function useNgoDonations(filter: DonationsFilter = {}, enabled = true) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['ngo', 'donations', filter],
     queryFn: () => fetchNgoDonations(filter),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && enabled,
   });
 }
 
@@ -1471,6 +1505,15 @@ export function useFollowedNgos() {
   return useQuery({
     queryKey: ['follows'],
     queryFn: fetchFollowedNgos,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useFollowedNurseries() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['follows', 'nurseries'],
+    queryFn: fetchFollowedNurseries,
     enabled: isAuthenticated,
   });
 }
@@ -2309,6 +2352,15 @@ export function useNurseryBulkRequirements(status?: BulkRequirementStatus) {
   });
 }
 
+export function useMyBulkResponses() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nursery', 'bulkRequirements', 'responses', 'mine'],
+    queryFn: fetchMyBulkResponses,
+    enabled: isAuthenticated,
+  });
+}
+
 /** There's no `GET /api/nursery/bulk-requirements/:id` route — the nursery side only exposes a
  * list (see api/nursery.ts's `fetchNurseryBulkRequirements`). This fetches the two status sets
  * that cover every tab the nursery UI shows (the default open/partially_fulfilled set, plus
@@ -2363,15 +2415,11 @@ export function useWithdrawBulkResponse() {
   });
 }
 
-export function useMarkBulkResponseFulfilled() {
+export function useMarkBulkResponseHandedOff() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (responseId: string) => markBulkResponseFulfilled(responseId),
-    onSuccess: () => {
-      invalidateNurseryBulkRequirements(queryClient);
-      queryClient.invalidateQueries({ queryKey: ['nursery', 'stock'] });
-      queryClient.invalidateQueries({ queryKey: ['nursery', 'dashboard'] });
-    },
+    mutationFn: (responseId: string) => markBulkResponseHandedOff(responseId),
+    onSuccess: () => invalidateNurseryBulkRequirements(queryClient),
   });
 }
 
@@ -2427,6 +2475,14 @@ export function useDeclineNgoBulkResponse() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (responseId: string) => declineNgoBulkResponse(responseId),
+    onSuccess: () => invalidateNgoBulkRequirements(queryClient),
+  });
+}
+
+export function useConfirmNgoBulkResponseReceived() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ responseId, code }: { responseId: string; code: string }) => confirmNgoBulkResponseReceived(responseId, code),
     onSuccess: () => invalidateNgoBulkRequirements(queryClient),
   });
 }
@@ -2650,6 +2706,11 @@ export function useClearCart() {
 export function useMyOrders() {
   const { isAuthenticated } = useAuth();
   return useQuery({ queryKey: ['orders', 'mine'], queryFn: fetchMyOrders, enabled: isAuthenticated });
+}
+
+export function useMyReviews() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({ queryKey: ['orders', 'reviews', 'mine'], queryFn: fetchMyReviews, enabled: isAuthenticated });
 }
 
 /** Polls every 8s while an order is out for delivery, so the tracking map keeps moving. */

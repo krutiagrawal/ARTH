@@ -11,6 +11,10 @@ export default async function nurseryBulkRequirementsRoutes(fastify: FastifyInst
     reply.send(await bulkRequirementService.listRelevantForNursery(fastify.prisma, request.user!.id, { status: request.query.status }));
   });
 
+  fastify.get('/responses/mine', async (request, reply) => {
+    reply.send(await bulkRequirementService.listMyResponses(fastify.prisma, request.user!.id));
+  });
+
   fastify.post<{ Params: { id: string } }>('/:id/respond', async (request, reply) => {
     const parsed = respondToBulkRequirementSchema.safeParse(request.body);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
@@ -22,7 +26,7 @@ export default async function nurseryBulkRequirementsRoutes(fastify: FastifyInst
     reply.send(await bulkRequirementService.withdrawResponse(fastify.prisma, request.user!.id, request.params.id));
   });
 
-  fastify.post<{ Params: { id: string } }>('/responses/:id/fulfilled', async (request, reply) => {
-    reply.send(await bulkRequirementService.markResponseFulfilled(fastify.prisma, request.user!.id, request.params.id));
+  fastify.post<{ Params: { id: string } }>('/responses/:id/handoff', async (request, reply) => {
+    reply.send(await bulkRequirementService.markResponseHandedOff(fastify.prisma, request.user!.id, request.params.id));
   });
 }

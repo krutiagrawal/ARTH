@@ -143,6 +143,11 @@ export async function fetchSavedPosts(cursor?: string): Promise<CursorPage<ApiPo
   return apiFetch(`/api/social/saved${qs}`);
 }
 
+export async function fetchLikedPosts(cursor?: string): Promise<CursorPage<ApiPost>> {
+  const qs = cursor ? `?cursor=${cursor}` : '';
+  return apiFetch(`/api/social/liked${qs}`);
+}
+
 export async function fetchNgoPosts(ngoId: string, cursor?: string): Promise<CursorPage<ApiPost>> {
   const qs = cursor ? `?cursor=${cursor}` : '';
   return apiFetch(`/api/ngos/${ngoId}/posts${qs}`);

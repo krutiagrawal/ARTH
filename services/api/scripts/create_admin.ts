@@ -42,7 +42,7 @@ async function main() {
 
   await prisma.$transaction(async (tx) => {
     const created = await tx.user.create({
-      data: { role: 'admin', email, passwordHash, passwordPlain: password, name, handle },
+      data: { role: 'admin', email, passwordHash, name, handle },
     });
     await tx.userSettings.create({ data: { userId: created.id } });
   });

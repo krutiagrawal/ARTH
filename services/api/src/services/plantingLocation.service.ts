@@ -43,15 +43,12 @@ export const DUPLICATE_PLANTING_MESSAGE =
 const MAX_ACCEPTABLE_ACCURACY_METERS = 50;
 const SAME_USER_MIN_DISTANCE_METERS = 15;
 
-export function assertGpsNotMocked(mocked: boolean | undefined) {
+export function assertGpsNotMocked(mocked: boolean) {
   if (mocked === true) throw new ForbiddenError(MOCKED_LOCATION_MESSAGE);
 }
 
-export function assertGpsAccuracy(accuracyMeters: number | undefined) {
-  // Missing accuracy (some devices never report it) is treated as "unknown" and allowed
-  // through — only an explicit numeric value worse than the threshold is rejected, so we
-  // never false-positive a real user just because their phone omits the field.
-  if (accuracyMeters !== undefined && accuracyMeters > MAX_ACCEPTABLE_ACCURACY_METERS) {
+export function assertGpsAccuracy(accuracyMeters: number) {
+  if (accuracyMeters > MAX_ACCEPTABLE_ACCURACY_METERS) {
     throw new ForbiddenError(WEAK_GPS_ACCURACY_MESSAGE);
   }
 }

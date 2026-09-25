@@ -326,47 +326,126 @@ export function SettingsScreen({ navigation }: any) {
             accent={COLORS.sage}
             onPress={() => navigation.navigate('Sessions')}
           />
-          <SettingsDivider variant="light" />
+          {/* These consumer-side activities (buying, adopting, donating, sponsoring) are specific
+              to individual users — this same screen is also reached by NGO's gear icon, so an NGO
+              account must not see rows that don't apply to it (see the "My Activity"/"Browse"
+              sections below for what NGO does get). */}
+          {user?.role === 'user' && (
+            <>
+              <SettingsDivider variant="light" />
+              <SettingsRow variant="light"
+                icon="🌱"
+                label="My Sapling Reservations"
+                sublabel="Requests you've sent to nurseries"
+                accent={COLORS.earth}
+                onPress={() => navigation.navigate('MySaplingReservations')}
+              />
+              <SettingsDivider variant="light" />
+              <SettingsRow variant="light"
+                icon="📦"
+                label="My Orders"
+                sublabel="Saplings you've bought and their delivery status"
+                accent={COLORS.golden}
+                onPress={() => navigation.navigate('MyOrders')}
+              />
+              <SettingsDivider variant="light" />
+              <SettingsRow variant="light"
+                icon="♥"
+                label="Wishlist"
+                sublabel="Nurseries and saplings you've saved"
+                accent={COLORS.coral}
+                onPress={() => navigation.navigate('Wishlist')}
+              />
+              <SettingsDivider variant="light" />
+              <SettingsRow variant="light"
+                icon="📍"
+                label="Delivery Addresses"
+                sublabel="Manage saved addresses"
+                accent={COLORS.sage}
+                onPress={() => navigation.navigate('AddressBook')}
+              />
+              <SettingsDivider variant="light" />
+              <SettingsRow variant="light"
+                icon="🌳"
+                label="My Adopted Trees"
+                sublabel="Trees you're caring for"
+                accent={COLORS.forest}
+                onPress={() => navigation.navigate('MyAdoptions')}
+              />
+              <SettingsDivider variant="light" />
+              <SettingsRow variant="light"
+                icon="💚"
+                label="My Donations"
+                sublabel="Campaigns you've donated to"
+                accent={COLORS.sage}
+                onPress={() => navigation.navigate('MyDonations')}
+              />
+              <SettingsDivider variant="light" />
+              <SettingsRow variant="light"
+                icon="🌱"
+                label="My Sponsorships"
+                sublabel="Plants you've sponsored on drives"
+                accent={COLORS.earth}
+                onPress={() => navigation.navigate('MySponsorships')}
+              />
+              <SettingsDivider variant="light" />
+              <SettingsRow variant="light"
+                icon="⭐"
+                label="My Reviews"
+                sublabel="Reviews you've left for nurseries"
+                accent={COLORS.golden}
+                onPress={() => navigation.navigate('MyReviews')}
+              />
+            </>
+          )}
+        </BorderCard>
+
+        {/* My Activity — same shape for every role: who I follow, what I've liked/saved/reported. */}
+        <SettingsSectionHeader title="My Activity" />
+        <BorderCard noPadding>
           <SettingsRow variant="light"
-            icon="🌱"
-            label="My Sapling Reservations"
-            sublabel="Requests you've sent to nurseries"
-            accent={COLORS.earth}
-            onPress={() => navigation.navigate('MySaplingReservations')}
-          />
-          <SettingsDivider variant="light" />
-          <SettingsRow variant="light"
-            icon="📦"
-            label="My Orders"
-            sublabel="Saplings you've bought and their delivery status"
-            accent={COLORS.golden}
-            onPress={() => navigation.navigate('MyOrders')}
-          />
-          <SettingsDivider variant="light" />
-          <SettingsRow variant="light"
-            icon="♥"
-            label="Wishlist"
-            sublabel="Nurseries and saplings you've saved"
-            accent={COLORS.coral}
-            onPress={() => navigation.navigate('Wishlist')}
-          />
-          <SettingsDivider variant="light" />
-          <SettingsRow variant="light"
-            icon="📍"
-            label="Delivery Addresses"
-            sublabel="Manage saved addresses"
+            icon="🧭"
+            label="Following"
+            sublabel="NGOs and nurseries you follow"
             accent={COLORS.sage}
-            onPress={() => navigation.navigate('AddressBook')}
+            onPress={() => navigation.navigate('Following')}
           />
           <SettingsDivider variant="light" />
           <SettingsRow variant="light"
-            icon="🌳"
-            label="My Adopted Trees"
-            sublabel="Trees you're caring for"
-            accent={COLORS.forest}
-            onPress={() => navigation.navigate('MyAdoptions')}
+            icon="💗"
+            label="Liked Posts"
+            accent={COLORS.coral}
+            onPress={() => navigation.navigate('LikedPosts')}
+          />
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light"
+            icon="🔖"
+            label="Saved Posts"
+            accent={COLORS.xpBlue}
+            onPress={() => navigation.navigate('SavedPosts')}
+          />
+          <SettingsDivider variant="light" />
+          <SettingsRow variant="light"
+            icon="🚩"
+            label="My Reports"
+            sublabel="Content and accounts you've reported"
+            accent={COLORS.textMuted}
+            onPress={() => navigation.navigate('MyReports')}
           />
         </BorderCard>
+
+        {/* Browse — NGO reaches this screen via its gear icon and (unlike individual users) has
+            no Map/Community-based discovery of other orgs, so it needs an explicit entry point. */}
+        {user?.role === 'ngo' && (
+          <>
+            <SettingsSectionHeader title="Browse" />
+            <BorderCard noPadding>
+              <SettingsRow variant="light" icon="🌿" label="Browse NGOs" accent={COLORS.forest} onPress={() => navigation.navigate('NgoDirectory')} />
+              <SettingsDivider variant="light" />
+              <SettingsRow variant="light" icon="🌳" label="Browse Nurseries" accent={COLORS.earth} onPress={() => navigation.navigate('NurseryDirectory')} />
+            </BorderCard>
+          </>
+        )}
 
         {/* Safety */}
         <SettingsSectionHeader title="Safety" />

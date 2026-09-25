@@ -70,6 +70,22 @@ export async function fetchJoinedDrives(): Promise<ApiDrive[]> {
   return apiFetch<ApiDrive[]>('/api/drives/joined');
 }
 
+export interface ApiMySponsorship {
+  id: string;
+  status: 'pending' | 'succeeded' | 'failed' | 'refunded';
+  amountCents: number;
+  currency: string;
+  sponsoredAt: string;
+  speciesName: string;
+  driveId: string;
+  driveTitle: string;
+  ngoName: string;
+}
+
+export async function fetchMySponsorships(): Promise<ApiMySponsorship[]> {
+  return apiFetch<ApiMySponsorship[]>('/api/drives/sponsorships/mine');
+}
+
 export async function fetchUserJoinedDrives(userId: string): Promise<ApiDrive[]> {
   return apiFetch<ApiDrive[]>(`/api/users/${userId}/drives/joined`);
 }
@@ -121,6 +137,27 @@ export interface ApiDriveAttendee {
 
 export async function fetchDriveAttendees(driveId: string): Promise<{ total: number; attendees: ApiDriveAttendee[] }> {
   return apiFetch(`/api/drives/${driveId}/attendees?take=50`);
+}
+
+export interface ApiDrivePlantSponsor {
+  id: string;
+  name: string;
+  handle: string;
+  amountCents: number;
+  sponsoredAt: string;
+}
+
+export interface ApiDrivePlantSponsors {
+  id: string;
+  speciesName: string;
+  priceCents: number;
+  sponsors: ApiDrivePlantSponsor[];
+}
+
+/** Owner-only — the NGO can't sponsor its own drive (see sponsorPlant server-side), so its own
+ * detail screen shows this instead of a "Sponsor" button. */
+export async function fetchDriveSponsors(driveId: string): Promise<{ plants: ApiDrivePlantSponsors[] }> {
+  return apiFetch(`/api/drives/${driveId}/sponsors`);
 }
 
 export async function setDriveRsvpAttendance(

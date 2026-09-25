@@ -194,6 +194,37 @@ export async function listReports(
   return { total, openCount, accountOpenCount, reports: withAccounts.map(serializeReport) };
 }
 
+/** Reports the caller has filed themselves — the activity-hub counterpart to the admin-only
+ * listReports above. No account/post enrichment (that's an admin-queue concern); just what was
+ * reported, why, and what came of it. */
+export async function listMyReports(prisma: PrismaClient, reporterId: string, filter: { page?: number; take?: number } = {}) {
+  const take = Math.min(filter.take ?? 25, 50);
+  const page = Math.max(filter.page ?? 1, 1);
+
+  const [reports, total] = await Promise.all([
+    prisma.contentReport.findMany({
+      where: { reporterId },
+      orderBy: { createdAt: 'desc' },
+      take,
+      skip: (page - 1) * take,
+    }),
+    prisma.contentReport.count({ where: { reporterId } }),
+  ]);
+
+  return {
+    total,
+    reports: reports.map((r) => ({
+      id: r.id,
+      targetType: r.targetType,
+      targetId: r.targetId,
+      reason: r.reason,
+      details: r.details,
+      status: r.status,
+      createdAt: r.createdAt,
+    })),
+  };
+}
+
 export type ModerationAction = 'hide' | 'unhide' | 'delete' | 'dismiss' | 'block_account';
 
 /**

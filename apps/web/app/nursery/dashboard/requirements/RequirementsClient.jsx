@@ -28,6 +28,7 @@ function tabOf(req) {
   if (!req.myResponse) return 'open'
   if (req.myResponse.status === 'proposed') return 'responded'
   if (req.myResponse.status === 'accepted') return 'accepted'
+  if (req.myResponse.status === 'handed_off') return 'accepted'
   if (req.myResponse.status === 'fulfilled') return 'completed'
   return 'other' // declined / withdrawn
 }
@@ -35,6 +36,7 @@ function tabOf(req) {
 const RESPONSE_BADGE = {
   proposed: { label: 'Responded', variant: 'secondary' },
   accepted: { label: 'Accepted – arrange handoff', variant: 'default' },
+  handed_off: { label: 'Handed off – awaiting NGO confirmation', variant: 'default' },
   declined: { label: 'Declined', variant: 'outline' },
   fulfilled: { label: 'Completed', variant: 'default' },
   withdrawn: { label: 'Withdrawn', variant: 'outline' },
@@ -118,8 +120,9 @@ export default function RequirementsClient() {
   const [tab, setTab] = useState('all')
   const [respondFor, setRespondFor] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const [fulfillTarget, setFulfillTarget] = useState(null)
+  const [handoffTarget, setHandoffTarget] = useState(null)
   const [withdrawTarget, setWithdrawTarget] = useState(null)
+  const [handoffCode, setHandoffCode] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -168,15 +171,16 @@ export default function RequirementsClient() {
     }
   }
 
-  const handleFulfill = async () => {
-    if (!fulfillTarget) return
+  const handleHandoff = async () => {
+    if (!handoffTarget) return
     try {
-      await proxy(`/nursery/bulk-requirements/responses/${fulfillTarget.myResponse.id}/fulfilled`, { method: 'POST' })
-      toast.success('Marked as fulfilled.')
+      const updated = await proxy(`/nursery/bulk-requirements/responses/${handoffTarget.myResponse.id}/handoff`, { method: 'POST' })
+      toast.success('Marked as handed off.')
+      setHandoffCode(updated.handoffCode)
     } catch (err) {
       toast.error(err.message || 'Something went wrong.')
     } finally {
-      setFulfillTarget(null)
+      setHandoffTarget(null)
       await load()
     }
   }
@@ -251,7 +255,7 @@ export default function RequirementsClient() {
                     <Button size="sm" variant="outline" className="rounded-full" onClick={() => setWithdrawTarget(r)}>Withdraw</Button>
                   )}
                   {r.myResponse?.status === 'accepted' && (
-                    <Button size="sm" className="rounded-full" onClick={() => setFulfillTarget(r)}>Mark fulfilled</Button>
+                    <Button size="sm" className="rounded-full" onClick={() => setHandoffTarget(r)}>Mark handed off</Button>
                   )}
                 </div>
               </div>
@@ -273,13 +277,24 @@ export default function RequirementsClient() {
       />
 
       <ConfirmDialog
-        open={Boolean(fulfillTarget)}
-        onOpenChange={(open) => !open && setFulfillTarget(null)}
-        title="Mark as fulfilled?"
-        description="Confirm this only once the handoff to the NGO has actually happened."
-        confirmLabel="Mark fulfilled"
-        onConfirm={handleFulfill}
+        open={Boolean(handoffTarget)}
+        onOpenChange={(open) => !open && setHandoffTarget(null)}
+        title="Mark as handed off?"
+        description="Only confirm once the saplings have actually left your nursery. You'll get a handoff code to share with the NGO — this offer only counts as fulfilled once they confirm receipt with it."
+        confirmLabel="Mark handed off"
+        onConfirm={handleHandoff}
       />
+
+      <ConfirmDialog
+        open={Boolean(handoffCode)}
+        onOpenChange={(open) => !open && setHandoffCode(null)}
+        title="Handoff code"
+        description="Share this code with the NGO in person — they need it to confirm receipt."
+        confirmLabel="Done"
+        onConfirm={() => setHandoffCode(null)}
+      >
+        <p className="mt-2 text-center text-3xl font-bold tracking-[0.3em]">{handoffCode}</p>
+      </ConfirmDialog>
     </DashboardPageShell>
   )
 }

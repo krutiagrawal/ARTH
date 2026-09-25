@@ -9,8 +9,9 @@ import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useHaptics } from '../hooks/useHaptics';
-import { useCampaign, useCreateDonationIntent } from '../hooks/useApiQueries';
+import { useCampaign, useCreateDonationIntent, useNgoDonations, useNgoProfile } from '../hooks/useApiQueries';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
@@ -29,6 +30,10 @@ export function CampaignDetailScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
   const { success, error: errorHaptic } = useHaptics();
   const { data: campaign, isLoading, refetch } = useCampaign(campaignId);
+  const { user } = useAuth();
+  const ngoProfile = useNgoProfile(user?.role === 'ngo');
+  const isOwnCampaign = user?.role === 'ngo' && !!campaign && ngoProfile.data?.id === campaign.ngoId;
+  const donationsQuery = useNgoDonations({ campaignId }, isOwnCampaign);
   const createIntent = useCreateDonationIntent();
   const queryClient = useQueryClient();
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
@@ -134,7 +139,23 @@ export function CampaignDetailScreen({ navigation, route }: any) {
             </Text>
           </BorderCard>
 
-          {donated ? (
+          {isOwnCampaign ? (
+            <>
+              <Text style={styles.fieldLabel}>Donors</Text>
+              {donationsQuery.isLoading ? (
+                <ActivityIndicator color={COLORS.sage} style={{ marginVertical: 12 }} />
+              ) : (donationsQuery.data?.donations.length ?? 0) === 0 ? (
+                <Text style={styles.description}>No donations yet.</Text>
+              ) : (
+                donationsQuery.data!.donations.map((d) => (
+                  <View key={d.id} style={styles.donorRow}>
+                    <Text style={styles.donorName}>{d.donor.name}</Text>
+                    <Text style={styles.donorAmount}>{formatRupees(d.amountCents)}</Text>
+                  </View>
+                ))
+              )}
+            </>
+          ) : donated ? (
             <View style={styles.successBanner}>
               <Text style={styles.successText}>💚 Thank you! Your donation is on its way to {campaign.ngoName}.</Text>
             </View>
@@ -218,6 +239,9 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: 'rgba(94,133,80,0.15)', marginVertical: 14 },
   description: { fontSize: 14, lineHeight: 21, color: COLORS.textPrimary, marginBottom: 12 },
   raisedText: { fontSize: 14, color: COLORS.forest, fontWeight: '700' },
+  donorRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(94,133,80,0.12)' },
+  donorName: { fontSize: 14, color: COLORS.textPrimary, fontWeight: '600' },
+  donorAmount: { fontSize: 14, color: COLORS.forest, fontWeight: '700' },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 10 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 12 },
   chip: {
