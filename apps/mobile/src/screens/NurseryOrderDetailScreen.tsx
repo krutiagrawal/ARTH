@@ -4,14 +4,13 @@ import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
+import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { StatusModal } from '../components/common/StatusModal';
 import { Sheet } from '../components/common/Sheet';
-import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
 import { useHaptics } from '../hooks/useHaptics';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import {
@@ -56,11 +55,6 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
   const [pickerMode, setPickerMode] = useState<'assign' | 'reassign'>('assign');
   const { data: profile } = useNurseryProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
-  // Sheet switches to a dark navy surface at night (see Sheet.tsx's isNightMode) but has no way
-  // to tell its children — every text color in the partner-picker below is applied inline off
-  // this instead of the fixed light-mode style colors, same pattern as NgoBulkRequirementsScreen.
-  const { period } = useTimeTheme();
-  const isNightMode = isNightlikePeriod(period);
 
   const run = async (fn: () => Promise<unknown>) => {
     setActionError('');
@@ -307,7 +301,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
         scrollable
       >
         {(deliveryPartners ?? []).filter((p) => p.isActive).length === 0 ? (
-          <Text style={[styles.emptyPartnersText, isNightMode && { color: ON_DARK_SURFACE.secondary }]}>
+          <Text style={styles.emptyPartnersText}>
             No active delivery partners yet — add one from the Delivery Partners screen first.
           </Text>
         ) : (
@@ -316,7 +310,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
             .map((partner) => (
               <TouchableOpacity
                 key={partner.id}
-                style={[styles.partnerRow, isNightMode && styles.partnerRowNight]}
+                style={styles.partnerRow}
                 disabled={dispatchMutation.isPending || reassignMutation.isPending}
                 onPress={() => {
                   setPickerVisible(false);
@@ -328,8 +322,8 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
                 }}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.partnerName, isNightMode && { color: ON_DARK_SURFACE.primary }]}>{partner.name}</Text>
-                  <Text style={[styles.partnerPhone, isNightMode && { color: ON_DARK_SURFACE.secondary }]}>{partner.phone}</Text>
+                  <Text style={styles.partnerName}>{partner.name}</Text>
+                  <Text style={styles.partnerPhone}>{partner.phone}</Text>
                 </View>
                 <View style={styles.partnerQueueBadge}>
                   <Text style={styles.partnerQueueBadgeText}>{partner.activeOrderCount} active</Text>
@@ -394,9 +388,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(94,133,80,0.12)',
   },
-  // Low-contrast brown/green border on the Sheet's dark navy night surface, same reasoning as
-  // NgoBulkRequirementsScreen's offerCardNight.
-  partnerRowNight: { borderBottomColor: 'rgba(255,255,255,0.18)' },
   partnerName: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
   partnerPhone: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   partnerQueueBadge: { backgroundColor: 'rgba(94,133,80,0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },

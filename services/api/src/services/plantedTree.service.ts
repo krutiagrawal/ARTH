@@ -3,7 +3,7 @@ import { PrismaClient, TreeHealthStatus } from '@plant/db';
 // 'not_checked' is a derived absence-of-check state, never something you can actually log a
 // health check as — the routes' zod schemas already restrict incoming status to these four.
 export type ActionableHealthStatus = Exclude<TreeHealthStatus, 'not_checked'>;
-import { BadRequestError, NotFoundError } from '../utils/errors';
+import { BadRequestError, ConflictError, NotFoundError } from '../utils/errors';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
 import { recordNgoContribution, recomputeReputation } from './ngoReputation.service';
 
@@ -19,7 +19,8 @@ interface BulkCreateInput {
 }
 
 interface ListFilter {
-  driveId?: string;
+  /** undefined = no drive filter, null = only driveless trees, string = a specific drive. */
+  driveId?: string | null;
   /** undefined = no zone filter, null = only unzoned trees, string = a specific zone. */
   zoneId?: string | null;
   speciesName?: string;
@@ -93,7 +94,7 @@ export async function listOwnPlantedTrees(prisma: PrismaClient, ngoUserId: strin
 
   const where = {
     ngoId: ngo.id,
-    ...(filter.driveId ? { driveId: filter.driveId } : {}),
+    ...(filter.driveId !== undefined ? { driveId: filter.driveId } : {}),
     ...(filter.zoneId !== undefined ? { zoneId: filter.zoneId } : {}),
     ...(filter.speciesName ? { speciesName: { contains: filter.speciesName, mode: 'insensitive' as const } } : {}),
   };
@@ -150,16 +151,50 @@ export async function listHealthChecksForTree(prisma: PrismaClient, ngoUserId: s
   });
 }
 
+// No per-user timezone stored anywhere in this schema (see streaks.job.ts) — "today" is
+// approximated as the server's own local day, same as the other day-boundary checks in
+// ngo.service.ts.
+function startOfToday(): Date {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  return start;
+}
+
+async function findTodaysHealthCheck(prisma: PrismaClient, plantedTreeId: string) {
+  const start = startOfToday();
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return prisma.treeHealthCheck.findFirst({
+    where: { plantedTreeId, checkedAt: { gte: start, lt: end } },
+    orderBy: { checkedAt: 'desc' },
+  });
+}
+
 export async function logHealthCheck(
   prisma: PrismaClient,
   ngoUserId: string,
   plantedTreeId: string,
-  input: { status: ActionableHealthStatus; notes?: string; photoUrl?: string },
+  input: { status: ActionableHealthStatus; notes?: string; photoUrl?: string; updateExisting?: boolean },
 ) {
   const tree = await findOwnedPlantedTreeOrThrow(prisma, ngoUserId, plantedTreeId);
-  return prisma.treeHealthCheck.create({
+  const existingToday = await findTodaysHealthCheck(prisma, tree.id);
+
+  if (existingToday && !input.updateExisting) {
+    throw new ConflictError('A health check was already logged for this tree today.', { existingCheck: existingToday });
+  }
+
+  if (existingToday) {
+    const check = await prisma.treeHealthCheck.update({
+      where: { id: existingToday.id },
+      data: { status: input.status, notes: input.notes, photoUrl: input.photoUrl ?? existingToday.photoUrl },
+    });
+    return { check, wasUpdate: true };
+  }
+
+  const check = await prisma.treeHealthCheck.create({
     data: { plantedTreeId: tree.id, status: input.status, notes: input.notes, photoUrl: input.photoUrl },
   });
+  return { check, wasUpdate: false };
 }
 
 export async function logBulkHealthChecks(

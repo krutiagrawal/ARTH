@@ -46,11 +46,13 @@ export function resolveMediaUrl(path: string | null | undefined): string | undef
 export class ApiError extends Error {
   status: number;
   code?: string;
+  details?: unknown;
 
-  constructor(status: number, message: string, code?: string) {
+  constructor(status: number, message: string, code?: string, details?: unknown) {
     super(message);
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -155,8 +157,9 @@ export async function apiFetch<T = unknown>(path: string, options: RequestOption
   if (!response.ok) {
     const message = typeof data === 'object' && data && 'message' in data ? String((data as any).message) : 'Request failed';
     const code = typeof data === 'object' && data && 'error' in data ? String((data as any).error) : undefined;
+    const details = typeof data === 'object' && data && 'details' in data ? (data as any).details : undefined;
     if (code === 'ACCOUNT_BLOCKED') onAccountBlocked?.(message);
-    throw new ApiError(response.status, message, code);
+    throw new ApiError(response.status, message, code, details);
   }
 
   return data as T;

@@ -1,8 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { Users } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
+import { MoreHorizontal, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import DataTable from '@/components/dashboard/DataTable'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
@@ -11,13 +14,32 @@ import { proxy } from '../proxy'
 export default function VolunteersClient() {
   const [volunteers, setVolunteers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [removingId, setRemovingId] = useState(null)
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true)
     proxy('/ngo/volunteers')
       .then(setVolunteers)
       .catch(() => setVolunteers([]))
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const handleRemove = async (volunteer) => {
+    setRemovingId(volunteer.userId)
+    try {
+      await proxy(`/ngo/volunteers/${volunteer.userId}`, { method: 'DELETE' })
+      toast.success(`Cancelled ${volunteer.name}'s upcoming RSVPs.`)
+      await load()
+    } catch (err) {
+      toast.error(err.message || 'Something went wrong.')
+    } finally {
+      setRemovingId(null)
+    }
+  }
 
   const columns = useMemo(
     () => [
@@ -45,8 +67,29 @@ export default function VolunteersClient() {
           </span>
         ),
       },
+      {
+        id: 'actions',
+        header: '',
+        cell: ({ row }) => {
+          const volunteer = row.original
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full" disabled={removingId === volunteer.userId}>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleRemove(volunteer)}>
+                  Remove
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )
+        },
+      },
     ],
-    [],
+    [removingId],
   )
 
   return (

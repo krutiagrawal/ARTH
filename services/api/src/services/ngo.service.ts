@@ -1,5 +1,7 @@
 import { PrismaClient, NgoOrgType, Prisma } from '@plant/db';
 import { ForbiddenError, NotFoundError } from '../utils/errors';
+import { notify } from './notification.service';
+import { computeSurvivalStats } from './plantedTree.service';
 
 const RECENT_ACTIVITY_LIMIT = 10;
 
@@ -406,6 +408,41 @@ export async function getOwnVolunteers(prisma: PrismaClient, userId: string) {
     .sort((a, b) => (b.lastActiveAt?.getTime() ?? 0) - (a.lastActiveAt?.getTime() ?? 0));
 }
 
+/**
+ * NGO-initiated removal of a volunteer. A "volunteer" has no dedicated record (see
+ * getOwnVolunteers above), so this cancels their confirmed RSVPs to this NGO's *upcoming* drives —
+ * completed drives are left untouched so past attendance history/stats aren't rewritten. Someone
+ * whose only participation was in the past will still show up in the volunteers list afterward,
+ * since that history is exactly what makes them a volunteer.
+ */
+export async function removeVolunteer(prisma: PrismaClient, ngoUserId: string, targetUserId: string) {
+  const ngo = await requireNgoProfile(prisma, ngoUserId);
+
+  const rsvps = await prisma.driveRsvp.findMany({
+    where: { userId: targetUserId, status: 'confirmed', drive: { ngoId: ngo.id, status: 'upcoming' } },
+    include: { drive: { select: { id: true, title: true } } },
+  });
+
+  if (rsvps.length > 0) {
+    await prisma.driveRsvp.updateMany({
+      where: { id: { in: rsvps.map((r) => r.id) } },
+      data: { status: 'cancelled' },
+    });
+
+    for (const r of rsvps) {
+      await notify(prisma, {
+        userId: targetUserId,
+        type: 'drive_reminder',
+        actorNgoId: ngo.id,
+        data: { driveId: r.drive.id, driveTitle: r.drive.title, kind: 'removed_by_ngo' },
+        push: { title: r.drive.title, body: 'Your RSVP was cancelled by the organizer.' },
+      });
+    }
+  }
+
+  return { cancelledCount: rsvps.length };
+}
+
 // Overview stats plus a 6-month trend so the Reports page can chart
 // donations/RSVPs/adoptions over time, not just current totals.
 export async function getOwnReports(prisma: PrismaClient, userId: string) {
@@ -417,7 +454,7 @@ export async function getOwnReports(prisma: PrismaClient, userId: string) {
   rangeStart.setDate(1);
   rangeStart.setMonth(rangeStart.getMonth() - 5);
 
-  const [donations, rsvps, adoptions] = await Promise.all([
+  const [donations, rsvps, adoptions, survival, recordedAttendance, sponsorships] = await Promise.all([
     prisma.donation.findMany({
       where: { status: 'succeeded', campaign: { ngoId: ngo.id }, createdAt: { gte: rangeStart } },
       select: { createdAt: true },
@@ -429,6 +466,22 @@ export async function getOwnReports(prisma: PrismaClient, userId: string) {
     prisma.adoption.findMany({
       where: { adoptableTree: { ngoId: ngo.id }, createdAt: { gte: rangeStart } },
       select: { createdAt: true },
+    }),
+    // Survival & Impact's own health-check data — the most direct measure of whether trees this
+    // NGO planted are actually still alive, not just that a planting happened.
+    computeSurvivalStats(prisma, ngo.id),
+    // Attendance is only ever recorded (attended set to true/false) on completed drives, and only
+    // when the NGO bothers to record it — restricting to non-null keeps an NGO that's never
+    // recorded attendance from showing a misleading 0% instead of "not yet tracked".
+    prisma.driveRsvp.findMany({
+      where: { status: 'confirmed', drive: { ngoId: ngo.id, status: 'completed' }, attended: { not: null } },
+      select: { attended: true },
+    }),
+    // Per-tree drive sponsorships are a funding channel distinct from campaign donations above.
+    prisma.drivePlantSponsorship.aggregate({
+      where: { status: 'succeeded', drivePlant: { drive: { ngoId: ngo.id } } },
+      _sum: { amountCents: true },
+      _count: { _all: true },
     }),
   ]);
 
@@ -449,8 +502,17 @@ export async function getOwnReports(prisma: PrismaClient, userId: string) {
     return monthLabels.map((month, i) => ({ month, count: counts[i] }));
   };
 
+  const attendanceRecorded = recordedAttendance.length;
+  const attendanceRate =
+    attendanceRecorded > 0
+      ? Math.round((recordedAttendance.filter((r) => r.attended).length / attendanceRecorded) * 1000) / 10
+      : null;
+
   return {
     ...stats,
+    survival: { total: survival.total, survivalRate: survival.survivalRate, counts: survival.counts },
+    attendance: { recorded: attendanceRecorded, rate: attendanceRate },
+    sponsoredTrees: { count: sponsorships._count._all, totalAmountCents: sponsorships._sum.amountCents ?? 0 },
     monthly: {
       donations: bucketByMonth(donations),
       rsvps: bucketByMonth(rsvps),

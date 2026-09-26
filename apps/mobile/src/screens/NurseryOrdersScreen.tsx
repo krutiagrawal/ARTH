@@ -4,13 +4,12 @@ import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
+import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { Sheet } from '../components/common/Sheet';
-import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
 import { useNurseryOrders } from '../hooks/useApiQueries';
 import type { ApiNurseryOrder, NurseryOrderStatus } from '../api/nursery';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -100,12 +99,6 @@ export function NurseryOrdersScreen({ navigation }: any) {
 
   const currentStatusLabel = STATUS_TABS.find((t) => t.key === statusTab)?.label ?? 'All';
 
-  // The Sheet component switches to a dark navy surface at night (see Sheet.tsx's `isNightMode`)
-  // but has no way to tell its children — without this, the sheet's option text stayed the
-  // light-mode dark/green colors, illegible on that dark background.
-  const { period } = useTimeTheme();
-  const isNightMode = isNightlikePeriod(period);
-
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
@@ -133,7 +126,7 @@ export function NurseryOrdersScreen({ navigation }: any) {
           return (
             <TouchableOpacity
               key={t.key}
-              style={[styles.sheetOption, isNightMode && styles.sheetOptionNight]}
+              style={styles.sheetOption}
               onPress={() => {
                 setStatusTab(t.key);
                 setShowStatusSheet(false);
@@ -142,13 +135,13 @@ export function NurseryOrdersScreen({ navigation }: any) {
               <Text
                 style={[
                   styles.sheetOptionText,
-                  { color: isNightMode ? ON_DARK_SURFACE.primary : COLORS.textPrimary },
-                  active && { color: isNightMode ? COLORS.mintLight : COLORS.forest, fontWeight: '700' },
+                  { color: COLORS.textPrimary },
+                  active && { color: COLORS.forest, fontWeight: '700' },
                 ]}
               >
                 {t.label}
               </Text>
-              {active && <Text style={[styles.sheetCheck, { color: isNightMode ? COLORS.mintLight : COLORS.forest }]}>✓</Text>}
+              {active && <Text style={[styles.sheetCheck, { color: COLORS.forest }]}>✓</Text>}
             </TouchableOpacity>
           );
         })}
@@ -213,8 +206,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(139, 107, 71, 0.15)',
   },
-  sheetOptionNight: { borderBottomColor: 'rgba(255,255,255,0.12)' },
-  // Colors applied inline based on isNightMode at the call site — see the sheetOption comment.
   sheetOptionText: { fontSize: 15 },
   sheetCheck: { fontSize: 16, fontWeight: '700' },
   list: { paddingHorizontal: SPACING.md },

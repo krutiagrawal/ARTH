@@ -85,10 +85,10 @@ export function NgoLogPlantedTreesScreen({ navigation, route }: any) {
         <View>
           <Text style={styles.hint}>Log how many trees were actually planted so you can track their survival over time.</Text>
 
-          <Text style={styles.sectionLabel}>Drive (optional)</Text>
+          <Text style={styles.sectionLabel}>Drive</Text>
           <View style={styles.chipRow}>
             <TouchableOpacity style={[styles.chip, !driveId && styles.chipSelected]} onPress={() => { setDriveId(undefined); setZoneId(undefined); }}>
-              <Text style={[styles.chipText, !driveId && styles.chipTextSelected]}>None</Text>
+              <Text style={[styles.chipText, !driveId && styles.chipTextSelected]}>No drive</Text>
             </TouchableOpacity>
             {drives.map((d) => (
               <TouchableOpacity key={d.id} style={[styles.chip, driveId === d.id && styles.chipSelected]} onPress={() => { setDriveId(d.id); setZoneId(undefined); }}>
@@ -96,6 +96,9 @@ export function NgoLogPlantedTreesScreen({ navigation, route }: any) {
               </TouchableOpacity>
             ))}
           </View>
+          {!driveId && (
+            <Text style={styles.driveHint}>These trees won't be linked to a plantation drive, but will still show up under "Independent Plantings".</Text>
+          )}
 
           {driveId && zones.length > 0 && (
             <>
@@ -171,6 +174,7 @@ const styles = StyleSheet.create({
   chipSelected: { borderColor: COLORS.sage, backgroundColor: 'rgba(135,168,120,0.25)' },
   chipText: { fontSize: 12, color: COLORS.textSecondary },
   chipTextSelected: { color: COLORS.forest, fontWeight: '700' },
+  driveHint: { fontSize: 11, color: COLORS.textSecondary, marginTop: 6 },
   error: { fontSize: 13, color: COLORS.coral, marginTop: 12 },
   submitButton: { marginTop: 36 },
 });

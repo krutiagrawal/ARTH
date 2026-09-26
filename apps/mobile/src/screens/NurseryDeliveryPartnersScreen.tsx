@@ -14,7 +14,6 @@ import { PhoneField } from '../components/common/PhoneField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { Sheet } from '../components/common/Sheet';
 import { StatusModal } from '../components/common/StatusModal';
-import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import {
   useDeliveryPartners,
@@ -75,8 +74,6 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
   const deactivateMutation = useDeactivateDeliveryPartner();
   const confirm = useConfirm();
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
-  const { period } = useTimeTheme();
-  const isNightMode = isNightlikePeriod(period);
   const { data: profile } = useNurseryProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
 
@@ -216,10 +213,9 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
 
       <Sheet visible={showCreate} onClose={() => setShowCreate(false)} title="Add a delivery partner" scrollable maxHeight={620}>
         <View style={{ gap: 4 }}>
-          <FormField dark={isNightMode} label="Name" value={name} onChangeText={setName} placeholder="eg - Rider's full name" />
-          <FormField dark={isNightMode} label="Handle" value={handle} onChangeText={setHandle} placeholder="eg - ravi_delivers" autoCapitalize="none" />
+          <FormField label="Name" value={name} onChangeText={setName} placeholder="eg - Rider's full name" />
+          <FormField label="Handle" value={handle} onChangeText={setHandle} placeholder="eg - ravi_delivers" autoCapitalize="none" />
           <FormField
-            dark={isNightMode}
             label="Email"
             value={email.value}
             onChangeText={email.setValue}
@@ -231,19 +227,18 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
           {email.error ? (
             <Text style={[styles.errorText, { textAlign: 'left' }]}>{email.error}</Text>
           ) : email.checking ? (
-            <Text style={[styles.hint, isNightMode && styles.hintDark]}>Checking…</Text>
+            <Text style={styles.hint}>Checking…</Text>
           ) : null}
           <PhoneField
-            dark={isNightMode}
             label="Phone"
             value={phone.value}
             onChangeText={phone.setValue}
             onBlur={() => phone.setTouched(true)}
             error={phone.touched ? phone.error : phone.checking ? 'Checking…' : null}
           />
-          <FormField dark={isNightMode} label="Temporary password" value={password} onChangeText={setPassword} placeholder="eg - At least 8 characters" secureTextEntry />
+          <FormField label="Temporary password" value={password} onChangeText={setPassword} placeholder="eg - At least 8 characters" secureTextEntry />
           {error && <Text style={styles.errorText}>{error}</Text>}
-          <Text style={[styles.hint, isNightMode && styles.hintDark]}>
+          <Text style={styles.hint}>
             Share this password with your delivery partner directly — they can log in on their own phone with this email and password.
           </Text>
           <AnimatedButton
@@ -260,8 +255,8 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
 
       <Sheet visible={!!editingPartner} onClose={() => setEditingPartner(null)} title="Edit delivery partner" scrollable>
         <View style={{ gap: 4 }}>
-          <FormField dark={isNightMode} label="Name" value={editName} onChangeText={setEditName} placeholder="eg - Rider's full name" />
-          <PhoneField dark={isNightMode} label="Phone" value={editPhone} onChangeText={setEditPhone} />
+          <FormField label="Name" value={editName} onChangeText={setEditName} placeholder="eg - Rider's full name" />
+          <PhoneField label="Phone" value={editPhone} onChangeText={setEditPhone} />
           {editError && <Text style={styles.errorText}>{editError}</Text>}
           <AnimatedButton
             label={updateMutation.isPending ? 'Saving…' : 'Save changes'}
@@ -302,5 +297,4 @@ const styles = StyleSheet.create({
   toggleButtonTextInactive: { color: COLORS.forest },
   errorText: { fontSize: 13, color: COLORS.coral, textAlign: 'center', marginTop: 4 },
   hint: { fontSize: 12, color: COLORS.textMuted, lineHeight: 17, marginTop: 4 },
-  hintDark: { color: 'rgba(255,255,255,0.6)' },
 });

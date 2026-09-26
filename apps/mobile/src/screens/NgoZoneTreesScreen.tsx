@@ -26,9 +26,13 @@ function FadeInRow({ delay, children }: { delay: number; children: React.ReactNo
 const STATUS_FILTERS: (TreeHealthStatus | 'all')[] = ['all', 'not_checked', 'healthy', 'struggling', 'dead', 'removed'];
 
 export function NgoZoneTreesScreen({ navigation, route }: any) {
-  const { zoneId, zoneName, driveId } = route.params as { zoneId: string | null; zoneName: string; driveId: string };
+  const { zoneId, zoneName, driveId } = route.params as { zoneId: string | null; zoneName: string; driveId: string | null };
   const insets = useSafeAreaInsets();
-  const { data, isLoading, refetch } = usePlantedTrees({ driveId, zoneId: zoneId ?? 'unzoned', take: 200 });
+  // A null driveId is the "Independent Plantings" pseudo-plantation — those trees have no zone either
+  // (zones only exist under a real drive), so there's no zoneId to filter by there.
+  const { data, isLoading, refetch } = usePlantedTrees(
+    driveId ? { driveId, zoneId: zoneId ?? 'unzoned', take: 200 } : { driveId: 'none', take: 200 },
+  );
   const bulkMutation = useLogBulkHealthChecks();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<TreeHealthStatus | 'all'>('all');

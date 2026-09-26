@@ -20,7 +20,7 @@ import { DrivesTabContent } from '../components/profile/DrivesTabContent';
 import { CampaignsTabContent } from '../components/profile/CampaignsTabContent';
 import { AdoptableTreesTabContent } from '../components/profile/AdoptableTreesTabContent';
 import { useAuth } from '../context/AuthContext';
-import { useBlockTarget, useNgoPosts } from '../hooks/useSocialQueries';
+import { useBlockTarget, useNgoPosts, useMyPortfolio } from '../hooks/useSocialQueries';
 import {
   useNgoProfile,
   useNgoStats,
@@ -49,17 +49,21 @@ function formatPastWorkDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 }
 
-/** A "past work" entry as shown to a visitor on an NGO's public profile — same fields as the
- * NGO's own private management card (NgoPortfolioScreen's EntryCard), but read-only plus
- * Like/Report in place of Edit/Delete, matching how a regular Post can be liked and reported. */
+/** A "past work" entry as shown on an NGO's profile — same fields as the NGO's own private
+ * management card (NgoPortfolioScreen's EntryCard). A visitor gets Like/Report, matching how a
+ * regular Post can be liked and reported; the NGO viewing its own profile gets neither (liking or
+ * reporting your own content doesn't make sense — same self-dealing rule other content follows),
+ * just the plain card, with editing left to the dedicated Past Work screen. */
 function PastWorkCard({
   entry,
+  isOwn = false,
   onToggleLike,
   onReport,
 }: {
   entry: ApiPortfolioEntry;
-  onToggleLike: () => void;
-  onReport: () => void;
+  isOwn?: boolean;
+  onToggleLike?: () => void;
+  onReport?: () => void;
 }) {
   const cover = resolveMediaUrl(entry.media[0]?.url);
 
@@ -99,12 +103,14 @@ function PastWorkCard({
           )}
         </View>
 
-        <View style={styles.pastWorkActions}>
-          <LikeButton liked={entry.likedByMe} count={entry.likeCount} onToggle={onToggleLike} size={18} />
-          <TouchableOpacity onPress={onReport} hitSlop={6}>
-            <Text style={styles.pastWorkReport}>🚩 Report</Text>
-          </TouchableOpacity>
-        </View>
+        {!isOwn && (
+          <View style={styles.pastWorkActions}>
+            <LikeButton liked={entry.likedByMe} count={entry.likeCount} onToggle={onToggleLike!} size={18} />
+            <TouchableOpacity onPress={onReport} hitSlop={6}>
+              <Text style={styles.pastWorkReport}>🚩 Report</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -163,6 +169,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
   const ownAchievements = useNgoAchievements(isOwn);
   const ownLeaderboard = useNgoLeaderboard(50, isOwn);
   const ownDrives = useMyDrives(isOwn);
+  const ownPortfolio = useMyPortfolio(isOwn);
 
   const publicProfile = useNgoPublicProfile(isOwn ? null : ngoId ?? null);
   const publicAchievements = useNgoPublicAchievements(isOwn ? undefined : ngoId);
@@ -185,7 +192,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
 
   const { refreshing, onRefresh } = usePullToRefresh(
     isOwn
-      ? [ownProfile.refetch, ownStats.refetch, ownStreak.refetch, ownAchievements.refetch, ownLeaderboard.refetch, ownDrives.refetch]
+      ? [ownProfile.refetch, ownStats.refetch, ownStreak.refetch, ownAchievements.refetch, ownLeaderboard.refetch, ownDrives.refetch, ownPortfolio.refetch]
       : [publicProfile.refetch, publicAchievements.refetch],
   );
 
@@ -194,7 +201,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
   const [reporting, setReporting] = useState(false);
   const [reportingEntryId, setReportingEntryId] = useState<string | null>(null);
   const togglePortfolioLike = useTogglePortfolioLike(ngoId);
-  const pastWork = isOwn ? [] : publicProfile.data?.portfolio ?? [];
+  const pastWork = isOwn ? ownPortfolio.data ?? [] : publicProfile.data?.portfolio ?? [];
   const openPost = useCallback(
     (post: ApiPost) => {
       if (!effectiveNgoId) return;
@@ -377,6 +384,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
                         <PastWorkCard
                           key={entry.id}
                           entry={entry}
+                          isOwn={isOwn}
                           onToggleLike={() => togglePortfolioLike.mutate({ id: entry.id, liked: entry.likedByMe })}
                           onReport={() => setReportingEntryId(entry.id)}
                         />

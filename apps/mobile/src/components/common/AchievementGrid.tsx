@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { Text } from './AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
+import { COLORS } from '../../constants/colors';
 import { RADIUS, SPACING } from '../../constants/theme';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { Sheet } from './Sheet';
@@ -11,7 +11,6 @@ import { AnimatedButton } from './AnimatedButton';
 import { ShareCardModal } from './ShareCardModal';
 import { AchievementShareCard } from '../share/AchievementShareCard';
 import { useScaleIn } from '../../hooks/useAnimations';
-import { useTimeTheme, isNightlikePeriod } from '../../hooks/useTimeTheme';
 import { RARITY_COLORS } from '../../constants/achievementRarity';
 import type { ApiAchievement } from '../../api/achievements';
 
@@ -110,8 +109,6 @@ export function AchievementDetailModal({
   achievement: ApiAchievement | null;
   onClose: () => void;
 }) {
-  const { period } = useTimeTheme();
-  const isNightMode = isNightlikePeriod(period);
   const [shareVisible, setShareVisible] = useState(false);
 
   return (
@@ -125,7 +122,7 @@ export function AchievementDetailModal({
             <Text style={styles.achievementModalIcon}>{achievement.icon}</Text>
           </LinearGradient>
           <Text style={styles.achievementModalRarity}>{achievement.rarity.toUpperCase()}</Text>
-          <Text style={[styles.achievementModalDesc, isNightMode && styles.achievementModalDescNight]}>
+          <Text style={styles.achievementModalDesc}>
             {achievement.description}
           </Text>
           {!achievement.unlocked && achievement.total !== undefined && (
@@ -138,7 +135,7 @@ export function AchievementDetailModal({
                   ]}
                 />
               </View>
-              <Text style={[styles.achievementModalProgressText, isNightMode && styles.achievementModalDescNight]}>
+              <Text style={styles.achievementModalProgressText}>
                 {achievement.progress} / {achievement.total}
               </Text>
             </View>
@@ -286,9 +283,6 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     textAlign: 'center',
     marginTop: SPACING.sm,
-  },
-  achievementModalDescNight: {
-    color: ON_DARK_SURFACE.secondary,
   },
   achievementModalProgressWrap: {
     width: '100%',

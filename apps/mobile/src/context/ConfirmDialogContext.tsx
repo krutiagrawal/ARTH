@@ -8,7 +8,7 @@ import { ConfirmDialog, ConfirmButton } from '../components/common/ConfirmDialog
  */
 
 interface ConfirmDialogContextValue {
-  confirm: (title: string, message?: string, buttons?: ConfirmButton[]) => void;
+  confirm: (title: string, message?: string, buttons?: ConfirmButton[], icon?: string) => void;
 }
 
 const ConfirmDialogContext = createContext<ConfirmDialogContextValue>({
@@ -22,12 +22,16 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState<string | undefined>(undefined);
   const [buttons, setButtons] = useState<ConfirmButton[]>(DEFAULT_BUTTONS);
+  const [icon, setIcon] = useState<string | undefined>(undefined);
 
   const confirm = useCallback(
-    (nextTitle: string, nextMessage?: string, nextButtons: ConfirmButton[] = DEFAULT_BUTTONS) => {
+    (nextTitle: string, nextMessage?: string, nextButtons: ConfirmButton[] = DEFAULT_BUTTONS, nextIcon?: string) => {
       setTitle(nextTitle);
       setMessage(nextMessage);
       setButtons(nextButtons);
+      // No explicit icon: default to a warning glyph for destructive confirms (delete/remove/
+      // block/etc.), otherwise leave plain info confirms icon-less.
+      setIcon(nextIcon ?? (nextButtons.some((b) => b.style === 'destructive') ? '⚠️' : undefined));
       setVisible(true);
     },
     []
@@ -38,7 +42,7 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
   return (
     <ConfirmDialogContext.Provider value={{ confirm }}>
       {children}
-      <ConfirmDialog visible={visible} onClose={onClose} title={title} message={message} buttons={buttons} />
+      <ConfirmDialog visible={visible} onClose={onClose} title={title} message={message} buttons={buttons} icon={icon} />
     </ConfirmDialogContext.Provider>
   );
 }

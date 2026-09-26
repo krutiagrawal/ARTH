@@ -180,6 +180,11 @@ export default async function ngoRoutes(fastify: FastifyInstance) {
     reply.send(volunteers);
   });
 
+  fastify.delete<{ Params: { userId: string } }>('/volunteers/:userId', async (request, reply) => {
+    const result = await ngoService.removeVolunteer(fastify.prisma, request.user!.id, request.params.userId);
+    reply.send(result);
+  });
+
   fastify.get('/reports', async (request, reply) => {
     const reports = await ngoService.getOwnReports(fastify.prisma, request.user!.id);
     reply.send(reports);

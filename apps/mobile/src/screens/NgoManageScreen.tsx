@@ -24,9 +24,21 @@ const SEGMENTS: { key: Segment; label: string; createRoute: string; newLabel: st
   { key: 'trees', label: 'Trees', createRoute: 'NgoCreateAdoptableTree', newLabel: '+ New Tree' },
 ];
 
-export function NgoManageScreen({ navigation, initialSegment }: { navigation: any; initialSegment?: Segment }) {
+export function NgoManageScreen({
+  navigation,
+  initialSegment,
+  route,
+}: {
+  navigation: any;
+  initialSegment?: Segment;
+  /** Present only when React Navigation renders this directly as a pushed Stack.Screen (e.g.
+   * deep-linked from Reports) rather than as the Manage tab's embedded content — used purely to
+   * decide whether a back button belongs in the header, since this screen otherwise has no way
+   * back on its own. */
+  route?: { params?: { initialSegment?: Segment } };
+}) {
   const insets = useSafeAreaInsets();
-  const [segment, setSegment] = useState<Segment>(initialSegment ?? 'drives');
+  const [segment, setSegment] = useState<Segment>(initialSegment ?? route?.params?.initialSegment ?? 'drives');
   const active = SEGMENTS.find((s) => s.key === segment)!;
   const { data: profile } = useNgoProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
@@ -39,6 +51,11 @@ export function NgoManageScreen({ navigation, initialSegment }: { navigation: an
       <LeafBranch size={160} style={styles.leaf} />
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        {route && (
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Text style={styles.backIcon}>←</Text>
+          </TouchableOpacity>
+        )}
         <Text style={styles.headerTitle}>
           <Text style={styles.headerTitleAccent}>Manage </Text>
           {active.label}
@@ -81,6 +98,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   leaf: { top: 28, right: -20 },
   header: { paddingHorizontal: 20, paddingBottom: 8 },
+  backButton: { width: 32, height: 32, justifyContent: 'center', marginBottom: 4 },
+  backIcon: { fontSize: 22, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: { fontFamily: FONTS.displayBold, fontSize: 28, lineHeight: 37, color: COLORS.textPrimary },
   // The nested span needs the family repeated: the global font patch treats every <Text> on its
   // own, so a child that only sets a color would otherwise drop back to the body face mid-word.

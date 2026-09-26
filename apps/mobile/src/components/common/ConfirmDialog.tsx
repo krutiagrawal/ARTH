@@ -2,11 +2,11 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text } from './AppText';
 import { Sheet } from './Sheet';
+import { IconBadge } from './IconBadge';
 import { AnimatedButton } from './AnimatedButton';
-import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
+import { COLORS } from '../../constants/colors';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { SPACING } from '../../constants/theme';
-import { useTimeTheme, isNightlikePeriod } from '../../hooks/useTimeTheme';
 
 export type ConfirmButtonStyle = 'default' | 'cancel' | 'destructive';
 
@@ -26,16 +26,15 @@ export function ConfirmDialog({
   title,
   message,
   buttons,
+  icon,
 }: {
   visible: boolean;
   onClose: () => void;
   title: string;
   message?: string;
   buttons: ConfirmButton[];
+  icon?: string;
 }) {
-  const { period } = useTimeTheme();
-  const isNightMode = isNightlikePeriod(period);
-
   const handlePress = (button: ConfirmButton) => {
     onClose();
     button.onPress?.();
@@ -50,10 +49,17 @@ export function ConfirmDialog({
   return (
     <Sheet visible={visible} onClose={onClose} variant="fade">
       <View style={styles.content}>
-        <Text style={[styles.title, isNightMode && styles.titleNight]}>{title}</Text>
-        {message ? (
-          <Text style={[styles.message, isNightMode && styles.messageNight]}>{message}</Text>
+        {icon ? (
+          <IconBadge
+            icon={icon}
+            color={buttons.some((b) => b.style === 'destructive') ? COLORS.danger : COLORS.sage}
+            size={48}
+            round
+            style={styles.icon}
+          />
         ) : null}
+        <Text style={styles.title}>{title}</Text>
+        {message ? <Text style={styles.message}>{message}</Text> : null}
         <View style={styles.buttons}>
           {buttons.map((button, index) => (
             <AnimatedButton
@@ -74,8 +80,8 @@ export function ConfirmDialog({
 
 const styles = StyleSheet.create({
   content: { alignItems: 'center', paddingTop: SPACING.sm },
+  icon: { marginBottom: SPACING.sm },
   title: { ...TYPOGRAPHY.h3, color: COLORS.textPrimary, textAlign: 'center' },
-  titleNight: { color: ON_DARK_SURFACE.primary },
   message: {
     ...TYPOGRAPHY.body,
     color: COLORS.textPrimary,
@@ -83,7 +89,6 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
     marginBottom: SPACING.md,
   },
-  messageNight: { color: ON_DARK_SURFACE.secondary },
   buttons: { width: '100%', marginTop: SPACING.xs },
   button: { marginTop: SPACING.sm },
 });

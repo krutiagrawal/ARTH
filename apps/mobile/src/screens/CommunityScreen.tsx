@@ -5,7 +5,7 @@ import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
+import { COLORS } from '../constants/colors';
 import { FONTS } from '../constants/typography';
 import { RADIUS, SHADOWS, SPACING } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
@@ -18,7 +18,6 @@ import { ProgressRing } from '../components/common/ProgressRing';
 import { EmptyState } from '../components/common/EmptyState';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useSlideUp, useFadeIn } from '../hooks/useAnimations';
-import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
 import {
   useFriends,
   useFriendRequests,
@@ -546,10 +545,6 @@ export function CommunityScreen({ navigation }: any) {
   const [joinedIds, setJoinedIds] = useState<Set<string>>(new Set());
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const { playSound } = useSoundSystem();
-  // The "Friends who joined" sheet uses the default (auto) Sheet surface, which flips to dark
-  // chrome at night — its own text colors need to follow, same as ReportSheet does.
-  const { period } = useTimeTheme();
-  const isNightMode = isNightlikePeriod(period);
   const insets = useSafeAreaInsets();
   const bottomNavClearance = useBottomNavClearance();
 
@@ -784,8 +779,8 @@ export function CommunityScreen({ navigation }: any) {
               <Text style={styles.friendsSheetAvatarEmoji}>{friend.avatarEmoji}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.friendsSheetName, isNightMode && styles.friendsSheetNameNight]}>{friend.name}</Text>
-              <Text style={[styles.friendsSheetHandle, isNightMode && styles.friendsSheetHandleNight]}>@{friend.handle}</Text>
+              <Text style={styles.friendsSheetName}>{friend.name}</Text>
+              <Text style={styles.friendsSheetHandle}>@{friend.handle}</Text>
             </View>
           </TouchableOpacity>
         ))}
@@ -1008,8 +1003,6 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: 1,
   },
-  friendsSheetNameNight: { color: ON_DARK_SURFACE.primary },
-  friendsSheetHandleNight: { color: ON_DARK_SURFACE.secondary },
   friendsJoinedRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text, TextInput } from '../common/AppText';
 import { Sheet } from '../common/Sheet';
-import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
+import { COLORS } from '../../constants/colors';
 import { RADIUS, SPACING } from '../../constants/theme';
 import { REPORT_REASONS, type ReportReason, type ReportTargetType } from '../../api/social';
 import { useReportContent } from '../../hooks/useSocialQueries';
-import { useTimeTheme, isNightlikePeriod } from '../../hooks/useTimeTheme';
 import { useConfirm } from '../../context/ConfirmDialogContext';
 
 interface ReportSheetProps {
@@ -30,8 +29,6 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
   const [details, setDetails] = useState('');
   const report = useReportContent();
   const confirm = useConfirm();
-  const { period } = useTimeTheme();
-  const isNightMode = isNightlikePeriod(period);
 
   const reset = () => {
     setReason(null);
@@ -64,7 +61,7 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
 
   return (
     <Sheet visible={visible} onClose={close} title={`Report ${targetLabel}`} variant="slideUp" scrollable>
-      <Text style={[styles.intro, isNightMode && styles.introNight]}>What is wrong with it? This is anonymous.</Text>
+      <Text style={styles.intro}>What is wrong with it? This is anonymous.</Text>
 
       <View style={styles.list}>
         {REPORT_REASONS.map((option) => {
@@ -80,10 +77,10 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
                 {selected && <View style={styles.radioDot} />}
               </View>
               <View style={styles.optionText}>
-                <Text style={[styles.optionLabel, isNightMode && styles.optionLabelNight, selected && styles.optionLabelSelected]}>
+                <Text style={[styles.optionLabel, selected && styles.optionLabelSelected]}>
                   {option.label}
                 </Text>
-                <Text style={[styles.optionHint, isNightMode && styles.optionHintNight]}>{option.hint}</Text>
+                <Text style={styles.optionHint}>{option.hint}</Text>
               </View>
             </TouchableOpacity>
           );
@@ -92,9 +89,9 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
 
       {reason === 'other' && (
         <TextInput
-          style={[styles.details, isNightMode && styles.detailsNight]}
+          style={styles.details}
           placeholder="eg - Tell us a bit more"
-          placeholderTextColor={isNightMode ? ON_DARK_SURFACE.muted : COLORS.textLight}
+          placeholderTextColor={COLORS.textLight}
           value={details}
           onChangeText={setDetails}
           multiline
@@ -166,8 +163,4 @@ const styles = StyleSheet.create({
   },
   submitDisabled: { opacity: 0.45 },
   submitText: { color: COLORS.white, fontSize: 15, fontWeight: '800' },
-  introNight: { color: ON_DARK_SURFACE.secondary },
-  optionLabelNight: { color: ON_DARK_SURFACE.primary },
-  optionHintNight: { color: ON_DARK_SURFACE.secondary },
-  detailsNight: { color: ON_DARK_SURFACE.primary, borderColor: 'rgba(255,255,255,0.2)' },
 });

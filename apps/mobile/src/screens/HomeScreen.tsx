@@ -463,17 +463,18 @@ const GROW_ACTION_ROUTES: Record<Exclude<GrowAction['key'], 'plant'>, string> = 
   donate: 'Campaigns',
 };
 
-/** The four contribution paths behind HomeGrowCTA — all real, backend-connected flows. */
+/** The four contribution paths behind HomeGrowCTA — all real, backend-connected flows. Renders
+ * through the shared `Sheet`, which is always the light/cream chrome regardless of time of day,
+ * so its text stays the fixed light-mode colors (no `homeTextColor` here, unlike the hero cards
+ * below which sit on the actual illustrated sky and do need to follow it). */
 function GrowActionSheet({
   visible,
   onClose,
   navigation,
-  theme,
 }: {
   visible: boolean;
   onClose: () => void;
   navigation: any;
-  theme: TimeTheme;
 }) {
   const { selection } = useHaptics();
 
@@ -498,10 +499,10 @@ function GrowActionSheet({
         >
           <Text style={styles.growActionIcon}>{action.icon}</Text>
           <View style={styles.growActionTextWrap}>
-            <Text style={[styles.growActionTitle, { color: homeTextColor(theme, COLORS.textPrimary) }]}>{action.title}</Text>
-            <Text style={[styles.growActionSubtitle, { color: homeTextColor(theme, COLORS.textPrimary, { secondary: true }) }]}>{action.subtitle}</Text>
+            <Text style={[styles.growActionTitle, { color: COLORS.textPrimary }]}>{action.title}</Text>
+            <Text style={[styles.growActionSubtitle, { color: COLORS.textPrimary }]}>{action.subtitle}</Text>
           </View>
-          <Text style={[styles.growActionArrow, { color: homeTextColor(theme, COLORS.textPrimary) }]}>›</Text>
+          <Text style={[styles.growActionArrow, { color: COLORS.textPrimary }]}>›</Text>
         </TouchableOpacity>
       ))}
     </Sheet>
@@ -651,7 +652,6 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
         visible={growSheetVisible}
         onClose={() => setGrowSheetVisible(false)}
         navigation={navigation}
-        theme={theme}
       />
     </BlurTargetView>
   );

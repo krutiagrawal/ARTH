@@ -79,7 +79,9 @@ export async function buildApp() {
 
   app.setErrorHandler((error: FastifyError | AppError, _request, reply) => {
     if (error instanceof AppError) {
-      reply.status(error.statusCode).send({ error: error.code, message: error.message });
+      reply
+        .status(error.statusCode)
+        .send({ error: error.code, message: error.message, ...(error.details !== undefined ? { details: error.details } : {}) });
       return;
     }
     if (error.validation) {

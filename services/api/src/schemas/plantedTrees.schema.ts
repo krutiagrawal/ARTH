@@ -3,6 +3,8 @@ import { z } from 'zod';
 const healthStatusEnum = z.enum(['healthy', 'struggling', 'dead', 'removed']);
 
 export const bulkCreatePlantedTreesSchema = z.object({
+  // Optional: a plantation genuinely may not have been part of any organized drive (see the
+  // "Independent Plantings" bucket in plantationZone.service.ts's getPlantationsOverview).
   driveId: z.string().uuid().optional(),
   zoneId: z.string().uuid().optional(),
   speciesName: z.string().min(1).max(100),
@@ -16,7 +18,9 @@ export const bulkCreatePlantedTreesSchema = z.object({
 });
 
 export const listQuerySchema = z.object({
-  driveId: z.string().uuid().optional(),
+  // 'none' is a sentinel meaning "only trees with no drive" (pre-dating the required-drive rule
+  // on new trees) — same route-level translation to a literal `null` filter as zoneId below.
+  driveId: z.union([z.string().uuid(), z.literal('none')]).optional(),
   // 'unzoned' is a sentinel meaning "only trees with no zone" — a route-level concern since it
   // isn't a real zone id, translated to a literal `null` filter before hitting the service.
   zoneId: z.union([z.string().uuid(), z.literal('unzoned')]).optional(),
@@ -46,6 +50,9 @@ export const zoneBulkHealthCheckSchema = z.object({
 export const singleHealthCheckSchema = z.object({
   status: healthStatusEnum,
   notes: z.string().max(1000).optional(),
+  // A tree already has a check logged today: the client re-submits with this flag (after the
+  // user confirms in a popup) to overwrite that entry instead of getting rejected again.
+  updateExisting: z.coerce.boolean().optional(),
 });
 
 export const bulkHealthCheckSchema = z.object({

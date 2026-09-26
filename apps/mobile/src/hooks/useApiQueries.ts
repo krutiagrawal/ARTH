@@ -100,6 +100,7 @@ import {
   fetchNgoDonations,
   fetchNgoDonationsSummary,
   fetchNgoVolunteers,
+  removeNgoVolunteer,
   UpdateNgoProfileInput,
   DonationsFilter,
 } from '../api/ngo';
@@ -1153,6 +1154,14 @@ export function useNgoVolunteers() {
   });
 }
 
+export function useRemoveNgoVolunteer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => removeNgoVolunteer(userId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ngo', 'volunteers'] }),
+  });
+}
+
 // ---------- Staff roster ----------
 
 export function useStaff() {
@@ -1213,8 +1222,13 @@ export function useBulkCreatePlantedTrees() {
 export function useLogHealthCheck() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ plantedTreeId, status, notes }: { plantedTreeId: string; status: ActionableHealthStatus; notes?: string }) =>
-      logHealthCheck(plantedTreeId, { status, notes }),
+    mutationFn: ({
+      plantedTreeId,
+      status,
+      notes,
+      updateExisting,
+    }: { plantedTreeId: string; status: ActionableHealthStatus; notes?: string; updateExisting?: boolean }) =>
+      logHealthCheck(plantedTreeId, { status, notes, updateExisting }),
     onSuccess: (_data, { plantedTreeId }) => {
       queryClient.invalidateQueries({ queryKey: ['ngo', 'planted-trees'] });
       queryClient.invalidateQueries({ queryKey: ['ngo', 'planted-tree', plantedTreeId] });

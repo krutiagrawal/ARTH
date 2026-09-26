@@ -17,7 +17,7 @@ import { usePhoneField } from '@/lib/usePhoneField'
 import { isValidWebsite } from '@/lib/validation'
 
 export default function SettingsClient() {
-  const { profile, loading, setProfile } = useNgoProfile()
+  const { profile, setProfile } = useNgoProfile()
   const [form, setForm] = useState(null)
   const [logoFile, setLogoFile] = useState(null)
   const [submitting, setSubmitting] = useState(false)
@@ -106,7 +106,10 @@ export default function SettingsClient() {
     }
   }
 
-  if (loading || !form) {
+  // Gate on the data itself, not `loading` — once a profile has loaded once, some other consumer
+  // of this shared context re-running `refresh()` (flipping `loading` back to true) must never
+  // blank this page's already-filled-in form back out to a skeleton from under the person editing it.
+  if (!form) {
     return (
       <DashboardPageShell className="space-y-4">
         <Skeleton className="h-10 w-64" />

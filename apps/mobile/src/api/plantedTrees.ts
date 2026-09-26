@@ -31,7 +31,8 @@ export interface ApiTreeHealthCheck {
 }
 
 export interface ListPlantedTreesFilter {
-  driveId?: string;
+  /** omit = no drive filter, 'none' = only driveless trees, otherwise a specific drive id. */
+  driveId?: string | 'none';
   /** omit = no zone filter, 'unzoned' = only unzoned trees, otherwise a specific zone id. */
   zoneId?: string | 'unzoned';
   speciesName?: string;
@@ -49,6 +50,7 @@ export async function fetchPlantedTrees(filter: ListPlantedTreesFilter = {}): Pr
 }
 
 export interface BulkCreatePlantedTreesInput {
+  /** Omit when the plantation wasn't part of any organized drive. */
   driveId?: string;
   zoneId?: string;
   speciesName: string;
@@ -84,12 +86,13 @@ export async function fetchHealthCheckHistory(plantedTreeId: string): Promise<{ 
 
 export async function logHealthCheck(
   plantedTreeId: string,
-  input: { status: ActionableHealthStatus; notes?: string },
-): Promise<void> {
+  input: { status: ActionableHealthStatus; notes?: string; updateExisting?: boolean },
+): Promise<ApiTreeHealthCheck> {
   const form = new FormData();
   form.append('status', input.status);
   if (input.notes) form.append('notes', input.notes);
-  await apiFetch(`/api/ngo/planted-trees/${plantedTreeId}/health-checks`, { method: 'POST', body: form, isForm: true });
+  if (input.updateExisting) form.append('updateExisting', 'true');
+  return apiFetch(`/api/ngo/planted-trees/${plantedTreeId}/health-checks`, { method: 'POST', body: form, isForm: true });
 }
 
 export async function logBulkHealthChecks(input: {
@@ -128,7 +131,8 @@ export interface ApiPlantationZone extends ZoneRollup {
 }
 
 export interface ApiPlantationSummary extends ZoneRollup {
-  driveId: string;
+  /** null for the synthetic "Independent Plantings" bucket — trees with no drive. */
+  driveId: string | null;
   driveTitle: string;
   zoneCount: number;
 }

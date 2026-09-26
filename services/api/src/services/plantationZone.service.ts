@@ -57,15 +57,9 @@ function rollupGroup(trees: { id: string; plantedAt: Date }[], statusByTree: Map
   return { total, counts, survivalRate, lastCheckedAt, nextCheckDue: computeNextCheckDue(earliestPlantedAt) };
 }
 
-// One batched query for every tree + health check under a drive, then grouped in memory per
-// zone — avoids an N+1 query per zone when a plantation has dozens of them.
-async function rollupsByZone(prisma: PrismaClient, driveId: string) {
-  const trees = await prisma.plantedTree.findMany({
-    where: { driveId },
-    select: { id: true, zoneId: true, plantedAt: true },
-  });
-  const treeIds = trees.map((t) => t.id);
-
+// One batched query for every tree's latest status + last health check, shared by any grouping
+// (per-zone, per-drive, or the flat "unassigned" bucket) that needs to roll trees up.
+async function computeStatusMaps(prisma: PrismaClient, treeIds: string[]) {
   const [statusByTree, checks] = await Promise.all([
     getLatestStatusByTree(prisma, treeIds),
     treeIds.length === 0
@@ -81,6 +75,19 @@ async function rollupsByZone(prisma: PrismaClient, driveId: string) {
   for (const c of checks) {
     if (!lastCheckedByTree.has(c.plantedTreeId)) lastCheckedByTree.set(c.plantedTreeId, c.checkedAt);
   }
+
+  return { statusByTree, lastCheckedByTree };
+}
+
+// One batched query for every tree + health check under a drive, then grouped in memory per
+// zone — avoids an N+1 query per zone when a plantation has dozens of them.
+async function rollupsByZone(prisma: PrismaClient, driveId: string) {
+  const trees = await prisma.plantedTree.findMany({
+    where: { driveId },
+    select: { id: true, zoneId: true, plantedAt: true },
+  });
+
+  const { statusByTree, lastCheckedByTree } = await computeStatusMaps(prisma, trees.map((t) => t.id));
 
   const byZone = new Map<string, { id: string; plantedAt: Date }[]>();
   for (const tree of trees) {
@@ -179,18 +186,43 @@ export async function getPlantationsOverview(prisma: PrismaClient, ngoUserId: st
     orderBy: { createdAt: 'desc' },
   });
 
-  return Promise.all(
+  const driveRows = await Promise.all(
     drives.map(async (drive) => {
       const { byZone, statusByTree, lastCheckedByTree } = await rollupsByZone(prisma, drive.id);
       const allTrees = Array.from(byZone.values()).flat();
       return {
-        driveId: drive.id,
+        driveId: drive.id as string | null,
         driveTitle: drive.title,
         zoneCount: drive._count.zones,
         ...rollupGroup(allTrees, statusByTree, lastCheckedByTree),
       };
     }),
   );
+
+  // Trees logged with no drive (a legitimate choice — not every plantation is part of an
+  // organized drive) have no Drive to group under above, so they'd otherwise be silently
+  // excluded from this list while still counting toward the survival-stats total — surface them
+  // as their own pseudo-plantation instead, same idea as the "Unzoned" bucket one level down.
+  const unassignedTrees = await prisma.plantedTree.findMany({
+    where: { ngoId: ngo.id, driveId: null },
+    select: { id: true, plantedAt: true },
+  });
+  if (unassignedTrees.length === 0) return driveRows;
+
+  const { statusByTree, lastCheckedByTree } = await computeStatusMaps(
+    prisma,
+    unassignedTrees.map((t) => t.id),
+  );
+
+  return [
+    ...driveRows,
+    {
+      driveId: null,
+      driveTitle: 'Independent Plantings',
+      zoneCount: 0,
+      ...rollupGroup(unassignedTrees, statusByTree, lastCheckedByTree),
+    },
+  ];
 }
 
 // Public, read-only "trees planted here" map data for an NGO's profile — one pin per drive that

@@ -9,8 +9,10 @@ import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { usePlantedTree, useHealthCheckHistory, useLogHealthCheck, useNgoProfile } from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
-import { resolveMediaUrl } from '../api/client';
+import { resolveMediaUrl, ApiError } from '../api/client';
+import { useConfirm } from '../context/ConfirmDialogContext';
 import { STATUS_META, ACTIONABLE_STATUSES } from '../constants/treeHealth';
+import type { ApiTreeHealthCheck } from '../api/plantedTrees';
 
 export function NgoTreeDetailScreen({ navigation, route }: any) {
   const { treeId } = route.params as { treeId: string };
@@ -20,8 +22,29 @@ export function NgoTreeDetailScreen({ navigation, route }: any) {
   const logMutation = useLogHealthCheck();
   const { data: profile } = useNgoProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
+  const confirm = useConfirm();
 
   const checks = history?.checks ?? [];
+
+  const markStatus = async (status: (typeof ACTIONABLE_STATUSES)[number]) => {
+    try {
+      await logMutation.mutateAsync({ plantedTreeId: treeId, status });
+    } catch (e) {
+      const existingCheck = e instanceof ApiError && e.code === 'CONFLICT'
+        ? (e.details as { existingCheck?: ApiTreeHealthCheck } | undefined)?.existingCheck
+        : undefined;
+      if (!existingCheck) return;
+
+      confirm(
+        'Already checked today',
+        `You logged this tree as ${STATUS_META[existingCheck.status].label} earlier today. Update today's entry to ${STATUS_META[status].label} instead?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Update', onPress: () => logMutation.mutateAsync({ plantedTreeId: treeId, status, updateExisting: true }) },
+        ],
+      );
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -81,7 +104,7 @@ export function NgoTreeDetailScreen({ navigation, route }: any) {
                 key={status}
                 style={[styles.markButton, { borderColor: STATUS_META[status].color }]}
                 disabled={logMutation.isPending}
-                onPress={guard(() => logMutation.mutateAsync({ plantedTreeId: treeId, status }))}
+                onPress={guard(() => markStatus(status))}
               >
                 <Text style={styles.markButtonText}>{STATUS_META[status].emoji} {STATUS_META[status].label}</Text>
               </TouchableOpacity>

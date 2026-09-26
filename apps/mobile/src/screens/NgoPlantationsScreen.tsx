@@ -68,12 +68,20 @@ export function NgoPlantationsScreen({ navigation }: any) {
           <EmptyState icon="🌳" title="No plantations yet" body="Log a batch of planted trees against a drive to start tracking survival by zone." actionLabel="Log trees" onAction={guard(() => navigation.navigate('NgoLogPlantedTrees'))} />
         )}
         {plantations.map((p, i) => (
-          <FadeInRow key={p.driveId} delay={Math.min(i, 12) * 40}>
-            <TouchableOpacity onPress={() => navigation.navigate('NgoZones', { driveId: p.driveId, driveTitle: p.driveTitle })} activeOpacity={0.85}>
+          <FadeInRow key={p.driveId ?? 'unassigned'} delay={Math.min(i, 12) * 40}>
+            <TouchableOpacity
+              onPress={() =>
+                p.driveId
+                  ? navigation.navigate('NgoZones', { driveId: p.driveId, driveTitle: p.driveTitle })
+                  : navigation.navigate('NgoZoneTrees', { zoneId: null, zoneName: p.driveTitle, driveId: null })
+              }
+              activeOpacity={0.85}
+            >
               <BorderCard style={styles.card}>
                 <Text style={styles.cardTitle}>{p.driveTitle}</Text>
                 <Text style={styles.cardMeta}>
-                  {p.zoneCount} zone{p.zoneCount === 1 ? '' : 's'} · {p.total} trees · {p.survivalRate}% survival
+                  {p.driveId ? `${p.zoneCount} zone${p.zoneCount === 1 ? '' : 's'} · ` : ''}
+                  {p.total} trees · {p.survivalRate}% survival
                 </Text>
                 <Text style={styles.cardMeta}>Next health check: {formatDueDate(p.nextCheckDue)}</Text>
               </BorderCard>

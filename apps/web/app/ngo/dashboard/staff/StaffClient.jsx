@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { MoreHorizontal, Plus, Users } from 'lucide-react'
+import { MoreHorizontal, Plus, User, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import DataTable from '@/components/dashboard/DataTable'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
@@ -15,6 +16,7 @@ import { useNgoProfile } from '../NgoProfileContext'
 import { useResourceCrud } from '@/lib/useResourceCrud'
 import { proxy } from '../proxy'
 import { staffFields } from '../resourceFields'
+import { resolveMediaUrl } from '@/lib/media'
 
 export default function StaffClient() {
   const { profile } = useNgoProfile()
@@ -58,9 +60,17 @@ export default function StaffClient() {
         accessorKey: 'name',
         header: 'Name',
         cell: ({ row }) => (
-          <div>
-            <p className="font-medium">{row.original.name}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{row.original.role}</p>
+          <div className="flex items-center gap-2.5">
+            <Avatar className="h-9 w-9">
+              {row.original.photoUrl && <AvatarImage src={resolveMediaUrl(row.original.photoUrl)} alt={row.original.name} />}
+              <AvatarFallback>
+                <User className="h-4 w-4 text-muted-foreground" />
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-medium">{row.original.name}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{row.original.role}</p>
+            </div>
           </div>
         ),
       },

@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Modal, Dimensions, ScrollView } from 'react-native';
 import { Text } from './AppText';
+import { IconBadge } from './IconBadge';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
 import { RADIUS, SPACING, SHADOWS } from '../../constants/theme';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
-import { useTimeTheme, isNightlikePeriod } from '../../hooks/useTimeTheme';
 
 const { height: SH } = Dimensions.get('window');
 
@@ -26,10 +26,10 @@ interface SheetProps {
   scrollable?: boolean;
   maxHeight?: number;
   /**
-   * 'auto' (default) picks light/night-dark chrome from the time-of-day theme, same as before.
-   * 'dark' forces the night-mode chrome (light text, translucent handle/close button) regardless
-   * of time of day — for content that's always a dark surface (e.g. a picker over a night scene),
-   * not just at night. Pair with `surfaceColor` to override the actual background hex/rgba.
+   * 'auto' (default) always uses the light/cream chrome. 'dark' forces the dark chrome (light
+   * text, translucent handle/close button) — for content that's always a dark surface (e.g. a
+   * picker over a night scene). Pair with `surfaceColor` to override the actual background
+   * hex/rgba.
    */
   surface?: 'auto' | 'dark';
   surfaceColor?: string;
@@ -49,8 +49,7 @@ export function Sheet({
   const insets = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();
   const effectiveAnimation = reduceMotion ? 'fade' : variant === 'slideUp' ? 'slide' : 'fade';
-  const { period } = useTimeTheme();
-  const isNightMode = surface === 'dark' ? true : isNightlikePeriod(period);
+  const isNightMode = surface === 'dark';
 
   const Content = scrollable ? ScrollView : View;
   const contentProps = scrollable
@@ -79,11 +78,16 @@ export function Sheet({
               <TouchableOpacity
                 onPress={onClose}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                style={[styles.closeButton, isNightMode && styles.closeButtonNight]}
+                style={styles.closeButton}
                 accessibilityRole="button"
                 accessibilityLabel="Close"
               >
-                <Text style={[styles.closeIcon, isNightMode && styles.titleNight]}>✕</Text>
+                <IconBadge
+                  icon="✕"
+                  color={isNightMode ? COLORS.white : COLORS.earth}
+                  size={30}
+                  round
+                />
               </TouchableOpacity>
             </View>
           ) : null}
@@ -140,18 +144,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
     marginLeft: SPACING.sm,
-  },
-  closeIcon: {
-    fontSize: 14,
-    color: COLORS.textPrimary,
-    fontWeight: '600',
   },
   content: {
     paddingBottom: SPACING.md,
@@ -167,8 +160,5 @@ const styles = StyleSheet.create({
   },
   handleNight: {
     backgroundColor: ON_DARK_SURFACE.muted,
-  },
-  closeButtonNight: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
   },
 });

@@ -29,7 +29,7 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 export function NgoSettingsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: profile, isLoading, refetch } = useNgoProfile();
+  const { data: profile, refetch } = useNgoProfile();
   const updateMutation = useUpdateNgoProfile();
   const { data: settings } = useSettings();
   const confirm = useConfirm();
@@ -122,6 +122,10 @@ export function NgoSettingsScreen({ navigation }: any) {
         followPolicy: approvalRequired ? 'approval' : 'open',
         logo: logo ?? undefined,
       });
+      // The freshly-picked local file has now been uploaded and is reflected in `profile.logoUrl`
+      // (refetched via the mutation's onSuccess) — drop it so `logoUri` switches back to resolving
+      // the stored URL instead of continuing to point at the local picked photo indefinitely.
+      setLogo(null);
       confirm('Saved', 'Your NGO profile has been updated.');
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not save your profile. Please try again.');
@@ -139,7 +143,10 @@ export function NgoSettingsScreen({ navigation }: any) {
         onBack={() => navigation?.goBack?.()}
       />
 
-      {isLoading ? (
+      {/* Gate on the data itself, not `isLoading` — once a profile has loaded once, a background
+          refetch (e.g. right after Save invalidates the cache) must never blank the form back out
+          from under the person still looking at it. */}
+      {!profile ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView

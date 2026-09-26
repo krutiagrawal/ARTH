@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, ViewStyle } from 'react-native';
 import { Text } from './AppText';
 import { COLORS } from '../../constants/colors';
 import { RADIUS } from '../../constants/theme';
@@ -10,9 +10,10 @@ interface IconBadgeProps {
   size?: number;
   /** Circular well instead of a rounded square — the reference's menu/list-row treatment. */
   round?: boolean;
+  style?: ViewStyle;
 }
 
-export function IconBadge({ icon, color = COLORS.sage, size = 40, round = false }: IconBadgeProps) {
+export function IconBadge({ icon, color = COLORS.sage, size = 40, round = false, style }: IconBadgeProps) {
   return (
     <View
       style={[
@@ -23,6 +24,7 @@ export function IconBadge({ icon, color = COLORS.sage, size = 40, round = false 
           borderRadius: round ? size / 2 : RADIUS.md,
           backgroundColor: `${color}22`,
         },
+        style,
       ]}
     >
       <Text style={{ fontSize: size * 0.5 }}>{icon}</Text>

@@ -83,6 +83,13 @@ export async function fetchNgoStats(): Promise<ApiNgoStats> {
 }
 
 export interface ApiNgoReports extends ApiNgoStats {
+  survival: {
+    total: number;
+    survivalRate: number;
+    counts: Record<'not_checked' | 'healthy' | 'struggling' | 'dead' | 'removed', number>;
+  };
+  attendance: { recorded: number; rate: number | null };
+  sponsoredTrees: { count: number; totalAmountCents: number };
   monthly: {
     donations: { month: string; count: number }[];
     rsvps: { month: string; count: number }[];
@@ -144,4 +151,11 @@ export interface ApiVolunteer {
 
 export async function fetchNgoVolunteers(): Promise<ApiVolunteer[]> {
   return apiFetch<ApiVolunteer[]>('/api/ngo/volunteers');
+}
+
+/** Cancels this person's confirmed RSVPs to the NGO's *upcoming* drives only — past attendance
+ * history is untouched, so someone whose only participation was in the past will still show up
+ * here afterward. */
+export async function removeNgoVolunteer(userId: string): Promise<{ cancelledCount: number }> {
+  return apiFetch<{ cancelledCount: number }>(`/api/ngo/volunteers/${userId}`, { method: 'DELETE' });
 }

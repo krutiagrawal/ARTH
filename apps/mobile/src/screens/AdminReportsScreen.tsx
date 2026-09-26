@@ -14,7 +14,6 @@ import { resolveMediaUrl } from '../api/client';
 import { useActOnReport, useAdminReports } from '../hooks/useSocialQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { ApiAdminReport, ModerationAction, ReportStatus, ReportTargetTypeFilter } from '../api/admin';
-import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
 
 const FILTERS: { key: ReportStatus | undefined; label: string }[] = [
   { key: 'open', label: 'Open' },
@@ -168,8 +167,6 @@ export function AdminReportsScreen() {
   const [targetTab, setTargetTab] = useState<ReportTargetTypeFilter>('accounts');
   const [pending, setPending] = useState<{ report: ApiAdminReport; action: ModerationAction } | null>(null);
   const [reason, setReason] = useState('');
-  const { period } = useTimeTheme();
-  const isNightMode = isNightlikePeriod(period);
 
   const { data, isLoading, refetch } = useAdminReports(filter, targetTab);
   const act = useActOnReport();
@@ -273,7 +270,7 @@ export function AdminReportsScreen() {
                   : 'Hide this content?'
         }
       >
-        <Text style={[styles.sheetBody, isNightMode && styles.sheetBodyNight]}>
+        <Text style={styles.sheetBody}>
           {pending?.action === 'block_account'
             ? 'They immediately lose access on web and mobile – every signed-in request will be rejected until unblocked.'
             : pending?.action === 'delete'
@@ -286,9 +283,9 @@ export function AdminReportsScreen() {
         </Text>
 
         <TextInput
-          style={[styles.reasonInput, isNightMode && styles.reasonInputNight]}
+          style={styles.reasonInput}
           placeholder="eg - Reason (optional – saved to the audit log)"
-          placeholderTextColor={isNightMode ? ON_DARK_SURFACE.muted : COLORS.textLight}
+          placeholderTextColor={COLORS.textLight}
           value={reason}
           onChangeText={setReason}
           multiline
@@ -428,6 +425,4 @@ const styles = StyleSheet.create({
   confirmDanger: { backgroundColor: COLORS.danger },
   confirmText: { fontSize: 15, fontWeight: '800', color: COLORS.white },
   busy: { opacity: 0.6 },
-  sheetBodyNight: { color: ON_DARK_SURFACE.secondary },
-  reasonInputNight: { color: ON_DARK_SURFACE.primary, borderColor: 'rgba(255,255,255,0.2)' },
 });

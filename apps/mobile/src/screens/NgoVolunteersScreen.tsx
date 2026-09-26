@@ -8,8 +8,11 @@ import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
-import { useNgoVolunteers } from '../hooks/useApiQueries';
+import { StatusModal } from '../components/common/StatusModal';
+import { useNgoVolunteers, useRemoveNgoVolunteer, useNgoProfile } from '../hooks/useApiQueries';
+import { useApprovalGate } from '../hooks/useApprovalGate';
 import { useSlideUp } from '../hooks/useAnimations';
+import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
@@ -20,7 +23,22 @@ function FadeInRow({ delay, children, style }: { delay: number; children: React.
 export function NgoVolunteersScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { data: volunteers = [], isLoading, refetch } = useNgoVolunteers();
+  const removeMutation = useRemoveNgoVolunteer();
+  const confirm = useConfirm();
+  const { data: profile } = useNgoProfile();
+  const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
+
+  const handleRemove = (userId: string, name: string) => {
+    confirm(
+      'Remove this volunteer?',
+      `Cancels ${name}'s RSVP to any of your upcoming drives. Past attendance is kept — if they only volunteered before, they'll still show up here.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: guard(() => removeMutation.mutate(userId)) },
+      ],
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -51,21 +69,30 @@ export function NgoVolunteersScreen({ navigation }: any) {
           <FadeInRow key={v.userId} delay={i * 60}>
             <BorderCard style={styles.card}>
               <View style={styles.cardRow}>
-                <View style={{ flex: 1 }}>
+                <TouchableOpacity
+                  style={{ flex: 1 }}
+                  activeOpacity={0.7}
+                  onPress={() => navigation.navigate('UserPublicProfile', { userId: v.userId })}
+                >
                   <Text style={styles.cardTitle}>{v.name}</Text>
                   <Text style={styles.cardMeta}>@{v.handle}</Text>
-                </View>
+                </TouchableOpacity>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={styles.countText}>{v.drivesAttended} drive{v.drivesAttended === 1 ? '' : 's'}</Text>
                   {v.lastActiveAt && (
                     <Text style={styles.dateText}>{new Date(v.lastActiveAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Text>
                   )}
+                  <TouchableOpacity onPress={() => handleRemove(v.userId, v.name)} style={styles.removeButton}>
+                    <Text style={styles.removeText}>Remove</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </BorderCard>
           </FadeInRow>
         ))}
       </ScrollView>
+
+      <StatusModal {...statusModalProps} />
     </View>
   );
 }
@@ -86,4 +113,6 @@ const styles = StyleSheet.create({
   cardMeta: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   countText: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
   dateText: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
+  removeButton: { marginTop: 6 },
+  removeText: { fontSize: 12, color: COLORS.danger, fontWeight: '600' },
 });

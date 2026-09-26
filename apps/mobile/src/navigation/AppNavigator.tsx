@@ -415,12 +415,16 @@ export type RootStackParamList = {
   NgoStaff: undefined;
   NgoCreateCampaign: undefined;
   NgoReports: undefined;
+  /** Deep-link into the Manage tab's drives/campaigns/trees segments from outside the bottom-tab
+   * flow (e.g. Reports' stat tiles) — the tab-embedded usage renders NgoManageScreen directly
+   * instead of through this route. */
+  NgoManage: { initialSegment?: 'drives' | 'campaigns' | 'trees' } | undefined;
   NgoDonations: undefined;
   NgoVolunteers: undefined;
   NgoLogPlantedTrees: { driveId?: string; driveTitle?: string } | undefined;
   NgoPlantations: undefined;
   NgoZones: { driveId: string; driveTitle: string };
-  NgoZoneTrees: { zoneId: string | null; zoneName: string; driveId: string };
+  NgoZoneTrees: { zoneId: string | null; zoneName: string; driveId: string | null };
   NgoTreeDetail: { treeId: string };
   NgoFollowers: undefined;
   NgoFollowerRequests: undefined;
@@ -927,6 +931,7 @@ export function AppNavigator() {
         <Stack.Screen name="NgoStaff" component={NgoStaffScreen} />
         <Stack.Screen name="NgoCreateCampaign" component={NgoCreateCampaignScreen} />
         <Stack.Screen name="NgoReports" component={NgoReportsScreen} />
+        <Stack.Screen name="NgoManage" component={NgoManageScreen} />
         <Stack.Screen name="NgoDonations" component={NgoDonationsScreen} />
         <Stack.Screen name="NgoVolunteers" component={NgoVolunteersScreen} />
         <Stack.Screen name="NgoLogPlantedTrees" component={NgoLogPlantedTreesScreen} />

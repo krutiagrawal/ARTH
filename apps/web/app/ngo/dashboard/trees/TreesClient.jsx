@@ -1,6 +1,8 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { MoreHorizontal, Plus, TreePine, MapPin, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -26,6 +28,10 @@ export default function TreesClient() {
   const { profile } = useNgoProfile()
   const { items, loading, create, update, remove, runAction } = useResourceCrud(proxy, '/adoptable-trees')
   const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
+  // Deep-linked from Reports ("Trees available"/"Trees adopted" stat tiles) — filters the list to
+  // just that status instead of landing on everything mixed together.
+  const statusFilter = useSearchParams().get('status')
+  const visibleItems = statusFilter ? items.filter((t) => t.status === statusFilter) : items
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -176,6 +182,14 @@ export default function TreesClient() {
         <div>
           <p className="eyebrow text-primary">Adoptable trees</p>
           <h1 className="font-serif text-3xl md:text-4xl mt-2">Trees for adoption</h1>
+          {statusFilter && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Showing <span className="capitalize font-medium">{statusFilter}</span> only ·{' '}
+              <Link href="/ngo/dashboard/trees" className="underline hover:text-foreground">
+                Clear filter
+              </Link>
+            </p>
+          )}
         </div>
         <Button onClick={guard(openCreate)} className="rounded-full shrink-0">
           <Plus className="h-4 w-4" /> New tree
@@ -184,7 +198,7 @@ export default function TreesClient() {
 
       <DataTable
         columns={columns}
-        data={items}
+        data={visibleItems}
         loading={loading}
         searchKey="nickname"
         searchPlaceholder="Search trees…"

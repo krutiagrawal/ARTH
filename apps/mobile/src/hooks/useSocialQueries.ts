@@ -378,12 +378,12 @@ export const useRemoveNurseryFollower = () => useNurseryFollowerAction(removeNur
 
 // ---------------------------------------------------------------- Portfolio
 
-export function useMyPortfolio() {
+export function useMyPortfolio(enabled: boolean = true) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: socialKeys.portfolio,
     queryFn: fetchMyPortfolio,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && enabled,
   });
 }
 

@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { resolveMediaUrl } from '@/lib/media'
@@ -21,6 +22,7 @@ export default function TreeDetailSheet({ treeId, open, onOpenChange, onChanged,
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(false)
   const [applying, setApplying] = useState(false)
+  const [conflict, setConflict] = useState(null)
 
   useEffect(() => {
     if (!open || !treeId) return
@@ -34,26 +36,33 @@ export default function TreeDetailSheet({ treeId, open, onOpenChange, onChanged,
       .finally(() => setLoading(false))
   }, [open, treeId])
 
-  const applyStatus = async (status) => {
+  const applyStatus = async (status, { force = false } = {}) => {
     setApplying(true)
     try {
       const form = new FormData()
       form.append('status', status)
+      if (force) form.append('updateExisting', 'true')
       await proxy(`/ngo/planted-trees/${treeId}/health-checks`, { method: 'POST', body: form })
       toast.success(`Marked as ${STATUS_LABELS[status]}.`)
+      setConflict(null)
       const [treeRes, historyRes] = await Promise.all([proxy(`/ngo/planted-trees/${treeId}`), proxy(`/ngo/planted-trees/${treeId}/health-checks`)])
       setTree(treeRes)
       setHistory(historyRes.checks)
       onChanged?.()
     } catch (err) {
-      toast.error(err.message || 'Something went wrong.')
+      if (err.code === 'CONFLICT' && err.details?.existingCheck) {
+        setConflict({ status, existingCheck: err.details.existingCheck })
+      } else {
+        toast.error(err.message || 'Something went wrong.')
+      }
     } finally {
       setApplying(false)
     }
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Fragment>
+      <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-lg flex flex-col gap-0 p-0">
         <div className="border-b border-border/70 px-5 py-4">
           <SheetTitle className="text-base">{tree?.speciesName || (loading ? 'Loading…' : 'Tree')}</SheetTitle>
@@ -119,6 +128,31 @@ export default function TreeDetailSheet({ treeId, open, onOpenChange, onChanged,
           </div>
         </div>
       </SheetContent>
-    </Sheet>
+      </Sheet>
+
+      <Dialog open={!!conflict} onOpenChange={(v) => !v && setConflict(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Already checked today</DialogTitle>
+            <DialogDescription>
+              {conflict && (
+                <>
+                  You logged this tree as {STATUS_LABELS[conflict.existingCheck.status]} earlier today. Update today&rsquo;s entry to{' '}
+                  {STATUS_LABELS[conflict.status]} instead?
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConflict(null)}>
+              Cancel
+            </Button>
+            <Button disabled={applying} onClick={guard(() => applyStatus(conflict.status, { force: true }))}>
+              {applying ? 'Updating…' : 'Update'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Fragment>
   )
 }

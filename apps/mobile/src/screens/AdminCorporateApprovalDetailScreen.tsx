@@ -13,7 +13,6 @@ import { useSetAdminCorporateStatus } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ApiError } from '../api/client';
 import type { ApiAdminCorporate, NgoApprovalStatus } from '../api/admin';
-import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
 
 function statusColor(status: string) {
   switch (status) {
@@ -38,8 +37,6 @@ export function AdminCorporateApprovalDetailScreen({ navigation, route }: any) {
   const [reasonSheet, setReasonSheet] = useState<'rejected' | 'suspended' | null>(null);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const { period } = useTimeTheme();
-  const isNightMode = isNightlikePeriod(period);
   const { refreshing, onRefresh } = usePullToRefresh();
 
   const applyStatus = async (status: NgoApprovalStatus, rejectionReason?: string) => {
@@ -153,13 +150,13 @@ export function AdminCorporateApprovalDetailScreen({ navigation, route }: any) {
       </ScrollView>
 
       <Sheet visible={reasonSheet !== null} onClose={() => setReasonSheet(null)} title={reasonSheet === 'rejected' ? 'Reject account' : 'Suspend account'}>
-        <Text style={[styles.sheetLabel, isNightMode && styles.sheetLabelNight]}>Reason (optional)</Text>
+        <Text style={styles.sheetLabel}>Reason (optional)</Text>
         <TextInput
-          style={[styles.sheetInput, isNightMode && styles.sheetInputNight]}
+          style={styles.sheetInput}
           value={reason}
           onChangeText={setReason}
           placeholder="eg - Let them know why…"
-          placeholderTextColor={isNightMode ? ON_DARK_SURFACE.muted : COLORS.textLight}
+          placeholderTextColor={COLORS.textLight}
           multiline
         />
         <AnimatedButton
@@ -196,6 +193,4 @@ const styles = StyleSheet.create({
   sheetLabel: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
   sheetInput: { backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: RADIUS.md, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: COLORS.textPrimary, minHeight: 80, textAlignVertical: 'top' },
   sheetButton: { marginTop: 16 },
-  sheetLabelNight: { color: ON_DARK_SURFACE.secondary },
-  sheetInputNight: { backgroundColor: 'rgba(255,255,255,0.08)', color: ON_DARK_SURFACE.primary },
 });

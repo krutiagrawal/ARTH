@@ -62,7 +62,7 @@ export default function SurvivalClient() {
         label: 'Plantation drive (optional)',
         type: 'select',
         section: 'Details',
-        placeholder: 'Not linked to a drive',
+        placeholder: 'No drive',
         options: drives.map((d) => ({ value: d.id, label: d.title })),
       },
     ],
@@ -159,7 +159,7 @@ export default function SurvivalClient() {
         loading={loading}
         searchKey="driveTitle"
         searchPlaceholder="Search plantations…"
-        onRowClick={(row) => router.push(`/ngo/dashboard/survival/${row.driveId}`)}
+        onRowClick={(row) => row.driveId && router.push(`/ngo/dashboard/survival/${row.driveId}`)}
         emptyState={
           <EmptyState icon={TreePine} title="No trees logged yet" body="After a drive, log how many trees you planted to start tracking survival by zone." actionLabel="Log planted trees" onAction={guard(() => setDialogOpen(true))} />
         }

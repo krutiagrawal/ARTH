@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
+import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
@@ -14,7 +14,6 @@ import { FormField, FormFieldShell } from '../components/common/FormField';
 import { AddressSearchField } from '../components/common/AddressSearchField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { Sheet } from '../components/common/Sheet';
-import { useTimeTheme, isNightlikePeriod } from '../hooks/useTimeTheme';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import {
   useNgoBulkRequirements,
@@ -60,14 +59,6 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
   const confirmReceivedMutation = useConfirmNgoBulkResponseReceived();
   const confirm = useConfirm();
   const [codeDrafts, setCodeDrafts] = useState<Record<string, string>>({});
-  // Sheet switches to a dark navy surface at night (see Sheet.tsx's isNightMode) but has no way
-  // to tell its children — every text color below is applied inline off this instead of the
-  // fixed light-mode style colors.
-  const { period } = useTimeTheme();
-  const isNightMode = isNightlikePeriod(period);
-  const primary = isNightMode ? ON_DARK_SURFACE.primary : COLORS.textPrimary;
-  const secondary = isNightMode ? ON_DARK_SURFACE.secondary : COLORS.textSecondary;
-  const muted = isNightMode ? ON_DARK_SURFACE.muted : COLORS.textMuted;
 
   return (
     <Sheet visible={!!id} onClose={onClose} title="Requirement" scrollable maxHeight={560}>
@@ -75,27 +66,27 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
         <ActivityIndicator color={COLORS.sage} style={{ marginVertical: 20 }} />
       ) : (
         <View style={{ gap: 12 }}>
-          <Text style={[styles.sheetSpecies, { color: primary }]}>{req.species?.commonName ?? req.speciesNote ?? 'Any species'}</Text>
-          <Text style={[styles.sheetMeta, { color: secondary }]}>
+          <Text style={styles.sheetSpecies}>{req.species?.commonName ?? req.speciesNote ?? 'Any species'}</Text>
+          <Text style={styles.sheetMeta}>
             {req.quantityFulfilled}/{req.quantityNeeded} fulfilled
             {req.neededByDate ? ` · Needed by ${new Date(req.neededByDate).toLocaleDateString()}` : ''}
           </Text>
-          {req.notes ? <Text style={[styles.sheetNotes, { color: primary }]}>{req.notes}</Text> : null}
+          {req.notes ? <Text style={styles.sheetNotes}>{req.notes}</Text> : null}
 
-          <Text style={[styles.sheetSectionTitle, { color: primary }]}>Nursery offers</Text>
+          <Text style={styles.sheetSectionTitle}>Nursery offers</Text>
           {!req.responses || req.responses.length === 0 ? (
-            <Text style={[styles.sheetEmpty, { color: muted }]}>No offers yet.</Text>
+            <Text style={styles.sheetEmpty}>No offers yet.</Text>
           ) : (
             req.responses.map((r) => (
-              <BorderCard key={r.id} style={[styles.offerCard, isNightMode && styles.offerCardNight]}>
-                <Text style={[styles.offerNursery, { color: primary }]}>{r.nursery.nurseryName}</Text>
-                <Text style={[styles.offerMeta, { color: secondary }]}>
+              <BorderCard key={r.id} style={styles.offerCard}>
+                <Text style={styles.offerNursery}>{r.nursery.nurseryName}</Text>
+                <Text style={styles.offerMeta}>
                   {r.quantityOffered} offered{r.priceCents != null ? ` · ₹${(r.priceCents / 100).toFixed(0)}` : ' · Free'}
                   {' · '}{[r.canPickup && 'Pickup', r.canDeliver && 'Delivery'].filter(Boolean).join(' + ') || '—'}
                 </Text>
-                {r.message ? <Text style={[styles.offerMessage, { color: primary }]}>{r.message}</Text> : null}
+                {r.message ? <Text style={styles.offerMessage}>{r.message}</Text> : null}
                 <View style={[styles.statusBadge, badgeColor(r.status)]}>
-                  <Text style={[styles.statusBadgeText, { color: isNightMode ? ON_DARK_SURFACE.primary : COLORS.textPrimary }]}>{r.status}</Text>
+                  <Text style={[styles.statusBadgeText, { color: COLORS.textPrimary }]}>{r.status}</Text>
                 </View>
                 {r.status === 'proposed' && (
                   <View style={styles.offerActions}>
@@ -109,11 +100,10 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
                 )}
                 {r.status === 'handed_off' && (
                   <View style={styles.confirmReceiptRow}>
-                    <Text style={[styles.offerMessage, { color: primary }]}>
+                    <Text style={styles.offerMessage}>
                       Ask the nursery for their handoff code, then enter it below to confirm you received the saplings.
                     </Text>
                     <FormField
-                      dark={isNightMode}
                       label="Handoff code"
                       value={codeDrafts[r.id] ?? ''}
                       onChangeText={(v) => setCodeDrafts((prev) => ({ ...prev, [r.id]: v }))}
@@ -146,7 +136,7 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
               }
               style={styles.cancelLink}
             >
-              <Text style={[styles.cancelLinkText, isNightMode && styles.cancelLinkTextNight]}>Cancel this requirement</Text>
+              <Text style={styles.cancelLinkText}>Cancel this requirement</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -160,8 +150,6 @@ export function NgoBulkRequirementsScreen({ navigation }: any) {
   const { data: requirements = [], isLoading, refetch } = useNgoBulkRequirements();
   const createMutation = useCreateNgoBulkRequirement();
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
-  const { period } = useTimeTheme();
-  const isNightMode = isNightlikePeriod(period);
 
   const [showCreate, setShowCreate] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -234,11 +222,11 @@ export function NgoBulkRequirementsScreen({ navigation }: any) {
 
       <Sheet visible={showCreate} onClose={() => setShowCreate(false)} title="New bulk requirement" scrollable maxHeight={560}>
         <View style={{ gap: 4 }}>
-          <FormField dark={isNightMode} label="Species (optional description)" value={speciesNote} onChangeText={setSpeciesNote} placeholder="eg - Native shade trees" />
-          <FormField dark={isNightMode} label="Quantity needed" value={quantityNeeded} onChangeText={setQuantityNeeded} placeholder="eg - 0" keyboardType="number-pad" />
-          <FormFieldShell dark={isNightMode} label="Needed by (optional)">
+          <FormField label="Species (optional description)" value={speciesNote} onChangeText={setSpeciesNote} placeholder="eg - Native shade trees" />
+          <FormField label="Quantity needed" value={quantityNeeded} onChangeText={setQuantityNeeded} placeholder="eg - 0" keyboardType="number-pad" />
+          <FormFieldShell label="Needed by (optional)">
             <TouchableOpacity onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
-              <Text style={[styles.dateValue, isNightMode && styles.dateValueDark, !neededByDate && styles.datePlaceholder]}>
+              <Text style={[styles.dateValue, !neededByDate && styles.datePlaceholder]}>
                 {neededByDate
                   ? neededByDate.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
                   : 'Select a date'}
@@ -268,8 +256,8 @@ export function NgoBulkRequirementsScreen({ navigation }: any) {
               <Text style={styles.doneText}>Done</Text>
             </TouchableOpacity>
           )}
-          <AddressSearchField dark={isNightMode} label="City (optional)" value={city} onChangeText={setCity} placeholder="eg - Pune" />
-          <FormField dark={isNightMode} label="Notes (optional)" value={notes} onChangeText={setNotes} placeholder="eg - Anything nurseries should know" multiline />
+          <AddressSearchField label="City (optional)" value={city} onChangeText={setCity} placeholder="eg - Pune" />
+          <FormField label="Notes (optional)" value={notes} onChangeText={setNotes} placeholder="eg - Anything nurseries should know" multiline />
           {error && <Text style={styles.errorText}>{error}</Text>}
           <AnimatedButton
             label={createMutation.isPending ? 'Posting…' : 'Post requirement'}
@@ -300,7 +288,6 @@ const styles = StyleSheet.create({
   statusBadgeText: { fontSize: 11, fontWeight: '700', color: COLORS.textPrimary, textTransform: 'capitalize' },
   errorText: { fontSize: 13, color: COLORS.coral, textAlign: 'center', marginTop: 4 },
   dateValue: { fontSize: 15, color: COLORS.textPrimary, fontWeight: '600', paddingVertical: 2 },
-  dateValueDark: { color: ON_DARK_SURFACE.primary },
   datePlaceholder: { color: COLORS.textLight, fontWeight: '500' },
   clearDateBtn: { alignSelf: 'flex-start', paddingHorizontal: 4, paddingVertical: 4, marginTop: -6 },
   clearDateText: { fontSize: 12, fontWeight: '700', color: COLORS.coral },
@@ -312,9 +299,6 @@ const styles = StyleSheet.create({
   sheetSectionTitle: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, marginTop: 8 },
   sheetEmpty: { fontSize: 13, color: COLORS.textMuted },
   offerCard: { gap: 4 },
-  // BorderCard has no fill of its own (see BorderCard.tsx) — its brown border is low-contrast on
-  // the Sheet's dark navy night surface, same reasoning as everything else on this screen.
-  offerCardNight: { borderColor: 'rgba(255,255,255,0.25)' },
   offerNursery: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
   offerMeta: { fontSize: 12, color: COLORS.textSecondary },
   offerMessage: { fontSize: 12, color: COLORS.textPrimary, fontStyle: 'italic' },
@@ -326,7 +310,4 @@ const styles = StyleSheet.create({
   offerDeclineText: { fontSize: 12, fontWeight: '700', color: COLORS.dangerDark },
   cancelLink: { alignItems: 'center', paddingVertical: 10 },
   cancelLinkText: { fontSize: 13, fontWeight: '700', color: COLORS.dangerDark },
-  // COLORS.dangerDark is a dark red, low-contrast on the Sheet's dark navy night surface — swap
-  // to the lighter coral accent (already used elsewhere as a dark-surface-safe error/danger tone).
-  cancelLinkTextNight: { color: COLORS.coral },
 });

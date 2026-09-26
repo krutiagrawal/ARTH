@@ -43,9 +43,10 @@ export default async function plantedTreesRoutes(fastify: FastifyInstance) {
     const parsed = listQuerySchema.safeParse(request.query);
     if (!parsed.success) throw new BadRequestError('Invalid query parameters');
 
-    const { zoneId, ...rest } = parsed.data;
+    const { zoneId, driveId, ...rest } = parsed.data;
     const { total, trees } = await plantedTreeService.listOwnPlantedTrees(fastify.prisma, request.user!.id, {
       ...rest,
+      driveId: driveId === 'none' ? null : driveId,
       zoneId: zoneId === 'unzoned' ? null : zoneId,
     });
     reply.send({ total, trees: trees.map(serializeTree) });
@@ -161,11 +162,11 @@ export default async function plantedTreesRoutes(fastify: FastifyInstance) {
       photoUrl = await saveHealthCheckPhoto({ filename: file.filename, mimetype: file.mimetype, buffer });
     }
 
-    const check = await plantedTreeService.logHealthCheck(fastify.prisma, request.user!.id, request.params.id, {
+    const { check, wasUpdate } = await plantedTreeService.logHealthCheck(fastify.prisma, request.user!.id, request.params.id, {
       ...parsed.data,
       photoUrl,
     });
-    reply.status(201).send(check);
+    reply.status(wasUpdate ? 200 : 201).send(check);
   });
 
   fastify.post('/health-checks/bulk', async (request, reply) => {
