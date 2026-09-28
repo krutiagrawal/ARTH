@@ -42,6 +42,8 @@ function AnimatedBar({ count, max, delay, isLatest }: { count: number; max: numb
   );
 }
 
+type MonthlyDatum = { month: string; monthKey: string; count: number };
+
 function MonthlyBarRow({
   label,
   icon,
@@ -49,13 +51,18 @@ function MonthlyBarRow({
   data,
   delay = 0,
   onPress,
+  onBarPress,
 }: {
   label: string;
   icon: string;
   color: string;
-  data: { month: string; count: number }[];
+  data: MonthlyDatum[];
   delay?: number;
+  /** Fired when the row's header is tapped — a "view all" fallback. */
   onPress?: () => void;
+  /** Fired when a single month's bar is tapped, with that bar's own datum — lets each bar drill
+   * into just that month instead of every bar bouncing to the same general list. */
+  onBarPress?: (datum: MonthlyDatum) => void;
 }) {
   const max = Math.max(1, ...data.map((d) => d.count));
   const rowAnim = useFadeIn(delay);
@@ -66,16 +73,22 @@ function MonthlyBarRow({
           <IconBadge icon={icon} color={color} size={28} />
           <Text style={styles.barSectionLabel}>{label}</Text>
         </View>
-        <View style={styles.barRow}>
-          {data.map((d, i) => (
-            <View key={d.month} style={styles.barCol}>
-              <AnimatedBar count={d.count} max={max} delay={delay + i * 60} isLatest={i === data.length - 1} />
-              <Text style={styles.barCount}>{d.count}</Text>
-              <Text style={styles.barMonth}>{d.month}</Text>
-            </View>
-          ))}
-        </View>
       </TouchableOpacity>
+      <View style={styles.barRow}>
+        {data.map((d, i) => (
+          <TouchableOpacity
+            key={d.month}
+            style={styles.barCol}
+            activeOpacity={0.7}
+            onPress={onBarPress ? () => onBarPress(d) : onPress}
+            disabled={!onBarPress && !onPress}
+          >
+            <AnimatedBar count={d.count} max={max} delay={delay + i * 60} isLatest={i === data.length - 1} />
+            <Text style={styles.barCount}>{d.count}</Text>
+            <Text style={styles.barMonth}>{d.month}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
     </Animated.View>
   );
 }
@@ -85,6 +98,39 @@ function StatLink({ onPress, style, children }: { onPress?: () => void; style?: 
     <TouchableOpacity activeOpacity={0.7} onPress={onPress} disabled={!onPress} style={style}>
       {children}
     </TouchableOpacity>
+  );
+}
+
+function KpiTile({
+  icon,
+  color,
+  value,
+  label,
+  sublabel,
+  onPress,
+}: {
+  icon: string;
+  color: string;
+  value: string;
+  label: string;
+  sublabel?: string;
+  onPress?: () => void;
+}) {
+  return (
+    <StatLink style={styles.bigStat} onPress={onPress}>
+      <BorderCard style={styles.kpiCard}>
+        <IconBadge icon={icon} color={color} size={32} />
+        <StatDisplay
+          value={value}
+          label={label}
+          sublabel={sublabel}
+          align="center"
+          size="sm"
+          color={COLORS.forest}
+          labelColor={COLORS.textSecondary}
+        />
+      </BorderCard>
+    </StatLink>
   );
 }
 
@@ -110,70 +156,99 @@ export function NgoReportsScreen({ navigation }: any) {
         >
           <View style={styles.summaryCard}>
             <StatLink style={styles.summaryItem} onPress={() => navigation.navigate('NgoManage', { initialSegment: 'drives' })}>
+              <IconBadge icon="📅" color={COLORS.white} size={24} />
               <StatDisplay value={String(reports.totalDrives)} label="Total Drives" align="center" size="md" color={ON_DARK_SURFACE.primary} labelColor={ON_DARK_SURFACE.secondary} />
             </StatLink>
             <View style={styles.summaryDivider} />
             <StatLink style={styles.summaryItem} onPress={() => navigation.navigate('NgoManage', { initialSegment: 'drives' })}>
+              <IconBadge icon="🤝" color={COLORS.white} size={24} />
               <StatDisplay value={String(reports.totalRsvps)} label="RSVPs" align="center" size="md" color={ON_DARK_SURFACE.primary} labelColor={ON_DARK_SURFACE.secondary} />
             </StatLink>
             <View style={styles.summaryDivider} />
             <StatLink style={styles.summaryItem} onPress={() => navigation.navigate('NgoDonations')}>
+              <IconBadge icon="💰" color={COLORS.white} size={24} />
               <StatDisplay value={`₹${(reports.totalRaisedCents / 100).toLocaleString()}`} label="Raised" align="center" size="md" color={ON_DARK_SURFACE.primary} labelColor={ON_DARK_SURFACE.secondary} />
             </StatLink>
             <View style={styles.summaryDivider} />
             <StatLink style={styles.summaryItem} onPress={() => navigation.navigate('NgoVolunteers')}>
+              <IconBadge icon="🙋" color={COLORS.white} size={24} />
               <StatDisplay value={String(reports.volunteersInvolved)} label="Volunteers" align="center" size="md" color={ON_DARK_SURFACE.primary} labelColor={ON_DARK_SURFACE.secondary} />
             </StatLink>
           </View>
 
-          <View style={[styles.bigStatsRow, styles.firstBigStatsRow]}>
-            <StatLink style={styles.bigStat} onPress={() => navigation.navigate('NgoManage', { initialSegment: 'drives' })}>
-              <StatDisplay value={String(reports.communitiesReached)} label="Cities Reached" align="center" size="lg" />
-            </StatLink>
-            <StatLink style={styles.bigStat} onPress={() => navigation.navigate('NgoManage', { initialSegment: 'trees' })}>
-              <StatDisplay value={`${reports.co2AbsorptionKg}kg`} label="CO₂ Potential" align="center" size="lg" />
-            </StatLink>
+          <View style={styles.firstSectionHeader}>
+            <SectionHeader icon="🌍" title="Reach & impact" color={COLORS.sage} />
+          </View>
+          <View style={styles.bigStatsRow}>
+            <KpiTile
+              icon="🏙️"
+              color={COLORS.sage}
+              value={String(reports.communitiesReached)}
+              label="Cities Reached"
+              onPress={() => navigation.navigate('NgoManage', { initialSegment: 'drives' })}
+            />
+            <KpiTile
+              icon="🍃"
+              color={COLORS.forest}
+              value={`${reports.co2AbsorptionKg}kg`}
+              label="CO₂ Potential"
+              onPress={() => navigation.navigate('NgoManage', { initialSegment: 'trees' })}
+            />
           </View>
 
           <View style={styles.bigStatsRow}>
-            <StatLink style={styles.bigStat} onPress={() => navigation.navigate('NgoManage', { initialSegment: 'trees' })}>
-              <StatDisplay value={String(reports.treesAvailable)} label="Trees Available" align="center" size="lg" />
-            </StatLink>
-            <StatLink style={styles.bigStat} onPress={() => navigation.navigate('NgoManage', { initialSegment: 'trees' })}>
-              <StatDisplay value={String(reports.treesAdopted)} label="Trees Adopted" align="center" size="lg" />
-            </StatLink>
+            <KpiTile
+              icon="🌱"
+              color={COLORS.sageDark}
+              value={String(reports.treesAvailable)}
+              label="Trees Available"
+              onPress={() => navigation.navigate('NgoManage', { initialSegment: 'trees' })}
+            />
+            <KpiTile
+              icon="🌳"
+              color={COLORS.forest}
+              value={String(reports.treesAdopted)}
+              label="Trees Adopted"
+              onPress={() => navigation.navigate('NgoManage', { initialSegment: 'trees' })}
+            />
           </View>
 
-          <SectionHeader title="Survival & attendance" />
+          <SectionHeader title="Survival & attendance" icon="🩺" color={COLORS.sageDark} />
           <View style={styles.bigStatsRow}>
-            <StatLink style={styles.bigStat} onPress={() => navigation.navigate('NgoPlantations')}>
-              <StatDisplay
-                value={`${reports.survival.survivalRate}%`}
-                label="Survival Rate"
-                sublabel={`${reports.survival.total} trees tracked`}
-                align="center"
-                size="lg"
-              />
-            </StatLink>
-            <StatLink style={styles.bigStat} onPress={() => navigation.navigate('NgoManage', { initialSegment: 'drives' })}>
-              <StatDisplay
-                value={reports.attendance.rate != null ? `${reports.attendance.rate}%` : '–'}
-                label="Attendance Rate"
-                sublabel={reports.attendance.rate != null ? `${reports.attendance.recorded} recorded` : 'Not yet tracked'}
-                align="center"
-                size="lg"
-              />
-            </StatLink>
+            <KpiTile
+              icon="✅"
+              color={COLORS.sage}
+              value={`${reports.survival.survivalRate}%`}
+              label="Survival Rate"
+              sublabel={`${reports.survival.total} trees tracked`}
+              onPress={() => navigation.navigate('NgoPlantations')}
+            />
+            <KpiTile
+              icon="🙋"
+              color={COLORS.golden}
+              value={reports.attendance.rate != null ? `${reports.attendance.rate}%` : '–'}
+              label="Attendance Rate"
+              sublabel={reports.attendance.rate != null ? `${reports.attendance.recorded} recorded` : 'Not yet tracked'}
+              onPress={() => navigation.navigate('NgoManage', { initialSegment: 'drives' })}
+            />
           </View>
 
-          <SectionHeader title="Standing & funding" />
+          <SectionHeader title="Standing & funding" icon="🏆" color={COLORS.amber} />
           <View style={styles.bigStatsRow}>
-            <StatLink style={styles.bigStat} onPress={() => navigation.navigate('NgoStreakBadges')}>
-              <StatDisplay value={reports.trustScore != null ? String(reports.trustScore) : 'N/A'} label="ARTH Trust Score" align="center" size="lg" />
-            </StatLink>
-            <StatLink style={styles.bigStat} onPress={() => navigation.navigate('NgoStreakBadges')}>
-              <StatDisplay value={`${GROWTH_LEVEL_META[reports.growthLevel].emoji} ${GROWTH_LEVEL_META[reports.growthLevel].label}`} label="Growth Level" align="center" size="lg" />
-            </StatLink>
+            <KpiTile
+              icon="🏆"
+              color={COLORS.amber}
+              value={reports.trustScore != null ? String(reports.trustScore) : 'N/A'}
+              label="ARTH Trust Score"
+              onPress={() => navigation.navigate('NgoStreakBadges')}
+            />
+            <KpiTile
+              icon={GROWTH_LEVEL_META[reports.growthLevel].emoji}
+              color={COLORS.sageDark}
+              value={GROWTH_LEVEL_META[reports.growthLevel].label}
+              label="Growth Level"
+              onPress={() => navigation.navigate('NgoStreakBadges')}
+            />
           </View>
           <StatLink onPress={() => navigation.navigate('NgoManage', { initialSegment: 'drives' })}>
             <BorderCard style={styles.sponsorCard}>
@@ -203,7 +278,8 @@ export function NgoReportsScreen({ navigation }: any) {
               color={COLORS.sage}
               data={reports.monthly.rsvps}
               delay={120}
-              onPress={() => navigation.navigate('NgoManage', { initialSegment: 'drives' })}
+              onPress={() => navigation.navigate('NgoVolunteers')}
+              onBarPress={(d) => navigation.navigate('NgoMonthlyRsvps', { month: d.monthKey, monthLabel: d.month })}
             />
             <MonthlyBarRow
               label="Adoptions (6 months)"
@@ -233,11 +309,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     ...SHADOWS.md,
   },
-  summaryItem: { flex: 1 },
+  summaryItem: { flex: 1, alignItems: 'center', gap: 6 },
   summaryDivider: { width: 1, height: 34, backgroundColor: 'rgba(255,255,255,0.2)' },
+  firstSectionHeader: { marginTop: 24 },
   bigStatsRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  firstBigStatsRow: { marginTop: 20 },
   bigStat: { flex: 1 },
+  kpiCard: { alignItems: 'center', gap: 8 },
   sponsorCard: { marginBottom: 16 },
   chartCard: { gap: 16 },
   barSection: { gap: 8 },

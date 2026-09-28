@@ -1,5 +1,5 @@
-import { PrismaClient, NgoOrgType, Prisma } from '@plant/db';
-import { ForbiddenError, NotFoundError } from '../utils/errors';
+import { PrismaClient, NgoOrgType, Prisma } from '@arth/db';
+import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
 import { notify } from './notification.service';
 import { computeSurvivalStats } from './plantedTree.service';
 
@@ -485,10 +485,13 @@ export async function getOwnReports(prisma: PrismaClient, userId: string) {
     }),
   ]);
 
-  const monthLabels = Array.from({ length: 6 }, (_, i) => {
+  const monthMarkers = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(rangeStart);
     d.setMonth(d.getMonth() + i);
-    return d.toLocaleString('en-US', { month: 'short', year: '2-digit' });
+    return {
+      label: d.toLocaleString('en-US', { month: 'short', year: '2-digit' }),
+      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+    };
   });
 
   const bucketByMonth = (rows: { createdAt: Date }[]) => {
@@ -499,7 +502,7 @@ export async function getOwnReports(prisma: PrismaClient, userId: string) {
         (row.createdAt.getMonth() - rangeStart.getMonth());
       if (idx >= 0 && idx < 6) counts[idx] += 1;
     }
-    return monthLabels.map((month, i) => ({ month, count: counts[i] }));
+    return monthMarkers.map(({ label, key }, i) => ({ month: label, monthKey: key, count: counts[i] }));
   };
 
   const attendanceRecorded = recordedAttendance.length;
@@ -519,4 +522,37 @@ export async function getOwnReports(prisma: PrismaClient, userId: string) {
       adoptions: bucketByMonth(adoptions),
     },
   };
+}
+
+/** The RSVPs behind a single bar of the Reports page's "RSVPs (6 months)" chart — who confirmed
+ * an RSVP to one of this NGO's drives within that calendar month. `month` matches the `monthKey`
+ * (e.g. "2026-03") returned by getOwnReports' monthly.rsvps bucket. */
+export async function getOwnMonthlyRsvps(prisma: PrismaClient, userId: string, month: string) {
+  const ngo = await requireNgoProfile(prisma, userId);
+
+  const match = /^(\d{4})-(\d{2})$/.exec(month);
+  if (!match) throw new BadRequestError('month must be in YYYY-MM format');
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]) - 1;
+  const start = new Date(year, monthIndex, 1);
+  const end = new Date(year, monthIndex + 1, 1);
+
+  const rsvps = await prisma.driveRsvp.findMany({
+    where: { status: 'confirmed', drive: { ngoId: ngo.id }, createdAt: { gte: start, lt: end } },
+    include: {
+      user: { select: { id: true, name: true, handle: true } },
+      drive: { select: { id: true, title: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return rsvps.map((r) => ({
+    id: r.id,
+    userId: r.user.id,
+    userName: r.user.name,
+    userHandle: r.user.handle,
+    driveId: r.drive.id,
+    driveTitle: r.drive.title,
+    createdAt: r.createdAt,
+  }));
 }

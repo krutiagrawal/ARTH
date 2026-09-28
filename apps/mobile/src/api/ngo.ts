@@ -82,6 +82,13 @@ export async function fetchNgoStats(): Promise<ApiNgoStats> {
   return apiFetch<ApiNgoStats>('/api/ngo/stats');
 }
 
+export interface MonthlyBucket {
+  month: string;
+  /** "YYYY-MM", for passing back into fetchNgoMonthlyRsvps etc. to drill into that month. */
+  monthKey: string;
+  count: number;
+}
+
 export interface ApiNgoReports extends ApiNgoStats {
   survival: {
     total: number;
@@ -91,14 +98,30 @@ export interface ApiNgoReports extends ApiNgoStats {
   attendance: { recorded: number; rate: number | null };
   sponsoredTrees: { count: number; totalAmountCents: number };
   monthly: {
-    donations: { month: string; count: number }[];
-    rsvps: { month: string; count: number }[];
-    adoptions: { month: string; count: number }[];
+    donations: MonthlyBucket[];
+    rsvps: MonthlyBucket[];
+    adoptions: MonthlyBucket[];
   };
 }
 
 export async function fetchNgoReports(): Promise<ApiNgoReports> {
   return apiFetch<ApiNgoReports>('/api/ngo/reports');
+}
+
+export interface ApiMonthlyRsvp {
+  id: string;
+  userId: string;
+  userName: string;
+  userHandle: string;
+  driveId: string;
+  driveTitle: string;
+  createdAt: string;
+}
+
+/** RSVPs behind one bar of the Reports page's "RSVPs (6 months)" chart. `month` is a "YYYY-MM"
+ * monthKey from ApiNgoReports.monthly.rsvps. */
+export async function fetchNgoMonthlyRsvps(month: string): Promise<ApiMonthlyRsvp[]> {
+  return apiFetch<ApiMonthlyRsvp[]>(`/api/ngo/rsvps?month=${encodeURIComponent(month)}`);
 }
 
 export interface ApiDonation {

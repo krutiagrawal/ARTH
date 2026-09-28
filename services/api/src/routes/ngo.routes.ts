@@ -190,6 +190,12 @@ export default async function ngoRoutes(fastify: FastifyInstance) {
     reply.send(reports);
   });
 
+  fastify.get<{ Querystring: { month?: string } }>('/rsvps', async (request, reply) => {
+    if (!request.query.month) throw new BadRequestError('month query parameter is required');
+    const rsvps = await ngoService.getOwnMonthlyRsvps(fastify.prisma, request.user!.id, request.query.month);
+    reply.send(rsvps);
+  });
+
   fastify.get('/achievements', async (request, reply) => {
     const ngo = await requireNgoProfile(fastify.prisma, request.user!.id);
 
