@@ -211,6 +211,10 @@ export default function RequirementsClient() {
         <div className="grid gap-4 sm:grid-cols-2">
           {filtered.map((r) => {
             const badge = r.myResponse ? RESPONSE_BADGE[r.myResponse.status] : null
+            // The NGO auto-expire job removes overdue requirements from this list within ~15
+            // minutes, so this only ever matters in that brief window — kept for correctness, not
+            // because expired ones are expected to show up here regularly.
+            const overdue = r.neededByDate && ['open', 'partially_fulfilled'].includes(r.status) && new Date(r.neededByDate) < new Date(new Date().setHours(0, 0, 0, 0))
             return (
               <div key={r.id} className="rounded-3xl border border-border/70 bg-card p-5 soft-shadow">
                 <div className="flex items-center gap-3">
@@ -235,7 +239,11 @@ export default function RequirementsClient() {
                 <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1"><Leaf className="h-3 w-3" /> {r.quantityFulfilled}/{r.quantityNeeded} fulfilled</span>
                   {r.city && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {r.city}{r.distanceKm != null ? ` · ${r.distanceKm.toFixed(1)} km` : ''}</span>}
-                  {r.neededByDate && <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" /> By {new Date(r.neededByDate).toLocaleDateString()}</span>}
+                  {r.neededByDate && (
+                    <span className={overdue ? 'flex items-center gap-1 text-destructive font-medium' : 'flex items-center gap-1'}>
+                      <CalendarDays className="h-3 w-3" /> By {new Date(r.neededByDate).toLocaleDateString()}
+                    </span>
+                  )}
                 </div>
 
                 {r.notes && <p className="mt-2 text-xs text-muted-foreground">{r.notes}</p>}
@@ -243,7 +251,9 @@ export default function RequirementsClient() {
                 {r.myResponse && (
                   <p className="mt-2 text-xs text-muted-foreground">
                     You offered {r.myResponse.quantityOffered}
-                    {r.myResponse.priceCents != null ? ` @ ₹${(r.myResponse.priceCents / 100).toLocaleString('en-IN')}` : ''}
+                    {r.myResponse.priceCents != null
+                      ? ` @ ₹${(r.myResponse.priceCents / 100).toLocaleString('en-IN')} each (₹${((r.myResponse.priceCents * r.myResponse.quantityOffered) / 100).toLocaleString('en-IN')} total)`
+                      : ''}
                   </p>
                 )}
 

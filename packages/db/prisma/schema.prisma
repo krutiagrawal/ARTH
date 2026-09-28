@@ -403,6 +403,7 @@ enum NotificationType {
   bulk_requirement_response_received
   bulk_requirement_response_accepted
   bulk_requirement_response_fulfilled
+  bulk_requirement_deadline_passed
   sapling_planted
   nursery_tree_milestone
   nursery_impact_milestone
@@ -2599,7 +2600,7 @@ model CompetitionEntryVote {
 
 // ---------- Marketing content (migrated in from apps/web's old Arth schema) ----------
 // Pure content, no User FK, no shared business logic — apps/web reads/writes these
-// directly via @plant/db instead of going through services/api's REST API.
+// directly via @arth/db instead of going through services/api's REST API.
 
 model Forest {
   id          String @id

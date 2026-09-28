@@ -97,6 +97,7 @@ import {
   resubmitNgoProfile,
   fetchNgoStats,
   fetchNgoReports,
+  fetchNgoMonthlyRsvps,
   fetchNgoDonations,
   fetchNgoDonationsSummary,
   fetchNgoVolunteers,
@@ -208,6 +209,7 @@ import {
   fetchNgoBulkRequirement,
   createNgoBulkRequirement,
   cancelNgoBulkRequirement,
+  rescheduleNgoBulkRequirement,
   acceptNgoBulkResponse,
   declineNgoBulkResponse,
   confirmNgoBulkResponseReceived,
@@ -1124,6 +1126,15 @@ export function useNgoReports() {
     queryKey: ['ngo', 'reports'],
     queryFn: fetchNgoReports,
     enabled: isAuthenticated,
+  });
+}
+
+export function useNgoMonthlyRsvps(month: string) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'rsvps', month],
+    queryFn: () => fetchNgoMonthlyRsvps(month),
+    enabled: isAuthenticated && !!month,
   });
 }
 
@@ -2473,6 +2484,14 @@ export function useCancelNgoBulkRequirement() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => cancelNgoBulkRequirement(id),
+    onSuccess: () => invalidateNgoBulkRequirements(queryClient),
+  });
+}
+
+export function useRescheduleNgoBulkRequirement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, neededByDate }: { id: string; neededByDate: string }) => rescheduleNgoBulkRequirement(id, neededByDate),
     onSuccess: () => invalidateNgoBulkRequirements(queryClient),
   });
 }

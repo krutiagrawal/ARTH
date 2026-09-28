@@ -94,6 +94,7 @@ import { NgoCreateCampaignScreen } from '../screens/NgoCreateCampaignScreen';
 import { NgoReportsScreen } from '../screens/NgoReportsScreen';
 import { NgoDonationsScreen } from '../screens/NgoDonationsScreen';
 import { NgoVolunteersScreen } from '../screens/NgoVolunteersScreen';
+import { NgoMonthlyRsvpsScreen } from '../screens/NgoMonthlyRsvpsScreen';
 import { NgoLogPlantedTreesScreen } from '../screens/NgoLogPlantedTreesScreen';
 import { NgoPlantationsScreen } from '../screens/NgoPlantationsScreen';
 import { NgoZonesScreen } from '../screens/NgoZonesScreen';
@@ -379,7 +380,7 @@ export type RootStackParamList = {
   NurseryDeliveryPartners: undefined;
   DeliveryPartnerMain: undefined;
   NurseryImpact: undefined;
-  NgoBulkRequirements: undefined;
+  NgoBulkRequirements: { openRequirementId?: string } | undefined;
   MyAdoptions: undefined;
   NurseryFollowers: undefined;
   NurseryPostUpdate: undefined;
@@ -421,6 +422,7 @@ export type RootStackParamList = {
   NgoManage: { initialSegment?: 'drives' | 'campaigns' | 'trees' } | undefined;
   NgoDonations: undefined;
   NgoVolunteers: undefined;
+  NgoMonthlyRsvps: { month: string; monthLabel: string };
   NgoLogPlantedTrees: { driveId?: string; driveTitle?: string } | undefined;
   NgoPlantations: undefined;
   NgoZones: { driveId: string; driveTitle: string };
@@ -934,6 +936,7 @@ export function AppNavigator() {
         <Stack.Screen name="NgoManage" component={NgoManageScreen} />
         <Stack.Screen name="NgoDonations" component={NgoDonationsScreen} />
         <Stack.Screen name="NgoVolunteers" component={NgoVolunteersScreen} />
+        <Stack.Screen name="NgoMonthlyRsvps" component={NgoMonthlyRsvpsScreen} />
         <Stack.Screen name="NgoLogPlantedTrees" component={NgoLogPlantedTreesScreen} />
         <Stack.Screen name="NgoPlantations" component={NgoPlantationsScreen} />
         <Stack.Screen name="NgoZones" component={NgoZonesScreen} />

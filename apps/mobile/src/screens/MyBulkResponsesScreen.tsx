@@ -26,7 +26,12 @@ function ResponseRow({ r }: { r: ApiMyBulkResponse }) {
     <BorderCard noPadding style={styles.row}>
       <View style={{ flex: 1 }}>
         <Text style={styles.title}>{r.ngoName}</Text>
-        <Text style={styles.meta}>{r.quantityOffered} × {r.species}{r.priceCents != null ? ` · ₹${(r.priceCents / 100).toFixed(0)}` : ' · Free'}</Text>
+        <Text style={styles.meta}>
+          {r.quantityOffered} × {r.species}
+          {r.priceCents != null
+            ? ` · ₹${(r.priceCents / 100).toFixed(0)} each · ₹${((r.priceCents * r.quantityOffered) / 100).toLocaleString('en-IN')} total`
+            : ' · Free'}
+        </Text>
         <Text style={styles.date}>{new Date(r.createdAt).toLocaleDateString()}</Text>
       </View>
       <View style={[styles.statusPill, STATUS_COLOR[r.status]]}>

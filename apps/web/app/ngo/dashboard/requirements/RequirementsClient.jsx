@@ -19,7 +19,17 @@ const REQ_BADGE = {
   partially_fulfilled: { label: 'Partially fulfilled', variant: 'secondary' },
   fulfilled: { label: 'Fulfilled', variant: 'default' },
   cancelled: { label: 'Cancelled', variant: 'outline' },
-  expired: { label: 'Expired', variant: 'outline' },
+  expired: { label: 'Expired', variant: 'destructive' },
+}
+
+// The due date's own day still counts as on-time; overdue begins the day after — matches the
+// mobile app's isBulkRequirementOverdue (apps/mobile/src/utils/bulkRequirement.ts).
+function isOverdue(r) {
+  if (r.status === 'expired') return true
+  if (!r.neededByDate || !['open', 'partially_fulfilled'].includes(r.status)) return false
+  const startOfToday = new Date()
+  startOfToday.setHours(0, 0, 0, 0)
+  return new Date(r.neededByDate) < startOfToday
 }
 
 const RESPONSE_BADGE = {
@@ -113,6 +123,9 @@ export default function RequirementsClient() {
   const [confirmTarget, setConfirmTarget] = useState(null) // response being confirmed-received
   const [confirmCode, setConfirmCode] = useState('')
   const [confirmSubmitting, setConfirmSubmitting] = useState(false)
+  const [rescheduleTarget, setRescheduleTarget] = useState(null)
+  const [rescheduleDate, setRescheduleDate] = useState('')
+  const [rescheduleSubmitting, setRescheduleSubmitting] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -153,6 +166,29 @@ export default function RequirementsClient() {
     } finally {
       setCancelTarget(null)
       await load()
+    }
+  }
+
+  const openReschedule = (requirement) => {
+    setRescheduleTarget(requirement)
+    setRescheduleDate('')
+  }
+
+  const handleReschedule = async () => {
+    if (!rescheduleTarget || !rescheduleDate) return
+    setRescheduleSubmitting(true)
+    try {
+      await proxy(`/ngo/bulk-requirements/${rescheduleTarget.id}/reschedule`, {
+        method: 'POST',
+        body: { neededByDate: new Date(rescheduleDate).toISOString() },
+      })
+      toast.success('Requirement rescheduled.')
+      setRescheduleTarget(null)
+      await load()
+    } catch (err) {
+      toast.error(err.message || 'Something went wrong.')
+    } finally {
+      setRescheduleSubmitting(false)
     }
   }
 
@@ -231,6 +267,7 @@ export default function RequirementsClient() {
         <div className="space-y-4">
           {requirements.map((r) => {
             const badge = REQ_BADGE[r.status]
+            const overdue = isOverdue(r)
             return (
               <div key={r.id} className="rounded-3xl border border-border/70 bg-card p-5 soft-shadow">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -239,11 +276,18 @@ export default function RequirementsClient() {
                     <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                       <span>{r.quantityFulfilled}/{r.quantityNeeded} fulfilled</span>
                       {r.city && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {r.city}</span>}
-                      {r.neededByDate && <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" /> By {new Date(r.neededByDate).toLocaleDateString()}</span>}
+                      {r.neededByDate && (
+                        <span className={overdue ? 'flex items-center gap-1 text-destructive font-medium' : 'flex items-center gap-1'}>
+                          <CalendarDays className="h-3 w-3" /> By {new Date(r.neededByDate).toLocaleDateString()}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {badge && <Badge variant={badge.variant}>{badge.label}</Badge>}
+                    {r.status === 'expired' && (
+                      <Button size="sm" className="rounded-full" onClick={() => openReschedule(r)}>Reschedule</Button>
+                    )}
                     {['open', 'partially_fulfilled'].includes(r.status) && (
                       <Button size="sm" variant="outline" className="rounded-full" onClick={() => setCancelTarget(r)}>Cancel</Button>
                     )}
@@ -263,7 +307,10 @@ export default function RequirementsClient() {
                           <div>
                             <p className="text-sm font-medium">{resp.nursery?.nurseryName}</p>
                             <p className="text-xs text-muted-foreground">
-                              {resp.quantityOffered} offered{resp.priceCents != null ? ` · ₹${(resp.priceCents / 100).toLocaleString('en-IN')}` : ' · Free'}
+                              {resp.quantityOffered} offered
+                              {resp.priceCents != null
+                                ? ` · ₹${(resp.priceCents / 100).toLocaleString('en-IN')} each · ₹${((resp.priceCents * resp.quantityOffered) / 100).toLocaleString('en-IN')} total`
+                                : ' · Free'}
                               {' · '}{[resp.canPickup && 'Pickup', resp.canDeliver && 'Delivery'].filter(Boolean).join(' + ') || '—'}
                             </p>
                             {resp.message && <p className="mt-1 text-xs italic text-muted-foreground">{resp.message}</p>}
@@ -302,6 +349,23 @@ export default function RequirementsClient() {
         destructive
         onConfirm={handleCancel}
       />
+
+      <ConfirmDialog
+        open={Boolean(rescheduleTarget)}
+        onOpenChange={(open) => !open && setRescheduleTarget(null)}
+        title="Reschedule this requirement"
+        description="Its deadline passed without being fulfilled. Pick a new date to reopen it to nurseries."
+        confirmLabel="Reschedule"
+        loading={rescheduleSubmitting}
+        onConfirm={handleReschedule}
+      >
+        <Input
+          type="date"
+          value={rescheduleDate}
+          onChange={(e) => setRescheduleDate(e.target.value)}
+          className="mt-2 h-9 rounded-full"
+        />
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={Boolean(declineTarget)}

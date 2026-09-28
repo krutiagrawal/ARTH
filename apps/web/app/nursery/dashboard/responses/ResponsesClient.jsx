@@ -54,7 +54,9 @@ export default function ResponsesClient() {
                 <p className="text-sm font-medium">{r.ngoName}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {r.quantityOffered} × {r.species}
-                  {r.priceCents != null ? ` · ₹${(r.priceCents / 100).toFixed(0)}` : ' · Free'} · {new Date(r.createdAt).toLocaleDateString()}
+                  {r.priceCents != null
+                    ? ` · ₹${(r.priceCents / 100).toFixed(0)} each · ₹${((r.priceCents * r.quantityOffered) / 100).toLocaleString('en-IN')} total`
+                    : ' · Free'} · {new Date(r.createdAt).toLocaleDateString()}
                 </p>
               </div>
               <Badge variant={STATUS_VARIANT[r.status] || 'outline'} className="shrink-0 capitalize">{r.status.replace('_', ' ')}</Badge>

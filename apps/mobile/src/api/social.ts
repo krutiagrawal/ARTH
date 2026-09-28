@@ -117,7 +117,8 @@ export type NotificationType =
   | 'ngo_tree_adopted'
   | 'ngo_streak_at_risk'
   | 'ngo_streak_broken'
-  | 'ngo_impact_milestone';
+  | 'ngo_impact_milestone'
+  | 'bulk_requirement_deadline_passed';
 
 export interface ApiNotification {
   id: string;

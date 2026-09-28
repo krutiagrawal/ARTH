@@ -66,6 +66,15 @@ export async function cancelNgoBulkRequirement(id: string): Promise<ApiNgoBulkRe
   return apiFetch<ApiNgoBulkRequirement>(`/api/ngo/bulk-requirements/${id}/cancel`, { method: 'POST' });
 }
 
+/** Only valid once a requirement has auto-expired (its deadline passed unfulfilled) — reopens it
+ * to nurseries with a new neededByDate. */
+export async function rescheduleNgoBulkRequirement(id: string, neededByDate: string): Promise<ApiNgoBulkRequirement> {
+  return apiFetch<ApiNgoBulkRequirement>(`/api/ngo/bulk-requirements/${id}/reschedule`, {
+    method: 'POST',
+    body: { neededByDate },
+  });
+}
+
 export async function acceptNgoBulkResponse(responseId: string): Promise<ApiNgoBulkResponse> {
   return apiFetch<ApiNgoBulkResponse>(`/api/ngo/bulk-requirements/responses/${responseId}/accept`, { method: 'POST' });
 }

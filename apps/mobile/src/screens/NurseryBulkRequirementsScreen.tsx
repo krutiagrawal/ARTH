@@ -12,6 +12,7 @@ import { EmptyState } from '../components/common/EmptyState';
 import { useNurseryBulkRequirementsCombined } from '../hooks/useApiQueries';
 import type { ApiBulkRequirement } from '../api/nursery';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { isBulkRequirementOverdue } from '../utils/bulkRequirement';
 
 type FilterTab = 'open' | 'responded' | 'accepted' | 'completed';
 
@@ -42,6 +43,7 @@ function matchesTab(req: ApiBulkRequirement, tab: FilterTab): boolean {
 }
 
 function RequirementRow({ item, navigation }: { item: ApiBulkRequirement; navigation: any }) {
+  const overdue = isBulkRequirementOverdue(item);
   return (
     <TouchableOpacity onPress={() => navigation.navigate('NurseryBulkRequirementDetail', { requirementId: item.id })} activeOpacity={0.85}>
       <BorderCard style={styles.row}>
@@ -53,7 +55,9 @@ function RequirementRow({ item, navigation }: { item: ApiBulkRequirement; naviga
           </Text>
           <Text style={styles.meta}>
             {item.quantityFulfilled}/{item.quantityNeeded} fulfilled
-            {item.neededByDate ? ` · Needed by ${new Date(item.neededByDate).toLocaleDateString()}` : ''}
+            {item.neededByDate ? (
+              <Text style={overdue ? styles.metaOverdue : undefined}> · Needed by {new Date(item.neededByDate).toLocaleDateString()}</Text>
+            ) : null}
             {item.distanceKm != null ? ` · ${item.distanceKm.toFixed(1)} km` : ''}
           </Text>
           {item.myResponse && (
@@ -134,6 +138,7 @@ const styles = StyleSheet.create({
   ngoName: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
   species: { fontSize: 13, color: COLORS.textPrimary, marginTop: 2 },
   meta: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4 },
+  metaOverdue: { color: COLORS.dangerDark, fontWeight: '700' },
   statusBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, marginTop: 6 },
   statusBadgeText: { fontSize: 11, fontWeight: '700', color: COLORS.textPrimary, textTransform: 'capitalize' },
 });

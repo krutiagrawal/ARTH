@@ -23,6 +23,7 @@ import {
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import { ApiError } from '../api/client';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { isBulkRequirementOverdue } from '../utils/bulkRequirement';
 
 export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
   const requirementId: string = route?.params?.requirementId;
@@ -129,7 +130,9 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
             {req.neededByDate && (
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Needed by</Text>
-                <Text style={styles.summaryValue}>{new Date(req.neededByDate).toLocaleDateString()}</Text>
+                <Text style={[styles.summaryValue, isBulkRequirementOverdue(req) && styles.summaryValueOverdue]}>
+                  {new Date(req.neededByDate).toLocaleDateString()}
+                </Text>
               </View>
             )}
             {req.city && (
@@ -153,10 +156,16 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
                   <Text style={styles.summaryValue}>{req.myResponse.quantityOffered}</Text>
                 </View>
                 {req.myResponse.priceCents != null && (
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Price</Text>
-                    <Text style={styles.summaryValue}>₹{(req.myResponse.priceCents / 100).toFixed(0)}</Text>
-                  </View>
+                  <>
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>Price per unit</Text>
+                      <Text style={styles.summaryValue}>₹{(req.myResponse.priceCents / 100).toFixed(0)}</Text>
+                    </View>
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>Total value</Text>
+                      <Text style={styles.summaryValue}>₹{((req.myResponse.priceCents * req.myResponse.quantityOffered) / 100).toLocaleString('en-IN')}</Text>
+                    </View>
+                  </>
                 )}
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Fulfilment</Text>
@@ -198,7 +207,7 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
                   <FormField label="Quantity offered" value={quantityOffered} onChangeText={setQuantityOffered} placeholder="eg - 0" keyboardType="number-pad" />
                 </View>
                 <View style={styles.inlineField}>
-                  <FormField label="Price ₹ (optional)" value={priceCents} onChangeText={setPriceCents} placeholder="eg - 0" keyboardType="number-pad" />
+                  <FormField label="Price per unit ₹ (optional)" value={priceCents} onChangeText={setPriceCents} placeholder="eg - 0" keyboardType="number-pad" />
                 </View>
               </View>
               <BorderCard style={styles.toggleCard}>
@@ -252,6 +261,7 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
   summaryLabel: { fontSize: 13, color: COLORS.textSecondary },
   summaryValue: { fontSize: 13, color: COLORS.textPrimary, fontWeight: '600' },
+  summaryValueOverdue: { color: COLORS.dangerDark },
   notes: { fontSize: 13, color: COLORS.textPrimary, marginTop: 10, lineHeight: 19 },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 8 },
   inlineRow: { flexDirection: 'row', gap: 12 },

@@ -113,6 +113,8 @@ function describe(n: ApiNotification): string {
       return 'Your Updates Streak broke – start a new one 💔';
     case 'ngo_impact_milestone':
       return 'You hit a Growth Level milestone 🏆';
+    case 'bulk_requirement_deadline_passed':
+      return "Your bulk requirement deadline passed without being fulfilled";
     default:
       return 'sent you an update';
   }
@@ -197,6 +199,8 @@ function iconFor(n: ApiNotification): string {
       return '💔';
     case 'ngo_impact_milestone':
       return '🏆';
+    case 'bulk_requirement_deadline_passed':
+      return '⏰';
     default:
       return '🛡️';
   }
@@ -250,7 +254,8 @@ function NotificationRow({
     notification.type === 'bulk_requirement_response_received' ||
     notification.type === 'ngo_streak_at_risk' ||
     notification.type === 'ngo_streak_broken' ||
-    notification.type === 'ngo_impact_milestone';
+    notification.type === 'ngo_impact_milestone' ||
+    notification.type === 'bulk_requirement_deadline_passed';
 
   return (
     <TouchableOpacity
@@ -374,6 +379,11 @@ export function NotificationsScreen({ navigation }: any) {
       }
       if (n.type === 'bulk_requirement_response_received') {
         navigation.navigate('NgoBulkRequirements');
+        return;
+      }
+      if (n.type === 'bulk_requirement_deadline_passed') {
+        const requirementId = (n.data as any)?.requirementId;
+        navigation.navigate('NgoBulkRequirements', requirementId ? { openRequirementId: requirementId } : undefined);
         return;
       }
       if (

@@ -24,3 +24,7 @@ export const respondToBulkRequirementSchema = z.object({
 export const confirmBulkRequirementResponseSchema = z.object({
   code: z.string().min(1).max(20),
 });
+
+export const rescheduleBulkRequirementSchema = z.object({
+  neededByDate: z.string().datetime(),
+});

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
 import { notify } from './notification.service';
 import { evaluateNurseryAchievements } from './nurseryAchievement.service';
@@ -129,6 +129,25 @@ export async function cancelRequirement(prisma: PrismaClient, ngoUserId: string,
     throw new BadRequestError('This requirement can no longer be cancelled');
   }
   return prisma.bulkRequirement.update({ where: { id: requirementId }, data: { status: 'cancelled' } });
+}
+
+// A repair path, not a general "edit the date anytime" feature — only callable once
+// bulkRequirementOverdue.job.ts has already flipped the requirement to 'expired'. Reopens to
+// 'partially_fulfilled' rather than 'open' if some quantity was already fulfilled before the
+// deadline passed, mirroring confirmResponseReceived's own status recompute in reverse.
+export async function rescheduleRequirement(prisma: PrismaClient, ngoUserId: string, requirementId: string, neededByDate: string) {
+  const ngo = await getOwnNgoProfile(prisma, ngoUserId);
+  const requirement = await prisma.bulkRequirement.findFirst({ where: { id: requirementId, ngoId: ngo.id } });
+  if (!requirement) throw new NotFoundError('Requirement not found');
+  if (requirement.status !== 'expired') throw new BadRequestError('Only an expired requirement can be rescheduled');
+
+  const newDate = new Date(neededByDate);
+  if (newDate <= new Date()) throw new BadRequestError('New date must be in the future');
+
+  return prisma.bulkRequirement.update({
+    where: { id: requirementId },
+    data: { neededByDate: newDate, status: requirement.quantityFulfilled > 0 ? 'partially_fulfilled' : 'open' },
+  });
 }
 
 export async function acceptResponse(prisma: PrismaClient, ngoUserId: string, responseId: string) {

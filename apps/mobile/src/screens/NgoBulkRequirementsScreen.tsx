@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Platform } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +20,7 @@ import {
   useNgoBulkRequirement,
   useCreateNgoBulkRequirement,
   useCancelNgoBulkRequirement,
+  useRescheduleNgoBulkRequirement,
   useAcceptNgoBulkResponse,
   useDeclineNgoBulkResponse,
   useConfirmNgoBulkResponseReceived,
@@ -27,15 +28,19 @@ import {
 import { ApiError } from '../api/client';
 import type { ApiNgoBulkRequirement } from '../api/ngoBulkRequirements';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { isBulkRequirementOverdue } from '../utils/bulkRequirement';
 
 function RequirementCard({ item, onPress }: { item: ApiNgoBulkRequirement; onPress: () => void }) {
+  const overdue = isBulkRequirementOverdue(item);
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
       <BorderCard style={styles.row}>
         <Text style={styles.species}>{item.species?.commonName ?? item.speciesNote ?? 'Any species'}</Text>
         <Text style={styles.meta}>
           {item.quantityFulfilled}/{item.quantityNeeded} fulfilled
-          {item.neededByDate ? ` · Needed by ${new Date(item.neededByDate).toLocaleDateString()}` : ''}
+          {item.neededByDate ? (
+            <Text style={overdue ? styles.metaOverdue : undefined}> · Needed by {new Date(item.neededByDate).toLocaleDateString()}</Text>
+          ) : null}
         </Text>
         <View style={[styles.statusBadge, badgeColor(item.status)]}>
           <Text style={styles.statusBadgeText}>{item.status.replace('_', ' ')}</Text>
@@ -54,11 +59,19 @@ function badgeColor(status: string) {
 function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
   const { data: req, isLoading } = useNgoBulkRequirement(id);
   const cancelMutation = useCancelNgoBulkRequirement();
+  const rescheduleMutation = useRescheduleNgoBulkRequirement();
   const acceptMutation = useAcceptNgoBulkResponse();
   const declineMutation = useDeclineNgoBulkResponse();
   const confirmReceivedMutation = useConfirmNgoBulkResponseReceived();
   const confirm = useConfirm();
   const [codeDrafts, setCodeDrafts] = useState<Record<string, string>>({});
+  const [rescheduleDate, setRescheduleDate] = useState<Date | null>(null);
+  const [showReschedulePicker, setShowReschedulePicker] = useState(false);
+
+  useEffect(() => {
+    setRescheduleDate(null);
+    setShowReschedulePicker(false);
+  }, [id]);
 
   return (
     <Sheet visible={!!id} onClose={onClose} title="Requirement" scrollable maxHeight={560}>
@@ -69,7 +82,9 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
           <Text style={styles.sheetSpecies}>{req.species?.commonName ?? req.speciesNote ?? 'Any species'}</Text>
           <Text style={styles.sheetMeta}>
             {req.quantityFulfilled}/{req.quantityNeeded} fulfilled
-            {req.neededByDate ? ` · Needed by ${new Date(req.neededByDate).toLocaleDateString()}` : ''}
+            {req.neededByDate ? (
+              <Text style={isBulkRequirementOverdue(req) ? styles.metaOverdue : undefined}> · Needed by {new Date(req.neededByDate).toLocaleDateString()}</Text>
+            ) : null}
           </Text>
           {req.notes ? <Text style={styles.sheetNotes}>{req.notes}</Text> : null}
 
@@ -81,7 +96,10 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
               <BorderCard key={r.id} style={styles.offerCard}>
                 <Text style={styles.offerNursery}>{r.nursery.nurseryName}</Text>
                 <Text style={styles.offerMeta}>
-                  {r.quantityOffered} offered{r.priceCents != null ? ` · ₹${(r.priceCents / 100).toFixed(0)}` : ' · Free'}
+                  {r.quantityOffered} offered
+                  {r.priceCents != null
+                    ? ` · ₹${(r.priceCents / 100).toFixed(0)} each · ₹${((r.priceCents * r.quantityOffered) / 100).toLocaleString('en-IN')} total`
+                    : ' · Free'}
                   {' · '}{[r.canPickup && 'Pickup', r.canDeliver && 'Delivery'].filter(Boolean).join(' + ') || '—'}
                 </Text>
                 {r.message ? <Text style={styles.offerMessage}>{r.message}</Text> : null}
@@ -126,6 +144,46 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
             ))
           )}
 
+          {req.status === 'expired' && (
+            <View style={styles.rescheduleBox}>
+              <Text style={styles.rescheduleHint}>This requirement's deadline passed without being fulfilled. Pick a new date to reopen it to nurseries.</Text>
+              <TouchableOpacity onPress={() => setShowReschedulePicker(true)} activeOpacity={0.7}>
+                <Text style={[styles.dateValue, !rescheduleDate && styles.datePlaceholder]}>
+                  {rescheduleDate
+                    ? rescheduleDate.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+                    : 'Select a new date'}
+                </Text>
+              </TouchableOpacity>
+              {showReschedulePicker && (
+                <DateTimePicker
+                  value={rescheduleDate ?? new Date()}
+                  mode="date"
+                  minimumDate={new Date()}
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(_event, date) => {
+                    if (Platform.OS !== 'ios') setShowReschedulePicker(false);
+                    if (date) setRescheduleDate(date);
+                  }}
+                />
+              )}
+              {Platform.OS === 'ios' && showReschedulePicker && (
+                <TouchableOpacity style={styles.doneBtn} onPress={() => setShowReschedulePicker(false)}>
+                  <Text style={styles.doneText}>Done</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                onPress={() => rescheduleDate && rescheduleMutation.mutate({ id: req.id, neededByDate: rescheduleDate.toISOString() })}
+                style={styles.offerAcceptButton}
+                disabled={!rescheduleDate || rescheduleMutation.isPending}
+              >
+                <Text style={styles.offerAcceptText}>{rescheduleMutation.isPending ? 'Rescheduling…' : 'Reschedule'}</Text>
+              </TouchableOpacity>
+              {rescheduleMutation.isError && (
+                <Text style={styles.errorText}>{rescheduleMutation.error instanceof ApiError ? rescheduleMutation.error.message : 'Could not reschedule this requirement.'}</Text>
+              )}
+            </View>
+          )}
+
           {req.status !== 'cancelled' && req.status !== 'fulfilled' && (
             <TouchableOpacity
               onPress={() =>
@@ -145,7 +203,7 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
   );
 }
 
-export function NgoBulkRequirementsScreen({ navigation }: any) {
+export function NgoBulkRequirementsScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
   const { data: requirements = [], isLoading, refetch } = useNgoBulkRequirements();
   const createMutation = useCreateNgoBulkRequirement();
@@ -153,6 +211,14 @@ export function NgoBulkRequirementsScreen({ navigation }: any) {
 
   const [showCreate, setShowCreate] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Deep-linked from a tapped notification (e.g. bulk_requirement_deadline_passed) straight into
+  // that requirement's detail sheet, the same param-driven pre-selection pattern other screens use
+  // (e.g. NgoLogPlantedTrees' driveId param).
+  useEffect(() => {
+    const id = route?.params?.openRequirementId;
+    if (id) setSelectedId(id);
+  }, [route?.params?.openRequirementId]);
   const [speciesNote, setSpeciesNote] = useState('');
   const [quantityNeeded, setQuantityNeeded] = useState('');
   const [neededByDate, setNeededByDate] = useState<Date | null>(null);
@@ -284,6 +350,7 @@ const styles = StyleSheet.create({
   row: { marginBottom: 10 },
   species: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
   meta: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+  metaOverdue: { color: COLORS.dangerDark, fontWeight: '700' },
   statusBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, marginTop: 6 },
   statusBadgeText: { fontSize: 11, fontWeight: '700', color: COLORS.textPrimary, textTransform: 'capitalize' },
   errorText: { fontSize: 13, color: COLORS.coral, textAlign: 'center', marginTop: 4 },
@@ -298,6 +365,8 @@ const styles = StyleSheet.create({
   sheetNotes: { fontSize: 13, color: COLORS.textPrimary, lineHeight: 19 },
   sheetSectionTitle: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, marginTop: 8 },
   sheetEmpty: { fontSize: 13, color: COLORS.textMuted },
+  rescheduleBox: { gap: 8, padding: 12, borderRadius: RADIUS.md, backgroundColor: 'rgba(194,74,59,0.08)' },
+  rescheduleHint: { fontSize: 12, color: COLORS.textPrimary },
   offerCard: { gap: 4 },
   offerNursery: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
   offerMeta: { fontSize: 12, color: COLORS.textSecondary },
