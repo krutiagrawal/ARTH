@@ -183,7 +183,7 @@ export function UserProfileScreen({ route, navigation }: any) {
           hint: 'Hides their posts and stories both ways',
           destructive: true,
           onPress: () =>
-            confirm(`Block ${name}?`, 'You will stop seeing each other on PLANT.', [
+            confirm(`Block ${name}?`, 'You will stop seeing each other on Arth.', [
               { text: 'Cancel', style: 'cancel' as const },
               {
                 text: 'Block',

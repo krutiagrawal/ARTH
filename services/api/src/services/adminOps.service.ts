@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { getStripeClient } from '../lib/stripe';
 import { NotFoundError, ForbiddenError } from '../utils/errors';
 

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { hashPassword } from '../utils/password';
 import { ConflictError, NotFoundError } from '../utils/errors';
 import * as nurseryService from './nursery.service';

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { postInclude, serializePost } from './post.service';
 
 interface ActivityEntry {

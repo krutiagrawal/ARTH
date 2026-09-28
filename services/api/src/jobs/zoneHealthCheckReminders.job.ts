@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { notify } from '../services/notification.service';
 
 // Mirrors treeMilestones.job.ts: 30/90/180/365-day-since-planting thresholds, but anchored to a

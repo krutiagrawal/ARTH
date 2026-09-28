@@ -1,5 +1,5 @@
 import fp from 'fastify-plugin';
-import { UserRole } from '@plant/db';
+import { UserRole } from '@arth/db';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { verifyAccessToken } from '../utils/jwt';
 import { AccountBlockedError, ForbiddenError, UnauthorizedError } from '../utils/errors';

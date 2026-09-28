@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole } from '@plant/db';
+import { PrismaClient, UserRole } from '@arth/db';
 import 'fastify';
 
 declare module 'fastify' {

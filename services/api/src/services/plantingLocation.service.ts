@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { haversineDistanceKm, LatLng } from '../utils/geo';
 import { ForbiddenError } from '../utils/errors';
 

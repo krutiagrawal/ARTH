@@ -1,4 +1,4 @@
-import { UserRole } from '@plant/db';
+import { UserRole } from '@arth/db';
 
 // The "has an NgoProfile" role. group/nursery/corporate used to be folded into this
 // list (they shared NgoProfile), but each now has its own dedicated profile model

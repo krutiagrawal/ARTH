@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { notify } from '../services/notification.service';
 
 // Tree.growthStage is set once at creation and never advanced anywhere in this backend, so

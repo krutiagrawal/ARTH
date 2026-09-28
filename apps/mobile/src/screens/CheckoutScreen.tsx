@@ -129,7 +129,7 @@ export function CheckoutScreen({ navigation }: any) {
       // No Stripe key configured on the backend (local/dev only) — the order already came back
       // confirmed, so there's no payment sheet to present. Skip straight to success.
       if (clientSecret) {
-        const { error: initError } = await initPaymentSheet({ merchantDisplayName: 'PLANT', paymentIntentClientSecret: clientSecret });
+        const { error: initError } = await initPaymentSheet({ merchantDisplayName: 'Arth', paymentIntentClientSecret: clientSecret });
         if (initError) throw new Error(initError.message);
 
         const { error: presentError } = await presentPaymentSheet();

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { ForbiddenError, NotFoundError } from '../utils/errors';
 import { notify } from './notification.service';
 import { getSocialFeed } from './post.service';

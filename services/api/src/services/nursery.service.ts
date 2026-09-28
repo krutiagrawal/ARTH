@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from '@plant/db';
+import { Prisma, PrismaClient } from '@arth/db';
 import { ForbiddenError, NotFoundError, BadRequestError } from '../utils/errors';
 import { notify } from './notification.service';
 import { recordNurseryContribution, recomputeReputation, getReputationSummary } from './nurseryReputation.service';

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { hashPassword } from '../src/utils/password';
 
 const prisma = new PrismaClient();

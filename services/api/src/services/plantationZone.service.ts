@@ -1,4 +1,4 @@
-import { PrismaClient, TreeHealthStatus } from '@plant/db';
+import { PrismaClient, TreeHealthStatus } from '@arth/db';
 import { ConflictError, NotFoundError } from '../utils/errors';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
 import { ActionableHealthStatus, getLatestStatusByTree, logBulkHealthChecks } from './plantedTree.service';

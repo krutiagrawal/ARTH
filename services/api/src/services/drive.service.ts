@@ -1,4 +1,4 @@
-import { DriveStatus, DriveTransportMode, PrismaClient } from '@plant/db';
+import { DriveStatus, DriveTransportMode, PrismaClient } from '@arth/db';
 import { getStripeClient } from '../lib/stripe';
 import { ConflictError, ForbiddenError, NotFoundError, ServiceUnavailableError } from '../utils/errors';
 import { geocodeAddress } from '../utils/geocode';

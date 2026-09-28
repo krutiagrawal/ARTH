@@ -21,7 +21,7 @@ const envSchema = z.object({
   // Password reset emails (Resend). Leave unset in dev and reset links are logged to the
   // console instead of sent — see services/email.service.ts.
   RESEND_API_KEY: z.string().optional(),
-  EMAIL_FROM: z.string().default('PLANT <hello@plant.example.org>'),
+  EMAIL_FROM: z.string().default('Arth <hello@arth.example.org>'),
   // Base URL of the web app, used to build the password-reset link sent by email.
   WEB_URL: z.string().default('http://localhost:3000'),
   // Gemini (https://aistudio.google.com/apikey) — powers AI verification of tree-planting

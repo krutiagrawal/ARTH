@@ -25,7 +25,7 @@ interface MenuItem {
 }
 
 const ITEMS: MenuItem[] = [
-  { emoji: '📚', title: 'Past Work', body: 'Drives you ran before joining PLANT', route: 'NgoPortfolio', color: COLORS.coral },
+  { emoji: '📚', title: 'Past Work', body: 'Drives you ran before joining Arth', route: 'NgoPortfolio', color: COLORS.coral },
   { emoji: '👥', title: 'Volunteers', body: "See who's shown up for your drives", route: 'NgoVolunteers', color: COLORS.xpBlue },
   { emoji: '🧑‍🤝‍🧑', title: 'Staff Roster', body: "Manage your team's public listing", route: 'NgoStaff', color: COLORS.warmBrown },
   { emoji: '💸', title: 'Donations', body: 'View and filter incoming donations', route: 'NgoDonations', color: COLORS.golden },

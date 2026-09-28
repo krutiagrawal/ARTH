@@ -1,4 +1,4 @@
-import { Prisma, GroupAchievementCriteriaType } from '@plant/db';
+import { Prisma, GroupAchievementCriteriaType } from '@arth/db';
 
 async function computeGroupProgress(
   tx: Prisma.TransactionClient,

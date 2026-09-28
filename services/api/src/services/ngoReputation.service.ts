@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient, NgoStreakType, NgoGrowthLevel } from '@plant/db';
+import { Prisma, PrismaClient, NgoStreakType, NgoGrowthLevel } from '@arth/db';
 import { startOfUtcDay, addDays } from './streak.service';
 import { notify } from './notification.service';
 

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { recomputeReputation } from '../src/services/nurseryReputation.service';
 
 const prisma = new PrismaClient();

@@ -127,7 +127,7 @@ export function NgoPortfolioScreen({ navigation }: any) {
           ListHeaderComponent={
             <View style={styles.intro}>
               <Text style={styles.introText}>
-                Show what you did before joining PLANT. These appear on your public profile, kept
+                Show what you did before joining Arth. These appear on your public profile, kept
                 separate from live drives and from your tracked survival numbers.
               </Text>
               {entries.length > 0 && (

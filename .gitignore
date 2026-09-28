@@ -8,6 +8,9 @@ build/
 out/
 apps/mobile/.expo/
 apps/mobile/web-build/
+# Regenerable via `npx expo prebuild` from app.json — not the source of truth.
+apps/mobile/android/
+apps/mobile/ios/
 
 # Env files (NOTE: files already tracked before this .gitignore existed remain
 # tracked until explicitly untracked with `git rm --cached` -- this only stops

@@ -1,4 +1,4 @@
-import { PrismaClient, User, GroupType, NurseryType, NgoOrgType, NgoDocumentType, Prisma } from '@plant/db';
+import { PrismaClient, User, GroupType, NurseryType, NgoOrgType, NgoDocumentType, Prisma } from '@arth/db';
 import { hashPassword, comparePassword } from '../utils/password';
 import {
   signAccessToken,
@@ -587,8 +587,8 @@ export async function requestPasswordReset(prisma: PrismaClient, email: string):
 
   await sendEmail({
     to: user.email,
-    subject: 'Reset your PLANT password',
-    html: `<p>Hi ${user.name},</p><p>Someone requested a password reset for your PLANT account. If this was you, click the link below — it expires in an hour.</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you didn't request this, you can ignore this email.</p>`,
+    subject: 'Reset your Arth password',
+    html: `<p>Hi ${user.name},</p><p>Someone requested a password reset for your Arth account. If this was you, click the link below — it expires in an hour.</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you didn't request this, you can ignore this email.</p>`,
   });
 }
 

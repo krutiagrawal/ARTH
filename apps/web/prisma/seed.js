@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@plant/db')
+const { PrismaClient } = require('@arth/db')
 
 const prisma = new PrismaClient()
 

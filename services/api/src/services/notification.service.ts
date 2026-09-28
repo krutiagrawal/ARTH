@@ -1,4 +1,4 @@
-import { NotificationType, Prisma, PrismaClient } from '@plant/db';
+import { NotificationType, Prisma, PrismaClient } from '@arth/db';
 import { sendPush } from './push.service';
 
 interface NotifyInput {

@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { Prisma } from '@plant/db';
+import { Prisma } from '@arth/db';
 
 interface LeaderboardRow {
   id: string;

@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma } from '@plant/db';
+import { PrismaClient, Prisma } from '@arth/db';
 import { ForbiddenError, NotFoundError } from '../utils/errors';
 
 interface UpsertAddressInput {

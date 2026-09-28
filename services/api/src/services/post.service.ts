@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from '@plant/db';
+import { Prisma, PrismaClient } from '@arth/db';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
 import { requireApprovedNgoProfile } from './ngo.service';
 import { requireApprovedNurseryProfile } from './nursery.service';

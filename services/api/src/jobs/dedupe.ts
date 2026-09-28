@@ -1,4 +1,4 @@
-import { NotificationType, PrismaClient } from '@plant/db';
+import { NotificationType, PrismaClient } from '@arth/db';
 
 /** Has `userId` already received a notification of `type` since `since`? Scheduled jobs run
  * on a fixed tick (see scheduler.ts) and must check this before notifying, or they'd re-send

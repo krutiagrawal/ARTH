@@ -1,4 +1,4 @@
-import { Prisma, NurseryAchievementCriteriaType } from '@plant/db';
+import { Prisma, NurseryAchievementCriteriaType } from '@arth/db';
 import { getArthContributionStreakCurrent, getFulfilmentStreakCurrent } from './nurseryReputation.service';
 
 // Fulfilment-rate/cancellation-streak criteria only start counting once a nursery has a

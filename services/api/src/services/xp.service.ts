@@ -1,4 +1,4 @@
-import { Prisma, XpReason } from '@plant/db';
+import { Prisma, XpReason } from '@arth/db';
 
 const XP_PER_LEVEL = 500;
 

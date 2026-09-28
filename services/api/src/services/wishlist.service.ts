@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { ConflictError, NotFoundError } from '../utils/errors';
 
 export async function listWishlist(prisma: PrismaClient, userId: string) {

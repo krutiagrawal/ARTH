@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { NotFoundError } from '../utils/errors';
 import { serializePost, viewerInclude } from './post.service';
 import { haversineDistanceKm } from '../utils/geo';

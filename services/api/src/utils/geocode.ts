@@ -7,7 +7,7 @@ const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
 const NOMINATIM_REVERSE_URL = 'https://nominatim.openstreetmap.org/reverse';
 const TIMEOUT_MS = 4000;
 const MIN_INTERVAL_MS = 1100;
-const USER_AGENT = 'PLANT-App/1.0 (tree planting platform; contact: support@plant.app)';
+const USER_AGENT = 'Arth-App/1.0 (tree planting platform; contact: support@arth.app)';
 
 // The product only launches in Pune right now (see CityPickerField.tsx), so address-field
 // search-as-you-type suggestions are boxed to Pune city plus its nearby villages/suburbs —

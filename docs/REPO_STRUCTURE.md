@@ -5,7 +5,7 @@ Generated after moving the mobile app, backend, and website into `apps/mobile`, 
 Collapsed on sight, wherever they appear: `node_modules/`, `dist/`, `.next/`, `.expo/`, `.cache/`, `.claude/`, `.git/` — plus two path-specific asset dumps: `apps/web/public/assets/homepage/` (864 homepage images) and `apps/web/.emergent/` (scaffold tool state from the site's original generator).
 
 ```
-PLANT/
+Arth/
 ├── .claude/  (0 files — omitted)
 ├── .git/  (80 files — omitted)
 ├── apps/

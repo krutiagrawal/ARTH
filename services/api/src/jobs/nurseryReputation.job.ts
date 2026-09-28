@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { recomputeReputation } from '../services/nurseryReputation.service';
 
 // Trust Score / Growth Level are recomputed inline at every activity hook (immediate feedback),

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { ForbiddenError, NotFoundError } from '../utils/errors';
 
 interface UpdateProfileInput {

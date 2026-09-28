@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "PLANT",
-    "slug": "plant-eco-app",
+    "name": "Arth",
+    "slug": "arth",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -16,7 +16,7 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.plant.ecoapp",
+      "bundleIdentifier": "com.arth.app",
       "infoPlist": {
         "LSApplicationQueriesSchemes": [
           "instagram",
@@ -29,12 +29,15 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1A3A16"
       },
-      "package": "com.plant.ecoapp",
+      "package": "com.arth.app",
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ]
     },
     "web": {
@@ -45,15 +48,15 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "PLANT needs your location to record where you plant trees.",
-          "locationWhenInUsePermission": "PLANT needs your location to record where you plant trees."
+          "locationAlwaysAndWhenInUsePermission": "Arth needs your location to record where you plant trees.",
+          "locationWhenInUsePermission": "Arth needs your location to record where you plant trees."
         }
       ],
       "expo-secure-store",
       [
         "@stripe/stripe-react-native",
         {
-          "merchantIdentifier": "merchant.com.plant.ecoapp",
+          "merchantIdentifier": "merchant.com.arth.app",
           "enableGooglePay": false
         }
       ],
@@ -72,11 +75,51 @@
           "color": "#2D5A27"
         }
       ],
-      "@react-native-community/datetimepicker"
+      [
+        "@react-native-community/datetimepicker",
+        {
+          "android": {
+            "datePicker": {
+              "colorAccent": {
+                "light": "#2D5A27"
+              },
+              "colorControlActivated": {
+                "light": "#2D5A27"
+              },
+              "colorControlHighlight": {
+                "light": "#A8C499"
+              },
+              "textColorPrimary": {
+                "light": "#2D2A25"
+              },
+              "textColorSecondary": {
+                "light": "#4A4034"
+              },
+              "windowBackground": {
+                "light": "#FFF8ED"
+              }
+            },
+            "timePicker": {
+              "headerBackground": {
+                "light": "#2D5A27"
+              },
+              "numbersSelectorColor": {
+                "light": "#2D5A27"
+              },
+              "numbersBackgroundColor": {
+                "light": "#FFF8ED"
+              },
+              "numbersTextColor": {
+                "light": "#2D2A25"
+              }
+            }
+          }
+        }
+      ]
     ],
     "extra": {
-      "eas": {
-        "projectId": "d2ae5230-f240-4cbd-88be-f425a284a11a"
+      "expo-navigation-bar": {
+        "enforceContrast": false
       }
     },
     "owner": "kruti_agrawal"

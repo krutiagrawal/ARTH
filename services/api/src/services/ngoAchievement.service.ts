@@ -1,4 +1,4 @@
-import { Prisma, NgoAchievementCriteriaType } from '@plant/db';
+import { Prisma, NgoAchievementCriteriaType } from '@arth/db';
 import { getUpdatesStreakCurrent } from './ngoReputation.service';
 
 async function computeNgoProgress(

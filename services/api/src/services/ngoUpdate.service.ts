@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { requireNgoProfile } from './ngo.service';
 import { createPost, deletePost, serializePost, viewerInclude } from './post.service';
 

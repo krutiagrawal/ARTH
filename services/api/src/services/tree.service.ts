@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { addXp } from './xp.service';
 import { recordPlantedToday } from './streak.service';
 import { evaluateAchievements } from './achievement.service';

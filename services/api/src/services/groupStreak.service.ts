@@ -1,4 +1,4 @@
-import { Prisma } from '@plant/db';
+import { Prisma } from '@arth/db';
 import { startOfUtcDay, addDays } from './streak.service';
 
 // Daily analog of streak.service.ts's recordPlantedToday, scoped to GroupProfile instead

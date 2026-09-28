@@ -1,4 +1,4 @@
-import { Prisma } from '@plant/db';
+import { Prisma } from '@arth/db';
 import { addXp } from './xp.service';
 
 export async function bumpTreePlantedChallenges(tx: Prisma.TransactionClient, userId: string) {

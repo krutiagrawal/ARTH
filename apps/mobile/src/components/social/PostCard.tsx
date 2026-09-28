@@ -163,7 +163,7 @@ export function PostCard({
         label: 'Share',
         onPress: () => {
           const what = post.caption?.trim() || `A post from ${post.author.name}`;
-          Share.share({ message: `${what}\n\nShared from PLANT 🌱` }).catch(() => undefined);
+          Share.share({ message: `${what}\n\nShared from Arth 🌱` }).catch(() => undefined);
         },
       });
     }

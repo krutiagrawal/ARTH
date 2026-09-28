@@ -1,4 +1,4 @@
-import { GroupMemberRole, PrismaClient } from '@plant/db';
+import { GroupMemberRole, PrismaClient } from '@arth/db';
 import { generateInviteCode } from '../utils/inviteCode';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../utils/errors';
 

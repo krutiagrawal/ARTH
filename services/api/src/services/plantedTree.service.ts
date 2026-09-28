@@ -1,4 +1,4 @@
-import { PrismaClient, TreeHealthStatus } from '@plant/db';
+import { PrismaClient, TreeHealthStatus } from '@arth/db';
 
 // 'not_checked' is a derived absence-of-check state, never something you can actually log a
 // health check as — the routes' zod schemas already restrict incoming status to these four.

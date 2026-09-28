@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient, NurseryStreakType, NurseryGrowthLevel } from '@plant/db';
+import { Prisma, PrismaClient, NurseryStreakType, NurseryGrowthLevel } from '@arth/db';
 import { startOfUtcDay, addDays } from './streak.service';
 
 // Accepts either a live PrismaClient (read-only routes) or a transaction client (activity hooks) —

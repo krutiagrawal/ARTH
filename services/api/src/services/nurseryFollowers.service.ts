@@ -1,4 +1,4 @@
-import { FollowStatus, Prisma, PrismaClient } from '@plant/db';
+import { FollowStatus, Prisma, PrismaClient } from '@arth/db';
 import { NotFoundError } from '../utils/errors';
 import { getOwnProfile } from './nursery.service';
 import { notify } from './notification.service';

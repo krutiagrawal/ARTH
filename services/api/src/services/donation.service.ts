@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { randomUUID } from 'node:crypto';
 import { getStripeClient } from '../lib/stripe';
 import { ConflictError, ForbiddenError, NotFoundError, ServiceUnavailableError } from '../utils/errors';

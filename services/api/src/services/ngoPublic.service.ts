@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { NotFoundError } from '../utils/errors';
 import { computeSurvivalStats } from './plantedTree.service';
 import { serializePost, viewerInclude } from './post.service';

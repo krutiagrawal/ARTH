@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../utils/errors';
 
 const cartInclude = {

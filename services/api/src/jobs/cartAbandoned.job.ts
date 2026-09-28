@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { notify } from '../services/notification.service';
 import { countNotificationsSince, hasRecentNotification } from './dedupe';
 

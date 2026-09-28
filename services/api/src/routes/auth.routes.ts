@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { NgoDocumentType } from '@plant/db';
+import { NgoDocumentType } from '@arth/db';
 import {
   registerSchema,
   registerNgoSchema,

@@ -1,4 +1,4 @@
-import { Prisma, MissionType } from '@plant/db';
+import { Prisma, MissionType } from '@arth/db';
 import { addXp } from './xp.service';
 
 function startOfUtcDay(date: Date): Date {

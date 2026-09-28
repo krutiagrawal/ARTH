@@ -5,7 +5,7 @@ ARTH is a tree-planting platform made of two independent applications sharing on
 - **`apps/mobile`** — the ARTH mobile app (Expo / React Native / TypeScript). Individual users, groups, real-world planting, tree care, camera/GPS, streaks, collectibles, the forest.
 - **`apps/web`** — the ARTH website (Next.js). Public site, dashboards, NGO/nursery/CSR operations, reporting, impact visibility. Talks to `services/api` for everything account/domain-related (see `apps/web/lib/apiProxy.js`); keeps its own direct Postgres access only for pure marketing content (blog, partners, static leaderboard rows, etc.).
 - **`services/api`** — the backend API both the mobile app and `apps/web` talk to (Fastify + Prisma + Postgres), and the sole owner of accounts/auth/domain writes.
-- **`packages/db`** — the shared Prisma schema/client (`@plant/db`) both `services/api` and `apps/web` depend on. One database, one migration history.
+- **`packages/db`** — the shared Prisma schema/client (`@arth/db`) both `services/api` and `apps/web` depend on. One database, one migration history.
 
 This is an npm-workspaces monorepo. Each app keeps its own dependencies, scripts, environment variables, and can be run/built/deployed independently of the others.
 
@@ -36,7 +36,7 @@ Mobile builds go through EAS as before — see `apps/mobile/eas.json`.
 
 ## Database (packages/db)
 
-Schema, migrations, and seed data live in `packages/db/prisma/` and are shared by both `services/api` and `apps/web` (via the `@plant/db` package) — there is one Postgres database for the whole platform.
+Schema, migrations, and seed data live in `packages/db/prisma/` and are shared by both `services/api` and `apps/web` (via the `@arth/db` package) — there is one Postgres database for the whole platform.
 
 ```bash
 npm run prisma:generate   # regenerate the Prisma client
@@ -77,7 +77,7 @@ apps/
   mobile/     Expo app — see apps/mobile/README.md for the full feature/architecture doc
   web/        Next.js app — proxies to services/api for accounts/domain data, own DB access for content only
 packages/
-  db/         Shared Prisma schema/client (@plant/db) — one migration history, one database
+  db/         Shared Prisma schema/client (@arth/db) — one migration history, one database
 services/
   api/        Fastify API for the mobile app and apps/web
 docs/

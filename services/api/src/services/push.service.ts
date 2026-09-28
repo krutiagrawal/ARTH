@@ -1,4 +1,4 @@
-import { PrismaClient } from '@plant/db';
+import { PrismaClient } from '@arth/db';
 import { env } from '../config/env';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';

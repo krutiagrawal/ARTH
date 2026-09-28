@@ -1,4 +1,4 @@
-# 🌱 PLANT — Eco-Gamified Tree Planting App
+# 🌱 Arth — Eco-Gamified Tree Planting App
 
 A premium, visually immersive habit-building mobile app for tracking real-world tree planting with Duolingo-level polish and a cozy game aesthetic.
 

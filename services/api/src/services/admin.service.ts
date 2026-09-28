@@ -1,4 +1,4 @@
-import { NgoApprovalStatus, Prisma, PrismaClient, UserRole } from '@plant/db';
+import { NgoApprovalStatus, Prisma, PrismaClient, UserRole } from '@arth/db';
 import { ForbiddenError, NotFoundError } from '../utils/errors';
 import { addXp } from './xp.service';
 import { getAdminNgoProfile } from './ngoPublic.service';

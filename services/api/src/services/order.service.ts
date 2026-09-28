@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from '@plant/db';
+import { Prisma, PrismaClient } from '@arth/db';
 import { getStripeClient } from '../lib/stripe';
 import { getLiveLocation } from '../lib/deliveryProvider';
 import { sendEmail } from './email.service';
@@ -340,7 +340,7 @@ async function finalizeConfirmedOrder(prisma: PrismaClient, order: OrderForFinal
 
   await sendEmail({
     to: order.user.email,
-    subject: 'Your PLANT order is confirmed',
+    subject: 'Your Arth order is confirmed',
     html: `<p>Hi ${order.user.name},</p><p>Your order from <strong>${order.nursery.nurseryName}</strong> for ₹${(order.totalCents / 100).toFixed(2)} is confirmed. We'll notify you as it's packed and ${order.fulfillmentType === 'pickup' ? 'ready for pickup' : 'on its way'}.</p>`,
   });
 }

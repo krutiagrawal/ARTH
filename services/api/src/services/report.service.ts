@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient, ReportReason, ReportStatus, ReportTargetType } from '@plant/db';
+import { Prisma, PrismaClient, ReportReason, ReportStatus, ReportTargetType } from '@arth/db';
 import { BadRequestError, NotFoundError } from '../utils/errors';
 import { applyAutoHideIfNeeded } from './post.service';
 
