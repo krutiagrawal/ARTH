@@ -141,6 +141,11 @@ export function NgoSettingsScreen({ navigation }: any) {
         title="NGO Profile"
         subtitle="Tell people about your organization"
         onBack={() => navigation?.goBack?.()}
+        right={
+          <TouchableOpacity onPress={() => navigation?.navigate('Settings')} style={styles.settingsButton}>
+            <Text style={styles.settingsIcon}>⚙️</Text>
+          </TouchableOpacity>
+        }
       />
 
       {/* Gate on the data itself, not `isLoading` — once a profile has loaded once, a background
@@ -290,6 +295,8 @@ export function NgoSettingsScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+  settingsButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  settingsIcon: { fontSize: 18 },
   policyCard: {
     flexDirection: 'row',
     alignItems: 'center',

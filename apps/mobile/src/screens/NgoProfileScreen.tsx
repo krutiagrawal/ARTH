@@ -270,14 +270,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
         ) : (
           <View style={styles.iconButton} />
         )}
-        <Text style={styles.topBarTitle} numberOfLines={1}>{name}</Text>
-        {isOwn ? (
-          <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.iconButton}>
-            <View style={styles.iconBlur}>
-              <Text style={styles.iconText}>⚙️</Text>
-            </View>
-          </TouchableOpacity>
-        ) : (
+        {isOwn ? null : (
           <TouchableOpacity onPress={() => setMenuOpen(true)} style={styles.iconButton} hitSlop={8}>
             <Text style={styles.menuDots}>⋯</Text>
           </TouchableOpacity>
@@ -299,6 +292,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
           ListHeaderComponent={
             <>
               <ProfileHeader
+                topInset={insets.top}
                 avatarUrl={logoUrl}
                 avatarEmoji="🌿"
                 storyRing={effectiveNgoId ? ringStatus.data?.ngos[effectiveNgoId] : null}
@@ -450,6 +444,11 @@ export function NgoProfileScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   topBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -463,10 +462,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
+    // Floats over the vine photo now (topBar is an absolute overlay, not its own banner) — needs
+    // a real backdrop to stay legible against green leaves.
+    backgroundColor: 'rgba(255,255,255,0.55)',
   },
   iconText: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
-  topBarTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center', marginHorizontal: 8 },
   menuDots: { fontSize: 20, color: COLORS.textSecondary },
   tabBody: { paddingHorizontal: 16, paddingTop: 16 },
   contributionsCard: { gap: 12 },

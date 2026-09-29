@@ -173,6 +173,11 @@ export function EditNurseryProfileScreen({ navigation }: any) {
         title="Nursery Profile"
         subtitle="Tell planters about your nursery"
         onBack={navigation?.canGoBack?.() ? () => navigation.goBack() : undefined}
+        right={
+          <TouchableOpacity onPress={() => navigation?.navigate('NurserySettings')} style={styles.settingsButton}>
+            <Text style={styles.settingsIcon}>⚙️</Text>
+          </TouchableOpacity>
+        }
       />
 
       {isLoading ? (
@@ -299,6 +304,8 @@ export function EditNurseryProfileScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  settingsButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  settingsIcon: { fontSize: 18 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 8, gap: 8 },
   statusBanner: { borderRadius: RADIUS.md, padding: 14, marginBottom: 12, borderLeftWidth: 4, borderLeftColor: COLORS.golden },
   statusBannerDanger: { borderLeftColor: COLORS.coral },

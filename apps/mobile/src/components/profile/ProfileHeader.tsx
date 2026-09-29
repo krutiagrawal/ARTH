@@ -8,6 +8,7 @@ import { ProgressRing } from '../common/ProgressRing';
 import { StatDisplay } from '../common/StatDisplay';
 import { StoryRing, type StoryRingStatus } from '../common/StoryRing';
 import { StoryAvatar } from '../common/StoryAvatar';
+import { ProfileVine } from './ProfileVine';
 
 export interface ProfileHeaderStat {
   value: string | number;
@@ -50,6 +51,9 @@ interface ProfileHeaderProps {
   primaryAction?: ProfileHeaderAction | null;
   /** Explanatory line under the action button, e.g. "This NGO approves each follower." */
   hint?: string | null;
+  /** Pass `insets.top` — reserves space above the vine banner so it starts below the status
+   * bar's clock/battery row instead of behind it. */
+  topInset?: number;
 }
 
 export function ProfileHeader({
@@ -65,6 +69,7 @@ export function ProfileHeader({
   stats,
   primaryAction,
   hint,
+  topInset,
 }: ProfileHeaderProps) {
   const avatarBox = (
     <View style={styles.avatarShadowWrap}>
@@ -80,6 +85,7 @@ export function ProfileHeader({
 
   return (
     <View style={styles.wrap}>
+      <ProfileVine topInset={topInset} />
       <View style={styles.avatarArea}>
         {storyAuthor ? (
           <StoryAvatar
@@ -192,10 +198,13 @@ const styles = StyleSheet.create({
   wrap: {
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 0,
     paddingBottom: 22,
   },
-  avatarArea: { position: 'relative', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  // Pulled up into the vine image's own lower dead space (mostly transparent past the dense
+  // foliage band) rather than sitting in the plain gap below it — closes the visual gap without
+  // actually cropping or resizing the vine itself.
+  avatarArea: { position: 'relative', alignItems: 'center', justifyContent: 'center', marginTop: -190, marginBottom: 12 },
   // Separate from `avatar` so the shadow isn't clipped by the avatar's own `overflow: hidden`.
   avatarShadowWrap: {
     borderRadius: 24,

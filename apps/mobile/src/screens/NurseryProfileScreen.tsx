@@ -113,6 +113,7 @@ export function NurseryProfileScreen({ route, navigation }: any) {
   const headerBlock = (
     <>
       <ProfileHeader
+        topInset={insets.top}
         avatarUrl={logoUrl}
         avatarEmoji="🌿"
         storyRing={effectiveNurseryId ? ringStatus.data?.nurseries[effectiveNurseryId] : null}
@@ -223,17 +224,7 @@ export function NurseryProfileScreen({ route, navigation }: any) {
         ) : (
           <View style={styles.iconButton} />
         )}
-        <Text style={styles.topBarTitle} numberOfLines={1}>{name}</Text>
-        {isOwn ? (
-          // Settings, not editing — "Edit profile" is the primaryAction button below (matches the
-          // individual user's own profile screen: gear icon = Settings, button under the avatar =
-          // Edit profile). This icon used to duplicate the button by also opening EditNurseryProfile.
-          <TouchableOpacity onPress={() => navigation.navigate('NurserySettings')} style={styles.iconButton}>
-            <View style={styles.iconBlur}>
-              <Text style={styles.iconText}>⚙️</Text>
-            </View>
-          </TouchableOpacity>
-        ) : (
+        {isOwn ? null : (
           <View style={styles.headerActions}>
             <TouchableOpacity onPress={() => setReporting(true)} style={styles.iconButton} hitSlop={8}>
               <View style={styles.iconBlur}>
@@ -371,7 +362,18 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
   scrollContent: { paddingBottom: 32 },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
+  topBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
   headerActions: { flexDirection: 'row', gap: 10 },
   iconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   iconBlur: {
@@ -380,10 +382,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
+    // Floats over the vine photo now (topBar is an absolute overlay, not its own banner) — needs
+    // a real backdrop to stay legible against green leaves, unlike the transparent version this
+    // had when it sat on the plain cream background.
+    backgroundColor: 'rgba(255,255,255,0.55)',
   },
   iconText: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
-  topBarTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center', marginHorizontal: 8 },
   publicExtras: { paddingHorizontal: 16, gap: 8, marginBottom: 8 },
   aboutCard: { paddingHorizontal: 16, marginBottom: 8 },
   aboutCardInner: { gap: 10 },

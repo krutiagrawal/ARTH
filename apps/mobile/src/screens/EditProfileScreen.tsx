@@ -59,7 +59,11 @@ export function EditProfileScreen({ navigation }: any) {
           </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Profile</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={() => navigation?.navigate('Settings')} style={styles.backButton}>
+          <View style={styles.backBlur}>
+            <Text style={styles.settingsIcon}>⚙️</Text>
+          </View>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -150,6 +154,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
+  settingsIcon: { fontSize: 18 },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
