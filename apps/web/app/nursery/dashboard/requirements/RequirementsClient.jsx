@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { ClipboardList, MapPin, CalendarDays, Leaf } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -42,7 +43,7 @@ const RESPONSE_BADGE = {
   withdrawn: { label: 'Withdrawn', variant: 'outline' },
 }
 
-function RespondSheet({ open, onOpenChange, requirement, submitting, onSubmit }) {
+function RespondSheet({ open, onOpenChange, requirement, submitting, onSubmit, onInsufficientStock }) {
   const [quantityOffered, setQuantityOffered] = useState('')
   const [priceRupees, setPriceRupees] = useState('')
   const [canDeliver, setCanDeliver] = useState(false)
@@ -62,8 +63,13 @@ function RespondSheet({ open, onOpenChange, requirement, submitting, onSubmit })
   const submit = (e) => {
     e.preventDefault()
     if (!quantityOffered) return
+    const qty = Number(quantityOffered)
+    if (requirement?.speciesId && qty > (requirement.myStockQuantity ?? 0)) {
+      onInsufficientStock({ requirement, quantityOffered: qty, available: requirement.myStockQuantity ?? 0 })
+      return
+    }
     onSubmit({
-      quantityOffered: Number(quantityOffered),
+      quantityOffered: qty,
       priceCents: priceRupees ? Math.round(Number(priceRupees) * 100) : undefined,
       canDeliver,
       canPickup,
@@ -115,6 +121,7 @@ function RespondSheet({ open, onOpenChange, requirement, submitting, onSubmit })
 }
 
 export default function RequirementsClient() {
+  const router = useRouter()
   const [requirements, setRequirements] = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('all')
@@ -123,6 +130,7 @@ export default function RequirementsClient() {
   const [handoffTarget, setHandoffTarget] = useState(null)
   const [withdrawTarget, setWithdrawTarget] = useState(null)
   const [handoffCode, setHandoffCode] = useState(null)
+  const [insufficientStock, setInsufficientStock] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -152,7 +160,11 @@ export default function RequirementsClient() {
       setRespondFor(null)
       await load()
     } catch (err) {
-      toast.error(err.message || 'Something went wrong.')
+      if (err.code === 'INSUFFICIENT_STOCK') {
+        setInsufficientStock({ requirement: respondFor, quantityOffered: body.quantityOffered, available: err.details?.available ?? 0 })
+      } else {
+        toast.error(err.message || 'Something went wrong.')
+      }
     } finally {
       setSubmitting(false)
     }
@@ -274,7 +286,14 @@ export default function RequirementsClient() {
         </div>
       )}
 
-      <RespondSheet open={Boolean(respondFor)} onOpenChange={(open) => !open && setRespondFor(null)} requirement={respondFor} submitting={submitting} onSubmit={handleRespond} />
+      <RespondSheet
+        open={Boolean(respondFor)}
+        onOpenChange={(open) => !open && setRespondFor(null)}
+        requirement={respondFor}
+        submitting={submitting}
+        onSubmit={handleRespond}
+        onInsufficientStock={setInsufficientStock}
+      />
 
       <ConfirmDialog
         open={Boolean(withdrawTarget)}
@@ -305,6 +324,22 @@ export default function RequirementsClient() {
       >
         <p className="mt-2 text-center text-3xl font-bold tracking-[0.3em]">{handoffCode}</p>
       </ConfirmDialog>
+
+      <ConfirmDialog
+        open={Boolean(insufficientStock)}
+        onOpenChange={(open) => !open && setInsufficientStock(null)}
+        title="Not enough in stock"
+        description={
+          insufficientStock
+            ? `You only have ${insufficientStock.available} ${insufficientStock.requirement?.species?.commonName || insufficientStock.requirement?.speciesNote || 'of this species'} in stock, but tried to offer ${insufficientStock.quantityOffered}.${insufficientStock.requirement?.neededByDate ? ` If you can source the rest by ${new Date(insufficientStock.requirement.neededByDate).toLocaleDateString()}, add it to your inventory first.` : ' Add more to your inventory before offering it.'}`
+            : ''
+        }
+        confirmLabel="Go to Manage Inventory"
+        onConfirm={() => {
+          setInsufficientStock(null)
+          router.push('/nursery/dashboard/inventory')
+        }}
+      />
     </DashboardPageShell>
   )
 }

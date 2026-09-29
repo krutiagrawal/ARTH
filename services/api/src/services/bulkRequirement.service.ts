@@ -185,6 +185,17 @@ export async function declineResponse(prisma: PrismaClient, ngoUserId: string, r
 
 // ---------- Nursery side ----------
 
+/** Sums SaplingStock.quantity across every row the nursery holds for a species — there's no
+ * unique constraint on (nurseryId, speciesId), so a nursery can have several rows for the same
+ * species (different pot sizes/ages, or a legacy free-text row), and all of them count. */
+async function getNurseryStockQuantity(prisma: PrismaClient, nurseryId: string, speciesId: string) {
+  const result = await prisma.saplingStock.aggregate({
+    where: { nurseryId, speciesId },
+    _sum: { quantity: true },
+  });
+  return result._sum.quantity ?? 0;
+}
+
 export async function listRelevantForNursery(
   prisma: PrismaClient,
   nurseryUserId: string,
@@ -198,6 +209,18 @@ export async function listRelevantForNursery(
     include: { species: { select: { commonName: true } }, ngo: { select: { orgName: true, logoUrl: true } }, responses: { where: { nurseryId: nursery.id } } },
   });
 
+  // One grouped query for every species referenced in this list, instead of one query per
+  // requirement, so this stays cheap regardless of how many requirements are shown.
+  const speciesIds = [...new Set(requirements.map((r) => r.speciesId).filter((id): id is string => id != null))];
+  const stockBySpecies = speciesIds.length
+    ? await prisma.saplingStock.groupBy({
+        by: ['speciesId'],
+        where: { nurseryId: nursery.id, speciesId: { in: speciesIds } },
+        _sum: { quantity: true },
+      })
+    : [];
+  const stockMap = new Map(stockBySpecies.map((s) => [s.speciesId as string, s._sum.quantity ?? 0]));
+
   return requirements.map((r) => ({
     ...r,
     distanceKm:
@@ -205,6 +228,8 @@ export async function listRelevantForNursery(
         ? haversineDistanceKm({ lat: Number(nursery.lat), lng: Number(nursery.lng) }, { lat: Number(r.lat), lng: Number(r.lng) })
         : null,
     myResponse: r.responses[0] ?? null,
+    // null means "not checkable" (requirement has no specific species) — distinct from 0 (checked, none in stock).
+    myStockQuantity: r.speciesId ? stockMap.get(r.speciesId) ?? 0 : null,
   }));
 }
 
@@ -246,9 +271,25 @@ interface RespondInput {
 
 export async function respondToRequirement(prisma: PrismaClient, nurseryUserId: string, requirementId: string, input: RespondInput) {
   const nursery = await getOwnNurseryProfile(prisma, nurseryUserId);
-  const requirement = await prisma.bulkRequirement.findUnique({ where: { id: requirementId }, include: { ngo: { select: { userId: true } } } });
+  const requirement = await prisma.bulkRequirement.findUnique({
+    where: { id: requirementId },
+    include: { ngo: { select: { userId: true } }, species: { select: { commonName: true } } },
+  });
   if (!requirement) throw new NotFoundError('Requirement not found');
   if (!['open', 'partially_fulfilled'].includes(requirement.status)) throw new BadRequestError('This requirement is no longer open');
+
+  // Requirements with no specific species (free-text speciesNote, e.g. "any native species")
+  // can't be checked against a stock line, so they skip this gate entirely.
+  if (requirement.speciesId) {
+    const available = await getNurseryStockQuantity(prisma, nursery.id, requirement.speciesId);
+    if (input.quantityOffered > available) {
+      throw new BadRequestError(
+        `You only have ${available} ${requirement.species?.commonName ?? 'in stock'} available, but tried to offer ${input.quantityOffered}.`,
+        'INSUFFICIENT_STOCK',
+        { available, quantityOffered: input.quantityOffered, speciesId: requirement.speciesId, speciesName: requirement.species?.commonName ?? null },
+      );
+    }
+  }
 
   const response = await prisma.bulkRequirementResponse.upsert({
     where: { requirementId_nurseryId: { requirementId, nurseryId: nursery.id } },

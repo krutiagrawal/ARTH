@@ -569,6 +569,9 @@ export interface ApiBulkRequirement {
   species: { commonName: string } | null;
   distanceKm: number | null;
   myResponse: ApiBulkResponse | null;
+  /** Nursery's total SaplingStock quantity for this requirement's species — null means the
+   * requirement has no specific species (nothing to check against), not that stock is unchecked. */
+  myStockQuantity: number | null;
 }
 
 /** No status filter returns only `open`/`partially_fulfilled` requirements server-side (see

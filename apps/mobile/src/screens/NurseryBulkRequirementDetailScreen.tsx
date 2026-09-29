@@ -54,11 +54,28 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
     }
   }, [req?.myResponse?.id]);
 
+  const promptInsufficientStock = (available: number) => {
+    const speciesName = req?.species?.commonName ?? req?.speciesNote ?? 'this species';
+    const byDate = req?.neededByDate ? ` by ${new Date(req.neededByDate).toLocaleDateString()}` : '';
+    confirm(
+      'Not enough in stock',
+      `You only have ${available} ${speciesName} in stock, but tried to offer ${quantityOffered}. If you can source the rest${byDate}, add it to your inventory first.`,
+      [
+        { text: 'Edit quantity', style: 'cancel' },
+        { text: 'Go to Manage Inventory', onPress: () => navigation.navigate('NurseryStock') },
+      ],
+    );
+  };
+
   const handleRespond = async () => {
     setError(null);
     const qty = Number(quantityOffered);
     if (!Number.isFinite(qty) || qty <= 0) {
       setError('Enter a valid quantity to offer.');
+      return;
+    }
+    if (req?.speciesId && qty > (req.myStockQuantity ?? 0)) {
+      promptInsufficientStock(req.myStockQuantity ?? 0);
       return;
     }
     try {
@@ -73,6 +90,11 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
         },
       });
     } catch (e) {
+      if (e instanceof ApiError && e.code === 'INSUFFICIENT_STOCK') {
+        const available = (e.details as { available?: number } | undefined)?.available ?? 0;
+        promptInsufficientStock(available);
+        return;
+      }
       setError(e instanceof ApiError ? e.message : 'Could not send your offer. Please try again.');
     }
   };
