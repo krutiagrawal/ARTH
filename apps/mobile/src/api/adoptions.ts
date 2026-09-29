@@ -77,3 +77,14 @@ export async function createAdoptableTree(input: CreateAdoptableTreeInput): Prom
 
   return apiFetch<ApiAdoptableTree>('/api/adoptable-trees', { method: 'POST', body: form, isForm: true });
 }
+
+/** Delists a tree — if it's currently adopted, the backend releases that adoption and notifies
+ * the adopter as part of the same call. */
+export async function removeAdoptableTree(id: string): Promise<ApiAdoptableTree> {
+  return apiFetch<ApiAdoptableTree>(`/api/adoptable-trees/${id}`, { method: 'DELETE' });
+}
+
+/** NGO-initiated release — puts an adopted tree back in the public pool without delisting it. */
+export async function releaseAdoption(id: string): Promise<ApiAdoptableTree> {
+  return apiFetch<ApiAdoptableTree>(`/api/adoptable-trees/${id}/release`, { method: 'POST', body: {} });
+}

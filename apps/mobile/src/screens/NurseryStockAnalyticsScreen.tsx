@@ -19,6 +19,9 @@ const REASON_LABEL: Record<ApiStockLedgerEntry['reason'], string> = {
   manual_adjust: 'Adjusted stock',
   manual_remove: 'Removed stock',
   reservation_fulfilled: 'Given to a planter',
+  order_placed: 'Sold via order',
+  order_cancelled: 'Order cancelled — restocked',
+  bulk_requirement_fulfilled: 'Fulfilled a bulk requirement',
 };
 
 function LedgerRow({ item }: { item: ApiStockLedgerEntry }) {
@@ -28,7 +31,7 @@ function LedgerRow({ item }: { item: ApiStockLedgerEntry }) {
       <View style={styles.ledgerText}>
         <Text style={styles.ledgerSpecies}>{item.species}</Text>
         <Text style={styles.ledgerMeta}>
-          {REASON_LABEL[item.reason]} · {new Date(item.createdAt).toLocaleDateString()}
+          {REASON_LABEL[item.reason] ?? item.reason} · {new Date(item.createdAt).toLocaleDateString()}
         </Text>
       </View>
       <Text style={[styles.ledgerDelta, { color: positive ? COLORS.sage : COLORS.coral }]}>

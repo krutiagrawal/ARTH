@@ -45,7 +45,7 @@ async function findOwnedTreeOrThrow(prisma: PrismaClient, ngoUserId: string, tre
   const ngo = await requireApprovedNgoProfile(prisma, ngoUserId);
   const tree = await prisma.adoptableTree.findFirst({ where: { id: treeId, ngoId: ngo.id } });
   if (!tree) throw new NotFoundError('Adoptable tree not found');
-  return tree;
+  return { ngo, tree };
 }
 
 
@@ -64,7 +64,7 @@ export async function updateAdoptableTree(
   treeId: string,
   input: UpdateAdoptableTreeInput,
 ) {
-  const tree = await findOwnedTreeOrThrow(prisma, ngoUserId, treeId);
+  const { tree } = await findOwnedTreeOrThrow(prisma, ngoUserId, treeId);
 
   let geo: { lat: number; lng: number } | null | undefined;
   if (input.city !== undefined || input.locationLabel !== undefined) {
@@ -80,13 +80,44 @@ export async function updateAdoptableTree(
   });
 }
 
+/**
+ * Delisting a tree that's currently adopted must not leave an orphaned Adoption row pointing at
+ * a tree the adopter can no longer see anywhere else (it would still show in "My Adopted Trees"
+ * with a working Release button that — since there'd be no removed-status check — would put the
+ * tree straight back in the public pool, undoing the NGO's removal without them ever knowing).
+ * So an active adoption is released as part of removal, and the adopter is told why.
+ */
 export async function removeAdoptableTree(prisma: PrismaClient, ngoUserId: string, treeId: string) {
-  const tree = await findOwnedTreeOrThrow(prisma, ngoUserId, treeId);
-  return prisma.adoptableTree.update({
-    where: { id: tree.id },
-    data: { status: 'removed' },
-    include: adoptableTreeInclude,
+  const { ngo, tree } = await findOwnedTreeOrThrow(prisma, ngoUserId, treeId);
+
+  const { updated, releasedAdopterId } = await prisma.$transaction(async (tx) => {
+    let releasedAdopterId: string | null = null;
+    if (tree.status === 'adopted') {
+      const adoption = await tx.adoption.findUnique({ where: { adoptableTreeId: tree.id } });
+      if (adoption) {
+        releasedAdopterId = adoption.userId;
+        await tx.adoption.delete({ where: { adoptableTreeId: tree.id } });
+      }
+    }
+    const updated = await tx.adoptableTree.update({
+      where: { id: tree.id },
+      data: { status: 'removed' },
+      include: adoptableTreeInclude,
+    });
+    return { updated, releasedAdopterId };
   });
+
+  if (releasedAdopterId) {
+    await notify(prisma, {
+      userId: releasedAdopterId,
+      type: 'adoptable_tree_removed',
+      actorNgoId: ngo.id,
+      data: { treeId: tree.id, treeNickname: tree.nickname },
+      push: { title: ngo.orgName, body: `Removed the listing for "${tree.nickname}" — your adoption of it has ended.` },
+    });
+  }
+
+  return updated;
 }
 
 export async function listAdoptableTrees(prisma: PrismaClient, filter: NearbyFilter) {
@@ -142,7 +173,7 @@ export async function listOwnedAdoptableTrees(prisma: PrismaClient, ngoUserId: s
 }
 
 export async function releaseAdoption(prisma: PrismaClient, ngoUserId: string, treeId: string) {
-  const tree = await findOwnedTreeOrThrow(prisma, ngoUserId, treeId);
+  const { tree } = await findOwnedTreeOrThrow(prisma, ngoUserId, treeId);
   if (tree.status !== 'adopted') throw new ConflictError('This tree is not currently adopted');
 
   return prisma.$transaction(async (tx) => {

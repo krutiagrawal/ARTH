@@ -2,14 +2,25 @@ import { PrismaClient } from '@arth/db';
 import { ConflictError, NotFoundError } from '../utils/errors';
 
 export async function listWishlist(prisma: PrismaClient, userId: string) {
-  return prisma.wishlistItem.findMany({
+  const items = await prisma.wishlistItem.findMany({
     where: { userId },
     include: {
-      nursery: { select: { id: true, nurseryName: true, logoUrl: true, avgRating: true } },
-      stock: { select: { id: true, species: true, priceCents: true, quantity: true, nursery: { select: { id: true, nurseryName: true } } } },
+      nursery: { select: { id: true, nurseryName: true, logoUrl: true, avgRating: true, status: true } },
+      stock: { select: { id: true, species: true, priceCents: true, quantity: true, nursery: { select: { id: true, nurseryName: true, status: true } } } },
     },
     orderBy: { createdAt: 'desc' },
   });
+
+  // A wishlisted nursery/stock item whose nursery has since been suspended shouldn't keep showing
+  // up as if nothing happened — every other nursery-facing surface (browse, checkout) already
+  // gates on approved status; this list was the one place that didn't.
+  return items
+    .filter((item) => (item.nursery ?? item.stock?.nursery)?.status === 'approved')
+    .map(({ nursery, stock, ...rest }) => ({
+      ...rest,
+      nursery: nursery ? { id: nursery.id, nurseryName: nursery.nurseryName, logoUrl: nursery.logoUrl, avgRating: nursery.avgRating } : null,
+      stock: stock ? { ...stock, nursery: { id: stock.nursery.id, nurseryName: stock.nursery.nurseryName } } : null,
+    }));
 }
 
 export async function addWishlistItem(prisma: PrismaClient, userId: string, input: { nurseryId?: string; stockId?: string }) {

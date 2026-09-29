@@ -9,6 +9,7 @@ import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { FONTS } from '../constants/typography';
 import { BorderCard } from '../components/common/BorderCard';
+import { EmptyState } from '../components/common/EmptyState';
 import { ActionSheet, type ActionSheetOption } from '../components/social/ActionSheet';
 import { ReportSheet } from '../components/social/ReportSheet';
 import { LikeButton } from '../components/social/LikeButton';
@@ -210,7 +211,11 @@ export function NgoProfileScreen({ route, navigation }: any) {
     [navigation, effectiveNgoId],
   );
 
-  const isLoading = isOwn ? !ownProfile.data : !publicProfile.data;
+  // A suspended/removed NGO's public profile 404s — without this, `isLoading` (derived from
+  // `!data`) would stay true forever once the query settles on an error, leaving the screen
+  // spinning indefinitely instead of telling the visitor the NGO is gone.
+  const isError = isOwn ? ownProfile.isError : publicProfile.isError;
+  const isLoading = !isError && (isOwn ? !ownProfile.data : !publicProfile.data);
   const weeks = isOwn ? ownStreak.data?.weeks ?? [] : [];
   const streakCurrent = currentStreakFromWeeks(weeks);
   const achievements = isOwn ? ownAchievements.data ?? [] : publicAchievements.data ?? [];
@@ -277,7 +282,15 @@ export function NgoProfileScreen({ route, navigation }: any) {
         )}
       </View>
 
-      {isLoading ? (
+      {isError ? (
+        <EmptyState
+          icon="🌱"
+          title="This NGO isn't available"
+          body="It may have been suspended or removed."
+          actionLabel="Go back"
+          onAction={() => navigation.goBack()}
+        />
+      ) : isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
         <PostGrid

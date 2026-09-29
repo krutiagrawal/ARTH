@@ -24,7 +24,9 @@ const STATUS_LABEL = {
   cancelled: 'Cancelled',
 }
 
-const CANCELLABLE = ['confirmed', 'packed', 'ready_for_pickup', 'out_for_delivery']
+// Matches nurseryCancelOrder's own allowed set (order.service.ts) — the backend rejects
+// 'out_for_delivery' (a dispatched delivery can't be cancelled), so it's deliberately excluded here.
+const CANCELLABLE = ['confirmed', 'packed', 'ready_for_pickup']
 
 function rupees(cents) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`

@@ -15,6 +15,7 @@ import { useApprovalGate } from '../hooks/useApprovalGate';
 import type { ApiNurseryReservation } from '../api/nursery';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { ApiError } from '../api/client';
 
 function ReservationRow({ item, showActions, guard }: { item: ApiNurseryReservation; showActions: boolean; guard: <A extends any[]>(fn: (...a: A) => void) => (...a: A) => void }) {
   const fulfillMutation = useFulfillReservation();
@@ -62,6 +63,11 @@ function ReservationRow({ item, showActions, guard }: { item: ApiNurseryReservat
             <Text style={styles.fulfillText}>{fulfillMutation.isPending ? 'Fulfilling…' : 'Fulfil'}</Text>
           </TouchableOpacity>
         </View>
+      )}
+      {fulfillMutation.isError && (
+        <Text style={styles.errorText}>
+          {fulfillMutation.error instanceof ApiError ? fulfillMutation.error.message : "Couldn't fulfil this reservation. Please try again."}
+        </Text>
       )}
     </BorderCard>
   );
@@ -141,6 +147,7 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 11, fontWeight: '700', textTransform: 'capitalize' },
   message: { fontSize: 13, color: COLORS.textSecondary, fontStyle: 'italic' },
   actionsRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  errorText: { fontSize: 12, color: COLORS.coral, marginTop: 8 },
   declineButton: { flex: 1, paddingVertical: 10, borderRadius: RADIUS.md, alignItems: 'center', backgroundColor: 'rgba(194,74,59,0.1)' },
   declineText: { fontSize: 13, fontWeight: '700', color: COLORS.coral },
   fulfillButton: { flex: 1, paddingVertical: 10, borderRadius: RADIUS.md, alignItems: 'center', backgroundColor: COLORS.forest },

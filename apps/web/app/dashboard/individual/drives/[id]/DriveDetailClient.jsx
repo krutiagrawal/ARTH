@@ -59,6 +59,7 @@ export default function DriveDetailClient({ driveId }) {
 
   const isFull = drive.capacity != null && drive.confirmedCount >= drive.capacity && !drive.isRsvped
   const isCancelled = drive.status === 'cancelled'
+  const isCompleted = drive.status === 'completed'
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -156,6 +157,8 @@ export default function DriveDetailClient({ driveId }) {
             <div className="pt-4">
               {isCancelled ? (
                 <Badge variant="destructive">This drive has been cancelled by the organizer.</Badge>
+              ) : isCompleted ? (
+                <Badge variant="outline">This drive has already happened.</Badge>
               ) : (
                 <Button
                   onClick={toggleRsvp}

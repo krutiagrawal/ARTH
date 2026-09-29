@@ -260,11 +260,24 @@ export async function actOnReport(
   } else if (report.targetType === 'story' && action === 'delete') {
     await prisma.story.deleteMany({ where: { id: report.targetId } });
   } else if (report.targetType === 'portfolio_entry') {
-    const entry = await prisma.ngoPortfolioEntry.findUnique({ where: { id: report.targetId }, select: { id: true } });
+    const entry = await prisma.ngoPortfolioEntry.findUnique({ where: { id: report.targetId }, select: { id: true, postId: true } });
     if (entry) {
-      if (action === 'hide') await prisma.ngoPortfolioEntry.update({ where: { id: entry.id }, data: { isHidden: true } });
-      if (action === 'unhide') await prisma.ngoPortfolioEntry.update({ where: { id: entry.id }, data: { isHidden: false } });
-      if (action === 'delete') await prisma.ngoPortfolioEntry.delete({ where: { id: entry.id } });
+      // Every portfolio entry is mirrored into the Posts feed (see createPortfolioEntry), and post
+      // visibility is governed solely by Post.isHidden — acting on the entry alone would leave the
+      // exact same reported content live and unmoderated in the NGO's feed and anyone's general
+      // feed, via the mirrored post nobody just touched.
+      if (action === 'hide') {
+        await prisma.ngoPortfolioEntry.update({ where: { id: entry.id }, data: { isHidden: true } });
+        if (entry.postId) await prisma.post.update({ where: { id: entry.postId }, data: { isHidden: true } });
+      }
+      if (action === 'unhide') {
+        await prisma.ngoPortfolioEntry.update({ where: { id: entry.id }, data: { isHidden: false } });
+        if (entry.postId) await prisma.post.update({ where: { id: entry.postId }, data: { isHidden: false } });
+      }
+      if (action === 'delete') {
+        if (entry.postId) await prisma.post.delete({ where: { id: entry.postId } });
+        await prisma.ngoPortfolioEntry.delete({ where: { id: entry.id } });
+      }
     }
   }
 

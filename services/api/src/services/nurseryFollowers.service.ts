@@ -93,8 +93,15 @@ export async function acceptFollowRequest(prisma: PrismaClient, nurseryUserId: s
 }
 
 export async function declineFollowRequest(prisma: PrismaClient, nurseryUserId: string, followId: string) {
-  const { follow } = await requireOwnFollow(prisma, nurseryUserId, followId);
+  const { nursery, follow } = await requireOwnFollow(prisma, nurseryUserId, followId);
   await prisma.follow.delete({ where: { id: follow.id } });
+
+  await notify(prisma, {
+    userId: follow.followerId,
+    type: 'follow_declined',
+    actorNurseryId: nursery.id,
+    push: { title: nursery.nurseryName, body: 'declined your follow request' },
+  });
 }
 
 export async function removeFollower(prisma: PrismaClient, nurseryUserId: string, followId: string) {

@@ -169,6 +169,15 @@ export default function DrivesClient() {
                 <DropdownMenuItem onClick={guard(() => openEdit(drive))}>
                   Edit
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={guard(() =>
+                    runAction(drive.id, 'feature', { featured: !drive.featured })
+                      .then(() => toast.success(drive.featured ? 'Removed from featured.' : 'Featured on your public profile.'))
+                      .catch((err) => toast.error(err.message || 'Something went wrong.')),
+                  )}
+                >
+                  {drive.featured ? 'Remove from featured' : 'Feature on profile'}
+                </DropdownMenuItem>
                 {drive.status === 'upcoming' && (
                   <DropdownMenuItem onClick={guard(() => setConfirm({ type: 'complete', drive }))}>
                     Mark completed
@@ -188,7 +197,7 @@ export default function DrivesClient() {
         },
       },
     ],
-    [guard],
+    [guard, runAction],
   )
 
   return (

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { BorderCard } from '../components/common/BorderCard';
+import { EmptyState } from '../components/common/EmptyState';
 import { LocationActions } from '../components/common/LocationActions';
 import { ReportSheet } from '../components/social/ReportSheet';
 import { ProfileHeader } from '../components/profile/ProfileHeader';
@@ -92,7 +93,11 @@ export function NurseryProfileScreen({ route, navigation }: any) {
     [navigation, effectiveNurseryId],
   );
 
-  const isLoading = isOwn ? !ownProfile.data : !publicProfile.data;
+  // A suspended/removed nursery's public profile 404s — without this, `isLoading` (derived from
+  // `!data`) would stay true forever once the query settles on an error, leaving the screen
+  // spinning indefinitely instead of telling the visitor the nursery is gone.
+  const isError = isOwn ? ownProfile.isError : publicProfile.isError;
+  const isLoading = !isError && (isOwn ? !ownProfile.data : !publicProfile.data);
   const achievements = isOwn ? ownAchievements.data ?? [] : publicAchievements.data ?? [];
   const badgesCount = achievements.filter((a) => a.unlocked).length;
 
@@ -240,7 +245,15 @@ export function NurseryProfileScreen({ route, navigation }: any) {
         )}
       </View>
 
-      {isLoading ? (
+      {isError ? (
+        <EmptyState
+          icon="🌱"
+          title="This nursery isn't available"
+          body="It may have been suspended or removed."
+          actionLabel="Go back"
+          onAction={() => navigation.goBack()}
+        />
+      ) : isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : tab === 'drives' ? (
         // Saplings tab gets its own plain ScrollView instead of living inside PostGrid's

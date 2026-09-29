@@ -93,7 +93,19 @@ export async function updateOwnProfile(prisma: PrismaClient, userId: string, inp
   const profile = await prisma.ngoProfile.findUnique({ where: { userId } });
   if (!profile) throw new NotFoundError('NGO profile not found');
 
-  return prisma.ngoProfile.update({ where: { id: profile.id }, data: input as Prisma.NgoProfileUpdateInput });
+  const updated = await prisma.ngoProfile.update({ where: { id: profile.id }, data: input as Prisma.NgoProfileUpdateInput });
+
+  // Switching to "open" means follows no longer need approval — without this, any request that
+  // queued up while policy was "approval" would sit `pending` forever, since nothing else ever
+  // revisits an existing Follow row after the policy that created it changes.
+  if (input.followPolicy === 'open' && profile.followPolicy !== 'open') {
+    await prisma.follow.updateMany({
+      where: { ngoId: profile.id, status: 'pending' },
+      data: { status: 'accepted', respondedAt: new Date() },
+    });
+  }
+
+  return updated;
 }
 
 // A rejected NGO can edit their details (via updateOwnProfile above, which has

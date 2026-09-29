@@ -15,6 +15,7 @@ import { useAddresses, useCreateAddress, useUpdateAddress, useDeleteAddress } fr
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { reverseGeocode } from '../api/geocode';
 import { isValidPincode } from '../utils/validation';
+import { ApiError } from '../api/client';
 import type { ApiAddress } from '../api/addresses';
 
 function AddressCard({ address }: { address: ApiAddress }) {
@@ -41,6 +42,11 @@ function AddressCard({ address }: { address: ApiAddress }) {
             <Text style={[styles.actionText, styles.deleteText]}>Delete</Text>
           </TouchableOpacity>
         </View>
+        {deleteMutation.isError && (
+          <Text style={styles.errorText}>
+            {deleteMutation.error instanceof ApiError ? deleteMutation.error.message : "Couldn't delete this address. Please try again."}
+          </Text>
+        )}
       </View>
     </BorderCard>
   );

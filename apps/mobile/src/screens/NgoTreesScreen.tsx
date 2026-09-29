@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { COLORS } from '../constants/colors';
@@ -7,11 +7,13 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { IconBadge } from '../components/common/IconBadge';
 import { StatusModal } from '../components/common/StatusModal';
-import { useMyAdoptableTrees, useNgoProfile } from '../hooks/useApiQueries';
+import { useMyAdoptableTrees, useNgoProfile, useRemoveAdoptableTree, useReleaseAdoption } from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useConfirm } from '../context/ConfirmDialogContext';
+import type { ApiAdoptableTree } from '../api/adoptions';
 
 function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
   const animStyle = useSlideUp(delay, 18);
@@ -38,6 +40,34 @@ export function NgoTreesScreen({ navigation }: any) {
   const { data: profile } = useNgoProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
+  const removeMutation = useRemoveAdoptableTree();
+  const releaseMutation = useReleaseAdoption();
+  const confirm = useConfirm();
+
+  const handleRemove = (tree: ApiAdoptableTree) => {
+    const isAdopted = tree.status === 'adopted';
+    confirm(
+      'Remove this listing?',
+      isAdopted
+        ? `${tree.nickname} is currently adopted — removing it will end that adoption and notify the adopter.`
+        : `${tree.nickname} will no longer be visible for adoption.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: guard(() => removeMutation.mutate(tree.id)) },
+      ],
+    );
+  };
+
+  const handleRelease = (tree: ApiAdoptableTree) => {
+    confirm(
+      'Release this adoption?',
+      `${tree.nickname} will go back to being available for someone else to adopt.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Release', onPress: guard(() => releaseMutation.mutate(tree.id)) },
+      ],
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -67,6 +97,18 @@ export function NgoTreesScreen({ navigation }: any) {
                     label={tree.status.charAt(0).toUpperCase() + tree.status.slice(1)}
                     color={TREE_STATUS_COLORS[tree.status]}
                   />
+                  {tree.status !== 'removed' && (
+                    <View style={styles.actionsRow}>
+                      {tree.status === 'adopted' && (
+                        <TouchableOpacity onPress={() => handleRelease(tree)}>
+                          <Text style={styles.actionText}>Release</Text>
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity onPress={() => handleRemove(tree)}>
+                        <Text style={[styles.actionText, styles.actionTextDanger]}>Remove listing</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               </View>
             </BorderCard>
@@ -92,4 +134,7 @@ const styles = StyleSheet.create({
   metaText: { fontSize: 12, color: COLORS.textSecondary, flexShrink: 1 },
   statusPill: { alignSelf: 'flex-start', borderRadius: 100, paddingHorizontal: 10, paddingVertical: 4, marginTop: 8 },
   statusPillText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
+  actionsRow: { flexDirection: 'row', gap: 16, marginTop: 10 },
+  actionText: { fontSize: 12, fontWeight: '700', color: COLORS.forest },
+  actionTextDanger: { color: COLORS.dangerDark },
 });

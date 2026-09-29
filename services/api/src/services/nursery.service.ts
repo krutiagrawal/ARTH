@@ -98,13 +98,25 @@ export async function updateOwnProfile(prisma: PrismaClient, userId: string, inp
     }
   }
 
-  return prisma.nurseryProfile.update({
+  const updated = await prisma.nurseryProfile.update({
     where: { id: profile.id },
     data: {
       ...input,
       ...(geocodedLat != null && geocodedLng != null ? { lat: geocodedLat, lng: geocodedLng } : {}),
     } as Prisma.NurseryProfileUpdateInput,
   });
+
+  // Switching to "open" means follows no longer need approval — without this, any request that
+  // queued up while policy was "approval" would sit `pending` forever, since nothing else ever
+  // revisits an existing Follow row after the policy that created it changes.
+  if (input.followPolicy === 'open' && profile.followPolicy !== 'open') {
+    await prisma.follow.updateMany({
+      where: { nurseryId: profile.id, status: 'pending' },
+      data: { status: 'accepted', respondedAt: new Date() },
+    });
+  }
+
+  return updated;
 }
 
 // Resolves a stock write's species link — exactly one of speciesId/species is expected (Zod
@@ -432,8 +444,21 @@ export async function fulfillReservation(prisma: PrismaClient, userId: string, r
     if (!reservation) throw new NotFoundError('Reservation not found');
     if (reservation.status !== 'pending') throw new BadRequestError('This reservation has already been responded to');
 
-    const newQuantity = Math.max(0, reservation.stock.quantity - reservation.quantity);
-    await tx.saplingStock.update({ where: { id: reservation.stockId }, data: { quantity: newQuantity } });
+    // A reservation request is only ever checked against stock at the moment it's made
+    // (createReservation) — by the time a nursery gets around to fulfilling it, another
+    // reservation or a marketplace sale may have already taken some of that stock. Clamping the
+    // decrement to whatever's actually on hand while still logging (and marking "fulfilled") the
+    // full requested amount would leave the stock ledger and physical stock permanently
+    // disagreeing, so this refuses instead — same shape as the bulk-requirement stock gate.
+    const decremented = await tx.saplingStock.updateMany({
+      where: { id: reservation.stockId, quantity: { gte: reservation.quantity } },
+      data: { quantity: { decrement: reservation.quantity } },
+    });
+    if (decremented.count === 0) {
+      throw new BadRequestError(
+        `You only have ${reservation.stock.quantity} ${reservation.stock.species} in stock, but this reservation is for ${reservation.quantity}. Add more stock first, or decline the reservation.`,
+      );
+    }
 
     await tx.saplingStockLedger.create({
       data: {
@@ -642,13 +667,23 @@ export async function getImpact(prisma: PrismaClient, userId: string) {
 export async function getStockAnalytics(prisma: PrismaClient, userId: string) {
   const profile = await getOwnProfile(prisma, userId);
 
-  const [addedAgg, givenOutAgg, reservationsFulfilled, stats] = await Promise.all([
+  const [addedAgg, givenOutAgg, cancelledAgg, reservationsFulfilled, stats] = await Promise.all([
     prisma.saplingStockLedger.aggregate({
       where: { nurseryId: profile.id, reason: { in: ['manual_add', 'manual_adjust'] }, delta: { gt: 0 } },
       _sum: { delta: true },
     }),
+    // 'reservation_fulfilled' was the only outflow reason counted here — the primary sales
+    // channel (regular cart/checkout purchases, 'order_placed') and bulk-requirement fulfilment
+    // were both invisible, so a nursery selling exclusively through the storefront saw "Given
+    // out: 0" forever regardless of actual sales volume.
     prisma.saplingStockLedger.aggregate({
-      where: { nurseryId: profile.id, reason: 'reservation_fulfilled' },
+      where: { nurseryId: profile.id, reason: { in: ['reservation_fulfilled', 'order_placed', 'bulk_requirement_fulfilled'] } },
+      _sum: { delta: true },
+    }),
+    // Netted out below so a cancelled/refunded order's restock doesn't still count toward
+    // "given out" just because its original order_placed row does.
+    prisma.saplingStockLedger.aggregate({
+      where: { nurseryId: profile.id, reason: 'order_cancelled' },
       _sum: { delta: true },
     }),
     prisma.saplingReservation.count({ where: { nurseryId: profile.id, status: 'fulfilled' } }),
@@ -657,7 +692,7 @@ export async function getStockAnalytics(prisma: PrismaClient, userId: string) {
 
   return {
     totalAddedLifetime: addedAgg._sum.delta ?? 0,
-    totalGivenOutLifetime: Math.abs(givenOutAgg._sum.delta ?? 0),
+    totalGivenOutLifetime: Math.max(0, Math.abs(givenOutAgg._sum.delta ?? 0) - (cancelledAgg._sum.delta ?? 0)),
     reservationsFulfilled,
     currentSpeciesCount: stats.speciesCount,
     currentTotalQuantity: stats.totalQuantity,

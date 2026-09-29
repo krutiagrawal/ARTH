@@ -69,6 +69,9 @@ import {
   fetchDriveSponsors,
   fetchMySponsorships,
   setDriveRsvpAttendance,
+  cancelDrive,
+  completeDrive,
+  setDriveFeatured,
 } from '../api/drives';
 import {
   fetchAdoptableTrees,
@@ -76,6 +79,8 @@ import {
   adoptTree,
   fetchMyAdoptableTrees,
   createAdoptableTree,
+  removeAdoptableTree,
+  releaseAdoption,
   fetchMyAdoptions,
   releaseMyAdoption,
   CreateAdoptableTreeInput,
@@ -992,6 +997,35 @@ export function useMyDrives(enabled: boolean = true) {
   });
 }
 
+function invalidateDrive(queryClient: ReturnType<typeof useQueryClient>, id: string) {
+  queryClient.invalidateQueries({ queryKey: ['drives', id] });
+  queryClient.invalidateQueries({ queryKey: ['drives', 'mine'] });
+}
+
+export function useCancelDrive() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => cancelDrive(id),
+    onSuccess: (_data, id) => invalidateDrive(queryClient, id),
+  });
+}
+
+export function useCompleteDrive() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => completeDrive(id),
+    onSuccess: (_data, id) => invalidateDrive(queryClient, id),
+  });
+}
+
+export function useSetDriveFeatured() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, featured }: { id: string; featured: boolean }) => setDriveFeatured(id, featured),
+    onSuccess: (_data, { id }) => invalidateDrive(queryClient, id),
+  });
+}
+
 export function useCreateDrive() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -1013,6 +1047,22 @@ export function useCreateAdoptableTree() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateAdoptableTreeInput) => createAdoptableTree(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] }),
+  });
+}
+
+export function useRemoveAdoptableTree() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => removeAdoptableTree(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] }),
+  });
+}
+
+export function useReleaseAdoption() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => releaseAdoption(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] }),
   });
 }

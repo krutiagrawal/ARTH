@@ -41,6 +41,7 @@ export function serializeDrive(entry: any) {
     confirmedCount: d._count?.rsvps ?? 0,
     status: d.status,
     isRsvped: d.isRsvped,
+    featured: d.featured,
     distanceKm: entry.distanceKm,
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,

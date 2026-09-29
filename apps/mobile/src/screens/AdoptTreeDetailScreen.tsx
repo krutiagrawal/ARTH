@@ -43,6 +43,7 @@ export function AdoptTreeDetailScreen({ navigation, route }: any) {
   };
 
   const alreadyTaken = tree?.isAdopted && !adopted;
+  const isRemoved = tree?.status === 'removed';
 
   return (
     <View style={styles.container}>
@@ -100,6 +101,10 @@ export function AdoptTreeDetailScreen({ navigation, route }: any) {
           ) : adopted ? (
             <View style={styles.successBanner}>
               <Text style={styles.successText}>🌳 You've adopted {tree.nickname}! Thank you for caring for it.</Text>
+            </View>
+          ) : isRemoved ? (
+            <View style={styles.cancelledBanner}>
+              <Text style={styles.cancelledText}>This listing has been removed and is no longer available for adoption.</Text>
             </View>
           ) : alreadyTaken ? (
             <View style={styles.cancelledBanner}>

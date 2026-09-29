@@ -405,6 +405,11 @@ export async function setRsvpAttendance(
 
 export async function rsvp(prisma: PrismaClient, userId: string, driveId: string) {
   const result = await prisma.$transaction(async (tx) => {
+    // Locks this drive's row for the rest of the transaction, so two concurrent RSVPs for the
+    // last open spot serialize instead of both reading the same pre-insert confirmedCount and
+    // both passing the capacity check below — without this, capacity can be oversold.
+    await tx.$queryRaw`SELECT id FROM drives WHERE id = ${driveId} FOR UPDATE`;
+
     const drive = await tx.drive.findUnique({ where: { id: driveId }, include: { ngo: { select: { userId: true, orgName: true } } } });
     if (!drive || drive.status !== 'upcoming') throw new NotFoundError('Drive not found');
     if (drive.ngo.userId === userId) throw new ForbiddenError('You cannot RSVP to your own drive');
@@ -437,11 +442,17 @@ export async function rsvp(prisma: PrismaClient, userId: string, driveId: string
 }
 
 export async function cancelRsvp(prisma: PrismaClient, userId: string, driveId: string) {
-  const result = await prisma.driveRsvp.updateMany({
-    where: { driveId, userId, status: 'confirmed' },
-    data: { status: 'cancelled' },
-  });
-  if (result.count === 0) throw new NotFoundError('RSVP not found');
+  const rsvp = await prisma.driveRsvp.findUnique({ where: { driveId_userId: { driveId, userId } }, include: { drive: { select: { status: true } } } });
+  if (!rsvp || rsvp.status !== 'confirmed') throw new NotFoundError('RSVP not found');
+  // Once the drive has happened, cancelling would silently erase a verified attendee from the
+  // NGO's attendance records/reports (both filter on status: 'confirmed' with no trace of the
+  // cancellation) — the UI already hides the "Cancel my RSVP" button once a drive is completed,
+  // this is the matching server-side gate.
+  if (rsvp.drive.status === 'completed' || rsvp.attended) {
+    throw new ConflictError('This drive has already happened — your RSVP can no longer be cancelled');
+  }
+
+  await prisma.driveRsvp.update({ where: { id: rsvp.id }, data: { status: 'cancelled' } });
 }
 
 /** Owner-only view of who sponsored what on this drive — the NGO can't sponsor its own drive

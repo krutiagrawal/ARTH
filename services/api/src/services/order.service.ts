@@ -227,29 +227,56 @@ export async function checkout(prisma: PrismaClient, userId: string, input: Chec
       })
     : null;
 
-  const order = await prisma.$transaction(async (tx) => {
-    const created = await tx.order.create({
-      data: {
-        userId,
-        nurseryId,
-        addressId,
-        fulfillmentType: input.fulfillmentType,
-        pickupWindowLabel: input.fulfillmentType === 'pickup' ? input.pickupWindowLabel : undefined,
-        scheduledFor: input.scheduledFor ? new Date(input.scheduledFor) : undefined,
-        subtotalCents,
-        deliveryFeeCents,
-        platformFeeCents,
-        totalCents,
-        stripePaymentIntentId: paymentIntent?.id,
-        items: {
-          create: items.map((i) => ({ stockId: i.stockId, species: i.stock.species, quantity: i.quantity, unitPriceCents: i.stock.priceCents! })),
+  let order;
+  try {
+    order = await prisma.$transaction(async (tx) => {
+      // Stock leaves inventory the moment an order is placed — not only once payment later
+      // settles — so a second buyer can never see/reserve units someone else's order (paid or
+      // still pending) is already holding. Each decrement is a single conditional UPDATE (not a
+      // read-then-write), so two concurrent checkouts against the same last few units can't both
+      // pass: only one `updateMany` can match `quantity >= requested` and actually take them.
+      for (const item of items) {
+        const result = await tx.saplingStock.updateMany({
+          where: { id: item.stockId, quantity: { gte: item.quantity } },
+          data: { quantity: { decrement: item.quantity } },
+        });
+        if (result.count === 0) {
+          throw new BadRequestError(`Only a few ${item.stock.species} left — someone may have just bought them. Please update your cart.`);
+        }
+        await tx.saplingStockLedger.create({
+          data: { nurseryId, stockId: item.stockId, species: item.stock.species, delta: -item.quantity, reason: 'order_placed' },
+        });
+      }
+
+      const created = await tx.order.create({
+        data: {
+          userId,
+          nurseryId,
+          addressId,
+          fulfillmentType: input.fulfillmentType,
+          pickupWindowLabel: input.fulfillmentType === 'pickup' ? input.pickupWindowLabel : undefined,
+          scheduledFor: input.scheduledFor ? new Date(input.scheduledFor) : undefined,
+          subtotalCents,
+          deliveryFeeCents,
+          platformFeeCents,
+          totalCents,
+          stripePaymentIntentId: paymentIntent?.id,
+          items: {
+            create: items.map((i) => ({ stockId: i.stockId, species: i.stock.species, quantity: i.quantity, unitPriceCents: i.stock.priceCents! })),
+          },
         },
-      },
-      include: orderInclude,
+        include: orderInclude,
+      });
+      await tx.cartItem.deleteMany({ where: { userId } });
+      return created;
     });
-    await tx.cartItem.deleteMany({ where: { userId } });
-    return created;
-  });
+  } catch (e) {
+    // The order/stock-hold transaction rolled back — nothing was actually charged yet (Stripe
+    // requires a later confirm step), so release the unused PaymentIntent rather than leaving a
+    // stray one that can never be completed.
+    if (paymentIntent) await stripe!.paymentIntents.cancel(paymentIntent.id).catch(() => {});
+    throw e;
+  }
 
   if (!stripe) {
     const fullOrder = await prisma.order.findUniqueOrThrow({
@@ -294,15 +321,9 @@ type OrderForFinalization = Prisma.OrderGetPayload<{ include: { items: true; nur
 // notifications, email), regardless of which path got it there.
 async function finalizeConfirmedOrder(prisma: PrismaClient, order: OrderForFinalization) {
   await prisma.$transaction(async (tx) => {
-    for (const item of order.items) {
-      if (!item.stockId) continue;
-      const stock = await tx.saplingStock.findUnique({ where: { id: item.stockId } });
-      if (!stock) continue;
-      await tx.saplingStock.update({ where: { id: item.stockId }, data: { quantity: Math.max(0, stock.quantity - item.quantity) } });
-      await tx.saplingStockLedger.create({
-        data: { nurseryId: order.nurseryId, stockId: item.stockId, species: item.species, delta: -item.quantity, reason: 'order_placed' },
-      });
-    }
+    // Stock is already decremented (and ledgered) at checkout() time — it leaves inventory the
+    // moment the order is placed, not only once payment settles here. Nothing to do to stock on
+    // this path anymore; see checkout()'s comment for why.
 
     await tx.order.update({
       where: { id: order.id },
@@ -351,6 +372,9 @@ export async function confirmOrderPayment(prisma: PrismaClient, paymentIntentId:
   if (!order || order.status !== 'pending_payment') return;
 
   if (!succeeded) {
+    // Stock was held at checkout() time regardless of payment outcome — a failed/expired payment
+    // has to give it back, same as any other cancelled order.
+    await restockCancelledOrder(prisma, order.id);
     await prisma.order.update({ where: { id: order.id }, data: { status: 'cancelled', cancelledAt: new Date() } });
     return;
   }
@@ -376,13 +400,33 @@ export async function cancelMyOrder(prisma: PrismaClient, userId: string, orderI
     throw new ForbiddenError('This order can no longer be cancelled');
   }
 
-  if (order.status === 'confirmed' && order.stripePaymentIntentId) {
+  if (order.stripePaymentIntentId) {
     const stripe = getStripeClient();
-    await stripe.refunds.create({ payment_intent: order.stripePaymentIntentId });
-    await restockCancelledOrder(prisma, order.id);
+    if (order.status === 'confirmed') {
+      await stripe.refunds.create({ payment_intent: order.stripePaymentIntentId });
+    } else {
+      // Nothing was captured yet at pending_payment — release the authorization instead of
+      // refunding. Best-effort: if Stripe already settled it (a payment landing right as the user
+      // cancels), this just fails silently and the webhook's own confirmOrderPayment path handles it.
+      await stripe.paymentIntents.cancel(order.stripePaymentIntentId).catch(() => {});
+    }
   }
+  // Stock is held from the moment the order was placed (see checkout()), regardless of payment
+  // status — both a pending_payment and a confirmed cancel have to give it back.
+  await restockCancelledOrder(prisma, order.id);
 
-  return prisma.order.update({ where: { id: order.id }, data: { status: 'cancelled', cancelledAt: new Date() } });
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.order.update({ where: { id: order.id }, data: { status: 'cancelled', cancelledAt: new Date() } });
+    // A buyer-initiated cancel is just as much a break in the nursery's fulfilment record as a
+    // nursery-initiated one (nurseryCancelOrder, above) — without this, the nursery's public Trust
+    // Score kept counting the now-cancelled order as a success until the weekly reputation job
+    // happened to catch up.
+    await refreshFulfilmentStreak(tx, order.nurseryId);
+    await recomputeReputation(tx, order.nurseryId);
+    return result;
+  });
+
+  return updated;
 }
 
 export async function restockCancelledOrder(prisma: PrismaClient, orderId: string) {
@@ -419,9 +463,9 @@ export async function adminRefundOrder(prisma: PrismaClient, orderId: string, in
     const stripe = getStripeClient();
     await stripe.refunds.create({ payment_intent: order.stripePaymentIntentId });
   }
-  if (order.status !== 'pending_payment') {
-    await restockCancelledOrder(prisma, order.id);
-  }
+  // Stock is held from the moment the order was placed (see checkout()), regardless of payment
+  // status, so every non-cancelled order has stock to give back here — not just confirmed+ ones.
+  await restockCancelledOrder(prisma, order.id);
 
   const updated = await prisma.$transaction(async (tx) => {
     const result = await tx.order.update({ where: { id: order.id }, data: { status: 'cancelled', cancelledAt: new Date() } });
@@ -434,6 +478,11 @@ export async function adminRefundOrder(prisma: PrismaClient, orderId: string, in
         reason: input.reason ?? null,
       },
     });
+    // Matches cancelMyOrder/nurseryCancelOrder — an admin refund is just as much a break in the
+    // nursery's fulfilment record as either of those, and shouldn't wait for the weekly reputation
+    // job to stop counting the now-cancelled order as a success.
+    await refreshFulfilmentStreak(tx, order.nurseryId);
+    await recomputeReputation(tx, order.nurseryId);
     return result;
   });
 

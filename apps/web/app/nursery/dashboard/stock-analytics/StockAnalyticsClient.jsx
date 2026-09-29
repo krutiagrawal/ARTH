@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Gift, Sprout, Handshake, Boxes, ArrowUp, ArrowDown, RefreshCw } from 'lucide-react'
+import { Gift, Sprout, Handshake, Boxes, ArrowUp, ArrowDown, RefreshCw, ShoppingCart, Undo2 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
@@ -14,6 +14,9 @@ const REASON_LABEL = {
   manual_adjust: 'Adjusted stock',
   manual_remove: 'Removed stock',
   reservation_fulfilled: 'Given to a planter',
+  order_placed: 'Sold via order',
+  order_cancelled: 'Order cancelled — restocked',
+  bulk_requirement_fulfilled: 'Fulfilled a bulk requirement',
 }
 
 const REASON_ICON = {
@@ -21,6 +24,9 @@ const REASON_ICON = {
   manual_adjust: RefreshCw,
   manual_remove: ArrowDown,
   reservation_fulfilled: Gift,
+  order_placed: ShoppingCart,
+  order_cancelled: Undo2,
+  bulk_requirement_fulfilled: Handshake,
 }
 
 function LedgerRow({ item }) {

@@ -12,10 +12,23 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { LocationActions } from '../components/common/LocationActions';
 import { useHaptics } from '../hooks/useHaptics';
 import { useAuth } from '../context/AuthContext';
-import { useDrive, useDriveAttendees, useDriveSponsors, useJoinDrive, useLeaveDrive, useNgoProfile, useSponsorPlant, useSetDriveRsvpAttendance } from '../hooks/useApiQueries';
+import {
+  useDrive,
+  useDriveAttendees,
+  useDriveSponsors,
+  useJoinDrive,
+  useLeaveDrive,
+  useNgoProfile,
+  useSponsorPlant,
+  useSetDriveRsvpAttendance,
+  useCancelDrive,
+  useCompleteDrive,
+  useSetDriveFeatured,
+} from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import type { ApiDrivePlant } from '../api/drives';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 // Loaded only once a sponsorship payment is actually in flight — see PaymentSheetRunner's own
 // comment for why this keeps `@stripe/stripe-react-native` out of this screen's own module-scope
@@ -43,6 +56,10 @@ export function DriveDetailScreen({ navigation, route }: any) {
   const joinMutation = useJoinDrive();
   const leaveMutation = useLeaveDrive();
   const sponsorMutation = useSponsorPlant();
+  const cancelDriveMutation = useCancelDrive();
+  const completeDriveMutation = useCompleteDrive();
+  const featuredMutation = useSetDriveFeatured();
+  const confirm = useConfirm();
   const queryClient = useQueryClient();
   const { refreshing, onRefresh } = usePullToRefresh(isOwnDrive ? [refetch, attendeesQuery.refetch, sponsorsQuery.refetch] : refetch);
   const [actionError, setActionError] = useState('');
@@ -52,6 +69,38 @@ export function DriveDetailScreen({ navigation, route }: any) {
 
   const isFull = !!drive && drive.capacity != null && drive.confirmedCount >= drive.capacity && !drive.isRsvped;
   const isCancelled = drive?.status === 'cancelled';
+  const isCompleted = drive?.status === 'completed';
+
+  const handleCancelDrive = () => {
+    if (!drive) return;
+    confirm('Cancel this drive?', "Volunteers who RSVP'd will see it as cancelled. This can't be undone.", [
+      { text: 'Back', style: 'cancel' },
+      {
+        text: 'Cancel drive',
+        style: 'destructive',
+        onPress: () => cancelDriveMutation.mutate(drive.id, { onError: (e) => setActionError(e instanceof ApiError ? e.message : 'Something went wrong.') }),
+      },
+    ]);
+  };
+
+  const handleCompleteDrive = () => {
+    if (!drive) return;
+    confirm('Mark this drive completed?', 'This unlocks attendance check-off for who actually showed up.', [
+      { text: 'Back', style: 'cancel' },
+      {
+        text: 'Mark completed',
+        onPress: () => completeDriveMutation.mutate(drive.id, { onError: (e) => setActionError(e instanceof ApiError ? e.message : 'Something went wrong.') }),
+      },
+    ]);
+  };
+
+  const toggleFeatured = () => {
+    if (!drive) return;
+    featuredMutation.mutate(
+      { id: drive.id, featured: !drive.featured },
+      { onError: (e) => setActionError(e instanceof ApiError ? e.message : 'Something went wrong.') },
+    );
+  };
 
   const handleRsvp = async () => {
     if (!drive) return;
@@ -246,6 +295,21 @@ export function DriveDetailScreen({ navigation, route }: any) {
 
           {isOwnDrive ? (
             <>
+              <View style={styles.ownerActionsRow}>
+                {drive.status === 'upcoming' && (
+                  <>
+                    <TouchableOpacity onPress={handleCompleteDrive} disabled={completeDriveMutation.isPending}>
+                      <Text style={styles.ownerActionText}>Mark completed</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={handleCancelDrive} disabled={cancelDriveMutation.isPending}>
+                      <Text style={[styles.ownerActionText, styles.ownerActionTextDanger]}>Cancel drive</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+                <TouchableOpacity onPress={toggleFeatured} disabled={featuredMutation.isPending}>
+                  <Text style={styles.ownerActionText}>{drive.featured ? '★ Featured' : '☆ Feature on profile'}</Text>
+                </TouchableOpacity>
+              </View>
               <Text style={styles.sectionLabel}>Who's coming ({drive.confirmedCount})</Text>
               {drive.status === 'completed' && (attendeesQuery.data?.attendees.length ?? 0) > 0 && (
                 <Text style={styles.infoText}>Tap to check off who actually showed up.</Text>
@@ -282,6 +346,10 @@ export function DriveDetailScreen({ navigation, route }: any) {
           ) : isCancelled ? (
             <View style={styles.cancelledBanner}>
               <Text style={styles.cancelledText}>This drive has been cancelled by the organizer.</Text>
+            </View>
+          ) : isCompleted ? (
+            <View style={styles.cancelledBanner}>
+              <Text style={styles.cancelledText}>This drive has already happened.</Text>
             </View>
           ) : (
             <AnimatedButton
@@ -357,6 +425,9 @@ const styles = StyleSheet.create({
   sponsorButton: { borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.sage, paddingHorizontal: 14, paddingVertical: 8 },
   sponsorButtonText: { fontSize: 12, fontWeight: '700', color: COLORS.forest },
   errorText: { fontSize: 13, color: COLORS.dangerDark, textAlign: 'center', marginBottom: 12 },
+  ownerActionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 14 },
+  ownerActionText: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
+  ownerActionTextDanger: { color: COLORS.dangerDark },
   attendeeRow: {
     flexDirection: 'row',
     alignItems: 'center',

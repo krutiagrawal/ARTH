@@ -265,7 +265,10 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
             )
           )}
 
-          {['confirmed', 'packed'].includes(order.status) && (
+          {/* Matches nurseryCancelOrder's own allowed set (order.service.ts) — 'ready_for_pickup'
+              is included so a nursery can cancel a no-show pickup instead of holding the reserved
+              stock hostage indefinitely. */}
+          {['confirmed', 'packed', 'ready_for_pickup'].includes(order.status) && (
             <TouchableOpacity onPress={handleCancel} style={styles.cancelButton}>
               <Text style={styles.cancelText}>Cancel this order</Text>
             </TouchableOpacity>

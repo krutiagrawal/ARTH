@@ -390,7 +390,14 @@ export interface ApiStockLedgerEntry {
   stockId: string | null;
   species: string;
   delta: number;
-  reason: 'manual_add' | 'manual_adjust' | 'manual_remove' | 'reservation_fulfilled';
+  reason:
+    | 'manual_add'
+    | 'manual_adjust'
+    | 'manual_remove'
+    | 'reservation_fulfilled'
+    | 'order_placed'
+    | 'order_cancelled'
+    | 'bulk_requirement_fulfilled';
   createdAt: string;
 }
 

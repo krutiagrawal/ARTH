@@ -102,8 +102,15 @@ export async function acceptFollowRequest(prisma: PrismaClient, ngoUserId: strin
 
 /** Declining removes the row outright, so the person can ask again later. */
 export async function declineFollowRequest(prisma: PrismaClient, ngoUserId: string, followId: string) {
-  const { follow } = await requireOwnFollow(prisma, ngoUserId, followId);
+  const { ngo, follow } = await requireOwnFollow(prisma, ngoUserId, followId);
   await prisma.follow.delete({ where: { id: follow.id } });
+
+  await notify(prisma, {
+    userId: follow.followerId,
+    type: 'follow_declined',
+    actorNgoId: ngo.id,
+    push: { title: ngo.orgName, body: 'declined your follow request' },
+  });
 }
 
 /** Removing an accepted follower. Silent by design — no notification is sent. */

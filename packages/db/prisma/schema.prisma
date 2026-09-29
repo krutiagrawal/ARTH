@@ -374,6 +374,7 @@ enum NotificationType {
   friend_request_accepted
   follow_request
   follow_accepted
+  follow_declined
   new_follower
   post_like
   new_post_from_followed
@@ -414,6 +415,7 @@ enum NotificationType {
   ngo_streak_broken
   ngo_health_check_due
   ngo_impact_milestone
+  adoptable_tree_removed
 }
 
 // ---------- Core ----------

@@ -35,6 +35,7 @@ export interface ApiDrive {
   confirmedCount: number;
   status: 'upcoming' | 'cancelled' | 'completed';
   isRsvped?: boolean;
+  featured: boolean;
   distanceKm?: number;
 }
 
@@ -98,6 +99,21 @@ export async function fetchGroupDrives(groupId: string): Promise<ApiDrive[]> {
 
 export async function fetchMyDrives(): Promise<ApiDrive[]> {
   return apiFetch<ApiDrive[]>('/api/drives/mine');
+}
+
+/** Cancels a drive the NGO organizes (e.g. rained out) — RSVPs stay recorded, the drive just
+ * stops accepting new ones and shows as cancelled everywhere it's listed. */
+export async function cancelDrive(id: string): Promise<ApiDrive> {
+  return apiFetch<ApiDrive>(`/api/drives/${id}`, { method: 'DELETE' });
+}
+
+/** Marks a drive completed, unlocking the attendance-checkoff UI on its detail screen. */
+export async function completeDrive(id: string): Promise<ApiDrive> {
+  return apiFetch<ApiDrive>(`/api/drives/${id}/complete`, { method: 'POST' });
+}
+
+export async function setDriveFeatured(id: string, featured: boolean): Promise<ApiDrive> {
+  return apiFetch<ApiDrive>(`/api/drives/${id}/feature`, { method: 'POST', body: { featured } });
 }
 
 export interface CreateDrivePickupPointInput {
