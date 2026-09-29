@@ -28,9 +28,13 @@ const TABS: { key: FilterTab; label: string }[] = [
  * per the product spec's simplified filter set. */
 function matchesTab(req: ApiBulkRequirement, tab: FilterTab): boolean {
   const responseStatus = req.myResponse?.status;
+  // A withdrawn/declined response is a dead end, not an active claim on this requirement — if the
+  // requirement itself is still open, the nursery can respond again, so it belongs back in "Open"
+  // rather than disappearing (matches respondToRequirement's own open/partially_fulfilled gate).
+  const hasNoActiveResponse = !responseStatus || responseStatus === 'withdrawn' || responseStatus === 'declined';
   switch (tab) {
     case 'open':
-      return req.status === 'open' && !responseStatus;
+      return ['open', 'partially_fulfilled'].includes(req.status) && hasNoActiveResponse;
     case 'responded':
       return responseStatus === 'proposed';
     case 'accepted':

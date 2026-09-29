@@ -1,16 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Platform } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, TextInput } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as Location from 'expo-location';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { FormField, FormFieldShell } from '../components/common/FormField';
+import { CityPickerField } from '../components/common/CityPickerField';
 import { AddressSearchField } from '../components/common/AddressSearchField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { Sheet } from '../components/common/Sheet';
@@ -24,11 +26,16 @@ import {
   useAcceptNgoBulkResponse,
   useDeclineNgoBulkResponse,
   useConfirmNgoBulkResponseReceived,
+  useSpecies,
+  useCreateSpecies,
 } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import type { ApiNgoBulkRequirement } from '../api/ngoBulkRequirements';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { isBulkRequirementOverdue } from '../utils/bulkRequirement';
+import { reverseGeocode } from '../api/geocode';
+import { SPECIES_EMOJI_OPTIONS } from '../api/species';
+import { fuzzyMatch } from '../utils/fuzzyMatch';
 
 function RequirementCard({ item, onPress }: { item: ApiNgoBulkRequirement; onPress: () => void }) {
   const overdue = isBulkRequirementOverdue(item);
@@ -207,6 +214,8 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
   const { data: requirements = [], isLoading, refetch } = useNgoBulkRequirements();
   const createMutation = useCreateNgoBulkRequirement();
+  const { data: speciesCatalog = [] } = useSpecies();
+  const createSpeciesMutation = useCreateSpecies();
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const [showCreate, setShowCreate] = useState(false);
@@ -219,13 +228,75 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
     const id = route?.params?.openRequirementId;
     if (id) setSelectedId(id);
   }, [route?.params?.openRequirementId]);
+  // Linking to a catalog species (rather than just free text below) is what lets nurseries'
+  // stock get checked against this request — see bulkRequirement.service.ts's respondToRequirement,
+  // which only gates on quantity when requirement.speciesId is set.
+  const [speciesId, setSpeciesId] = useState<string | null>(null);
+  const [speciesQuery, setSpeciesQuery] = useState('');
+  const [showSpeciesResults, setShowSpeciesResults] = useState(false);
+  const [showAddSpecies, setShowAddSpecies] = useState(false);
+  const [newSpeciesEmoji, setNewSpeciesEmoji] = useState<string | null>(null);
   const [speciesNote, setSpeciesNote] = useState('');
   const [quantityNeeded, setQuantityNeeded] = useState('');
   const [neededByDate, setNeededByDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [city, setCity] = useState('');
+  const [address, setAddress] = useState('');
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [locationNotice, setLocationNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Fuzzy (not just substring) so a typo or near-miss spelling ("roze", "gulmohr") still surfaces
+  // the existing catalog entry instead of nudging the NGO toward adding a near-duplicate.
+  const speciesMatches = useMemo(
+    () => fuzzyMatch(speciesQuery, speciesCatalog, (s) => s.commonName),
+    [speciesQuery, speciesCatalog],
+  );
+
+  const handleAddSpecies = async () => {
+    const commonName = speciesQuery.trim();
+    if (!commonName || !newSpeciesEmoji) return;
+    setError(null);
+    try {
+      const created = await createSpeciesMutation.mutateAsync({ commonName, emoji: newSpeciesEmoji });
+      setSpeciesId(created.id);
+      setSpeciesQuery('');
+      setNewSpeciesEmoji(null);
+      setShowAddSpecies(false);
+      setShowSpeciesResults(false);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Couldn't add that species. Please try again.");
+    }
+  };
+
+  const useCurrentLocation = async () => {
+    setLocating(true);
+    setLocationNotice(null);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setError('Location permission is needed to capture where this requirement should be delivered.');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const lat = loc.coords.latitude;
+      const lng = loc.coords.longitude;
+      setCoords({ lat, lng });
+      const found = await reverseGeocode(lat, lng).catch(() => null);
+      if (found) {
+        setAddress(found.label);
+        setLocationNotice({ ok: true, text: '✓ Matched from GPS — check the address above is correct' });
+      } else {
+        setLocationNotice({ ok: false, text: "Pin captured, but we couldn't find an address for it — the coordinates are still saved" });
+      }
+    } catch {
+      setError("Couldn't get your location. Please try again.");
+    } finally {
+      setLocating(false);
+    }
+  };
 
   const handleCreate = async () => {
     setError(null);
@@ -236,16 +307,26 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
     }
     try {
       await createMutation.mutateAsync({
+        speciesId: speciesId ?? undefined,
         speciesNote: speciesNote.trim() || undefined,
         quantityNeeded: qty,
         neededByDate: neededByDate ? neededByDate.toISOString() : undefined,
         city: city.trim() || undefined,
+        lat: coords?.lat,
+        lng: coords?.lng,
         notes: notes.trim() || undefined,
       });
+      setSpeciesId(null);
+      setSpeciesQuery('');
+      setShowAddSpecies(false);
+      setNewSpeciesEmoji(null);
       setSpeciesNote('');
       setQuantityNeeded('');
       setNeededByDate(null);
       setCity('');
+      setAddress('');
+      setCoords(null);
+      setLocationNotice(null);
       setNotes('');
       setShowCreate(false);
     } catch (e) {
@@ -288,7 +369,88 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
 
       <Sheet visible={showCreate} onClose={() => setShowCreate(false)} title="New bulk requirement" scrollable maxHeight={560}>
         <View style={{ gap: 4 }}>
-          <FormField label="Species (optional description)" value={speciesNote} onChangeText={setSpeciesNote} placeholder="eg - Native shade trees" />
+          <Text style={styles.formLabel}>Species (optional)</Text>
+          {speciesId ? (
+            <View style={styles.selectedSpeciesRow}>
+              <Text style={styles.selectedSpeciesText}>
+                {speciesCatalog.find((s) => s.id === speciesId)?.emoji} {speciesCatalog.find((s) => s.id === speciesId)?.commonName}
+              </Text>
+              <TouchableOpacity onPress={() => setSpeciesId(null)}>
+                <Text style={styles.changeLink}>Change</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              <TextInput
+                style={styles.searchInput}
+                value={speciesQuery}
+                onChangeText={(v) => {
+                  setSpeciesQuery(v);
+                  setShowSpeciesResults(true);
+                }}
+                onFocus={() => setShowSpeciesResults(true)}
+                placeholder="eg - Search catalog species, Neem"
+                placeholderTextColor={COLORS.textLight}
+              />
+              {!showAddSpecies && showSpeciesResults && speciesMatches.length > 0 && (
+                <View style={styles.resultsList}>
+                  {speciesMatches.map((s) => (
+                    <TouchableOpacity
+                      key={s.id}
+                      style={styles.resultRow}
+                      onPress={() => {
+                        setSpeciesId(s.id);
+                        setShowSpeciesResults(false);
+                      }}
+                    >
+                      <Text style={styles.resultText}>{s.emoji} {s.commonName}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+              <TouchableOpacity
+                onPress={() => {
+                  setShowAddSpecies((prev) => !prev);
+                  setShowSpeciesResults(false);
+                }}
+                style={styles.addSpeciesToggle}
+              >
+                <Text style={styles.addSpeciesToggleText}>
+                  {showAddSpecies ? '✕ Cancel' : "Can't find it? Add it to the catalog"}
+                </Text>
+              </TouchableOpacity>
+              {showAddSpecies && (
+                <View style={styles.inlineSpeciesBlock}>
+                  <Text style={styles.formLabel}>
+                    Adding "{speciesQuery.trim() || '…'}" — edit the name in the search box above, then pick an emoji
+                  </Text>
+                  <View style={styles.emojiGrid}>
+                    {SPECIES_EMOJI_OPTIONS.map((emoji) => (
+                      <TouchableOpacity
+                        key={emoji}
+                        style={[styles.emojiChip, newSpeciesEmoji === emoji && styles.emojiChipSelected]}
+                        onPress={() => setNewSpeciesEmoji(emoji)}
+                      >
+                        <Text style={styles.emojiChipText}>{emoji}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <AnimatedButton
+                    label={createSpeciesMutation.isPending ? 'Adding…' : `Add "${speciesQuery.trim() || '…'}" to the catalog`}
+                    onPress={handleAddSpecies}
+                    variant="secondary"
+                    size="md"
+                    fullWidth
+                    disabled={!speciesQuery.trim() || !newSpeciesEmoji || createSpeciesMutation.isPending}
+                  />
+                </View>
+              )}
+            </>
+          )}
+          <Text style={styles.fieldHint}>
+            Matching a catalog species lets nurseries' existing stock be checked when they respond — leave blank for open-ended asks like "any native species".
+          </Text>
+          <FormField label="Additional description (optional)" value={speciesNote} onChangeText={setSpeciesNote} placeholder="eg - Native shade trees" />
           <FormField label="Quantity needed" value={quantityNeeded} onChangeText={setQuantityNeeded} placeholder="eg - 0" keyboardType="number-pad" />
           <FormFieldShell label="Needed by (optional)">
             <TouchableOpacity onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
@@ -322,7 +484,29 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
               <Text style={styles.doneText}>Done</Text>
             </TouchableOpacity>
           )}
-          <AddressSearchField label="City (optional)" value={city} onChangeText={setCity} placeholder="eg - Pune" />
+          <AddressSearchField
+            label="Delivery address (optional)"
+            value={address}
+            onChangeText={(text) => {
+              setAddress(text);
+              setCoords(null);
+              setLocationNotice(null);
+            }}
+            placeholder="Street / area / landmark"
+            onSelectSuggestion={(s) => {
+              setCoords({ lat: s.lat, lng: s.lng });
+              setLocationNotice(null);
+            }}
+          />
+          <TouchableOpacity style={styles.locationButton} onPress={useCurrentLocation} disabled={locating}>
+            <Text style={styles.locationButtonText}>{locating ? 'Locating…' : '📍 Or use my current location'}</Text>
+          </TouchableOpacity>
+          {locationNotice && (
+            <Text style={[styles.locationNoticeText, locationNotice.ok ? styles.locationNoticeOk : styles.locationNoticeWarn]}>
+              {locationNotice.text}
+            </Text>
+          )}
+          <CityPickerField label="City (optional)" value={city} onChange={setCity} />
           <FormField label="Notes (optional)" value={notes} onChangeText={setNotes} placeholder="eg - Anything nurseries should know" multiline />
           {error && <Text style={styles.errorText}>{error}</Text>}
           <AnimatedButton
@@ -344,6 +528,54 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  formLabel: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted, marginBottom: 6 },
+  searchInput: {
+    backgroundColor: 'transparent',
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: 'rgba(139, 107, 71, 0.30)',
+    padding: 12,
+    fontSize: 14,
+    color: COLORS.textPrimary,
+  },
+  resultsList: {
+    backgroundColor: 'transparent',
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: 'rgba(139, 107, 71, 0.30)',
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  resultRow: { paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(139, 107, 71, 0.15)' },
+  resultText: { fontSize: 14, color: COLORS.textPrimary },
+  selectedSpeciesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(94,133,80,0.08)',
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  selectedSpeciesText: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
+  changeLink: { fontSize: 12, fontWeight: '700', color: COLORS.forest },
+  fieldHint: { fontSize: 11, color: COLORS.textMuted, marginTop: 6, marginBottom: 4, lineHeight: 15 },
+  addSpeciesToggle: { marginTop: 8, paddingVertical: 4 },
+  addSpeciesToggleText: { fontSize: 12, fontWeight: '700', color: COLORS.forest },
+  inlineSpeciesBlock: { marginTop: 8, gap: 10 },
+  emojiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  emojiChip: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(139, 107, 71, 0.30)',
+  },
+  emojiChipSelected: { backgroundColor: COLORS.forest, borderColor: COLORS.forest },
+  emojiChipText: { fontSize: 18 },
   newButton: { paddingHorizontal: 10, paddingVertical: 8 },
   newButtonText: { fontSize: 14, fontWeight: '700', color: COLORS.forest },
   list: { paddingHorizontal: SPACING.md, paddingTop: 8 },
@@ -360,6 +592,11 @@ const styles = StyleSheet.create({
   clearDateText: { fontSize: 12, fontWeight: '700', color: COLORS.coral },
   doneBtn: { alignSelf: 'flex-end', paddingHorizontal: 14, paddingVertical: 6 },
   doneText: { fontSize: 14, fontWeight: '800', color: COLORS.forest },
+  locationButton: { paddingVertical: 6, marginBottom: 4 },
+  locationButtonText: { fontSize: 13, fontWeight: '600', color: COLORS.forest },
+  locationNoticeText: { fontSize: 12, lineHeight: 16, marginBottom: 6 },
+  locationNoticeOk: { color: COLORS.forest },
+  locationNoticeWarn: { color: COLORS.golden },
   sheetSpecies: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary },
   sheetMeta: { fontSize: 13, color: COLORS.textSecondary },
   sheetNotes: { fontSize: 13, color: COLORS.textPrimary, lineHeight: 19 },

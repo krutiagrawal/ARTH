@@ -29,6 +29,7 @@ import { ApiError, resolveMediaUrl } from '../api/client';
 import { SPECIES_EMOJI_OPTIONS } from '../api/species';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { fuzzyMatch } from '../utils/fuzzyMatch';
 
 const ENVIRONMENT_OPTIONS = ['terrace', 'garden', 'farm', 'roadside'];
 const SEASON_OPTIONS = ['monsoon', 'winter', 'summer', 'year-round'];
@@ -124,11 +125,12 @@ export function NurseryStockScreen({ navigation }: any) {
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
   const [selectedItem, setSelectedItem] = useState<ApiSaplingStock | null>(null);
 
-  const speciesMatches = useMemo(() => {
-    const q = speciesQuery.trim().toLowerCase();
-    if (!q) return [];
-    return speciesCatalog.filter((s) => s.commonName.toLowerCase().includes(q)).slice(0, 8);
-  }, [speciesQuery, speciesCatalog]);
+  // Fuzzy (not just substring) so a typo or near-miss spelling ("roze", "gulmohr") still surfaces
+  // the existing catalog entry instead of nudging the nursery toward adding a near-duplicate.
+  const speciesMatches = useMemo(
+    () => fuzzyMatch(speciesQuery, speciesCatalog, (s) => s.commonName),
+    [speciesQuery, speciesCatalog],
+  );
 
   const toggleInArray = (arr: string[], value: string) => (arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value]);
 

@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Search, Sprout, X } from 'lucide-react'
 import DrawerFormShell, { FormSection, FieldLabel, fieldInputClassName, fieldTextareaClassName, fieldButtonClassName } from '@/components/dashboard/DrawerFormShell'
 import { Button } from '@/components/ui/button'
 import PhotoUploadField from '@/components/dashboard/PhotoUploadField'
+import { fuzzyMatch } from '@/lib/fuzzyMatch'
 import { proxy } from '../proxy'
 
 const SUNLIGHT_OPTIONS = [
@@ -80,10 +81,11 @@ export default function InventoryFormSheet({ open, onOpenChange, item, submittin
     }
   }, [open, item])
 
+  // Fuzzy (not just substring) so a typo or near-miss spelling ("roze", "gulmohr") still surfaces
+  // the existing catalog entry instead of nudging the nursery toward adding a near-duplicate.
   const filteredSpecies = useMemo(() => {
-    const q = speciesQuery.trim().toLowerCase()
-    if (!q) return species.slice(0, 20)
-    return species.filter((s) => s.commonName.toLowerCase().includes(q)).slice(0, 20)
+    if (!speciesQuery.trim()) return species.slice(0, 20)
+    return fuzzyMatch(speciesQuery, species, (s) => s.commonName, 20)
   }, [species, speciesQuery])
 
   const set = (key) => (e) => setForm((s) => ({ ...s, [key]: e.target.value }))

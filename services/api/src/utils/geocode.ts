@@ -78,7 +78,7 @@ export async function searchAddress(query: string): Promise<AddressSuggestion[]>
   const trimmed = query.trim();
   if (trimmed.length < 3) return [];
 
-  const url = `${NOMINATIM_URL}?format=json&addressdetails=1&limit=6&viewbox=${PUNE_VIEWBOX}&bounded=1&q=${encodeURIComponent(trimmed)}`;
+  const url = `${NOMINATIM_URL}?format=json&addressdetails=1&limit=10&viewbox=${PUNE_VIEWBOX}&bounded=1&q=${encodeURIComponent(trimmed)}`;
   const response = await throttledFetch(url);
   if (!response) return [];
 

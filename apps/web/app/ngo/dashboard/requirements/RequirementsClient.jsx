@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { ClipboardList, MapPin, CalendarDays, Plus } from 'lucide-react'
+import { ClipboardList, MapPin, CalendarDays, Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -12,6 +12,7 @@ import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
 import DrawerFormShell, { fieldButtonClassName } from '@/components/dashboard/DrawerFormShell'
+import { fuzzyMatch } from '@/lib/fuzzyMatch'
 import { proxy } from '../proxy'
 
 const REQ_BADGE = {
@@ -42,6 +43,14 @@ const RESPONSE_BADGE = {
 }
 
 function CreateSheet({ open, onOpenChange, submitting, onSubmit }) {
+  const [species, setSpecies] = useState([])
+  const [speciesId, setSpeciesId] = useState('')
+  const [speciesQuery, setSpeciesQuery] = useState('')
+  const [speciesPickerOpen, setSpeciesPickerOpen] = useState(false)
+  const [addingSpecies, setAddingSpecies] = useState(false)
+  const [newSpeciesEmoji, setNewSpeciesEmoji] = useState('')
+  const [addSpeciesError, setAddSpeciesError] = useState('')
+  const [addingSpeciesBusy, setAddingSpeciesBusy] = useState(false)
   const [speciesNote, setSpeciesNote] = useState('')
   const [quantityNeeded, setQuantityNeeded] = useState('')
   const [neededByDate, setNeededByDate] = useState('')
@@ -50,18 +59,57 @@ function CreateSheet({ open, onOpenChange, submitting, onSubmit }) {
 
   useEffect(() => {
     if (open) {
+      setSpeciesId('')
+      setSpeciesQuery('')
+      setSpeciesPickerOpen(false)
+      setAddingSpecies(false)
+      setNewSpeciesEmoji('')
+      setAddSpeciesError('')
       setSpeciesNote('')
       setQuantityNeeded('')
       setNeededByDate('')
       setCity('')
       setNotes('')
+      proxy('/species').then(setSpecies).catch(() => setSpecies([]))
     }
   }, [open])
+
+  const handleAddSpecies = async () => {
+    const commonName = speciesQuery.trim()
+    if (!commonName || !newSpeciesEmoji.trim()) return
+    setAddSpeciesError('')
+    setAddingSpeciesBusy(true)
+    try {
+      const created = await proxy('/species', { method: 'POST', body: { commonName, emoji: newSpeciesEmoji.trim() } })
+      setSpecies((prev) => (prev.some((s) => s.id === created.id) ? prev : [...prev, created]))
+      setSpeciesId(created.id)
+      setSpeciesQuery('')
+      setNewSpeciesEmoji('')
+      setAddingSpecies(false)
+    } catch (err) {
+      setAddSpeciesError(err.message || "Couldn't add that species. Please try again.")
+    } finally {
+      setAddingSpeciesBusy(false)
+    }
+  }
+
+  // Linking to a catalog species (not just the free-text note below) is what lets nurseries'
+  // stock get checked when they respond — see bulkRequirement.service.ts's respondToRequirement,
+  // which only gates on quantity when requirement.speciesId is set. Fuzzy (not just substring) so
+  // a typo or near-miss spelling ("roze", "gulmohr") still surfaces the existing entry instead of
+  // nudging the NGO toward adding a near-duplicate.
+  const filteredSpecies = useMemo(() => {
+    if (!speciesQuery.trim()) return species.slice(0, 8)
+    return fuzzyMatch(speciesQuery, species, (s) => s.commonName)
+  }, [species, speciesQuery])
+
+  const selectedSpecies = species.find((s) => s.id === speciesId)
 
   const submit = (e) => {
     e.preventDefault()
     if (!quantityNeeded) return
     onSubmit({
+      speciesId: speciesId || undefined,
       speciesNote: speciesNote || undefined,
       quantityNeeded: Number(quantityNeeded),
       neededByDate: neededByDate ? new Date(neededByDate).toISOString() : undefined,
@@ -88,8 +136,75 @@ function CreateSheet({ open, onOpenChange, submitting, onSubmit }) {
       }
     >
       <form id="requirement-form" onSubmit={submit} className="space-y-3">
+        <div className="relative">
+          <span className="text-[11px] font-medium text-muted-foreground">Species (optional)</span>
+          {selectedSpecies ? (
+            <div className="mt-1 flex items-center justify-between rounded-full bg-secondary/40 px-4 py-2">
+              <span className="text-sm font-medium">{selectedSpecies.emoji || '🌱'} {selectedSpecies.commonName}</span>
+              <button type="button" onClick={() => setSpeciesId('')} className="text-xs font-semibold text-primary">Change</button>
+            </div>
+          ) : (
+            <div className="relative mt-1">
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={speciesQuery}
+                onChange={(e) => { setSpeciesQuery(e.target.value); setSpeciesPickerOpen(true) }}
+                onFocus={() => setSpeciesPickerOpen(true)}
+                placeholder="Search catalog species, eg – Neem"
+                className="h-9 rounded-full pl-8"
+              />
+              {!addingSpecies && speciesPickerOpen && filteredSpecies.length > 0 && (
+                <div className="absolute z-10 mt-1 w-full max-h-56 overflow-y-auto rounded-xl border border-border/70 bg-background shadow-lg">
+                  {filteredSpecies.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => { setSpeciesId(s.id); setSpeciesPickerOpen(false); setSpeciesQuery('') }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] hover:bg-secondary/40"
+                    >
+                      <span>{s.emoji || '🌱'}</span>
+                      <span className="flex-1 truncate">{s.commonName}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => { setAddingSpecies((v) => !v); setSpeciesPickerOpen(false) }}
+                className="mt-1 text-xs font-semibold text-primary"
+              >
+                {addingSpecies ? '✕ Cancel' : "Can't find it? Add it to the catalog"}
+              </button>
+              {addingSpecies && (
+                <div className="mt-2 space-y-2 rounded-xl border border-border/60 bg-secondary/20 p-3">
+                  <p className="text-[11px] text-muted-foreground">
+                    Adding &ldquo;{speciesQuery.trim() || '…'}&rdquo; — edit the name in the search box above.
+                  </p>
+                  <label className="block">
+                    <span className="text-[11px] font-medium text-muted-foreground">Emoji</span>
+                    <Input value={newSpeciesEmoji} onChange={(e) => setNewSpeciesEmoji(e.target.value)} placeholder="🌹" className="mt-1 h-9 w-20 rounded-full text-center" />
+                  </label>
+                  {addSpeciesError && <p className="text-xs text-destructive">{addSpeciesError}</p>}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="rounded-full"
+                    disabled={!speciesQuery.trim() || !newSpeciesEmoji.trim() || addingSpeciesBusy}
+                    onClick={handleAddSpecies}
+                  >
+                    {addingSpeciesBusy ? 'Adding…' : `Add "${speciesQuery.trim() || '…'}" to the catalog`}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Matching a catalog species lets nurseries&rsquo; existing stock be checked when they respond — leave blank for open-ended asks like &ldquo;any native species&rdquo;.
+          </p>
+        </div>
         <label className="block">
-          <span className="text-[11px] font-medium text-muted-foreground">Species (optional description)</span>
+          <span className="text-[11px] font-medium text-muted-foreground">Additional description (optional)</span>
           <Input value={speciesNote} onChange={(e) => setSpeciesNote(e.target.value)} placeholder="eg – Native shade trees" className="mt-1 h-9 rounded-full" />
         </label>
         <label className="block">

@@ -26,12 +26,15 @@ const TABS = [
 ]
 
 function tabOf(req) {
-  if (!req.myResponse) return 'open'
+  // A withdrawn/declined response is a dead end, not an active claim — the nursery can respond
+  // again while the requirement is still open, so it belongs back under "Open" rather than an
+  // 'other' bucket no tab shows.
+  if (!req.myResponse || ['withdrawn', 'declined'].includes(req.myResponse.status)) return 'open'
   if (req.myResponse.status === 'proposed') return 'responded'
   if (req.myResponse.status === 'accepted') return 'accepted'
   if (req.myResponse.status === 'handed_off') return 'accepted'
   if (req.myResponse.status === 'fulfilled') return 'completed'
-  return 'other' // declined / withdrawn
+  return 'other'
 }
 
 const RESPONSE_BADGE = {
@@ -270,7 +273,7 @@ export default function RequirementsClient() {
                 )}
 
                 <div className="mt-4 flex gap-2">
-                  {!r.myResponse && (
+                  {(!r.myResponse || ['withdrawn', 'declined'].includes(r.myResponse.status)) && (
                     <Button size="sm" className="rounded-full" onClick={() => setRespondFor(r)}>Respond</Button>
                   )}
                   {r.myResponse?.status === 'proposed' && (
