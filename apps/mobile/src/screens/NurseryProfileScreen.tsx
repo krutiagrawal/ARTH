@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
+import { FONTS } from '../constants/typography';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { LocationActions } from '../components/common/LocationActions';
@@ -17,7 +18,7 @@ import { NurserySaplingsTabContent } from '../components/profile/NurserySaplings
 import { GrowthLevelBadge, GROWTH_LEVEL_META } from '../components/common/GrowthLevelBadge';
 import { TrustScoreGauge } from '../components/common/TrustScoreGauge';
 import { ContributionStreakCard } from '../components/common/ContributionStreakCard';
-import { useNurseryPosts } from '../hooks/useSocialQueries';
+import { useNurseryPosts, useNurseryFollowers } from '../hooks/useSocialQueries';
 import {
   useNurseryProfile,
   useNurseryStats,
@@ -29,6 +30,7 @@ import {
   useUnfollowNursery,
   useRingStatus,
   useSaplingStock,
+  useNurseryImpact,
 } from '../hooks/useApiQueries';
 import { useAuth } from '../context/AuthContext';
 import { resolveMediaUrl } from '../api/client';
@@ -57,6 +59,8 @@ export function NurseryProfileScreen({ route, navigation }: any) {
   const ownStats = useNurseryStats();
   const ownReputation = useNurseryReputation(8);
   const ownAchievements = useNurseryBadges();
+  const ownFollowers = useNurseryFollowers({ status: 'accepted' });
+  const ownImpact = useNurseryImpact();
 
   const publicProfile = useNurseryPublicProfile(isOwn ? null : nurseryId ?? null);
   const publicAchievements = useNurseryPublicAchievements(isOwn ? undefined : nurseryId);
@@ -80,7 +84,7 @@ export function NurseryProfileScreen({ route, navigation }: any) {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
   const { refreshing, onRefresh } = usePullToRefresh(
     isOwn
-      ? [ownProfile.refetch, ownStats.refetch, ownStock.refetch, refetchPosts]
+      ? [ownProfile.refetch, ownStats.refetch, ownStock.refetch, refetchPosts, ownFollowers.refetch, ownImpact.refetch]
       : [publicProfile.refetch, refetchPosts],
   );
 
@@ -128,13 +132,34 @@ export function NurseryProfileScreen({ route, navigation }: any) {
         stats={
           isOwn
             ? [
-                { value: ownStats.data?.speciesCount ?? 0, label: 'Species' },
                 {
-                  value: `${GROWTH_LEVEL_META[ownProfile.data?.growthLevel ?? 'seedling'].emoji} ${GROWTH_LEVEL_META[ownProfile.data?.growthLevel ?? 'seedling'].label}`,
+                  value: ownFollowers.data?.total ?? 0,
+                  label: 'Followers',
+                  onPress: () => navigation.navigate('NurseryFollowers'),
+                },
+                {
+                  value: GROWTH_LEVEL_META[ownProfile.data?.growthLevel ?? 'seedling'].label,
+                  // The tier name plus emoji is too wide for the stat column's digit-sized type
+                  // (see StatDisplay's `numberSmall`, 32px) and was clipping mid-word — render it
+                  // at a size that actually fits the column, in the display face instead of the
+                  // plain numeral font.
+                  valueNode: (
+                    <Text style={styles.growthLevelValue} numberOfLines={2}>
+                      <Text style={styles.growthLevelEmoji}>
+                        {GROWTH_LEVEL_META[ownProfile.data?.growthLevel ?? 'seedling'].emoji}
+                      </Text>
+                      {'\n'}
+                      {GROWTH_LEVEL_META[ownProfile.data?.growthLevel ?? 'seedling'].label}
+                    </Text>
+                  ),
                   label: 'Growth Level',
                   onPress: () => navigation.navigate('NurseryStreakBadges'),
                 },
-                { value: badgesCount, label: 'Badges', onPress: () => setTab('achievements') },
+                {
+                  value: ownImpact.data?.totalSaplingsSupplied ?? 0,
+                  label: 'Trees Supplied',
+                  onPress: () => navigation.navigate('NurseryImpact'),
+                },
               ]
             : [
                 { value: posts.length, label: 'Posts' },
@@ -373,6 +398,17 @@ export function NurseryProfileScreen({ route, navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  growthLevelValue: {
+    textAlign: 'center',
+    fontFamily: FONTS.display,
+    fontSize: 13,
+    lineHeight: 18,
+    color: COLORS.textPrimary,
+  },
+  growthLevelEmoji: {
+    fontSize: 20,
+    lineHeight: 24,
+  },
   flex: { flex: 1 },
   scrollContent: { paddingBottom: 32 },
   topBar: {

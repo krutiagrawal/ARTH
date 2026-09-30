@@ -3,12 +3,12 @@ import { View, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicato
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurTargetView } from 'expo-blur';
+import { BlurView, BlurTargetView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { FONTS } from '../constants/typography';
-import { SHADOWS } from '../constants/theme';
+import { SHADOWS, RADIUS } from '../constants/theme';
 import { EcoWidget } from '../components/common/EcoWidget';
 import { MuteButton } from '../components/common/MuteButton';
 import { BorderCard } from '../components/common/BorderCard';
@@ -32,7 +32,7 @@ import { hexToRgba } from '../utils/color';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 const { width: SW, height: SH } = Dimensions.get('window');
-const HERO_HEIGHT = SH * 0.5;
+const HERO_HEIGHT = SH * 0.54;
 
 function formatRupees(cents: number) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`;
@@ -380,79 +380,103 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
               value={stats?.speciesCount ?? 0}
               label="Species"
               variant="glass"
-              fill
-              fillMinHeight={70}
               compact
-              dark={false}
-              color={COLORS.forest}
-              cardBackground={COLORS.cream}
-              cardBackgroundAlt={COLORS.beigeLight}
-              cardOverlayAlpha={0.94}
-              textColor={COLORS.textSecondary}
-              subTextColor={COLORS.textSecondary}
-              borderColor="rgba(139, 107, 71, 0.3)"
+              dark={theme.cardTint === 'dark'}
+              color={theme.accentColor}
+              cardBackground={theme.cardBackground}
+              cardBackgroundAlt={theme.cardBackgroundAlt}
+              cardOverlayAlpha={theme.cardOverlayAlpha}
+              textColor={theme.textSecondaryOnCard}
+              subTextColor={theme.textSecondaryOnCard}
+              borderColor={theme.cardBorder}
               delay={100}
               onPress={() => navigation.navigate('NurseryStock')}
               blurTarget={blurTargetRef}
             />
-            <EcoWidget
-              icon="📦"
-              value={stats?.totalQuantity ?? 0}
-              label="In stock"
-              variant="glass"
-              fill
-              fillMinHeight={70}
-              compact
-              dark={false}
-              color={COLORS.forest}
-              cardBackground={COLORS.cream}
-              cardBackgroundAlt={COLORS.beigeLight}
-              cardOverlayAlpha={0.94}
-              textColor={COLORS.textSecondary}
-              subTextColor={COLORS.textSecondary}
-              borderColor="rgba(139, 107, 71, 0.3)"
-              delay={200}
-              onPress={() => navigation.navigate('NurseryStock')}
-              blurTarget={blurTargetRef}
-            />
-            <EcoWidget
-              icon={GROWTH_LEVEL_META[today?.growthLevel ?? 'seedling'].emoji}
-              value={GROWTH_LEVEL_META[today?.growthLevel ?? 'seedling'].label}
-              label="Growth Level"
-              variant="glass"
-              fill
-              fillMinHeight={70}
-              compact
-              dark={false}
-              color={COLORS.forest}
-              cardBackground={COLORS.cream}
-              cardBackgroundAlt={COLORS.beigeLight}
-              cardOverlayAlpha={0.94}
-              textColor={COLORS.textSecondary}
-              subTextColor={COLORS.textSecondary}
-              borderColor="rgba(139, 107, 71, 0.3)"
-              delay={300}
-              onPress={() => navigation.navigate('NurseryStreakBadges')}
-              blurTarget={blurTargetRef}
-            />
+            <View style={styles.statsRight}>
+              <EcoWidget
+                icon="📦"
+                value={stats?.totalQuantity ?? 0}
+                label="In stock"
+                variant="glass"
+                compact
+                dark={theme.cardTint === 'dark'}
+                color={theme.accentColor}
+                cardBackground={theme.cardBackground}
+                cardBackgroundAlt={theme.cardBackgroundAlt}
+                cardOverlayAlpha={theme.cardOverlayAlpha}
+                textColor={theme.textSecondaryOnCard}
+                subTextColor={theme.textSecondaryOnCard}
+                borderColor={theme.cardBorder}
+                delay={200}
+                onPress={() => navigation.navigate('NurseryStock')}
+                blurTarget={blurTargetRef}
+              />
+              <EcoWidget
+                icon={GROWTH_LEVEL_META[today?.growthLevel ?? 'seedling'].emoji}
+                value={GROWTH_LEVEL_META[today?.growthLevel ?? 'seedling'].label}
+                label="Growth Level"
+                variant="glass"
+                compact
+                dark={theme.cardTint === 'dark'}
+                color={theme.accentColor}
+                cardBackground={theme.cardBackground}
+                cardBackgroundAlt={theme.cardBackgroundAlt}
+                cardOverlayAlpha={theme.cardOverlayAlpha}
+                textColor={theme.textSecondaryOnCard}
+                subTextColor={theme.textSecondaryOnCard}
+                borderColor={theme.cardBorder}
+                delay={300}
+                onPress={() => navigation.navigate('NurseryStreakBadges')}
+                blurTarget={blurTargetRef}
+              />
+            </View>
           </View>
+
+          {/* Today's orders pill — anchored near the bottom edge of the hero, at the hills/ground
+              seam, mirroring Home's "Forest stats" pill (same real glassmorphism recipe: BlurView
+              + a theme-tinted, not hardcoded, translucent overlay) instead of the plain 4-card
+              grid this used to be further down the page. */}
+          {today && (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('NurseryOrders')}
+              style={styles.todayStats}
+            >
+              <BlurView
+                intensity={35}
+                tint={theme.cardTint === 'dark' ? 'dark' : 'light'}
+                blurTarget={blurTargetRef}
+                style={styles.todayStatsBlur}
+              >
+                <View style={[styles.todayStatsOverlay, { backgroundColor: hexToRgba(theme.cardBackground, theme.cardOverlayAlpha) }]} />
+                <View style={styles.todayStatRow}>
+                  <View style={styles.todayStat}>
+                    <Text style={[styles.todayStatNum, { color: theme.textPrimaryOnCard }]}>{today.ordersToday}</Text>
+                    <Text style={[styles.todayStatLabel, { color: theme.textSecondaryOnCard }]}>Orders</Text>
+                  </View>
+                  <View style={[styles.todayStatDivider, { backgroundColor: theme.cardBorder }]} />
+                  <View style={styles.todayStat}>
+                    <Text style={[styles.todayStatNum, { color: theme.textPrimaryOnCard }]}>{today.newPending}</Text>
+                    <Text style={[styles.todayStatLabel, { color: theme.textSecondaryOnCard }]}>Pending</Text>
+                  </View>
+                  <View style={[styles.todayStatDivider, { backgroundColor: theme.cardBorder }]} />
+                  <View style={styles.todayStat}>
+                    <Text style={[styles.todayStatNum, { color: theme.textPrimaryOnCard }]}>{today.readyForPickup}</Text>
+                    <Text style={[styles.todayStatLabel, { color: theme.textSecondaryOnCard }]}>Pickup</Text>
+                  </View>
+                  <View style={[styles.todayStatDivider, { backgroundColor: theme.cardBorder }]} />
+                  <View style={styles.todayStat}>
+                    <Text style={[styles.todayStatNum, { color: theme.textPrimaryOnCard }]}>{today.deliveriesPending}</Text>
+                    <Text style={[styles.todayStatLabel, { color: theme.textSecondaryOnCard }]}>Delivery</Text>
+                  </View>
+                </View>
+              </BlurView>
+            </TouchableOpacity>
+          )}
         </View>
 
         {profile && <StatusBanner status={profile.status} seamText={seamText} navigation={navigation} />}
-
-        {today && (
-          <>
-            <Text style={[styles.sectionTitle, { color: seamText.primary }]}>Today</Text>
-            <View style={styles.gridRow}>
-              <EcoWidget {...tileProps} icon="🛒" value={String(today.ordersToday)} label="Orders today" delay={0} onPress={() => navigation.navigate('NurseryOrders')} />
-              <EcoWidget {...tileProps} icon="🆕" value={String(today.newPending)} label="New pending" delay={60} onPress={() => navigation.navigate('NurseryOrders')} />
-            </View>
-            <View style={styles.gridRow}>
-              <EcoWidget {...tileProps} icon="📦" value={String(today.readyForPickup)} label="Ready for pickup" delay={120} onPress={() => navigation.navigate('NurseryOrders')} />
-              <EcoWidget {...tileProps} icon="🚴" value={String(today.deliveriesPending)} label="Deliveries pending" delay={180} onPress={() => navigation.navigate('NurseryOrders')} />
-            </View>
-          </>
-        )}
 
         <Text style={[styles.sectionTitle, { color: seamText.primary }]}>Quick Actions</Text>
         <View style={styles.dockGrid}>
@@ -560,7 +584,52 @@ const styles = StyleSheet.create({
   avatarButton: {},
   avatar: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', ...SHADOWS.sage },
   avatarText: { fontSize: 22 },
-  statsRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginTop: 4, marginBottom: 20 },
+  statsRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', paddingHorizontal: 20, marginTop: 4, marginBottom: 20 },
+  statsRight: { flex: 1, flexDirection: 'row', gap: 8 },
+  // Today's orders pill, anchored at the hero's bottom edge — same recipe as Home's "Forest
+  // stats" pill (see HomeScreen.tsx `forestStats*`), just with 4 columns instead of 3.
+  todayStats: {
+    position: 'absolute',
+    bottom: 14,
+    left: 20,
+    right: 20,
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  // `TouchableOpacity` (styles.todayStats above) carries the absolute positioning so it anchors
+  // to the hero itself; this is deliberately un-flexed and left to size from its own content
+  // (matching how the un-wrapped BlurView sized itself before this touchable existed) — putting
+  // `flex: 1` here would ask it to fill a parent whose own height is itself derived from this
+  // child's content, an undefined cross-reference that risks collapsing back to zero height,
+  // which is exactly the "pill lands under the stats row" bug this replaces.
+  todayStatsBlur: { borderRadius: RADIUS.lg, overflow: 'hidden' },
+  todayStatsOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  todayStatRow: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  todayStat: { flex: 1, alignItems: 'center' },
+  todayStatNum: { fontSize: 15, fontWeight: '700' },
+  todayStatLabel: {
+    fontSize: 9,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  todayStatDivider: {
+    width: 1,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    marginVertical: 4,
+  },
   loader: { marginTop: 20, marginBottom: 8 },
   statusBanner: { padding: 14, marginTop: 4, marginBottom: 8 },
   statusTitle: { fontSize: 14, fontWeight: '700' },

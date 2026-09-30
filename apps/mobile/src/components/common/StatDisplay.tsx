@@ -21,6 +21,9 @@ interface StatDisplayProps {
   size?: 'sm' | 'md' | 'lg';
   align?: 'left' | 'center';
   style?: ViewStyle;
+  /** Escape hatch for non-numeric values (e.g. a tier badge) that shouldn't be forced into the
+   * big digit-sized type below — pass a fully custom node in place of the default value text. */
+  valueNode?: React.ReactNode;
 }
 
 export function StatDisplay({
@@ -32,14 +35,17 @@ export function StatDisplay({
   size = 'md',
   align = 'left',
   style,
+  valueNode,
 }: StatDisplayProps) {
   const valueStyle = size === 'lg' ? TYPOGRAPHY.number : size === 'md' ? TYPOGRAPHY.numberSmall : TYPOGRAPHY.numberTiny;
 
   return (
     <View style={[align === 'center' && styles.center, style]}>
-      <Text style={[valueStyle, { color }, align === 'center' && styles.textCenter]} numberOfLines={1}>
-        {value}
-      </Text>
+      {valueNode ?? (
+        <Text style={[valueStyle, { color }, align === 'center' && styles.textCenter]} numberOfLines={1}>
+          {value}
+        </Text>
+      )}
       <Text
         style={[TYPOGRAPHY.label, styles.label, { color: labelColor }, align === 'center' && styles.textCenter]}
         numberOfLines={1}

@@ -88,6 +88,9 @@ export function EcoWidget({
   // otherwise overflow a three-across grid on a narrow phone, and the tighter horizontal padding
   // keeps two-word labels ("Upcoming drives") on two lines instead of three.
   const fillCardStyle = fill ? [styles.fillCard, fillMinHeight != null && { minHeight: fillMinHeight }] : null;
+  // A notch tighter than the default card, independent of `fill` — for a card that should just
+  // read a bit smaller without being squeezed into a fixed-height grid tile.
+  const compactCardStyle = compact ? styles.compactCard : null;
 
   if (variant === 'glass') {
     const glassContent = (
@@ -132,6 +135,7 @@ export function EcoWidget({
                 styles.glassWidgetThemed,
                 { borderColor: borderColor ?? cardBackground, borderTopColor: 'rgba(255,255,255,0.4)' },
                 fillCardStyle,
+                compactCardStyle,
               ]}
             >
               <LinearGradient
@@ -159,7 +163,7 @@ export function EcoWidget({
     return (
       <Animated.View style={[slideStyle, style]}>
         <TouchableOpacity activeOpacity={0.85} onPress={onPress} disabled={!onPress} style={fillStyle}>
-          <GlassCard variant={dark ? 'dark' : 'light'} style={[styles.glassWidget, fillCardStyle]}>
+          <GlassCard variant={dark ? 'dark' : 'light'} style={[styles.glassWidget, fillCardStyle, compactCardStyle]}>
             {glassContent}
           </GlassCard>
         </TouchableOpacity>
@@ -283,8 +287,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   glassIconCompact: {
-    fontSize: 18,
-    marginBottom: 2,
+    fontSize: 22,
+    marginBottom: 4,
   },
   minimalIcon: {
     fontSize: 28,
@@ -306,8 +310,8 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   glassValueCompact: {
-    fontSize: 14,
-    marginBottom: 0,
+    fontSize: 16,
+    marginBottom: 1,
   },
   minimalValue: {
     fontSize: 18,
@@ -341,8 +345,12 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   glassLabelCompact: {
-    fontSize: 9,
-    letterSpacing: 0.3,
+    fontSize: 10,
+    letterSpacing: 0.4,
+  },
+  compactCard: {
+    paddingVertical: 11,
+    paddingHorizontal: 13,
   },
   minimalLabel: {
     fontSize: 12,

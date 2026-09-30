@@ -14,6 +14,8 @@ export interface ProfileHeaderStat {
   value: string | number;
   label: string;
   onPress?: () => void;
+  /** Escape hatch for non-numeric values (e.g. a tier badge) — see `StatDisplay`. */
+  valueNode?: React.ReactNode;
 }
 
 export interface ProfileHeaderAction {
@@ -149,7 +151,7 @@ export function ProfileHeader({
               disabled={!s.onPress}
               activeOpacity={s.onPress ? 0.7 : 1}
             >
-              <StatDisplay value={s.value} label={s.label} size="md" align="center" />
+              <StatDisplay value={s.value} valueNode={s.valueNode} label={s.label} size="md" align="center" />
             </TouchableOpacity>
           </React.Fragment>
         ))}
