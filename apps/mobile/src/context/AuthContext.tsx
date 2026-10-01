@@ -10,7 +10,7 @@ interface AuthContextValue {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<ApiUser>;
-  register: (input: { email: string; password: string; name: string; handle: string }) => Promise<void>;
+  register: (input: { email: string; password: string; name: string; handle: string; phone: string; city: string }) => Promise<void>;
   registerNgo: (input: RegisterNgoInput) => Promise<void>;
   registerGroup: (input: {
     email: string;
@@ -121,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [queryClient]);
 
   const register = useCallback(
-    async (input: { email: string; password: string; name: string; handle: string }) => {
+    async (input: { email: string; password: string; name: string; handle: string; phone: string; city: string }) => {
       const registeredUser = await authApi.register(input);
       queryClient.clear();
       setUser(registeredUser);

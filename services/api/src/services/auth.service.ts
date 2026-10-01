@@ -20,6 +20,11 @@ interface RegisterInput {
   deviceInfo?: string;
 }
 
+interface RegisterIndividualInput extends RegisterInput {
+  phone: string;
+  city: string;
+}
+
 interface OfficeBearerInput {
   name: string;
   designation?: string;
@@ -163,6 +168,16 @@ export function toPublicUser(user: User) {
     handle: user.handle,
     bio: user.bio,
     avatarEmoji: user.avatarEmoji,
+    phone: user.phone,
+    city: user.city,
+    plantingSpace: user.plantingSpace,
+    gardeningExperience: user.gardeningExperience,
+    motivation: user.motivation,
+    dateOfBirth: user.dateOfBirth,
+    speciesInterest: user.speciesInterest,
+    homeSunlight: user.homeSunlight,
+    plantingGoal: user.plantingGoal,
+    personalizationCompletedAt: user.personalizationCompletedAt,
     xp: user.xp,
     level: user.level,
     streakCurrent: user.streakCurrent,
@@ -196,12 +211,15 @@ export async function checkAvailability(
   };
 }
 
-export async function register(prisma: PrismaClient, input: RegisterInput) {
+export async function register(prisma: PrismaClient, input: RegisterIndividualInput) {
   const existingEmail = await prisma.user.findUnique({ where: { email: input.email } });
   if (existingEmail) throw new ConflictError('Email is already registered');
 
   const existingHandle = await prisma.user.findUnique({ where: { handle: input.handle } });
   if (existingHandle) throw new ConflictError('Handle is already taken');
+
+  const existingPhone = await prisma.user.findUnique({ where: { phone: input.phone } });
+  if (existingPhone) throw new ConflictError('Phone number is already registered');
 
   const passwordHash = await hashPassword(input.password);
 
@@ -212,6 +230,8 @@ export async function register(prisma: PrismaClient, input: RegisterInput) {
         passwordHash,
         name: input.name,
         handle: input.handle,
+        phone: input.phone,
+        city: input.city,
       },
     });
 

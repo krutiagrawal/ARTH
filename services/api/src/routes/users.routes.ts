@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { updateMeSchema, changePasswordSchema } from '../schemas/users.schema';
+import { updateMeSchema, changePasswordSchema, personalizeSchema } from '../schemas/users.schema';
 import { toPublicUser, issueTokenPair, logoutAll } from '../services/auth.service';
 import { hashPassword, comparePassword } from '../utils/password';
 import { BadRequestError, ConflictError, UnauthorizedError } from '../utils/errors';
@@ -24,6 +24,18 @@ export default async function usersRoutes(fastify: FastifyInstance) {
     const updated = await fastify.prisma.user.update({
       where: { id: request.user!.id },
       data: parsed.data,
+    });
+
+    reply.send(toPublicUser(updated));
+  });
+
+  fastify.patch('/me/personalize', async (request, reply) => {
+    const parsed = personalizeSchema.safeParse(request.body);
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    const updated = await fastify.prisma.user.update({
+      where: { id: request.user!.id },
+      data: { ...parsed.data, personalizationCompletedAt: new Date() },
     });
 
     reply.send(toPublicUser(updated));

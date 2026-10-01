@@ -17,6 +17,8 @@ export const registerSchema = z.object({
     .min(3)
     .max(30)
     .regex(/^[a-z0-9_]+$/, 'Handle may only contain lowercase letters, numbers, and underscores'),
+  phone: phoneSchema,
+  city: z.string().min(1).max(100),
   deviceInfo: z.string().max(200).optional(),
 });
 

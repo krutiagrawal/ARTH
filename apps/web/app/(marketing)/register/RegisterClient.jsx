@@ -26,6 +26,8 @@ function App() {
   const [handle, setHandle] = useState('')
   const [email, setEmail] = useState('')
   const [emailTouched, setEmailTouched] = useState(false)
+  const [phone, setPhone] = useState('')
+  const [city, setCity] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
@@ -45,6 +47,14 @@ function App() {
       setError(emailField.error || 'Enter a valid email address.')
       return
     }
+    if (!/^[6-9]\d{9}$/.test(phone.trim())) {
+      setError('Enter a valid 10-digit mobile number.')
+      return
+    }
+    if (!city.trim()) {
+      setError('Enter your city.')
+      return
+    }
     if (password !== confirmPassword) {
       setError('Passwords do not match.')
       return
@@ -54,7 +64,7 @@ function App() {
       const res = await fetch('/api/member/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, handle, email, password }),
+        body: JSON.stringify({ name, handle, email, phone: phone.trim(), city: city.trim(), password }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -62,7 +72,7 @@ function App() {
         return
       }
       await refresh()
-      router.push('/dashboard/individual')
+      router.push('/dashboard/individual/onboarding')
     } catch {
       setError('Could not reach the server. Please check your connection and try again.')
     } finally {
@@ -145,6 +155,14 @@ function App() {
                 />
                 {emailField.checking && <p className="mt-1 text-xs text-muted-foreground">Checking…</p>}
                 {emailField.error && <p className="mt-1 text-xs text-destructive">{emailField.error}</p>}
+              </label>
+              <label className="block">
+                <span className="eyebrow">Phone</span>
+                <input type="tel" required inputMode="numeric" maxLength={10} value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ''))} placeholder="10-digit mobile number" className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+              </label>
+              <label className="block">
+                <span className="eyebrow">City</span>
+                <input required value={city} onChange={e => setCity(e.target.value)} placeholder="Your city" className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
               </label>
               <label className="block">
                 <span className="eyebrow">Password</span>

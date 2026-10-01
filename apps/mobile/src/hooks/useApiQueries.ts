@@ -28,9 +28,11 @@ import { fetchFeed, cheerActivity } from '../api/feed';
 import {
   fetchPublicProfile,
   updateMe,
+  personalizeMe,
   changePassword,
   fetchSessions,
   revokeSession,
+  type PersonalizeInput,
 } from '../api/users';
 import {
   fetchDecorationTypes,
@@ -635,6 +637,14 @@ export function useUpdateMe() {
   const { setUser } = useAuth();
   return useMutation({
     mutationFn: (input: { name?: string; handle?: string; avatarEmoji?: string; bio?: string | null }) => updateMe(input),
+    onSuccess: (updated) => setUser(updated),
+  });
+}
+
+export function usePersonalizeMe() {
+  const { setUser } = useAuth();
+  return useMutation({
+    mutationFn: (input: PersonalizeInput) => personalizeMe(input),
     onSuccess: (updated) => setUser(updated),
   });
 }

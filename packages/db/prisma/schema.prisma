@@ -433,6 +433,20 @@ model User {
   handle                 String    @unique
   bio                    String?   @db.VarChar(160)
   avatarEmoji            String    @default("🧑") @map("avatar_emoji")
+  city                   String?
+
+  // Personalization — collected on an optional, skippable step right after Individual
+  // signup. personalizationCompletedAt is stamped whether the user fills these in or
+  // skips, so the step is never shown again.
+  plantingSpace              String[]       @default([]) @map("planting_space")
+  gardeningExperience        String?        @map("gardening_experience")
+  motivation                 String[]       @default([])
+  dateOfBirth                DateTime?      @map("date_of_birth")
+  speciesInterest            String[]       @default([]) @map("species_interest")
+  homeSunlight               SunlightNeeds? @map("home_sunlight")
+  plantingGoal               Int?           @map("planting_goal")
+  personalizationCompletedAt DateTime?      @map("personalization_completed_at")
+
   xp                     Int       @default(0)
   level                  Int       @default(1)
   streakCurrent          Int       @default(0) @map("streak_current")

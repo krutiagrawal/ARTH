@@ -27,7 +27,6 @@ export function CityPickerField({
 }) {
   const [open, setOpen] = useState(false);
   const { data: cities = [] } = useCities();
-  const isDark = variant === 'dark';
 
   return (
     <>
@@ -45,14 +44,9 @@ export function CityPickerField({
         )}
       </TouchableOpacity>
 
-      <Sheet
-        visible={open}
-        onClose={() => setOpen(false)}
-        title="Select city"
-        variant="slideUp"
-        scrollable
-        surface={isDark ? 'dark' : 'auto'}
-      >
+      {/* Always the light/cream sheet — beige background, green selected text, brown borders —
+          regardless of the trigger's own chrome, since that's the app's actual dropdown look. */}
+      <Sheet visible={open} onClose={() => setOpen(false)} title="Select city" variant="slideUp" scrollable>
         <ScrollView>
           {cities.map((c) => {
             const selected = c.name === value;
@@ -65,26 +59,17 @@ export function CityPickerField({
                   onChange(c.name);
                   setOpen(false);
                 }}
-                style={[styles.row, isDark && styles.rowNight, !c.isLaunched && styles.rowDisabled]}
+                style={[styles.row, !c.isLaunched && styles.rowDisabled]}
               >
-                <Text
-                  style={[
-                    styles.rowText,
-                    isDark && styles.rowTextNight,
-                    selected && (isDark ? styles.rowTextSelectedNight : styles.rowTextSelected),
-                    !c.isLaunched && styles.rowTextDisabled,
-                  ]}
-                >
+                <Text style={[styles.rowText, selected && styles.rowTextSelected, !c.isLaunched && styles.rowTextDisabled]}>
                   {c.name}
                 </Text>
                 {!c.isLaunched && (
-                  <View style={[styles.badge, isDark && styles.badgeNight]}>
-                    <Text style={[styles.badgeText, isDark && styles.badgeTextNight]}>Coming soon</Text>
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>Coming soon</Text>
                   </View>
                 )}
-                {selected && c.isLaunched && (
-                  <Text style={isDark ? styles.checkNight : styles.check}>✓</Text>
-                )}
+                {selected && c.isLaunched && <Text style={styles.check}>✓</Text>}
               </TouchableOpacity>
             );
           })}
@@ -117,11 +102,8 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(139, 107, 71, 0.12)',
   },
   rowDisabled: { opacity: 0.45 },
-  rowNight: { borderBottomColor: 'rgba(255,255,255,0.12)' },
   rowText: { fontSize: 15, fontWeight: '600', color: COLORS.textPrimary },
-  rowTextNight: { color: ON_DARK_SURFACE.primary },
   rowTextSelected: { color: COLORS.forest },
-  rowTextSelectedNight: { color: COLORS.mint },
   rowTextDisabled: { fontWeight: '500' },
   badge: {
     borderRadius: RADIUS.full,
@@ -129,9 +111,6 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     backgroundColor: COLORS.beige,
   },
-  badgeNight: { backgroundColor: 'rgba(255,255,255,0.12)' },
   badgeText: { fontSize: 11, fontWeight: '600', color: COLORS.textMuted },
-  badgeTextNight: { color: ON_DARK_SURFACE.muted },
   check: { fontSize: 16, fontWeight: '700', color: COLORS.forest },
-  checkNight: { fontSize: 16, fontWeight: '700', color: COLORS.mint },
 });

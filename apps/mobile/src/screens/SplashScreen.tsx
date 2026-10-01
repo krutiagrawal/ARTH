@@ -21,7 +21,7 @@ import { TYPOGRAPHY } from '../constants/typography';
 import { FloatingParticles } from '../components/common/FloatingParticles';
 import { MuteButton } from '../components/common/MuteButton';
 import { useAuth } from '../context/AuthContext';
-import { ROLE_ROUTES } from '../constants/roleRoutes';
+import { resolvePostAuthRoute } from '../constants/roleRoutes';
 import { syncAndroidNavigationBarStyle } from '../utils/androidNavigationBar';
 
 const { width: SW, height: SH } = Dimensions.get('window');
@@ -58,9 +58,8 @@ export function SplashScreen({ navigation }: any) {
       return;
     }
 
-    if (authStateRef.current.isAuthenticated) {
-      const role = authStateRef.current.user?.role;
-      navigation.replace(ROLE_ROUTES[role as keyof typeof ROLE_ROUTES] ?? 'Main');
+    if (authStateRef.current.isAuthenticated && authStateRef.current.user) {
+      navigation.replace(resolvePostAuthRoute(authStateRef.current.user));
       return;
     }
 

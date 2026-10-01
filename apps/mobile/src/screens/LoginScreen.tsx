@@ -11,7 +11,7 @@ import { PasswordInput } from '../components/common/PasswordInput';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
-import { ROLE_ROUTES } from '../constants/roleRoutes';
+import { resolvePostAuthRoute } from '../constants/roleRoutes';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { isValidEmail } from '../utils/validation';
 
@@ -40,7 +40,7 @@ export function LoginScreen({ navigation }: any) {
     setIsSubmitting(true);
     try {
       const loggedInUser = await login(email.trim().toLowerCase(), password);
-      const target = ROLE_ROUTES[loggedInUser.role] ?? 'Main';
+      const target = resolvePostAuthRoute(loggedInUser);
       navigation.reset({ index: 0, routes: [{ name: target }] });
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');

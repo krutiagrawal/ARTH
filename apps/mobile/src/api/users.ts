@@ -27,8 +27,22 @@ export async function fetchPublicProfile(userId: string): Promise<ApiPublicProfi
   return apiFetch<ApiPublicProfile>(`/api/users/${userId}`);
 }
 
-export async function updateMe(input: { name?: string; handle?: string; avatarEmoji?: string; bio?: string | null }): Promise<ApiUser> {
+export async function updateMe(input: { name?: string; handle?: string; avatarEmoji?: string; bio?: string | null; city?: string }): Promise<ApiUser> {
   return apiFetch<ApiUser>('/api/users/me', { method: 'PATCH', body: input });
+}
+
+export interface PersonalizeInput {
+  plantingSpace?: ('balcony' | 'terrace' | 'garden' | 'farmland' | 'city_outskirts' | 'open_land' | 'none')[];
+  gardeningExperience?: 'beginner' | 'intermediate' | 'experienced';
+  motivation?: ('home_gardening' | 'environmental_cause' | 'school_or_csr_project' | 'hobby' | 'other')[];
+  dateOfBirth?: string;
+  speciesInterest?: ('fruit' | 'flowering' | 'shade' | 'medicinal' | 'native')[];
+  homeSunlight?: 'full_sun' | 'partial_shade' | 'shade';
+  plantingGoal?: number;
+}
+
+export async function personalizeMe(input: PersonalizeInput): Promise<ApiUser> {
+  return apiFetch<ApiUser>('/api/users/me/personalize', { method: 'PATCH', body: input });
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<ApiUser> {

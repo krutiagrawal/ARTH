@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { Text, TextInput } from './AppText';
 import { FormFieldShell, FORM_FIELD_VALUE_STYLE } from './FormField';
 import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
@@ -14,6 +14,9 @@ interface PhoneFieldProps {
   dark?: boolean;
   /** Shown below the field — format error, "already registered", etc. */
   error?: string | null;
+  /** Overrides the field box's chrome (background/border/margin) — for screens that need this
+   * field to match a different surrounding input style than FormFieldShell's default. */
+  style?: StyleProp<ViewStyle>;
 }
 
 /**
@@ -21,10 +24,10 @@ interface PhoneFieldProps {
  * visual prefix, never part of the stored value, so every phone field in the app produces the
  * same bare-10-digit shape regardless of what the user tries to type.
  */
-export function PhoneField({ label = 'Phone number', value, onChangeText, onBlur, placeholder = '98765 43210', dark, error }: PhoneFieldProps) {
+export function PhoneField({ label = 'Phone number', value, onChangeText, onBlur, placeholder = '98765 43210', dark, error, style }: PhoneFieldProps) {
   return (
     <View style={styles.wrap}>
-      <FormFieldShell label={label} dark={dark}>
+      <FormFieldShell label={label} dark={dark} style={style}>
         <View style={styles.row}>
           <Text style={[styles.prefix, dark && styles.prefixDark]}>+91</Text>
           <View style={[styles.divider, dark && styles.dividerDark]} />

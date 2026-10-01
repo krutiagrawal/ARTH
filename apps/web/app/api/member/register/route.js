@@ -12,6 +12,8 @@ const schema = z.object({
     .min(3)
     .max(30)
     .regex(/^[a-z0-9_]+$/, 'Handle may only contain lowercase letters, numbers, and underscores'),
+  phone: z.string().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit mobile number'),
+  city: z.string().min(1).max(100),
 })
 
 export async function POST(request) {

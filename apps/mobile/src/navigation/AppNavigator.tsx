@@ -13,6 +13,7 @@ import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { AccountTypeScreen } from '../screens/AccountTypeScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
+import { PersonalizeOnboardingScreen } from '../screens/PersonalizeOnboardingScreen';
 import { GroupRegisterScreen } from '../screens/GroupRegisterScreen';
 import { GroupDashboardScreen } from '../screens/GroupDashboardScreen';
 import { GroupManageScreen } from '../screens/GroupManageScreen';
@@ -336,6 +337,7 @@ export type RootStackParamList = {
   AccountType: undefined;
   Login: undefined;
   Register: undefined;
+  PersonalizeOnboarding: undefined;
   GroupRegister: undefined;
   GroupMain: undefined;
   GroupCreateChallenge: undefined;
@@ -823,6 +825,7 @@ export function AppNavigator() {
         <Stack.Screen name="AccountType" component={AccountTypeScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="PersonalizeOnboarding" component={PersonalizeOnboardingScreen} />
         <Stack.Screen name="GroupRegister" component={GroupRegisterScreen} />
         <Stack.Screen name="GroupMain" component={GroupMainApp} />
         <Stack.Screen name="GroupCreateChallenge" component={GroupCreateChallengeScreen} />

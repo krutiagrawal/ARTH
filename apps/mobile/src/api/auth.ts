@@ -21,6 +21,9 @@ export interface ApiUser {
   badgesCount: number;
   selectedForestThemeId: string | null;
   createdAt: string;
+  /** null until the Individual signup "personalize your experience" quiz is finished or skipped
+   * — gates whether Splash/Login route to PersonalizeOnboarding instead of Main. */
+  personalizationCompletedAt: string | null;
 }
 
 export interface AuthResponse {
@@ -51,7 +54,7 @@ export async function persistAuthResponse(response: AuthResponse): Promise<ApiUs
   return response.user;
 }
 
-export async function register(input: { email: string; password: string; name: string; handle: string }) {
+export async function register(input: { email: string; password: string; name: string; handle: string; phone: string; city: string }) {
   const response = await apiFetch<AuthResponse>('/api/auth/register', {
     method: 'POST',
     body: { ...input, deviceInfo },

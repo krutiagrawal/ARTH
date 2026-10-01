@@ -8,12 +8,14 @@ import { TYPOGRAPHY } from '../constants/typography';
 import { RADIUS, SPACING } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { PasswordInput } from '../components/common/PasswordInput';
+import { PhoneField } from '../components/common/PhoneField';
+import { CityPickerField } from '../components/common/CityPickerField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useAuth } from '../context/AuthContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { useAvailabilityCheck } from '../hooks/useAvailabilityCheck';
 import { ApiError } from '../api/client';
-import { isValidEmail } from '../utils/validation';
+import { isValidEmail, isValidPhone } from '../utils/validation';
 
 function slugifyHandle(name: string): string {
   return name
@@ -29,6 +31,9 @@ export function RegisterScreen({ navigation }: any) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [emailTouched, setEmailTouched] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [phoneTouched, setPhoneTouched] = useState(false);
+  const [city, setCity] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,9 +47,17 @@ export function RegisterScreen({ navigation }: any) {
       ? 'This email is already registered'
       : null;
 
+  const phoneValid = isValidPhone(phone);
+  const phoneAvailability = useAvailabilityCheck('phone', phone, phoneValid);
+  const phoneError = phoneTouched && phone && !phoneValid
+    ? 'Enter a valid 10-digit mobile number'
+    : phoneAvailability.taken
+      ? 'This phone number is already registered'
+      : null;
+
   const handleRegister = useCallback(async () => {
     setError(null);
-    if (!name.trim() || !email.trim() || !password) {
+    if (!name.trim() || !email.trim() || !phone.trim() || !city.trim() || !password) {
       setError('Fill in all fields to continue');
       return;
     }
@@ -57,6 +70,15 @@ export function RegisterScreen({ navigation }: any) {
       setError('This email is already registered');
       return;
     }
+    if (!phoneValid) {
+      setPhoneTouched(true);
+      setError('Enter a valid 10-digit mobile number');
+      return;
+    }
+    if (phoneAvailability.taken) {
+      setError('This phone number is already registered');
+      return;
+    }
     if (password.length < 8) {
       setError('Password must be at least 8 characters');
       return;
@@ -66,16 +88,18 @@ export function RegisterScreen({ navigation }: any) {
       await register({
         name: name.trim(),
         email: email.trim().toLowerCase(),
+        phone,
+        city: city.trim(),
         password,
         handle: slugifyHandle(name),
       });
-      navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+      navigation.reset({ index: 0, routes: [{ name: 'PersonalizeOnboarding' }] });
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
-  }, [name, email, emailValid, emailAvailability.taken, password, register, navigation]);
+  }, [name, email, emailValid, emailAvailability.taken, phone, phoneValid, phoneAvailability.taken, city, password, register, navigation]);
 
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -118,6 +142,15 @@ export function RegisterScreen({ navigation }: any) {
           ) : emailAvailability.checking ? (
             <Text style={styles.fieldHint}>Checking…</Text>
           ) : null}
+          <PhoneField
+            value={phone}
+            onChangeText={setPhone}
+            onBlur={() => setPhoneTouched(true)}
+            dark
+            error={phoneError || (phoneAvailability.checking ? 'Checking…' : null)}
+            style={styles.phoneFieldBox}
+          />
+          <CityPickerField value={city} onChange={setCity} variant="dark" />
           <PasswordInput
             inputStyle={styles.input}
             placeholder="Password (min. 8 characters)"
@@ -201,6 +234,15 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 15,
     color: COLORS.white,
+    marginBottom: SPACING.sm,
+  },
+  // Matches the glass chrome of `input` above — PhoneField renders through the shared
+  // FormFieldShell, which is transparent with a marginTop by default, so it needs this override
+  // to look like the rest of the fields on this screen instead of NGO/Nursery's bordered-only look.
+  phoneFieldBox: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderColor: 'rgba(255,255,255,0.3)',
+    marginTop: 0,
     marginBottom: SPACING.sm,
   },
   error: {
