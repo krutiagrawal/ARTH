@@ -50,6 +50,9 @@ export default async function usersRoutes(fastify: FastifyInstance) {
     const valid = await comparePassword(parsed.data.currentPassword, user.passwordHash);
     if (!valid) throw new UnauthorizedError('Current password is incorrect');
 
+    const isSameAsCurrent = await comparePassword(parsed.data.newPassword, user.passwordHash);
+    if (isSameAsCurrent) throw new BadRequestError('New password must be different from your current password');
+
     const passwordHash = await hashPassword(parsed.data.newPassword);
     const updated = await fastify.prisma.user.update({
       where: { id: user.id },

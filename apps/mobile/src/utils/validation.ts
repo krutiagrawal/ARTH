@@ -1,7 +1,7 @@
 // Shared field-format validators, used across every signup/edit form in the app so "is this a
 // real email/phone/etc." is checked the same way everywhere instead of ad hoc per screen.
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
 
 export function isValidEmail(value: string): boolean {
   return EMAIL_REGEX.test(value.trim());

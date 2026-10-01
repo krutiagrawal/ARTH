@@ -816,7 +816,7 @@ const styles = StyleSheet.create({
   },
   forestStats: {
     position: 'absolute',
-    bottom: 14,
+    bottom: -4,
     left: 20,
     right: 20,
     borderRadius: RADIUS.lg,
@@ -859,6 +859,7 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   growCtaSection: {
+    marginTop: 12,
     marginBottom: 18,
   },
   trayWrap: {

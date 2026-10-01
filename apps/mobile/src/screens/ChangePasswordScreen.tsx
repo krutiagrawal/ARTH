@@ -30,6 +30,10 @@ export function ChangePasswordScreen({ navigation }: any) {
       setError('New password must be at least 8 characters.');
       return;
     }
+    if (newPassword === currentPassword) {
+      setError('New password must be different from your current password.');
+      return;
+    }
     if (newPassword !== confirmPassword) {
       setError('New password and confirmation do not match.');
       return;
@@ -67,6 +71,7 @@ export function ChangePasswordScreen({ navigation }: any) {
           <Text style={styles.label}>Current Password</Text>
           <PasswordInput
             inputStyle={styles.input}
+            iconColor={COLORS.textSecondary}
             value={currentPassword}
             onChangeText={setCurrentPassword}
             placeholder="eg - Enter current password"
@@ -76,6 +81,7 @@ export function ChangePasswordScreen({ navigation }: any) {
           <Text style={styles.label}>New Password</Text>
           <PasswordInput
             inputStyle={styles.input}
+            iconColor={COLORS.textSecondary}
             value={newPassword}
             onChangeText={setNewPassword}
             placeholder="eg - At least 8 characters"
@@ -85,6 +91,7 @@ export function ChangePasswordScreen({ navigation }: any) {
           <Text style={styles.label}>Confirm New Password</Text>
           <PasswordInput
             inputStyle={styles.input}
+            iconColor={COLORS.textSecondary}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             placeholder="eg - Re-enter new password"
@@ -144,7 +151,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   input: {
-    backgroundColor: COLORS.white,
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
     borderRadius: RADIUS.md,
     paddingHorizontal: 14,
     paddingVertical: 12,

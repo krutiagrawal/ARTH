@@ -1,7 +1,7 @@
 // Shared field-format validators, mirroring apps/mobile/src/utils/validation.ts so "is this a
 // real email/phone/pincode/website" is checked the same way on every ARTH client.
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/
 
 export function isValidEmail(value) {
   return EMAIL_REGEX.test((value || '').trim())

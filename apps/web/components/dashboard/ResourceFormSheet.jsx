@@ -10,7 +10,7 @@ import PhotoUploadField from './PhotoUploadField'
 import CitySelect from './CitySelect'
 import { sanitizePhoneDigits } from '@/lib/validation'
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/
 // Bare 10-digit Indian mobile number — the +91 prefix rendered by the 'phone' field type is
 // never part of this value, matching what services/api's phoneSchema expects.
 const PHONE_REGEX = /^[6-9]\d{9}$/
