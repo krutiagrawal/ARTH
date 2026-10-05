@@ -38,6 +38,7 @@ import { ShareCardModal } from '../components/common/ShareCardModal';
 import { TreePlantedShareCard } from '../components/share/TreePlantedShareCard';
 import { NOT_APPROVED_MESSAGE } from '../constants/plantingLocation';
 import { getCurrentPositionWithTimeout } from '../utils/location';
+import { getSpeciesCareTip } from '../constants/speciesCareTips';
 import { EFFECTIVE_WIDTH } from '../utils/responsive';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 
@@ -310,7 +311,7 @@ function SuccessAnimation({ treeName, xpEarned, publicId, speciesName, speciesEm
 
             <Animated.View style={[styles.successTip, tilesStyle]}>
               <Text style={styles.successTipEmoji}>💧</Text>
-              <Text style={styles.successTipText}>Water it, log health check-ins and watch your impact grow 🌍</Text>
+              <Text style={styles.successTipText}>{getSpeciesCareTip(speciesName)}</Text>
             </Animated.View>
           </LinearGradient>
         </Animated.View>

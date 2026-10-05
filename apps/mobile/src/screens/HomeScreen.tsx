@@ -323,7 +323,7 @@ function MissionCard({ missions, navigation, blurTarget, previewPeriod }: { miss
                   <Text style={[styles.missionItemTitle, { color: homeTextColor(theme, theme.textPrimaryOnCard) }, mission.completed && styles.missionItemDoneText]}>
                     {mission.title}
                   </Text>
-                  <Text style={[styles.missionItemDesc, { color: homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true }) }]}>{mission.description}</Text>
+                  <Text style={[styles.missionItemDesc, { color: homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true }) }, mission.completed && styles.missionItemDoneText]}>{mission.description}</Text>
                 </View>
                 <View style={styles.missionXp}>
                   <Text style={[styles.missionXpText, { color: homeTextColor(theme, COLORS.xpBlue) }]}>+{mission.xpReward} XP</Text>
@@ -1043,7 +1043,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   missionItemDone: {
-    opacity: 0.6,
+    opacity: 1,
   },
   missionCheck: {
     width: 22,
@@ -1073,7 +1073,7 @@ const styles = StyleSheet.create({
   },
   missionItemDoneText: {
     textDecorationLine: 'line-through',
-    color: COLORS.white,
+    color: '#000000',
   },
   missionItemDesc: {
     fontSize: 11,
