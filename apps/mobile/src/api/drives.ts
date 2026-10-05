@@ -87,6 +87,33 @@ export async function fetchMySponsorships(): Promise<ApiMySponsorship[]> {
   return apiFetch<ApiMySponsorship[]>('/api/drives/sponsorships/mine');
 }
 
+export interface ApiSponsorHealthRollup {
+  driveCount: number;
+  totalTrees: number;
+  counts: { not_checked: number; healthy: number; struggling: number; dead: number; removed: number };
+}
+
+// Real PlantedTree health outcomes across every drive the user has sponsored — an aggregate,
+// not a per-sponsorship attribution (a sponsorship funds a catalog slot/drive, not one specific
+// physical tree).
+export async function fetchSponsorHealthRollup(): Promise<ApiSponsorHealthRollup> {
+  return apiFetch<ApiSponsorHealthRollup>('/api/drives/sponsorships/mine/health-rollup');
+}
+
+export interface ApiDriveTreeSummary {
+  total: number;
+  counts: { not_checked: number; healthy: number; struggling: number; dead: number; removed: number };
+  survivalRate: number;
+  lastCheckedAt: string | null;
+}
+
+// Real per-drive tree-identification/health breakdown — every logged tree already has its own
+// identity (a publicId), this just surfaces the real counts, viewable by anyone who can see the
+// drive (attendee, sponsor), not NGO-owner-only.
+export async function fetchDriveTreeSummary(driveId: string): Promise<ApiDriveTreeSummary> {
+  return apiFetch<ApiDriveTreeSummary>(`/api/drives/${driveId}/tree-summary`);
+}
+
 export async function fetchUserJoinedDrives(userId: string): Promise<ApiDrive[]> {
   return apiFetch<ApiDrive[]>(`/api/users/${userId}/drives/joined`);
 }

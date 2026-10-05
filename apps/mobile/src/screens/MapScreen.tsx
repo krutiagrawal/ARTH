@@ -730,6 +730,9 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
                 </Text>
               </View>
             </View>
+            <TouchableOpacity style={styles.indiaBtn} onPress={() => navigation.navigate('NearbyTrees')}>
+              <Text style={styles.indiaBtnText}>🌳 Nearby</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.indiaBtn} onPress={fitToOverview}>
               <Text style={styles.indiaBtnText}>🌍 Overview</Text>
             </TouchableOpacity>
@@ -863,7 +866,7 @@ const styles = StyleSheet.create({
   header: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 },
   headerBlur: { margin: 12, borderRadius: 18, overflow: 'hidden' },
   headerContent: {
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 8,
     justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12,
   },
   headerTitleRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, marginRight: 8 },

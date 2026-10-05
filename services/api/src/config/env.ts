@@ -28,6 +28,15 @@ const envSchema = z.object({
   // photos. Leave unset in dev and aiVerification.service.ts skips the check (photo passes
   // through unverified) instead of blocking planting — see services/aiVerification.service.ts.
   GEMINI_API_KEY: z.string().optional(),
+  // Temporary testing toggle — off (default) enforces planting inside an ApprovedPlantingLocation
+  // radius as normal; set to 'false' locally to plant from anywhere while testing. See
+  // plantingLocation.service.ts's assertEligiblePlantingLocation. Re-enable before any real deploy.
+  APPROVED_PLANTING_LOCATION_CHECK_ENABLED: z.enum(['true', 'false']).default('true'),
+  // Temporary testing toggle — off (default) enforces the "can't plant within 15m of your own
+  // prior planting" anti-duplicate check as normal; set to 'false' locally to replant the same
+  // spot repeatedly while testing. See plantingLocation.service.ts's assertNoNearbyOwnPlanting.
+  // Re-enable before any real deploy.
+  DUPLICATE_PLANTING_CHECK_ENABLED: z.enum(['true', 'false']).default('true'),
 });
 
 const parsed = envSchema.safeParse(process.env);

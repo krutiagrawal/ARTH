@@ -1,11 +1,19 @@
 import { FastifyInstance } from 'fastify';
 import { MultipartFile } from '@fastify/multipart';
-import { plantTreeSchema, updateTreeSchema } from '../schemas/trees.schema';
-import { saveTreePhoto } from '../services/upload.service';
+import { plantTreeSchema, updateTreeSchema, logOwnObservationSchema } from '../schemas/trees.schema';
+import { saveTreePhoto, saveHealthCheckPhoto } from '../services/upload.service';
+import { splitMultipartBody } from '../utils/multipart';
 import { plantTree } from '../services/tree.service';
+import { logOwnerObservation } from '../services/treeObservation.service';
 import { verifyPlantingPhoto } from '../services/aiVerification.service';
 import { assertGpsNotMocked, assertGpsAccuracy } from '../services/plantingLocation.service';
+import { resolvePublicId, getPassportByInternalId } from '../services/treePassport.service';
+import { findNearbyTrees } from '../services/nearbyTrees.service';
 import { BadRequestError, NotFoundError } from '../utils/errors';
+
+const DEFAULT_NEARBY_RADIUS_METERS = 800;
+const MIN_NEARBY_RADIUS_METERS = 100;
+const MAX_NEARBY_RADIUS_METERS = 1000;
 
 async function extractPhoto(body: Record<string, MultipartFile | { value: string }>) {
   for (const part of Object.values(body ?? {})) {
@@ -20,6 +28,7 @@ async function extractPhoto(body: Record<string, MultipartFile | { value: string
 function serializeTree(tree: any) {
   return {
     id: tree.id,
+    publicId: tree.publicId,
     species: tree.species?.commonName,
     speciesId: tree.speciesId,
     speciesEmoji: tree.species?.emoji,
@@ -29,6 +38,7 @@ function serializeTree(tree: any) {
     lat: Number(tree.lat),
     lng: Number(tree.lng),
     growthStage: tree.growthStage,
+    healthStatus: tree.healthStatus,
     photoUri: tree.photoUrl,
     co2Absorbed: Number(tree.co2Absorbed),
     xpEarned: tree.xpEarned,
@@ -66,6 +76,46 @@ export default async function treesRoutes(fastify: FastifyInstance) {
 
     reply.send(trees.map(serializeTree));
   });
+
+  // Broad-radius ("Trees Near Me") discovery — deliberately a much looser gate than observation
+  // eligibility (see plantingLocation.service.ts's assertCloseEnoughToObserve), and the
+  // coordinates it returns are privacy-jittered, never the true stored position.
+  fastify.get<{ Querystring: { lat?: string; lng?: string; radius?: string } }>('/nearby', async (request, reply) => {
+    const lat = Number(request.query.lat);
+    const lng = Number(request.query.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new BadRequestError('lat/lng are required');
+
+    const radius = Math.min(
+      Math.max(Number(request.query.radius) || DEFAULT_NEARBY_RADIUS_METERS, MIN_NEARBY_RADIUS_METERS),
+      MAX_NEARBY_RADIUS_METERS,
+    );
+
+    const trees = await findNearbyTrees(fastify.prisma, { lat, lng }, radius);
+    reply.send(trees);
+  });
+
+  // Resolves a permanent ARTH Tree Identity (publicId, e.g. "A48Z91" — the QR/deep-link payload)
+  // to the record it belongs to. Probes Tree first, then PlantedTree, since the two models are
+  // deliberately kept separate (see schema.prisma's Tree/PlantedTree comments) rather than
+  // merged — a publicId's prefix doesn't encode which one it is, the lookup does.
+  fastify.get<{ Params: { publicId: string } }>('/resolve/:publicId', async (request, reply) => {
+    const resolution = await resolvePublicId(fastify.prisma, request.params.publicId);
+    reply.send(resolution);
+  });
+
+  // The unified Tree Passport — works for an individual Tree or an NGO PlantedTree. Read-mostly
+  // and intentionally not owner-gated (a Passport is meant to be viewable by an adopter, a
+  // community observer, or anyone who scanned the tree's QR), unlike plantedTrees.routes.ts's
+  // NGO-owner-only mutation endpoints, which stay untouched.
+  fastify.get<{ Params: { kind: 'tree' | 'planted-tree'; id: string } }>(
+    '/passport/:kind/:id',
+    async (request, reply) => {
+      const { kind, id } = request.params;
+      if (kind !== 'tree' && kind !== 'planted-tree') throw new BadRequestError('Invalid passport kind');
+      const passport = await getPassportByInternalId(fastify.prisma, kind, id);
+      reply.send(passport);
+    },
+  );
 
   fastify.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
     const tree = await fastify.prisma.tree.findFirst({
@@ -139,6 +189,7 @@ export default async function treesRoutes(fastify: FastifyInstance) {
       caption: parsed.data.caption,
       photoUrl,
       aiVerificationStatus,
+      saplingUnitId: parsed.data.saplingUnitId,
     });
 
     reply.status(201).send(serializeTree(tree));
@@ -160,6 +211,31 @@ export default async function treesRoutes(fastify: FastifyInstance) {
     });
 
     reply.send(serializeTree(updated));
+  });
+
+  // Owner self-check-in — the tree's own "how's it doing?" log, distinct from the NGO
+  // zone/bulk health-check flow (plantedTrees.routes.ts, untouched) and the community
+  // geofenced-observation flow (treeObservations.routes.ts). Moves Tree.healthStatus.
+  fastify.post<{ Params: { id: string } }>('/:id/observations', async (request, reply) => {
+    const isMultipart = (request.headers['content-type'] ?? '').includes('multipart/form-data');
+    const { fields, file } = isMultipart
+      ? splitMultipartBody(request.body as any)
+      : { fields: (request.body ?? {}) as Record<string, unknown>, file: undefined };
+
+    const parsed = logOwnObservationSchema.safeParse(fields);
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    let photoUrl: string | undefined;
+    if (file) {
+      const buffer = await file.toBuffer();
+      photoUrl = await saveHealthCheckPhoto({ filename: file.filename, mimetype: file.mimetype, buffer });
+    }
+
+    const observation = await logOwnerObservation(fastify.prisma, request.user!.id, request.params.id, {
+      ...parsed.data,
+      photoUrl,
+    });
+    reply.status(201).send(observation);
   });
 
   fastify.delete<{ Params: { id: string } }>('/:id', async (request, reply) => {

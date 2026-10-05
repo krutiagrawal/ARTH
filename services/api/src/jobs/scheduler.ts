@@ -5,6 +5,7 @@ import { runCartAbandonedJob } from './cartAbandoned.job';
 import { runNurseryFulfillmentTodayJob } from './nurseryFulfillmentToday.job';
 import { runTreeMilestonesJob } from './treeMilestones.job';
 import { runZoneHealthCheckRemindersJob } from './zoneHealthCheckReminders.job';
+import { runOwnerHealthCheckRemindersJob } from './ownerHealthCheckReminders.job';
 import { runBulkRequirementOverdueJob } from './bulkRequirementOverdue.job';
 import { runStuckOrdersJob } from './stuckOrders.job';
 import { runNurseryReputationJob } from './nurseryReputation.job';
@@ -37,6 +38,7 @@ export function startScheduler(app: FastifyInstance): void {
       await runNurseryFulfillmentTodayJob(app.prisma);
       await runTreeMilestonesJob(app.prisma);
       await runZoneHealthCheckRemindersJob(app.prisma);
+      await runOwnerHealthCheckRemindersJob(app.prisma);
       await runBulkRequirementOverdueJob(app.prisma);
       await runStuckOrdersJob(app.prisma);
       await runNurseryReputationJob(app.prisma);

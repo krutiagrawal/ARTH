@@ -1,7 +1,9 @@
 import { apiFetch, toFormFile } from './client';
+import type { TreeHealthStatus } from './plantedTrees';
 
 export interface ApiTree {
   id: string;
+  publicId: string;
   species: string;
   speciesId: string;
   speciesEmoji: string;
@@ -11,6 +13,7 @@ export interface ApiTree {
   lat: number;
   lng: number;
   growthStage: 1 | 2 | 3 | 4 | 5;
+  healthStatus: TreeHealthStatus;
   photoUri: string | null;
   co2Absorbed: number;
   xpEarned: number;
@@ -61,6 +64,112 @@ export async function plantTree(input: PlantTreeInput): Promise<ApiTree> {
   }
 
   return apiFetch<ApiTree>('/api/trees', { method: 'POST', body: form, isForm: true });
+}
+
+interface PassportPerson {
+  id: string;
+  name: string;
+  handle: string;
+  avatarEmoji?: string;
+}
+
+interface PassportSourceUnit {
+  id: string;
+  speciesNameSnapshot: string;
+  ageAtSupplyLabel: string | null;
+  supplyDate: string;
+  nurseryId: string;
+}
+
+export interface PassportTimelineEntry {
+  id: string;
+  source: 'planted' | 'verified' | 'health_check' | 'observation';
+  status: TreeHealthStatus | string | null;
+  note: string | null;
+  photoUrl: string | null;
+  at: string;
+  observerRole?: 'owner' | 'ngo' | 'community';
+  observer?: { id: string; name: string; handle: string } | null;
+}
+
+export interface IndividualTreePassport {
+  kind: 'individual';
+  id: string;
+  publicId: string;
+  nickname: string;
+  species: { id: string; commonName: string; emoji: string };
+  plantedAt: string;
+  locationLabel: string | null;
+  lat: number;
+  lng: number;
+  photoUrl: string | null;
+  co2Absorbed: number;
+  xpEarned: number;
+  aiVerificationStatus: 'unverified' | 'verified' | 'rejected';
+  healthStatus: TreeHealthStatus;
+  owner: PassportPerson;
+  nursery: { id: string; nurseryName: string; logoUrl: string | null } | null;
+  sourceUnit: PassportSourceUnit | null;
+  timeline: PassportTimelineEntry[];
+}
+
+export interface NgoTreePassport {
+  kind: 'ngo';
+  id: string;
+  publicId: string;
+  speciesName: string;
+  label: string | null;
+  plantedAt: string;
+  locationLabel: string | null;
+  lat: number | null;
+  lng: number | null;
+  photoUrl: string | null;
+  ngo: { id: string; orgName: string; logoUrl: string | null };
+  drive: { id: string; title: string } | null;
+  zone: { id: string; name: string } | null;
+  sourceUnit: PassportSourceUnit | null;
+  adopter: PassportPerson | null;
+  healthStatus: TreeHealthStatus;
+  timeline: PassportTimelineEntry[];
+}
+
+export type TreePassport = IndividualTreePassport | NgoTreePassport;
+
+export async function fetchTreePassport(kind: 'tree' | 'planted-tree', id: string): Promise<TreePassport> {
+  return apiFetch<TreePassport>(`/api/trees/passport/${kind}/${id}`);
+}
+
+export interface LogOwnObservationInput {
+  status: Exclude<TreeHealthStatus, 'not_checked'>;
+  note?: string;
+  photo?: { uri: string; name: string; type: string };
+}
+
+export async function logOwnObservation(treeId: string, input: LogOwnObservationInput): Promise<unknown> {
+  const form = new FormData();
+  form.append('status', input.status);
+  if (input.note?.trim()) form.append('note', input.note.trim());
+  if (input.photo) form.append('photo', toFormFile(input.photo.uri), input.photo.name);
+  return apiFetch(`/api/trees/${treeId}/observations`, { method: 'POST', body: form, isForm: true });
+}
+
+export interface ApiNearbyTree {
+  id: string;
+  kind: 'tree' | 'planted-tree';
+  publicId: string;
+  species: string;
+  speciesEmoji: string | null;
+  photoUrl: string | null;
+  healthStatus: TreeHealthStatus;
+  approxDistanceM: number;
+  lat: number;
+  lng: number;
+}
+
+export async function fetchNearbyTrees(params: { lat: number; lng: number; radius?: number }): Promise<ApiNearbyTree[]> {
+  const query = new URLSearchParams({ lat: String(params.lat), lng: String(params.lng) });
+  if (params.radius) query.set('radius', String(params.radius));
+  return apiFetch<ApiNearbyTree[]>(`/api/trees/nearby?${query.toString()}`);
 }
 
 export interface VerifyPlantingPhotoResult {

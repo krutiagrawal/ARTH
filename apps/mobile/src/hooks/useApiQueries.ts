@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
-import { fetchTrees, plantTree, verifyPlantingPhoto, fetchTreesMap, type PlantTreeInput } from '../api/trees';
+import { fetchTrees, plantTree, verifyPlantingPhoto, fetchTreesMap, fetchTreePassport, fetchNearbyTrees, logOwnObservation, type PlantTreeInput, type LogOwnObservationInput } from '../api/trees';
+import { logCommunityObservation, type LogCommunityObservationInput } from '../api/treeObservations';
 import { fetchNgoPublicFollowers, fetchNurseryPublicFollowers } from '../api/publicFollowers';
 import { fetchApprovedLocations, checkPlantingEligibility } from '../api/plantingLocations';
 import { fetchSpecies, createSpecies, fetchNearbyStock } from '../api/species';
@@ -70,6 +71,8 @@ import {
   fetchDriveAttendees,
   fetchDriveSponsors,
   fetchMySponsorships,
+  fetchSponsorHealthRollup,
+  fetchDriveTreeSummary,
   setDriveRsvpAttendance,
   cancelDrive,
   completeDrive,
@@ -294,6 +297,47 @@ export function useTrees(limit?: number, enabled: boolean = true) {
     queryKey: ['trees', limit],
     queryFn: () => fetchTrees({ limit }),
     enabled: isAuthenticated && enabled,
+  });
+}
+
+export function useTreePassport(kind: 'tree' | 'planted-tree', id: string | undefined) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['trees', 'passport', kind, id],
+    queryFn: () => fetchTreePassport(kind, id as string),
+    enabled: isAuthenticated && !!id,
+  });
+}
+
+export function useLogOwnObservation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ treeId, ...input }: { treeId: string } & LogOwnObservationInput) => logOwnObservation(treeId, input),
+    onSuccess: () => {
+      // Shares the 'trees' prefix with the list, map, and passport queries — one invalidation
+      // covers all of them (healthStatus just changed, and a new timeline entry was added).
+      queryClient.invalidateQueries({ queryKey: ['trees'] });
+    },
+  });
+}
+
+export function useNearbyTrees(coords: { lat: number; lng: number } | null, radius?: number) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['trees', 'nearby', coords, radius],
+    queryFn: () => fetchNearbyTrees({ lat: coords!.lat, lng: coords!.lng, radius }),
+    enabled: isAuthenticated && !!coords,
+  });
+}
+
+export function useLogCommunityObservation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: LogCommunityObservationInput) => logCommunityObservation(input),
+    onSuccess: (_data, input) => {
+      queryClient.invalidateQueries({ queryKey: ['trees'] });
+      queryClient.invalidateQueries({ queryKey: ['trees', 'passport', input.targetKind, input.targetId] });
+    },
   });
 }
 
@@ -976,6 +1020,24 @@ export function useMySponsorships() {
     queryKey: ['drives', 'sponsorships', 'mine'],
     queryFn: fetchMySponsorships,
     enabled: isAuthenticated,
+  });
+}
+
+export function useSponsorHealthRollup() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['drives', 'sponsorships', 'mine', 'health-rollup'],
+    queryFn: fetchSponsorHealthRollup,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useDriveTreeSummary(driveId: string | undefined) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['drives', driveId, 'tree-summary'],
+    queryFn: () => fetchDriveTreeSummary(driveId as string),
+    enabled: isAuthenticated && !!driveId,
   });
 }
 

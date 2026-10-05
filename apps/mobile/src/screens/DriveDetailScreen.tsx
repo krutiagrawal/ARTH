@@ -24,7 +24,9 @@ import {
   useCancelDrive,
   useCompleteDrive,
   useSetDriveFeatured,
+  useDriveTreeSummary,
 } from '../hooks/useApiQueries';
+import { STATUS_META } from '../constants/treeHealth';
 import { ApiError } from '../api/client';
 import type { ApiDrivePlant } from '../api/drives';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -52,6 +54,7 @@ export function DriveDetailScreen({ navigation, route }: any) {
   const isOwnDrive = user?.role === 'ngo' && !!drive && ngoProfile.data?.id === drive.ngoId;
   const attendeesQuery = useDriveAttendees(driveId, isOwnDrive);
   const sponsorsQuery = useDriveSponsors(driveId, isOwnDrive);
+  const { data: treeSummary } = useDriveTreeSummary(driveId);
   const attendanceMutation = useSetDriveRsvpAttendance(driveId);
   const joinMutation = useJoinDrive();
   const leaveMutation = useLeaveDrive();
@@ -219,6 +222,28 @@ export function DriveDetailScreen({ navigation, route }: any) {
             label={drive.transportMode === 'ngo_provided' ? 'Drive location' : 'Location'}
             address={[drive.address, drive.city].filter(Boolean).join(', ')}
           />
+
+          {treeSummary && treeSummary.total > 0 ? (
+            <>
+              <Text style={styles.sectionLabel}>Impact so far</Text>
+              <BorderCard style={styles.card}>
+                <Text style={styles.infoText}>
+                  {treeSummary.total} tree{treeSummary.total === 1 ? '' : 's'} logged · {treeSummary.survivalRate}% survival rate
+                </Text>
+                <View style={styles.treeCountsRow}>
+                  {(['healthy', 'struggling', 'dead', 'not_checked'] as const)
+                    .filter((status) => treeSummary.counts[status] > 0)
+                    .map((status) => (
+                      <View key={status} style={[styles.treeCountPill, { borderColor: STATUS_META[status].color }]}>
+                        <Text style={[styles.treeCountPillText, { color: STATUS_META[status].color }]}>
+                          {treeSummary.counts[status]} {STATUS_META[status].label}
+                        </Text>
+                      </View>
+                    ))}
+                </View>
+              </BorderCard>
+            </>
+          ) : null}
 
           {drive.transportMode === 'ngo_provided' && drive.pickupPoints.length > 0 && (
             <>
@@ -405,6 +430,9 @@ const styles = StyleSheet.create({
   infoIcon: { fontSize: 14 },
   infoText: { fontSize: 13, color: COLORS.textSecondary, flex: 1 },
   sectionLabel: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8, marginTop: 4 },
+  treeCountsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  treeCountPill: { paddingVertical: 5, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1.5 },
+  treeCountPillText: { fontSize: 11, fontWeight: '700' },
   instructionsCard: { backgroundColor: 'rgba(212,168,83,0.12)', borderRadius: RADIUS.lg, padding: 14, marginBottom: 16 },
   instructionsLabel: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 },
   instructionsText: { fontSize: 13, lineHeight: 19, color: COLORS.textPrimary },

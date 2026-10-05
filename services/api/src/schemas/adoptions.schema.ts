@@ -7,6 +7,9 @@ export const createAdoptableTreeSchema = z.object({
   instructions: z.string().max(2000).optional(),
   city: z.string().min(1).max(100),
   locationLabel: z.string().max(200).optional(),
+  // Present only when creating this listing FROM a real PlantedTree row — see
+  // adoption.service.ts's createAdoptableTree.
+  plantedTreeId: z.string().uuid().optional(),
 });
 
 export const updateAdoptableTreeSchema = z.object({

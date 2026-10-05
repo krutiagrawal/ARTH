@@ -11,6 +11,7 @@ import {
 import { saveDrivePhoto } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
 import * as driveService from '../services/drive.service';
+import { getPublicDriveTreeSummary } from '../services/plantationZone.service';
 import { BadRequestError } from '../utils/errors';
 
 export function serializeDrive(entry: any) {
@@ -74,6 +75,18 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
   // Plants the calling user has sponsored, across every drive — for the activity hub.
   fastify.get('/sponsorships/mine', async (request, reply) => {
     reply.send(await driveService.listMySponsorships(fastify.prisma, request.user!.id));
+  });
+
+  // Real PlantedTree health outcomes across every drive the user has sponsored — an aggregate,
+  // not a per-sponsorship attribution (see getSponsorHealthRollup's comment).
+  fastify.get('/sponsorships/mine/health-rollup', async (request, reply) => {
+    reply.send(await driveService.getSponsorHealthRollup(fastify.prisma, request.user!.id));
+  });
+
+  // Real tree-identification/health counts for this drive — viewable by anyone who can see the
+  // drive itself (attendee, sponsor), not NGO-owner-gated.
+  fastify.get<{ Params: { id: string } }>('/:id/tree-summary', async (request, reply) => {
+    reply.send(await getPublicDriveTreeSummary(fastify.prisma, request.params.id));
   });
 
   fastify.get<{ Params: { id: string } }>(

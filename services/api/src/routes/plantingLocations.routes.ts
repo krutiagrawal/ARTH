@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { checkPlantingLocationSchema } from '../schemas/plantingLocations.schema';
 import { listApprovedLocations, findMatchingLocation } from '../services/plantingLocation.service';
 import { BadRequestError } from '../utils/errors';
+import { env } from '../config/env';
 
 function serializeLocation(location: any) {
   return {
@@ -25,7 +26,7 @@ export default async function plantingLocationsRoutes(fastify: FastifyInstance) 
 
     const match = await findMatchingLocation(fastify.prisma, parsed.data);
     reply.send({
-      eligible: !!match,
+      eligible: !!match || env.APPROVED_PLANTING_LOCATION_CHECK_ENABLED === 'false',
       location: match ? { id: match.id, name: match.name } : undefined,
     });
   });

@@ -337,7 +337,7 @@ function MissionCard({ missions, navigation, blurTarget, previewPeriod }: { miss
   );
 }
 
-function RecentTrees({ trees, onNavigateTab, blurTarget, previewPeriod }: { trees: ApiTree[]; onNavigateTab: (tab: string) => void; blurTarget: RefObject<View | null>; previewPeriod?: TimePeriod | null }) {
+function RecentTrees({ trees, navigation, blurTarget, previewPeriod }: { trees: ApiTree[]; navigation: any; blurTarget: RefObject<View | null>; previewPeriod?: TimePeriod | null }) {
   const slideStyle = useSlideUp(200, 24);
   const { data: homeSettings } = useSettings();
   const theme = useTimeTheme((previewPeriod !== undefined ? previewPeriod : (homeSettings?.pinnedTimeTheme ?? null)) as TimePeriod | null);
@@ -347,7 +347,7 @@ function RecentTrees({ trees, onNavigateTab, blurTarget, previewPeriod }: { tree
     <Animated.View style={slideStyle}>
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionTitle, { color: theme.textOnSky }]}>Recent Plants</Text>
-        <TouchableOpacity onPress={() => onNavigateTab('Map')}>
+        <TouchableOpacity onPress={() => navigation.navigate('MyTrees')}>
           <Text style={[styles.seeAll, { color: homeTextColor(theme, theme.accentColor) }]}>See all →</Text>
         </TouchableOpacity>
       </View>
@@ -358,7 +358,7 @@ function RecentTrees({ trees, onNavigateTab, blurTarget, previewPeriod }: { tree
             tree={tree}
             size="chip"
             theme={theme}
-            onPress={() => onNavigateTab('Map')}
+            onPress={() => navigation.navigate('TreePassport', { kind: 'tree', id: tree.id })}
             style={styles.treeCardSpacing}
             blurTarget={blurTarget}
           />
@@ -607,7 +607,7 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
         </View>
 
         <MissionCard missions={missions} navigation={navigation} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />
-        <RecentTrees trees={trees} onNavigateTab={onNavigateTab} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />
+        <RecentTrees trees={trees} navigation={navigation} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />
         {todayFact ? (
           <View style={styles.ecoInsightSection}>
             <View style={styles.sectionHeader}>

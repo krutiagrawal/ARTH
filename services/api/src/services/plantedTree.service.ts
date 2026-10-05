@@ -1,4 +1,4 @@
-import { PrismaClient, TreeHealthStatus } from '@arth/db';
+import { PrismaClient, TreeHealthStatus, generatePublicId } from '@arth/db';
 
 // 'not_checked' is a derived absence-of-check state, never something you can actually log a
 // health check as — the routes' zod schemas already restrict incoming status to these four.
@@ -16,6 +16,11 @@ interface BulkCreateInput {
   lat?: number;
   lng?: number;
   photoUrl?: string;
+  // Present only when the NGO is scanning individually-tracked saplings that arrived via a
+  // nursery bulk-requirement fulfilment (see bulkRequirement.service.ts) — completes the
+  // nursery->NGO batch provenance chain. Must have exactly `count` entries when provided; the
+  // existing no-units path (a bare count + one representative photo) is unaffected.
+  saplingUnitIds?: string[];
 }
 
 interface ListFilter {
@@ -45,6 +50,31 @@ export async function getLatestStatusByTree(prisma: PrismaClient, plantedTreeIds
   return map;
 }
 
+const UNIQUE_ID_GENERATION_PASSES = 5;
+
+// createManyAndReturn can't retry per-row the way a single create() can, so generate `count`
+// candidate publicIds up front, check them against the DB in one findMany, and regenerate only
+// the colliding ones — convergence in 1-2 passes is expected at this ID-space size.
+async function generateUniquePublicIds(prisma: PrismaClient, count: number): Promise<string[]> {
+  const ids = new Set<string>();
+  while (ids.size < count) ids.add(generatePublicId());
+  let candidates = Array.from(ids);
+
+  for (let pass = 0; pass < UNIQUE_ID_GENERATION_PASSES; pass++) {
+    const existing = await prisma.plantedTree.findMany({
+      where: { publicId: { in: candidates } },
+      select: { publicId: true },
+    });
+    if (existing.length === 0) return candidates;
+
+    const taken = new Set(existing.map((e) => e.publicId));
+    const regenerated = new Set(candidates.filter((id) => !taken.has(id)));
+    while (regenerated.size < count) regenerated.add(generatePublicId());
+    candidates = Array.from(regenerated);
+  }
+  throw new Error('Could not generate enough unique publicIds');
+}
+
 // Creates `count` individual PlantedTree rows in one call (NGOs realistically plant in the
 // hundreds). Trees start with no health-check record at all — they read as 'not_checked' until
 // someone actually inspects them, rather than a fake auto-'healthy' check that used to make an
@@ -56,6 +86,10 @@ export async function bulkCreatePlantedTrees(prisma: PrismaClient, ngoUserId: st
   // representative photo of the batch, same evidence bar as an individual tree planting.
   if (!input.photoUrl) throw new BadRequestError('A photo of the planting is required to log trees.');
 
+  if (input.saplingUnitIds && input.saplingUnitIds.length !== input.count) {
+    throw new BadRequestError('saplingUnitIds must have exactly `count` entries.');
+  }
+
   if (input.driveId) {
     const drive = await prisma.drive.findFirst({ where: { id: input.driveId, ngoId: ngo.id } });
     if (!drive) throw new NotFoundError('Drive not found');
@@ -66,9 +100,28 @@ export async function bulkCreatePlantedTrees(prisma: PrismaClient, ngoUserId: st
     if (!zone) throw new NotFoundError('Zone not found');
   }
 
+  const publicIds = await generateUniquePublicIds(prisma, input.count);
+
   return prisma.$transaction(async (tx) => {
+    if (input.saplingUnitIds) {
+      // Must be collected, must belong to a bulk-requirement fulfilment this NGO itself raised
+      // — never a marketplace/reservation-sourced unit, which is tree.service.ts's plantTree's
+      // path instead, never this one.
+      const matched = await tx.arthSaplingUnit.findMany({
+        where: {
+          id: { in: input.saplingUnitIds },
+          status: 'collected',
+          bulkRequirementResponse: { requirement: { ngoId: ngo.id } },
+        },
+        select: { id: true },
+      });
+      if (matched.length !== input.saplingUnitIds.length) {
+        throw new BadRequestError('One or more sapling units could not be matched to a collected bulk-requirement fulfilment for this NGO.');
+      }
+    }
+
     const created = await tx.plantedTree.createManyAndReturn({
-      data: Array.from({ length: input.count }, () => ({
+      data: publicIds.map((publicId) => ({
         ngoId: ngo.id,
         driveId: input.driveId,
         zoneId: input.zoneId,
@@ -77,8 +130,17 @@ export async function bulkCreatePlantedTrees(prisma: PrismaClient, ngoUserId: st
         lat: input.lat,
         lng: input.lng,
         photoUrl: input.photoUrl,
+        publicId,
       })),
     });
+
+    if (input.saplingUnitIds) {
+      await Promise.all(
+        input.saplingUnitIds.map((unitId, i) =>
+          tx.arthSaplingUnit.update({ where: { id: unitId }, data: { status: 'planted', plantedTreeId: created[i].id } }),
+        ),
+      );
+    }
 
     await recordNgoContribution(tx, ngo.id, ['impact_verification']);
     await recomputeReputation(tx, ngo.id);

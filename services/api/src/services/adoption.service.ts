@@ -13,6 +13,11 @@ interface CreateAdoptableTreeInput {
   city: string;
   locationLabel?: string;
   photoUrl?: string;
+  // Present only when this listing is created FROM a real PlantedTree row — lets the listing
+  // resolve to an actual tree identity (so its Passport's "People" section can show the
+  // adopter), per "connect, don't force" — existing standalone listings (this field omitted)
+  // keep their own fields as the only source of truth, exactly as before.
+  plantedTreeId?: string;
 }
 
 interface UpdateAdoptableTreeInput {
@@ -51,9 +56,38 @@ async function findOwnedTreeOrThrow(prisma: PrismaClient, ngoUserId: string, tre
 
 export async function createAdoptableTree(prisma: PrismaClient, ngoUserId: string, input: CreateAdoptableTreeInput) {
   const ngo = await requireApprovedNgoProfile(prisma, ngoUserId);
-  const geo = await geocodeAddress(`${input.locationLabel ?? ''}, ${input.city}`);
+
+  let plantedTreeFields: { speciesName?: string; photoUrl?: string | null; locationLabel?: string | null; lat?: number; lng?: number } = {};
+  if (input.plantedTreeId) {
+    const plantedTree = await prisma.plantedTree.findFirst({ where: { id: input.plantedTreeId, ngoId: ngo.id } });
+    if (!plantedTree) throw new NotFoundError('Planted tree not found');
+    plantedTreeFields = {
+      speciesName: plantedTree.speciesName,
+      photoUrl: plantedTree.photoUrl,
+      locationLabel: plantedTree.locationLabel,
+      lat: plantedTree.lat !== null ? Number(plantedTree.lat) : undefined,
+      lng: plantedTree.lng !== null ? Number(plantedTree.lng) : undefined,
+    };
+  }
+
+  // Only geocode from the city/address when there's no real PlantedTree coordinate to use
+  // instead — unchanged behavior for every standalone listing.
+  const geo = plantedTreeFields.lat === undefined ? await geocodeAddress(`${input.locationLabel ?? ''}, ${input.city}`) : null;
+
   return prisma.adoptableTree.create({
-    data: { ngoId: ngo.id, ...input, lat: geo?.lat, lng: geo?.lng },
+    data: {
+      ngoId: ngo.id,
+      nickname: input.nickname,
+      speciesName: plantedTreeFields.speciesName ?? input.speciesName,
+      description: input.description,
+      instructions: input.instructions,
+      city: input.city,
+      locationLabel: plantedTreeFields.locationLabel ?? input.locationLabel,
+      photoUrl: plantedTreeFields.photoUrl ?? input.photoUrl,
+      lat: plantedTreeFields.lat ?? geo?.lat,
+      lng: plantedTreeFields.lng ?? geo?.lng,
+      plantedTreeId: input.plantedTreeId,
+    },
     include: adoptableTreeInclude,
   });
 }

@@ -1,4 +1,4 @@
-import { DriveStatus, DriveTransportMode, PrismaClient } from '@arth/db';
+import { DriveStatus, DriveTransportMode, PrismaClient, TreeHealthStatus } from '@arth/db';
 import { getStripeClient } from '../lib/stripe';
 import { ConflictError, ForbiddenError, NotFoundError, ServiceUnavailableError } from '../utils/errors';
 import { geocodeAddress } from '../utils/geocode';
@@ -6,6 +6,7 @@ import { haversineDistanceKm } from '../utils/geo';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
 import { notify } from './notification.service';
 import { recordNgoContribution, recomputeReputation } from './ngoReputation.service';
+import { getLatestStatusByTree } from './plantedTree.service';
 
 interface PickupPointInput {
   address: string;
@@ -512,6 +513,27 @@ export async function listMySponsorships(prisma: PrismaClient, userId: string) {
     driveTitle: s.drivePlant.drive.title,
     ngoName: s.drivePlant.drive.ngo.orgName,
   }));
+}
+
+// Aggregate-only rollup, deliberately not a per-tree attribution — a sponsorship funds a
+// catalog slot/drive, not a specific physical tree (see DrivePlant's comment), so this rolls up
+// the REAL PlantedTree health outcomes of every drive the user has sponsored at least one plant
+// in, rather than inventing a one-to-one sponsorship->tree link that doesn't exist in the data.
+export async function getSponsorHealthRollup(prisma: PrismaClient, userId: string) {
+  const sponsorships = await prisma.drivePlantSponsorship.findMany({
+    where: { userId, status: 'succeeded' },
+    select: { drivePlant: { select: { driveId: true } } },
+  });
+  const driveIds = Array.from(new Set(sponsorships.map((s) => s.drivePlant.driveId)));
+
+  const counts: Record<TreeHealthStatus, number> = { not_checked: 0, healthy: 0, struggling: 0, dead: 0, removed: 0 };
+  if (driveIds.length === 0) return { driveCount: 0, totalTrees: 0, counts };
+
+  const trees = await prisma.plantedTree.findMany({ where: { driveId: { in: driveIds } }, select: { id: true } });
+  const statusByTree = await getLatestStatusByTree(prisma, trees.map((t) => t.id));
+  for (const tree of trees) counts[statusByTree.get(tree.id) ?? 'not_checked'] += 1;
+
+  return { driveCount: driveIds.length, totalTrees: trees.length, counts };
 }
 
 export async function sponsorPlant(prisma: PrismaClient, userId: string, driveId: string, plantId: string) {

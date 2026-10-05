@@ -229,6 +229,18 @@ export async function getPlantationsOverview(prisma: PrismaClient, ngoUserId: st
 // has logged trees (using the drive's own lat/lng, since zones have no coordinates of their own),
 // with a per-zone survival breakdown for that pin's info sheet. No ownership check: this only
 // exposes what's already shown in aggregate on the public profile, plus zone names/counts.
+// Real per-drive tree-identification/health breakdown — viewable by anyone who can already see
+// the drive (an attendee, a sponsor), not NGO-owner-gated like getPlantationsOverview above.
+// Every PlantedTree row is already its own identified entity (carries a publicId — see
+// tree_identity_and_observations migration) even when logged via the bulk endpoint, so this
+// surfaces the real counts rather than inventing a separate "batch vs. individually identified"
+// distinction the current data model has no basis for.
+export async function getPublicDriveTreeSummary(prisma: PrismaClient, driveId: string) {
+  const { byZone, statusByTree, lastCheckedByTree } = await rollupsByZone(prisma, driveId);
+  const allTrees = Array.from(byZone.values()).flat();
+  return rollupGroup(allTrees, statusByTree, lastCheckedByTree);
+}
+
 export async function listPublicPlantingSummary(prisma: PrismaClient, ngoId: string) {
   const drives = await prisma.drive.findMany({
     where: { ngoId, plantedTrees: { some: {} } },

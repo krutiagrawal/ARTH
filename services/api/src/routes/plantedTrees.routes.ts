@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { ORG_ROLES } from '../constants/roles';
 import * as plantedTreeService from '../services/plantedTree.service';
 import * as plantationZoneService from '../services/plantationZone.service';
+import { logNgoIndividualObservation } from '../services/treeObservation.service';
 import { savePlantedTreePhoto, saveHealthCheckPhoto } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
 import {
@@ -14,6 +15,7 @@ import {
   renameZoneSchema,
   listZonesQuerySchema,
   zoneBulkHealthCheckSchema,
+  ngoIndividualObservationSchema,
 } from '../schemas/plantedTrees.schema';
 import { BadRequestError } from '../utils/errors';
 
@@ -167,6 +169,32 @@ export default async function plantedTreesRoutes(fastify: FastifyInstance) {
       photoUrl,
     });
     reply.status(wasUpdate ? 200 : 201).send(check);
+  });
+
+  // An NGO staffer observing one individually-identified PlantedTree outside the zone/bulk flow
+  // above — writes to the generalized TreeObservation model instead of TreeHealthCheck, so it
+  // never changes computeSurvivalStats/getLatestStatusByTree's numbers. Feeds the unified
+  // Passport timeline only (see treePassport.service.ts).
+  fastify.post<{ Params: { id: string } }>('/:id/observations', async (request, reply) => {
+    const isMultipart = (request.headers['content-type'] ?? '').includes('multipart/form-data');
+    const { fields, file } = isMultipart
+      ? splitMultipartBody(request.body as any)
+      : { fields: (request.body ?? {}) as Record<string, unknown>, file: undefined };
+
+    const parsed = ngoIndividualObservationSchema.safeParse(fields);
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    let photoUrl: string | undefined;
+    if (file) {
+      const buffer = await file.toBuffer();
+      photoUrl = await saveHealthCheckPhoto({ filename: file.filename, mimetype: file.mimetype, buffer });
+    }
+
+    const observation = await logNgoIndividualObservation(fastify.prisma, request.user!.id, request.params.id, {
+      ...parsed.data,
+      photoUrl,
+    });
+    reply.status(201).send(observation);
   });
 
   fastify.post('/health-checks/bulk', async (request, reply) => {

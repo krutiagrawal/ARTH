@@ -78,6 +78,10 @@ import { HomeThemePickerScreen } from '../screens/HomeThemePickerScreen';
 import { FriendsListScreen } from '../screens/FriendsListScreen';
 import { DrivesListScreen } from '../screens/DrivesListScreen';
 import { DriveDetailScreen } from '../screens/DriveDetailScreen';
+import { MyTreesScreen } from '../screens/MyTreesScreen';
+import { TreePassportScreen } from '../screens/TreePassportScreen';
+import { NearbyTreesScreen } from '../screens/NearbyTreesScreen';
+import { LogCommunityObservationScreen } from '../screens/LogCommunityObservationScreen';
 import { AdoptTreeListScreen } from '../screens/AdoptTreeListScreen';
 import { AdoptTreeDetailScreen } from '../screens/AdoptTreeDetailScreen';
 import { EcoInsightsScreen } from '../screens/EcoInsightsScreen';
@@ -390,7 +394,7 @@ export type RootStackParamList = {
   CorporateMain: undefined;
   CorporateSponsorships: undefined;
   Main: undefined;
-  PlantTree: { verifiedLat?: number; verifiedLng?: number } | undefined;
+  PlantTree: { verifiedLat?: number; verifiedLng?: number; preselectSpeciesId?: string } | undefined;
   StreakProtection: undefined;
   Settings: undefined;
   Profile: undefined;
@@ -405,6 +409,17 @@ export type RootStackParamList = {
   FriendsList: { mode: 'requests' | 'squad' };
   Drives: undefined;
   DriveDetail: { driveId: string };
+  MyTrees: undefined;
+  TreePassport: { kind: 'tree' | 'planted-tree'; id: string };
+  NearbyTrees: undefined;
+  LogCommunityObservation: {
+    kind: 'tree' | 'planted-tree';
+    id: string;
+    species?: string;
+    speciesEmoji?: string | null;
+    photoUrl?: string | null;
+    publicId?: string;
+  };
   AdoptTreeList: undefined;
   AdoptTreeDetail: { treeId: string };
   Campaigns: undefined;
@@ -923,6 +938,10 @@ export function AppNavigator() {
         />
         <Stack.Screen name="Drives" component={DrivesListScreen} />
         <Stack.Screen name="DriveDetail" component={DriveDetailScreen} />
+        <Stack.Screen name="MyTrees" component={MyTreesScreen} />
+        <Stack.Screen name="TreePassport" component={TreePassportScreen} />
+        <Stack.Screen name="NearbyTrees" component={NearbyTreesScreen} />
+        <Stack.Screen name="LogCommunityObservation" component={LogCommunityObservationScreen} />
         <Stack.Screen name="AdoptTreeList" component={AdoptTreeListScreen} />
         <Stack.Screen name="AdoptTreeDetail" component={AdoptTreeDetailScreen} />
         <Stack.Screen name="EcoInsights" component={EcoInsightsScreen} />

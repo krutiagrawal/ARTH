@@ -55,6 +55,7 @@ import ngoFollowersRoutes from './routes/ngoFollowers.routes';
 import portfolioRoutes from './routes/portfolio.routes';
 import portfolioLikesRoutes from './routes/portfolioLikes.routes';
 import plantedTreesRoutes from './routes/plantedTrees.routes';
+import treeObservationsRoutes from './routes/treeObservations.routes';
 import competitionsPublicRoutes from './routes/competitions.public.routes';
 import competitionsRoutes from './routes/competitions.routes';
 import nurseryFollowersRoutes from './routes/nurseryFollowers.routes';
@@ -152,6 +153,7 @@ export async function buildApp() {
     // /notifications, /blocks, /reports, /push-tokens) that don't share one prefix.
     await instance.register(socialRoutes, { prefix: '/api' });
     await instance.register(plantedTreesRoutes, { prefix: '/api/ngo/planted-trees' });
+    await instance.register(treeObservationsRoutes, { prefix: '/api/tree-observations' });
     await instance.register(competitionsRoutes, { prefix: '/api/competitions' });
     await instance.register(addressesRoutes, { prefix: '/api/addresses' });
     await instance.register(cartRoutes, { prefix: '/api/cart' });

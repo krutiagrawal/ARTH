@@ -17,8 +17,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import { COLORS } from '../constants/colors';
+import { COLORS, GRADIENTS } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
+import { TYPOGRAPHY } from '../constants/typography';
 import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { StatusModal } from '../components/common/StatusModal';
@@ -50,10 +51,13 @@ const SPECIES_GRID_GAP = 8;
 const SPECIES_CHIP_WIDTH = (EFFECTIVE_WIDTH - SPECIES_GRID_PADDING * 2 - SPECIES_GRID_GAP * 2) / 3;
 const INITIAL_SPECIES_COUNT = 9;
 
-// The real enforcement lives server-side (tree.service.ts's assertEligiblePlantingLocation call)
-// — this flag only controls whether the frontend shows the pre-check/warning before submit
-// instead of letting the user find out from a rejected submission.
-const ARTH_APPROVED_LOCATION_CHECK_ENABLED = true;
+// The real enforcement lives server-side (tree.service.ts's assertEligiblePlantingLocation call,
+// gated by APPROVED_PLANTING_LOCATION_CHECK_ENABLED in services/api/.env) — this flag only
+// controls whether the frontend shows the pre-check/warning before submit instead of letting the
+// user find out from a rejected submission.
+// TEMPORARILY set to false for testing — flip back to true (and the server env var back to
+// true) before any real deploy.
+const ARTH_APPROVED_LOCATION_CHECK_ENABLED = false;
 
 type Stage = 'upload' | 'scanning' | 'details' | 'success';
 
@@ -147,16 +151,49 @@ function ScanAnimation({ onComplete }: { onComplete: () => void }) {
   );
 }
 
-function SuccessAnimation({ treeName, xpEarned }: { treeName: string; xpEarned: number }) {
+function SuccessAnimation({ treeName, xpEarned, publicId }: { treeName: string; xpEarned: number; publicId?: string }) {
+  // The card itself now animates in — a gentle 3D flip-up-into-place, as if it were laid down
+  // on a table, rather than just appearing while only the particles around it move.
+  const cardOpacity = useSharedValue(0);
+  const cardScale = useSharedValue(0.82);
+  const cardTiltX = useSharedValue(55);
+  const glowOpacity = useSharedValue(0);
   const checkScale = useSharedValue(0);
   const confettiOpacity = useSharedValue(0);
   const textOpacity = useSharedValue(0);
+  // Identity-card reveal — sequenced after the existing checkmark/XP beats, same primitives
+  // (withDelay/withSpring/withTiming) already used above, no new animation library.
+  const idCardRotation = useSharedValue(90);
+  const idCardOpacity = useSharedValue(0);
 
   React.useEffect(() => {
-    checkScale.value = withDelay(200, withSpring(1, { damping: 8, stiffness: 150 }));
+    cardOpacity.value = withTiming(1, { duration: 400 });
+    cardScale.value = withSpring(1, { damping: 11, stiffness: 110 });
+    cardTiltX.value = withSpring(0, { damping: 12, stiffness: 90 });
+    checkScale.value = withDelay(250, withSpring(1, { damping: 8, stiffness: 150 }));
     confettiOpacity.value = withDelay(400, withTiming(1, { duration: 600 }));
-    textOpacity.value = withDelay(600, withTiming(1, { duration: 500 }));
+    textOpacity.value = withDelay(650, withTiming(1, { duration: 500 }));
+    // A slow, soft breathing glow behind the card once it settles — subtle, not a gamified pulse.
+    glowOpacity.value = withDelay(
+      500,
+      withRepeat(withSequence(withTiming(0.55, { duration: 1400 }), withTiming(0.2, { duration: 1400 })), -1, true),
+    );
+    if (publicId) {
+      idCardOpacity.value = withDelay(1300, withTiming(1, { duration: 300 }));
+      idCardRotation.value = withDelay(1300, withSpring(0, { damping: 10, stiffness: 120 }));
+    }
   }, []);
+
+  const glowStyle = useAnimatedStyle(() => ({ opacity: glowOpacity.value }));
+
+  const cardStyle = useAnimatedStyle(() => ({
+    opacity: cardOpacity.value,
+    transform: [
+      { perspective: 900 },
+      { scale: cardScale.value },
+      { rotateX: `${cardTiltX.value}deg` },
+    ],
+  }));
 
   const checkStyle = useAnimatedStyle(() => ({
     transform: [{ scale: checkScale.value }],
@@ -167,32 +204,48 @@ function SuccessAnimation({ treeName, xpEarned }: { treeName: string; xpEarned: 
     transform: [{ translateY: 20 - textOpacity.value * 20 }],
   }));
 
+  const idCardStyle = useAnimatedStyle(() => ({
+    opacity: idCardOpacity.value,
+    transform: [{ perspective: 800 }, { rotateY: `${idCardRotation.value}deg` }],
+  }));
+
   return (
     <View style={styles.successContainer}>
       <FloatingParticles count={22} type="petal" />
 
-      <View style={styles.successCard}>
-        <Animated.View style={[styles.successCheck, checkStyle]}>
-          <LinearGradient
-            colors={[COLORS.sageLight, COLORS.forest]}
-            style={styles.successCheckGradient}
-          >
-            <Text style={styles.successCheckIcon}>🌱</Text>
-          </LinearGradient>
-        </Animated.View>
+      <Animated.View style={[styles.successGlow, glowStyle]} />
 
-        <Animated.View style={[styles.successText, textStyle]}>
-          <Text style={styles.successTitle}>Tree Added! 🎉</Text>
-          <Text style={styles.successSubtitle}>
-            "{treeName}" has joined your forest
-          </Text>
-          <View style={styles.successXp}>
-            <Text style={styles.successXpText}>+{xpEarned} XP earned</Text>
-          </View>
-        </Animated.View>
+      <Animated.View style={[styles.successCardWrap, cardStyle]}>
+        <LinearGradient colors={GRADIENTS.warmEarth as any} style={styles.successCard}>
+          <Animated.View style={[styles.successCheck, checkStyle]}>
+            <LinearGradient
+              colors={[COLORS.sageLight, COLORS.forest]}
+              style={styles.successCheckGradient}
+            >
+              <Text style={styles.successCheckIcon}>🌱</Text>
+            </LinearGradient>
+          </Animated.View>
 
-        <MascotBubble message="Amazing! Your forest grows stronger 🌿" size={90} mood="proud" />
-      </View>
+          <Animated.View style={[styles.successText, textStyle]}>
+            <Text style={styles.successTitle}>Tree Added</Text>
+            <Text style={styles.successSubtitle}>
+              "{treeName}" has joined your forest
+            </Text>
+            <View style={styles.successXp}>
+              <Text style={styles.successXpText}>+{xpEarned} XP earned</Text>
+            </View>
+          </Animated.View>
+
+          {publicId ? (
+            <Animated.View style={[styles.successIdCard, idCardStyle]}>
+              <Text style={styles.successIdCardLabel}>ARTH TREE ID</Text>
+              <Text style={styles.successIdCardValue}>#{publicId}</Text>
+            </Animated.View>
+          ) : null}
+
+          <MascotBubble message="Amazing! Your forest grows stronger 🌿" size={90} mood="proud" />
+        </LinearGradient>
+      </Animated.View>
     </View>
   );
 }
@@ -204,7 +257,10 @@ export function PlantTreeScreen({ navigation, route }: any) {
 
   const [stage, setStage] = useState<Stage>('upload');
   const [imageUri, setImageUri] = useState<string | null>(null);
-  const [selectedSpeciesId, setSelectedSpeciesId] = useState<string | null>(null);
+  // Lets a "Plant a replacement" CTA (Tree Passport's memorial state) land here with the same
+  // species already chosen, instead of making the user re-pick it.
+  const preselectSpeciesId: string | undefined = route?.params?.preselectSpeciesId;
+  const [selectedSpeciesId, setSelectedSpeciesId] = useState<string | null>(preselectSpeciesId ?? null);
   const [nickname, setNickname] = useState('');
   const [caption, setCaption] = useState('');
   const [showAddSpecies, setShowAddSpecies] = useState(false);
@@ -695,7 +751,11 @@ export function PlantTreeScreen({ navigation, route }: any) {
 
       {stage === 'success' && (
         <>
-          <SuccessAnimation treeName={nickname || selectedSpecies?.commonName || 'your tree'} xpEarned={xpEarned} />
+          <SuccessAnimation
+            treeName={nickname || selectedSpecies?.commonName || 'your tree'}
+            xpEarned={xpEarned}
+            publicId={plantedTree?.publicId}
+          />
           <View style={[styles.successDoneButton, { paddingBottom: bottomNavClearance }]}>
             <AnimatedButton
               label="View My Forest 🌳"
@@ -1005,9 +1065,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 8,
     borderRadius: RADIUS.full,
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: COLORS.sand,
+    borderColor: COLORS.warmBrown,
   },
   speciesChipSelected: {
     backgroundColor: COLORS.forest,
@@ -1044,9 +1104,9 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: COLORS.sand,
+    borderColor: COLORS.warmBrown,
   },
   emojiChipSelected: {
     backgroundColor: COLORS.forest,
@@ -1056,10 +1116,10 @@ const styles = StyleSheet.create({
     fontSize: 19,
   },
   nicknameInput: {
-    backgroundColor: 'rgba(255,255,255,0.8)',
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.md,
     borderWidth: 1.5,
-    borderColor: COLORS.sand,
+    borderColor: COLORS.warmBrown,
     padding: 14,
     fontSize: 15,
     color: COLORS.textPrimary,
@@ -1097,17 +1157,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 28,
   },
+  // Soft breathing glow sitting behind the card — an absolutely-positioned blurred-looking
+  // radial via a plain tinted circle (no blur dependency), scaled larger than the card itself.
+  successGlow: {
+    position: 'absolute',
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: COLORS.sageLight,
+  },
+  successCardWrap: {
+    width: '100%',
+    borderRadius: RADIUS.xl,
+    ...SHADOWS.lg,
+  },
   successCard: {
     width: '100%',
     alignItems: 'center',
     gap: 22,
-    backgroundColor: 'rgba(255,255,255,0.6)',
     borderRadius: RADIUS.xl,
     borderWidth: 1.5,
-    borderColor: COLORS.sand,
+    borderColor: COLORS.earth,
     paddingVertical: 32,
     paddingHorizontal: 24,
-    ...SHADOWS.md,
+    overflow: 'hidden',
   },
   successCheck: {
     ...SHADOWS.sage,
@@ -1127,18 +1200,18 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   successTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: COLORS.textPrimary,
+    ...TYPOGRAPHY.display1,
+    color: COLORS.earthDark,
     textAlign: 'center',
   },
   successSubtitle: {
     fontSize: 16,
-    color: COLORS.textPrimary,
+    fontStyle: 'italic',
+    color: COLORS.textSecondary,
     textAlign: 'center',
   },
   successXp: {
-    backgroundColor: 'rgba(74,144,217,0.12)',
+    backgroundColor: 'rgba(255,248,237,0.85)',
     borderRadius: RADIUS.full,
     paddingHorizontal: 16,
     paddingVertical: 6,
@@ -1148,6 +1221,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: COLORS.xpBlue,
+  },
+  successIdCard: {
+    marginTop: 18,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,248,237,0.55)',
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
+    borderRadius: RADIUS.md,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  successIdCardLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    letterSpacing: 0.8,
+  },
+  successIdCardValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.warmBrown,
+    marginTop: 2,
+    letterSpacing: 0.5,
   },
   successDoneButton: {
     paddingHorizontal: 24,

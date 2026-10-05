@@ -181,6 +181,16 @@ enum TreeHealthStatus {
   removed
 }
 
+// Who authored a TreeObservation (see model below) — owner self-check-ins and NGO staff
+// observations both move a tree's canonical healthStatus; community observations are
+// informational/corroborating only and never do (one bad-faith submission must never flip a
+// tree to "dead").
+enum TreeObserverRole {
+  owner
+  ngo
+  community
+}
+
 enum NgoAchievementCriteriaType {
   drives_hosted
   trees_planted
@@ -416,24 +426,28 @@ enum NotificationType {
   ngo_health_check_due
   ngo_impact_milestone
   adoptable_tree_removed
+  tree_observation_logged
+  tree_health_check_reminder
+  community_observation_nearby
+  tree_marked_dead
 }
 
 // ---------- Core ----------
 
 model User {
-  id                     String    @id @default(uuid())
-  role                   UserRole  @default(user)
-  email                  String    @unique
+  id           String   @id @default(uuid())
+  role         UserRole @default(user)
+  email        String   @unique
   // Bare 10-digit Indian mobile number, no country code (the +91 is a fixed UI prefix, not stored)
   // — nullable because existing accounts predate this field, but unique wherever set so the same
   // number can't back two accounts.
-  phone                  String?   @unique
-  passwordHash           String    @map("password_hash")
-  name                   String
-  handle                 String    @unique
-  bio                    String?   @db.VarChar(160)
-  avatarEmoji            String    @default("🧑") @map("avatar_emoji")
-  city                   String?
+  phone        String?  @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  handle       String   @unique
+  bio          String?  @db.VarChar(160)
+  avatarEmoji  String   @default("🧑") @map("avatar_emoji")
+  city         String?
 
   // Personalization — collected on an optional, skippable step right after Individual
   // signup. personalizationCompletedAt is stamped whether the user fills these in or
@@ -474,6 +488,7 @@ model User {
   settings               UserSettings?
   refreshTokens          RefreshToken[]
   trees                  Tree[]
+  treeObservations       TreeObservation[]
   userAchievements       UserAchievement[]
   friendshipsRequested   Friendship[]                @relation("FriendshipRequester")
   friendshipsReceived    Friendship[]                @relation("FriendshipAddressee")
@@ -625,6 +640,13 @@ model Tree {
   co2Absorbed          Decimal                @default(0) @map("co2_absorbed") @db.Decimal(6, 2)
   xpEarned             Int                    @default(0) @map("xp_earned")
   aiVerificationStatus TreeVerificationStatus @default(unverified) @map("ai_verification_status")
+  // Permanent, human-readable ARTH Tree Identity (e.g. "A48Z91") — generated once at creation,
+  // stable for the tree's whole life. See packages/db/publicId.ts.
+  publicId             String                 @unique @map("public_id")
+  // Denormalized latest-known health state, updated by owner self-check-ins and NGO
+  // observations (never by community observations — see TreeObserverRole). Powers "My Trees"
+  // counts without a live aggregate query every time.
+  healthStatus         TreeHealthStatus       @default(not_checked) @map("health_status")
   // Admin review of unverified/rejected AI submissions. NULL reviewedAt means
   // it's still sitting in the admin review queue.
   reviewedByAdminId    String?                @map("reviewed_by_admin_id")
@@ -637,11 +659,12 @@ model Tree {
   createdAt            DateTime               @default(now()) @map("created_at")
   updatedAt            DateTime               @updatedAt @map("updated_at")
 
-  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  species    TreeSpecies      @relation(fields: [speciesId], references: [id])
-  nursery    NurseryProfile?  @relation(fields: [nurseryId], references: [id])
-  posts      Post[]
-  sourceUnit ArthSaplingUnit?
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  species      TreeSpecies       @relation(fields: [speciesId], references: [id])
+  nursery      NurseryProfile?   @relation(fields: [nurseryId], references: [id])
+  posts        Post[]
+  sourceUnit   ArthSaplingUnit?
+  observations TreeObservation[]
 
   @@index([userId])
   @@index([plantedAt(sort: Desc)])
@@ -1271,8 +1294,14 @@ model ArthSaplingUnit {
   supplyDate                DateTime              @default(now()) @map("supply_date")
   status                    ArthSaplingUnitStatus @default(issued)
   collectedAt               DateTime?             @map("collected_at")
-  // One-to-one once planted — set by tree.service.ts's plantTree, never elsewhere.
+  // One-to-one once planted via the individual-Tree path — set by tree.service.ts's plantTree.
   treeId                    String?               @unique @map("tree_id")
+  // One-to-one once planted via the NGO bulk-requirement path — set by plantedTree.service.ts's
+  // bulkCreatePlantedTrees when an NGO scans individually-tracked bulk-sourced units. Exactly
+  // one of treeId/plantedTreeId is ever set for a given unit (an individual-marketplace/
+  // reservation-sourced unit can never become a PlantedTree, and a bulk-requirement-sourced
+  // unit can never become an individual Tree — see plantTree's guard against this).
+  plantedTreeId             String?               @unique @map("planted_tree_id")
 
   orderItem               OrderItem?               @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
   reservation             SaplingReservation?      @relation(fields: [reservationId], references: [id], onDelete: Cascade)
@@ -1280,11 +1309,13 @@ model ArthSaplingUnit {
   nursery                 NurseryProfile           @relation(fields: [nurseryId], references: [id], onDelete: Cascade)
   species                 TreeSpecies?             @relation(fields: [speciesId], references: [id])
   tree                    Tree?                    @relation(fields: [treeId], references: [id])
+  plantedTree             PlantedTree?             @relation(fields: [plantedTreeId], references: [id])
 
   @@index([nurseryId])
   @@index([orderItemId])
   @@index([reservationId])
   @@index([bulkRequirementResponseId])
+  @@index([plantedTreeId])
   @@map("arth_sapling_units")
 }
 
@@ -1998,12 +2029,20 @@ model AdoptableTree {
   status        AdoptableTreeStatus @default(available)
   createdAt     DateTime            @default(now()) @map("created_at")
   updatedAt     DateTime            @updatedAt @map("updated_at")
+  // Set when an NGO creates this listing FROM a real PlantedTree row — lets the listing resolve
+  // to an actual tree identity (so its Passport's "People" section can show the adopter).
+  // Nullable/additive: existing standalone listings (and any new ones an NGO creates without a
+  // specific PlantedTree in hand) keep working exactly as before, with their own display fields
+  // as the source of truth — this FK is read for resolution, never required.
+  plantedTreeId String?             @map("planted_tree_id")
 
-  ngo      NgoProfile @relation(fields: [ngoId], references: [id], onDelete: Cascade)
-  adoption Adoption?
+  ngo         NgoProfile   @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  adoption    Adoption?
+  plantedTree PlantedTree? @relation(fields: [plantedTreeId], references: [id], onDelete: SetNull)
 
   @@index([ngoId])
   @@index([lat, lng])
+  @@index([plantedTreeId])
   @@map("adoptable_trees")
 }
 
@@ -2382,11 +2421,19 @@ model PlantedTree {
   lng           Decimal? @db.Decimal(9, 6)
   photoUrl      String?  @map("photo_url")
   createdAt     DateTime @default(now()) @map("created_at")
+  // Permanent, human-readable ARTH Tree Identity, same convention as Tree.publicId. NOTE: no
+  // denormalized healthStatus field here — plantedTree.service.ts's getLatestStatusByTree/
+  // computeSurvivalStats already compute this correctly from TreeHealthCheck; duplicating it
+  // would risk divergence from numbers NGOs already report externally.
+  publicId      String   @unique @map("public_id")
 
-  ngo          NgoProfile        @relation(fields: [ngoId], references: [id], onDelete: Cascade)
-  drive        Drive?            @relation(fields: [driveId], references: [id], onDelete: SetNull)
-  zone         PlantationZone?   @relation(fields: [zoneId], references: [id], onDelete: SetNull)
-  healthChecks TreeHealthCheck[]
+  ngo               NgoProfile        @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  drive             Drive?            @relation(fields: [driveId], references: [id], onDelete: SetNull)
+  zone              PlantationZone?   @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  healthChecks      TreeHealthCheck[]
+  observations      TreeObservation[]
+  sourceUnit        ArthSaplingUnit?
+  adoptableListings AdoptableTree[]
 
   @@index([ngoId])
   @@index([driveId])
@@ -2407,6 +2454,44 @@ model TreeHealthCheck {
 
   @@index([plantedTreeId, checkedAt(sort: Desc)])
   @@map("tree_health_checks")
+}
+
+// Generalized health/observation record usable for an individual Tree OR an NGO PlantedTree —
+// exactly one of treeId/plantedTreeId is set, service-layer-enforced (same dual-nullable-FK
+// convention as Block's blockedUserId/blockedNgoId). NGO zone-level bulk checks keep using
+// TreeHealthCheck unchanged; this model is for (a) an individual owner's self-check-in, (b) an
+// NGO staffer checking one individually-identified PlantedTree outside the bulk/zone flow, and
+// (c) any nearby community member's drive-by observation. A PlantedTree's unified Passport
+// timeline is the union of TreeHealthCheck ∪ TreeObservation, sorted by date; an individual
+// Tree's timeline is TreeObservation only. Only `owner`/`ngo` observerRole rows move the
+// canonical healthStatus — `community` rows are informational/corroborating only.
+model TreeObservation {
+  id              String           @id @default(uuid())
+  treeId          String?          @map("tree_id")
+  plantedTreeId   String?          @map("planted_tree_id")
+  observerUserId  String           @map("observer_user_id")
+  observerRole    TreeObserverRole @map("observer_role")
+  status          TreeHealthStatus
+  note            String?
+  photoUrl        String?          @map("photo_url")
+  gpsLat          Decimal?         @map("gps_lat") @db.Decimal(9, 6)
+  gpsLng          Decimal?         @map("gps_lng") @db.Decimal(9, 6)
+  gpsAccuracyM    Decimal?         @map("gps_accuracy_m") @db.Decimal(6, 2)
+  // Distance from the observer's submitted GPS to the target tree's TRUE stored coordinates at
+  // submission time — stored for audit/abuse-review, computed server-side (see
+  // plantingLocation.service.ts's assertCloseEnoughToObserve), never trusted from the client.
+  distanceToTreeM Decimal?         @map("distance_to_tree_m") @db.Decimal(6, 2)
+  confidence      Decimal?         @db.Decimal(4, 3)
+  createdAt       DateTime         @default(now()) @map("created_at")
+
+  tree         Tree?        @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  plantedTree  PlantedTree? @relation(fields: [plantedTreeId], references: [id], onDelete: Cascade)
+  observerUser User         @relation(fields: [observerUserId], references: [id], onDelete: Cascade)
+
+  @@index([treeId, createdAt(sort: Desc)])
+  @@index([plantedTreeId, createdAt(sort: Desc)])
+  @@index([observerUserId])
+  @@map("tree_observations")
 }
 
 // Organizational/UX grouping layer over PlantedTree so an NGO manages hundreds/thousands of

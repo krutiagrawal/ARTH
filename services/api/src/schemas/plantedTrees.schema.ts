@@ -15,6 +15,14 @@ export const bulkCreatePlantedTreesSchema = z.object({
   locationLabel: z.string().max(300).optional(),
   lat: z.coerce.number().min(-90).max(90).optional(),
   lng: z.coerce.number().min(-180).max(180).optional(),
+  // Comma-separated ArthSaplingUnit ids (multipart scalar fields can't carry a real array) —
+  // present only when the NGO is scanning individually-tracked bulk-requirement-sourced
+  // saplings; must match `count` exactly (enforced in plantedTree.service.ts).
+  saplingUnitIds: z
+    .string()
+    .optional()
+    .transform((v) => (v ? v.split(',').map((s) => s.trim()).filter(Boolean) : undefined))
+    .pipe(z.array(z.string().uuid()).optional()),
 });
 
 export const listQuerySchema = z.object({
@@ -63,4 +71,13 @@ export const bulkHealthCheckSchema = z.object({
 
 export const survivalStatsQuerySchema = z.object({
   driveId: z.string().uuid().optional(),
+});
+
+// For treeObservation.service.ts's logNgoIndividualObservation — an NGO staffer observing one
+// individually-identified PlantedTree outside the zone/bulk flow. Same shape as
+// singleHealthCheckSchema deliberately minus updateExisting (TreeObservation is append-only, no
+// "already logged today" merge behavior).
+export const ngoIndividualObservationSchema = z.object({
+  status: healthStatusEnum,
+  note: z.string().max(1000).optional(),
 });

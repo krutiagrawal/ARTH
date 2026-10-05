@@ -9,6 +9,7 @@ import { TYPOGRAPHY } from '../../constants/typography';
 import { hexToRgba } from '../../utils/color';
 import type { ApiTree } from '../../api/trees';
 import type { TimeTheme } from '../../hooks/useTimeTheme';
+import { STATUS_META } from '../../constants/treeHealth';
 
 const GROWTH_STAGE_EMOJI = ['🌱', '🌿', '🌳', '🌲', '🎋'];
 const GROWTH_STAGE_LABEL = ['Seedling', 'Sprouting', 'Growing', 'Maturing', 'Flourishing'];
@@ -29,9 +30,12 @@ interface TreeCardProps {
   style?: StyleProp<ViewStyle>;
   /** Ref to the screen's `BlurTargetView` — required on Android for this to actually blur. */
   blurTarget?: RefObject<View | null>;
+  /** Default-hidden — only My Trees currently opts in, so every other call site (Home, Map)
+   * renders exactly as before. */
+  showHealthStatus?: boolean;
 }
 
-export function TreeCard({ tree, size = 'chip', onPress, theme, style, blurTarget }: TreeCardProps) {
+export function TreeCard({ tree, size = 'chip', onPress, theme, style, blurTarget, showHealthStatus = false }: TreeCardProps) {
   const isCard = size === 'card';
   const nameColor = theme?.textPrimaryOnCard ?? COLORS.textWhite;
   const secondaryColor = theme?.textSecondaryOnCard ?? COLORS.textWhite;
@@ -89,6 +93,13 @@ export function TreeCard({ tree, size = 'chip', onPress, theme, style, blurTarge
           <Text style={[styles.locationLine, { color: secondaryColor }]} numberOfLines={1}>
             📍 {tree.location.split(',')[0]}
           </Text>
+        ) : null}
+        {showHealthStatus && tree.healthStatus ? (
+          <View style={[styles.healthPill, { borderColor: STATUS_META[tree.healthStatus].color }]}>
+            <Text style={[styles.healthPillText, { color: STATUS_META[tree.healthStatus].color }]}>
+              {STATUS_META[tree.healthStatus].emoji} {STATUS_META[tree.healthStatus].label}
+            </Text>
+          </View>
         ) : null}
       </BlurView>
     </Wrapper>
@@ -150,5 +161,16 @@ const styles = StyleSheet.create({
   locationLine: {
     ...TYPOGRAPHY.caption,
     textAlign: 'center',
+  },
+  healthPill: {
+    marginTop: 6,
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+  },
+  healthPillText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

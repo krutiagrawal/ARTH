@@ -1,6 +1,7 @@
 import { PrismaClient } from '@arth/db';
 import { haversineDistanceKm, LatLng } from '../utils/geo';
 import { ForbiddenError } from '../utils/errors';
+import { env } from '../config/env';
 
 export const NOT_APPROVED_MESSAGE =
   'This place is not approved for planting, check out ARTH approved places.';
@@ -27,6 +28,7 @@ export async function findMatchingLocation(prisma: PrismaClient, point: LatLng) 
 
 export async function assertEligiblePlantingLocation(prisma: PrismaClient, point: LatLng) {
   const match = await findMatchingLocation(prisma, point);
+  if (!match && env.APPROVED_PLANTING_LOCATION_CHECK_ENABLED === 'false') return null;
   if (!match) throw new ForbiddenError(NOT_APPROVED_MESSAGE);
   return match;
 }
@@ -54,6 +56,8 @@ export function assertGpsAccuracy(accuracyMeters: number) {
 }
 
 export async function assertNoNearbyOwnPlanting(prisma: PrismaClient, userId: string, point: LatLng) {
+  if (env.DUPLICATE_PLANTING_CHECK_ENABLED === 'false') return;
+
   const priorTrees = await prisma.tree.findMany({
     where: {
       userId,
@@ -70,4 +74,33 @@ export async function assertNoNearbyOwnPlanting(prisma: PrismaClient, userId: st
       throw new ForbiddenError(DUPLICATE_PLANTING_MESSAGE);
     }
   }
+}
+
+// ---- Community tree-observation geofencing ----
+// Deliberately separate constants from the planting ones above even though
+// OBSERVATION_MAX_DISTANCE_METERS equals SAME_USER_MIN_DISTANCE_METERS today — different
+// semantic meaning (can't be a duplicate planting vs. must be standing by this specific tree),
+// so they're free to diverge later without the two concerns getting tangled.
+const OBSERVATION_MAX_DISTANCE_METERS = 15;
+const OBSERVATION_MAX_ACCURACY_METERS = 20;
+
+export const TOO_FAR_TO_OBSERVE_MESSAGE =
+  'You need to be standing within 15 meters of this tree to log an observation.';
+
+export function assertObservationGpsAccuracy(accuracyMeters: number) {
+  if (accuracyMeters > OBSERVATION_MAX_ACCURACY_METERS) {
+    throw new ForbiddenError(WEAK_GPS_ACCURACY_MESSAGE);
+  }
+}
+
+// Resolves distance server-side from the tree's TRUE stored coordinates (passed in by the
+// caller, which already loaded the row) against the observer's submitted point — never the
+// other way around, and the true coordinates are never sent to the client before this check
+// passes. Returns the distance in meters so the caller can persist it for audit/abuse-review.
+export function assertCloseEnoughToObserve(targetTrueCoords: LatLng, point: LatLng): number {
+  const distanceM = haversineDistanceKm(point, targetTrueCoords) * 1000;
+  if (distanceM > OBSERVATION_MAX_DISTANCE_METERS) {
+    throw new ForbiddenError(TOO_FAR_TO_OBSERVE_MESSAGE);
+  }
+  return distanceM;
 }
