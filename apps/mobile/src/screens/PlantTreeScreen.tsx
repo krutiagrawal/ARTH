@@ -23,7 +23,6 @@ import { TYPOGRAPHY } from '../constants/typography';
 import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { StatusModal } from '../components/common/StatusModal';
-import { MascotBubble } from '../components/common/Mascot';
 import { FloatingParticles } from '../components/common/FloatingParticles';
 import { useHaptics } from '../hooks/useHaptics';
 import { useSpecies, useCreateSpecies } from '../hooks/useApiQueries';
@@ -224,7 +223,7 @@ function SuccessAnimation({ treeName, xpEarned, publicId, speciesName, speciesEm
       <View style={styles.successHillFront} pointerEvents="none" />
 
       <ScrollView
-        contentContainerStyle={[styles.successScroll, { paddingTop: topInset + 28, paddingBottom: bottomPad + 150 }]}
+        contentContainerStyle={[styles.successScroll, { paddingTop: topInset + 12, paddingBottom: bottomPad + 90 }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={[styles.successCardWrap, cardStyle]}>
@@ -234,56 +233,73 @@ function SuccessAnimation({ treeName, xpEarned, publicId, speciesName, speciesEm
             {/* Gloss highlight */}
             <LinearGradient colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0.08)', 'rgba(255,255,255,0)']} style={styles.successGloss} pointerEvents="none" />
 
-            <Text style={styles.successBadge}>PLANTATION COMPLETE</Text>
-
-            <Animated.View style={[styles.successCheck, checkStyle]}>
-              <LinearGradient colors={['#E3F0D9', '#A8C499', '#2D5A27']} style={styles.successCheckGradient}>
-                <Text style={styles.successCheckIcon}>✓</Text>
-              </LinearGradient>
-            </Animated.View>
+            {/* Illustrated hero scene */}
+            <View style={styles.successScene}>
+              <LinearGradient colors={['#D9EBCD', '#A8C499']} style={StyleSheet.absoluteFill} />
+              <Text style={styles.successSceneSun}>☀️</Text>
+              <Text style={styles.successSceneCloud}>☁️</Text>
+              <View style={styles.successSceneHillA} />
+              <View style={styles.successSceneHillB} />
+              <Text style={[styles.successSceneSide, { left: 22 }]}>🌿</Text>
+              <Text style={[styles.successSceneSide, { right: 22 }]}>🌼</Text>
+              <Text style={[styles.successSceneFly, { left: '30%' }]}>🦋</Text>
+              <Animated.Text style={[styles.successSceneTree, checkStyle]}>{speciesEmoji || '🌳'}</Animated.Text>
+            </View>
 
             <Animated.View style={[styles.successText, textStyle]}>
-              <Text style={styles.successTitle}>Tree Planted!</Text>
-              <Text style={styles.successSubtitle}>"{treeName}" has joined your forest</Text>
               <View style={styles.successXp}>
-                <Text style={styles.successXpText}>+{xpEarned} XP earned</Text>
+                <Text style={styles.successXpText}>⭐  +{xpEarned} XP earned</Text>
               </View>
-            </Animated.View>
-
-            <Animated.View style={[styles.successTiles, tilesStyle]}>
-              <View style={styles.successTile}>
-                <Text style={styles.successTileLabel}>SPECIES</Text>
-                <Text style={styles.successTileValue} numberOfLines={1}>{speciesName}</Text>
-              </View>
-              <View style={styles.successTile}>
-                <Text style={styles.successTileLabel}>PLANTED AT</Text>
-                <Text style={styles.successTileValue} numberOfLines={1}>{locationLabel || 'Your spot'}</Text>
-              </View>
-              <View style={styles.successTile}>
-                <Text style={styles.successTileLabel}>DATE</Text>
-                <Text style={styles.successTileValue} numberOfLines={1}>
-                  {new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+              <Text style={styles.successTitle}>Tree Planted! 🎉</Text>
+              <View style={styles.successJoined}>
+                <Text style={styles.successSubtitle}>
+                  <Text style={styles.successTreeName}>"{treeName}"</Text> has joined your forest 🌲
                 </Text>
               </View>
             </Animated.View>
 
-            {publicId ? (
-              <Animated.View style={[styles.successIdCard, idCardStyle]}>
-                <Text style={styles.successIdCardLabel}>ARTH TREE ID</Text>
-                <Text style={styles.successIdCardValue}>#{publicId}</Text>
-              </Animated.View>
-            ) : null}
+            <Animated.View style={[styles.successRows, tilesStyle]}>
+              <View style={styles.successRow}>
+                <View style={styles.successRowIcon}><Text style={styles.successRowEmoji}>🌳</Text></View>
+                <Text style={styles.successRowLabel}>Species</Text>
+                <Text style={styles.successRowValue} numberOfLines={1}>{speciesName}</Text>
+              </View>
+              <View style={styles.successDivider} />
+              <View style={styles.successRow}>
+                <View style={styles.successRowIcon}><Text style={styles.successRowEmoji}>📍</Text></View>
+                <Text style={styles.successRowLabel}>Planted at</Text>
+                <Text style={styles.successRowValue} numberOfLines={1}>{locationLabel || 'Your spot'}</Text>
+              </View>
+              <View style={styles.successDivider} />
+              <View style={styles.successRow}>
+                <View style={styles.successRowIcon}><Text style={styles.successRowEmoji}>📅</Text></View>
+                <Text style={styles.successRowLabel}>Date</Text>
+                <Text style={styles.successRowValue} numberOfLines={1}>
+                  {new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+                </Text>
+              </View>
+              {publicId ? (
+                <>
+                  <View style={styles.successDivider} />
+                  <Animated.View style={[styles.successRow, idCardStyle]}>
+                    <View style={styles.successRowIcon}><Text style={styles.successRowEmoji}>🪪</Text></View>
+                    <Text style={styles.successRowLabel}>ARTH Tree ID</Text>
+                    <Text style={styles.successRowValue} numberOfLines={1}>#{publicId}</Text>
+                  </Animated.View>
+                </>
+              ) : null}
+            </Animated.View>
 
             <Animated.View style={[styles.successTip, tilesStyle]}>
-              <Text style={styles.successTipText}>Water it, log health check-ins and watch your impact grow.</Text>
+              <Text style={styles.successTipEmoji}>💧</Text>
+              <Text style={styles.successTipText}>Water it, log health check-ins and watch your impact grow 🌍</Text>
             </Animated.View>
           </LinearGradient>
         </Animated.View>
 
-        <MascotBubble message="Amazing! Your forest grows stronger" size={80} mood="proud" />
       </ScrollView>
 
-      <View style={[styles.successDoneButton, { paddingBottom: bottomPad }]}>
+      <View style={[styles.successDoneButton, { paddingBottom: Math.max(bottomPad - 14, 8) }]}>
         <AnimatedButton label="View My Forest" onPress={onDone} variant="primary" size="md" fullWidth textStyle={{ fontSize: 15 }} />
         <AnimatedButton label="Share" onPress={onShare} variant="secondary" size="md" fullWidth style={styles.successShareButton} textStyle={{ fontSize: 15 }} />
       </View>
@@ -438,7 +454,24 @@ export function PlantTreeScreen({ navigation, route }: any) {
   const [plantedTree, setPlantedTree] = useState<ApiTree | null>(null);
   const [shareVisible, setShareVisible] = useState(false);
 
+  // Guards the whole submit (location lookup + upload), not just the mutation, so rapid taps
+  // can never plant the same tree twice.
+  const submittingRef = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSubmit = useCallback(async () => {
+    if (!selectedSpecies || !imageUri || submittingRef.current) return;
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    try {
+      await submitTree();
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
+    }
+  }, [selectedSpecies, imageUri, nickname, caption, location, plantTreeMutation, success]);
+
+  const submitTree = async () => {
     if (!selectedSpecies || !imageUri) return;
     setSubmitError(null);
 
@@ -489,7 +522,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
         setSubmitError(e instanceof Error ? e.message : 'Could not save your tree. Please try again.');
       }
     }
-  }, [selectedSpecies, imageUri, nickname, caption, location, plantTreeMutation, success]);
+  };
 
   const handleAddSpecies = useCallback(async () => {
     const commonName = newSpeciesName.trim();
@@ -780,12 +813,12 @@ export function PlantTreeScreen({ navigation, route }: any) {
           {submitError && <Text style={styles.errorText}>{submitError}</Text>}
 
           <AnimatedButton
-            label={plantTreeMutation.isPending ? 'Adding to Forest...' : '🌱  Add to My Forest'}
+            label={isSubmitting || plantTreeMutation.isPending ? 'Adding to Forest...' : '🌱  Add to My Forest'}
             onPress={handleSubmit}
             variant="primary"
             size="lg"
             fullWidth
-            disabled={!selectedSpecies || plantTreeMutation.isPending || eligible === false}
+            disabled={!selectedSpecies || isSubmitting || plantTreeMutation.isPending || eligible === false}
           />
         </ScrollView>
       )}
@@ -1240,11 +1273,11 @@ const styles = StyleSheet.create({
   successCard: {
     width: '100%',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
     borderRadius: RADIUS.xl,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.45)',
-    paddingVertical: 28,
+    paddingVertical: 18,
     paddingHorizontal: 18,
     overflow: 'hidden',
   },
@@ -1267,27 +1300,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: RADIUS.full,
     overflow: 'hidden',
-  },
-  successCheck: {
-    shadowColor: '#0D2318',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 10,
-  },
-  successCheckGradient: {
-    width: 104,
-    height: 104,
-    borderRadius: 52,
-    borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.7)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  successCheckIcon: {
-    fontSize: 56,
-    fontWeight: '800',
-    color: '#1F4A1B',
+    marginBottom: 4,
   },
   successText: {
     alignItems: 'center',
@@ -1301,11 +1314,29 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
+  successJoined: {
+    backgroundColor: 'rgba(13,35,24,0.5)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(214,235,198,0.85)',
+    borderRadius: RADIUS.md,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    marginTop: 2,
+    shadowColor: '#D6EBC6',
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+  },
   successSubtitle: {
-    fontSize: 16,
-    fontStyle: 'italic',
-    color: '#E3F0D9',
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#F6FBF2',
     textAlign: 'center',
+  },
+  successTreeName: {
+    fontSize: 19,
+    fontWeight: '900',
+    color: '#E8FBD6',
   },
   successXp: {
     backgroundColor: 'rgba(13,35,24,0.6)',
@@ -1321,66 +1352,97 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#D6EBC6',
   },
-  successTiles: {
-    flexDirection: 'row',
-    gap: 8,
+  successScene: {
     width: '100%',
-  },
-  successTile: {
-    flex: 1,
+    height: 128,
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
     alignItems: 'center',
+    justifyContent: 'flex-end',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.6)',
+  },
+  successSceneSun: { position: 'absolute', top: 10, right: 16, fontSize: 30 },
+  successSceneCloud: { position: 'absolute', top: 14, left: 16, fontSize: 28 },
+  successSceneHillA: {
+    position: 'absolute',
+    bottom: -70,
+    left: -40,
+    width: 260,
+    height: 130,
+    borderRadius: 130,
+    backgroundColor: '#5E8550',
+  },
+  successSceneHillB: {
+    position: 'absolute',
+    bottom: -75,
+    right: -50,
+    width: 280,
+    height: 130,
+    borderRadius: 140,
+    backgroundColor: '#2D5A27',
+  },
+  successSceneSide: { position: 'absolute', bottom: 8, fontSize: 28 },
+  successSceneFly: { position: 'absolute', top: 40, fontSize: 20 },
+  successSceneTree: { fontSize: 64, marginBottom: 4 },
+  successRows: {
+    width: '100%',
     backgroundColor: 'rgba(13,35,24,0.38)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.25)',
     borderRadius: RADIUS.md,
-    paddingVertical: 10,
-    paddingHorizontal: 6,
-    gap: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
   },
-  successTileLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    color: '#BFD9B0',
-  },
-  successTileValue: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#F6FBF2',
-  },
-  successIdCard: {
+  successRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(13,35,24,0.55)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(168,196,153,0.8)',
-    borderRadius: RADIUS.md,
-    paddingVertical: 10,
-    paddingHorizontal: 22,
+    paddingVertical: 8,
+    gap: 10,
   },
-  successIdCardLabel: {
-    fontSize: 10,
+  successRowIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successRowEmoji: { fontSize: 18 },
+  successRowLabel: {
+    fontSize: 13,
     fontWeight: '700',
+    letterSpacing: 0.4,
     color: '#BFD9B0',
-    letterSpacing: 0.8,
   },
-  successIdCardValue: {
-    fontSize: 17,
+  successRowValue: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: 15,
     fontWeight: '800',
     color: '#F6FBF2',
-    marginTop: 2,
-    letterSpacing: 0.5,
+  },
+  successDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    marginLeft: 48,
   },
   successTip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    width: '100%',
     backgroundColor: 'rgba(255,255,255,0.14)',
     borderRadius: RADIUS.md,
     paddingVertical: 10,
     paddingHorizontal: 14,
   },
+  successTipEmoji: { fontSize: 22 },
   successTipText: {
+    flex: 1,
     fontSize: 12.5,
     lineHeight: 18,
     color: '#EAF4E3',
-    textAlign: 'center',
   },
   successDoneButton: {
     position: 'absolute',
