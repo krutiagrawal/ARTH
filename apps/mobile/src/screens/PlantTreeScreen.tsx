@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Image, RefreshControl } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Image, RefreshControl, AppState } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import Animated, {
   useSharedValue,
@@ -190,6 +190,24 @@ function SuccessAnimation({ treeName, xpEarned, publicId, speciesName, speciesEm
       idCardOpacity.value = withDelay(1300, withTiming(1, { duration: 300 }));
       idCardRotation.value = withDelay(1300, withSpring(0, { damping: 10, stiffness: 120 }));
     }
+  }, []);
+
+  // Backgrounding / locking the phone can leave reanimated's shared values reset or mid-flight,
+  // which made the card vanish on return. On coming back to the foreground, snap everything to
+  // its settled state.
+  React.useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return;
+      cardOpacity.value = 1;
+      cardScale.value = 1;
+      cardTiltX.value = 0;
+      checkScale.value = 1;
+      textOpacity.value = 1;
+      tilesOpacity.value = 1;
+      idCardOpacity.value = 1;
+      idCardRotation.value = 0;
+    });
+    return () => sub.remove();
   }, []);
 
   const glowStyle = useAnimatedStyle(() => ({ opacity: glowOpacity.value }));

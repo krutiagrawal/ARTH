@@ -23,7 +23,8 @@ export async function getOrCreateTodayMissions(tx: Prisma.TransactionClient, use
   return rows;
 }
 
-export async function completeMissionByType(tx: Prisma.TransactionClient, userId: string, type: MissionType) {
+/** `awardXp: false` marks the quest done without paying its XP (a planting still awaiting admin review). */
+export async function completeMissionByType(tx: Prisma.TransactionClient, userId: string, type: MissionType, awardXp = true) {
   const today = startOfUtcDay(new Date());
   const rows = await getOrCreateTodayMissions(tx, userId);
   const match = rows.find((row) => row.mission.type === type && !row.completed);
@@ -34,7 +35,7 @@ export async function completeMissionByType(tx: Prisma.TransactionClient, userId
     data: { completed: true, completedAt: new Date() },
   });
 
-  await addXp(tx, userId, match.mission.xpReward, 'mission_completed', 'mission', match.mission.id);
+  if (awardXp) await addXp(tx, userId, match.mission.xpReward, 'mission_completed', 'mission', match.mission.id);
 }
 
 export async function completeMissionById(tx: Prisma.TransactionClient, userId: string, missionId: string) {

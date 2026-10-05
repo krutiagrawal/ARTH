@@ -1918,6 +1918,7 @@ export function usePlantTree() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['trees'] }),
         queryClient.invalidateQueries({ queryKey: ['missions', 'today'] }),
+        queryClient.invalidateQueries({ queryKey: ['social', 'posts'] }),
         queryClient.invalidateQueries({ queryKey: ['achievements'] }),
         queryClient.invalidateQueries({ queryKey: ['streaks', 'calendar'] }),
         queryClient.invalidateQueries({ queryKey: ['leaderboard'] }),

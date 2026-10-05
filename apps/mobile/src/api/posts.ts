@@ -28,6 +28,11 @@ export interface ApiPost {
   driveTitle: string | null;
   treeId: string | null;
   treeNickname: string | null;
+  treeSpecies?: string | null;
+  treeSpeciesEmoji?: string | null;
+  treeLocation?: string | null;
+  treePlantedAt?: string | null;
+  treePublicId?: string | null;
   likeCount: number;
   likedByMe: boolean;
   savedByMe: boolean;

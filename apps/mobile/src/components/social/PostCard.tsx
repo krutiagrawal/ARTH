@@ -294,10 +294,16 @@ export function PostCard({
           </Text>
         </TouchableOpacity>
       ) : post.treeNickname ? (
-        <View style={styles.tag}>
-          <Text style={styles.tagText} numberOfLines={1}>
-            🌳 {post.treeNickname}
+        <View style={styles.plantCard}>
+          <Text style={styles.plantTitle} numberOfLines={1}>
+            {post.treeSpeciesEmoji || '🌳'} Planted {post.treeNickname}
           </Text>
+          {post.treeSpecies ? <Text style={styles.plantLine}>🌿 {post.treeSpecies}</Text> : null}
+          {post.treeLocation ? <Text style={styles.plantLine} numberOfLines={2}>📍 {post.treeLocation}</Text> : null}
+          <Text style={styles.plantLine}>
+            🕒 {new Date(post.treePlantedAt || post.createdAt).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+          </Text>
+          {post.treePublicId ? <Text style={styles.plantLine}>🪪 #{post.treePublicId}</Text> : null}
         </View>
       ) : null}
 
@@ -312,6 +318,18 @@ export function PostCard({
 }
 
 const styles = StyleSheet.create({
+  plantCard: {
+    marginHorizontal: 14,
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(94,133,80,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(94,133,80,0.35)',
+    gap: 3,
+  },
+  plantTitle: { fontSize: 14, fontWeight: '800', color: '#2D5A27' },
+  plantLine: { fontSize: 12.5, color: '#4F6B47' },
   card: {
     backgroundColor: 'transparent',
     borderRadius: RADIUS.lg,

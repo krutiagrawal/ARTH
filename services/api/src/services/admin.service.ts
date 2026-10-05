@@ -716,6 +716,20 @@ export async function reviewTree(
       },
     });
 
+    if (input.decision === 'approve' && tree.aiVerificationStatus === 'rejected' && tree.photoUrl) {
+      const existingPost = await tx.post.findFirst({ where: { treeId: tree.id }, select: { id: true } });
+      if (!existingPost) {
+        await tx.post.create({
+          data: {
+            authorType: 'user',
+            userId: tree.userId,
+            treeId: tree.id,
+            media: { create: [{ url: tree.photoUrl, order: 0 }] },
+          },
+        });
+      }
+    }
+
     if (shouldAwardWithheldXp) {
       await addXp(tx, tree.userId, tree.xpEarned, 'tree_planted', 'tree', tree.id);
       await tx.user.update({

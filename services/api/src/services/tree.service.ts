@@ -133,15 +133,14 @@ export async function plantTree(prisma: PrismaClient, input: PlantTreeInput) {
     // unverifiable submission can't earn XP in the meantime. reviewTree() awards this same set
     // (XP + counters) on approval — advertising "live camera only" tree photos means a tree with
     // no photo must not get full credit either.
-    if (input.aiVerificationStatus === 'rejected' || input.aiVerificationStatus === 'unverified') {
-      return { tree, provenanceFollowUp: null as ProvenanceFollowUp | null };
-    }
-
+    // Every planting that isn't an outright photo rejection becomes a post on the planter's profile
+    // (see the block below), and counts as "planted today" for the Morning Planting quest — only
+    // the XP payout waits for admin approval.
     // A planting is also a post — it's how "Planted a tree" shows up on the planter's own
     // profile feed (with its photo, nickname tag, and caption) instead of only living in the
     // trees list. Skipped only in the impossible case of neither a photo nor a caption, since an
     // empty post has nothing to show.
-    if (input.photoUrl || input.caption?.trim()) {
+    if (input.aiVerificationStatus !== 'rejected' && (input.photoUrl || input.caption?.trim())) {
       await tx.post.create({
         data: {
           authorType: 'user',
@@ -151,6 +150,13 @@ export async function plantTree(prisma: PrismaClient, input: PlantTreeInput) {
           media: input.photoUrl ? { create: [{ url: input.photoUrl, order: 0 }] } : undefined,
         },
       });
+    }
+
+    if (input.aiVerificationStatus === 'rejected' || input.aiVerificationStatus === 'unverified') {
+      if (input.aiVerificationStatus === 'unverified') {
+        await completeMissionByType(tx, input.userId, 'plant', false);
+      }
+      return { tree, provenanceFollowUp: null as ProvenanceFollowUp | null };
     }
 
     await tx.user.update({

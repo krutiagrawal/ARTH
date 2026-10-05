@@ -20,7 +20,16 @@ export const postInclude = {
   ngo: { select: { id: true, orgName: true, logoUrl: true } },
   nursery: { select: { id: true, nurseryName: true, logoUrl: true } },
   drive: { select: { id: true, title: true } },
-  tree: { select: { id: true, nickname: true } },
+  tree: {
+    select: {
+      id: true,
+      nickname: true,
+      locationLabel: true,
+      plantedAt: true,
+      publicId: true,
+      species: { select: { commonName: true, emoji: true } },
+    },
+  },
   media: { orderBy: { order: 'asc' as const }, select: { id: true, url: true, order: true } },
 } satisfies Prisma.PostInclude;
 
@@ -75,6 +84,11 @@ export function serializePost(post: PostWithRelations, viewerId?: string) {
     driveTitle: post.drive?.title ?? null,
     treeId: post.treeId,
     treeNickname: post.tree?.nickname ?? null,
+    treeSpecies: post.tree?.species?.commonName ?? null,
+    treeSpeciesEmoji: post.tree?.species?.emoji ?? null,
+    treeLocation: post.tree?.locationLabel ?? null,
+    treePlantedAt: post.tree?.plantedAt ?? null,
+    treePublicId: post.tree?.publicId ?? null,
     likeCount: post.likeCount,
     likedByMe: (post.likes?.length ?? 0) > 0,
     savedByMe: (post.saves?.length ?? 0) > 0,
