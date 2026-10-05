@@ -151,18 +151,28 @@ function ScanAnimation({ onComplete }: { onComplete: () => void }) {
   );
 }
 
-function SuccessAnimation({ treeName, xpEarned, publicId }: { treeName: string; xpEarned: number; publicId?: string }) {
-  // The card itself now animates in — a gentle 3D flip-up-into-place, as if it were laid down
-  // on a table, rather than just appearing while only the particles around it move.
+interface SuccessProps {
+  treeName: string;
+  xpEarned: number;
+  publicId?: string;
+  speciesName: string;
+  speciesEmoji?: string;
+  locationLabel?: string | null;
+  topInset: number;
+  bottomPad: number;
+  onDone: () => void;
+  onShare: () => void;
+}
+
+// Full-page celebration: deep-green scene with hills and trees, and a glossy sage "3D" card.
+function SuccessAnimation({ treeName, xpEarned, publicId, speciesName, speciesEmoji, locationLabel, topInset, bottomPad, onDone, onShare }: SuccessProps) {
   const cardOpacity = useSharedValue(0);
   const cardScale = useSharedValue(0.82);
   const cardTiltX = useSharedValue(55);
   const glowOpacity = useSharedValue(0);
   const checkScale = useSharedValue(0);
-  const confettiOpacity = useSharedValue(0);
   const textOpacity = useSharedValue(0);
-  // Identity-card reveal — sequenced after the existing checkmark/XP beats, same primitives
-  // (withDelay/withSpring/withTiming) already used above, no new animation library.
+  const tilesOpacity = useSharedValue(0);
   const idCardRotation = useSharedValue(90);
   const idCardOpacity = useSharedValue(0);
 
@@ -171,9 +181,8 @@ function SuccessAnimation({ treeName, xpEarned, publicId }: { treeName: string; 
     cardScale.value = withSpring(1, { damping: 11, stiffness: 110 });
     cardTiltX.value = withSpring(0, { damping: 12, stiffness: 90 });
     checkScale.value = withDelay(250, withSpring(1, { damping: 8, stiffness: 150 }));
-    confettiOpacity.value = withDelay(400, withTiming(1, { duration: 600 }));
     textOpacity.value = withDelay(650, withTiming(1, { duration: 500 }));
-    // A slow, soft breathing glow behind the card once it settles — subtle, not a gamified pulse.
+    tilesOpacity.value = withDelay(950, withTiming(1, { duration: 500 }));
     glowOpacity.value = withDelay(
       500,
       withRepeat(withSequence(withTiming(0.55, { duration: 1400 }), withTiming(0.2, { duration: 1400 })), -1, true),
@@ -185,67 +194,99 @@ function SuccessAnimation({ treeName, xpEarned, publicId }: { treeName: string; 
   }, []);
 
   const glowStyle = useAnimatedStyle(() => ({ opacity: glowOpacity.value }));
-
   const cardStyle = useAnimatedStyle(() => ({
     opacity: cardOpacity.value,
-    transform: [
-      { perspective: 900 },
-      { scale: cardScale.value },
-      { rotateX: `${cardTiltX.value}deg` },
-    ],
+    transform: [{ perspective: 900 }, { scale: cardScale.value }, { rotateX: `${cardTiltX.value}deg` }],
   }));
-
-  const checkStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: checkScale.value }],
-  }));
-
+  const checkStyle = useAnimatedStyle(() => ({ transform: [{ scale: checkScale.value }] }));
   const textStyle = useAnimatedStyle(() => ({
     opacity: textOpacity.value,
     transform: [{ translateY: 20 - textOpacity.value * 20 }],
   }));
-
+  const tilesStyle = useAnimatedStyle(() => ({
+    opacity: tilesOpacity.value,
+    transform: [{ translateY: 16 - tilesOpacity.value * 16 }],
+  }));
   const idCardStyle = useAnimatedStyle(() => ({
     opacity: idCardOpacity.value,
     transform: [{ perspective: 800 }, { rotateY: `${idCardRotation.value}deg` }],
   }));
 
   return (
-    <View style={styles.successContainer}>
+    <View style={styles.successRoot}>
+      <LinearGradient colors={['#0D2318', '#1A3A16', '#2D5A27']} style={StyleSheet.absoluteFill} />
+      <Animated.View style={[styles.successSun, glowStyle]} />
       <FloatingParticles count={22} type="petal" />
 
-      <Animated.View style={[styles.successGlow, glowStyle]} />
 
-      <Animated.View style={[styles.successCardWrap, cardStyle]}>
-        <LinearGradient colors={GRADIENTS.warmEarth as any} style={styles.successCard}>
-          <Animated.View style={[styles.successCheck, checkStyle]}>
-            <LinearGradient
-              colors={[COLORS.sageLight, COLORS.forest]}
-              style={styles.successCheckGradient}
-            >
-              <Text style={styles.successCheckIcon}>🌱</Text>
-            </LinearGradient>
-          </Animated.View>
+      {/* Hills & trees illustration */}
+      <View style={styles.successHillBack} pointerEvents="none" />
+      <View style={styles.successHillFront} pointerEvents="none" />
 
-          <Animated.View style={[styles.successText, textStyle]}>
-            <Text style={styles.successTitle}>Tree Added</Text>
-            <Text style={styles.successSubtitle}>
-              "{treeName}" has joined your forest
-            </Text>
-            <View style={styles.successXp}>
-              <Text style={styles.successXpText}>+{xpEarned} XP earned</Text>
-            </View>
-          </Animated.View>
+      <ScrollView
+        contentContainerStyle={[styles.successScroll, { paddingTop: topInset + 28, paddingBottom: bottomPad + 150 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View style={[styles.successCardWrap, cardStyle]}>
+          {/* Thick bottom edge gives the card its 3D slab depth */}
+          <View style={styles.successCardEdge} />
+          <LinearGradient colors={['#B9D3AA', '#7FA66F', '#3F7036', '#1F4A1B']} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={styles.successCard}>
+            {/* Gloss highlight */}
+            <LinearGradient colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0.08)', 'rgba(255,255,255,0)']} style={styles.successGloss} pointerEvents="none" />
 
-          {publicId ? (
-            <Animated.View style={[styles.successIdCard, idCardStyle]}>
-              <Text style={styles.successIdCardLabel}>ARTH TREE ID</Text>
-              <Text style={styles.successIdCardValue}>#{publicId}</Text>
+            <Text style={styles.successBadge}>PLANTATION COMPLETE</Text>
+
+            <Animated.View style={[styles.successCheck, checkStyle]}>
+              <LinearGradient colors={['#E3F0D9', '#A8C499', '#2D5A27']} style={styles.successCheckGradient}>
+                <Text style={styles.successCheckIcon}>✓</Text>
+              </LinearGradient>
             </Animated.View>
-          ) : null}
 
-          <MascotBubble message="Amazing! Your forest grows stronger 🌿" size={90} mood="proud" />
-        </LinearGradient>
-      </Animated.View>
+            <Animated.View style={[styles.successText, textStyle]}>
+              <Text style={styles.successTitle}>Tree Planted!</Text>
+              <Text style={styles.successSubtitle}>"{treeName}" has joined your forest</Text>
+              <View style={styles.successXp}>
+                <Text style={styles.successXpText}>+{xpEarned} XP earned</Text>
+              </View>
+            </Animated.View>
+
+            <Animated.View style={[styles.successTiles, tilesStyle]}>
+              <View style={styles.successTile}>
+                <Text style={styles.successTileLabel}>SPECIES</Text>
+                <Text style={styles.successTileValue} numberOfLines={1}>{speciesName}</Text>
+              </View>
+              <View style={styles.successTile}>
+                <Text style={styles.successTileLabel}>PLANTED AT</Text>
+                <Text style={styles.successTileValue} numberOfLines={1}>{locationLabel || 'Your spot'}</Text>
+              </View>
+              <View style={styles.successTile}>
+                <Text style={styles.successTileLabel}>DATE</Text>
+                <Text style={styles.successTileValue} numberOfLines={1}>
+                  {new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                </Text>
+              </View>
+            </Animated.View>
+
+            {publicId ? (
+              <Animated.View style={[styles.successIdCard, idCardStyle]}>
+                <Text style={styles.successIdCardLabel}>ARTH TREE ID</Text>
+                <Text style={styles.successIdCardValue}>#{publicId}</Text>
+              </Animated.View>
+            ) : null}
+
+            <Animated.View style={[styles.successTip, tilesStyle]}>
+              <Text style={styles.successTipText}>Water it, log health check-ins and watch your impact grow.</Text>
+            </Animated.View>
+          </LinearGradient>
+        </Animated.View>
+
+        <MascotBubble message="Amazing! Your forest grows stronger" size={80} mood="proud" />
+      </ScrollView>
+
+      <View style={[styles.successDoneButton, { paddingBottom: bottomPad }]}>
+        <AnimatedButton label="View My Forest" onPress={onDone} variant="primary" size="md" fullWidth textStyle={{ fontSize: 15 }} />
+        <AnimatedButton label="Share" onPress={onShare} variant="secondary" size="md" fullWidth style={styles.successShareButton} textStyle={{ fontSize: 15 }} />
+      </View>
     </View>
   );
 }
@@ -750,31 +791,18 @@ export function PlantTreeScreen({ navigation, route }: any) {
       )}
 
       {stage === 'success' && (
-        <>
-          <SuccessAnimation
-            treeName={nickname || selectedSpecies?.commonName || 'your tree'}
-            xpEarned={xpEarned}
-            publicId={plantedTree?.publicId}
-          />
-          <View style={[styles.successDoneButton, { paddingBottom: bottomNavClearance }]}>
-            <AnimatedButton
-              label="View My Forest 🌳"
-              onPress={handleDone}
-              variant="primary"
-              size="lg"
-              fullWidth
-            />
-            <AnimatedButton
-              label="Share"
-              icon="📸"
-              onPress={() => setShareVisible(true)}
-              variant="secondary"
-              size="lg"
-              fullWidth
-              style={styles.successShareButton}
-            />
-          </View>
-        </>
+        <SuccessAnimation
+          treeName={nickname || selectedSpecies?.commonName || 'your tree'}
+          xpEarned={xpEarned}
+          publicId={plantedTree?.publicId}
+          speciesName={selectedSpecies?.commonName || plantedTree?.species || 'Tree'}
+          speciesEmoji={plantedTree?.speciesEmoji || (selectedSpecies as any)?.emoji || '🌳'}
+          locationLabel={plantedTree?.location}
+          topInset={insets.top}
+          bottomPad={bottomNavClearance}
+          onDone={handleDone}
+          onShare={() => setShareVisible(true)}
+        />
       )}
 
       <ShareCardModal visible={shareVisible} onClose={() => setShareVisible(false)} title="Share your tree" caption="I just planted a tree with ARTH 🌱">
@@ -1151,49 +1179,115 @@ const styles = StyleSheet.create({
     color: COLORS.coral,
     textAlign: 'center',
   },
-  successContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 28,
+  // Full-page overlay — covers the header and bottom area entirely.
+  successRoot: {
+    ...StyleSheet.absoluteFill as object,
+    zIndex: 50,
+    elevation: 50,
   },
-  // Soft breathing glow sitting behind the card — an absolutely-positioned blurred-looking
-  // radial via a plain tinted circle (no blur dependency), scaled larger than the card itself.
-  successGlow: {
+  successSun: {
     position: 'absolute',
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: COLORS.sageLight,
+    top: -60,
+    alignSelf: 'center',
+    width: 360,
+    height: 360,
+    borderRadius: 180,
+    backgroundColor: '#A8C499',
+  },
+  successHillBack: {
+    position: 'absolute',
+    bottom: -150,
+    left: -80,
+    width: SW * 1.3,
+    height: 360,
+    borderRadius: 200,
+    backgroundColor: '#2D5A27',
+    opacity: 0.9,
+  },
+  successHillFront: {
+    position: 'absolute',
+    bottom: -190,
+    right: -100,
+    width: SW * 1.4,
+    height: 360,
+    borderRadius: 220,
+    backgroundColor: '#5E8550',
+    opacity: 0.55,
+  },
+  successScroll: {
+    alignItems: 'center',
+    paddingHorizontal: 22,
+    gap: 14,
   },
   successCardWrap: {
     width: '100%',
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.45,
+    shadowRadius: 22,
+    elevation: 16,
+  },
+  successCardEdge: {
+    position: 'absolute',
+    left: 4,
+    right: 4,
+    top: 10,
+    bottom: -10,
     borderRadius: RADIUS.xl,
-    ...SHADOWS.lg,
+    backgroundColor: '#12301A',
   },
   successCard: {
     width: '100%',
     alignItems: 'center',
-    gap: 22,
+    gap: 16,
     borderRadius: RADIUS.xl,
     borderWidth: 1.5,
-    borderColor: COLORS.earth,
-    paddingVertical: 32,
-    paddingHorizontal: 24,
+    borderColor: 'rgba(255,255,255,0.45)',
+    paddingVertical: 28,
+    paddingHorizontal: 18,
+    overflow: 'hidden',
+  },
+  successGloss: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '48%',
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+  },
+  successBadge: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.4,
+    color: '#F1F8EC',
+    backgroundColor: 'rgba(18,48,26,0.55)',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: RADIUS.full,
     overflow: 'hidden',
   },
   successCheck: {
-    ...SHADOWS.sage,
+    shadowColor: '#0D2318',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 10,
   },
   successCheckGradient: {
-    width: 96,
-    height: 96,
-    borderRadius: 28,
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   successCheckIcon: {
-    fontSize: 48,
+    fontSize: 56,
+    fontWeight: '800',
+    color: '#1F4A1B',
   },
   successText: {
     alignItems: 'center',
@@ -1201,52 +1295,100 @@ const styles = StyleSheet.create({
   },
   successTitle: {
     ...TYPOGRAPHY.display1,
-    color: COLORS.earthDark,
+    color: '#F6FBF2',
     textAlign: 'center',
+    textShadowColor: 'rgba(13,35,24,0.55)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   successSubtitle: {
     fontSize: 16,
     fontStyle: 'italic',
-    color: COLORS.textSecondary,
+    color: '#E3F0D9',
     textAlign: 'center',
   },
   successXp: {
-    backgroundColor: 'rgba(255,248,237,0.85)',
+    backgroundColor: 'rgba(13,35,24,0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(168,196,153,0.7)',
     borderRadius: RADIUS.full,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 7,
     marginTop: 4,
   },
   successXpText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.xpBlue,
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#D6EBC6',
   },
-  successIdCard: {
-    marginTop: 18,
+  successTiles: {
+    flexDirection: 'row',
+    gap: 8,
+    width: '100%',
+  },
+  successTile: {
+    flex: 1,
     alignItems: 'center',
-    backgroundColor: 'rgba(255,248,237,0.55)',
-    borderWidth: 1.5,
-    borderColor: COLORS.warmBrown,
+    backgroundColor: 'rgba(13,35,24,0.38)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
     borderRadius: RADIUS.md,
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 6,
+    gap: 2,
+  },
+  successTileLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: '#BFD9B0',
+  },
+  successTileValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#F6FBF2',
+  },
+  successIdCard: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(13,35,24,0.55)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(168,196,153,0.8)',
+    borderRadius: RADIUS.md,
+    paddingVertical: 10,
+    paddingHorizontal: 22,
   },
   successIdCardLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: COLORS.textSecondary,
+    color: '#BFD9B0',
     letterSpacing: 0.8,
   },
   successIdCardValue: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '800',
-    color: COLORS.warmBrown,
+    color: '#F6FBF2',
     marginTop: 2,
     letterSpacing: 0.5,
   },
+  successTip: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: RADIUS.md,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  successTipText: {
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: '#EAF4E3',
+    textAlign: 'center',
+  },
   successDoneButton: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
     paddingHorizontal: 24,
+    paddingTop: 12,
   },
   successShareButton: {
     marginTop: 12,
