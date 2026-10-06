@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Image } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Image, Linking } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,8 +8,6 @@ import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { BorderCard } from '../components/common/BorderCard';
-import { StatDisplay } from '../components/common/StatDisplay';
 import { useTreePassport, useLogOwnObservation } from '../hooks/useApiQueries';
 import { useAuth } from '../context/AuthContext';
 import { useHaptics } from '../hooks/useHaptics';
@@ -42,35 +40,61 @@ const SOURCE_LABEL: Record<PassportTimelineEntry['source'], string> = {
   observation: 'Observation',
 };
 
+// Translucent tints (never white) cycled across the detail tiles so the grid reads as a
+// colourful patchwork rather than a stack of identical boxes.
+const TILE_TONES = [
+  { bg: 'rgba(135,168,120,0.20)', border: 'rgba(135,168,120,0.45)' },
+  { bg: 'rgba(212,168,83,0.18)', border: 'rgba(212,168,83,0.45)' },
+  { bg: 'rgba(232,137,106,0.16)', border: 'rgba(232,137,106,0.40)' },
+  { bg: 'rgba(120,170,210,0.20)', border: 'rgba(120,170,210,0.45)' },
+];
+
+interface Tile {
+  icon: string;
+  label: string;
+  value: string;
+  wide?: boolean;
+  big?: boolean;
+  onPress?: () => void;
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionLabel}>{title}</Text>
-      {children}
-    </View>
+function DetailTile({ tile, tone }: { tile: Tile; tone: (typeof TILE_TONES)[number] }) {
+  const style = [styles.tile, tile.wide && styles.tileWide, { backgroundColor: tone.bg, borderColor: tone.border }];
+  const content = (
+    <>
+      <View style={styles.tileTop}>
+        <Text style={styles.tileIcon}>{tile.icon}</Text>
+        {tile.onPress ? <Text style={styles.tileChevron}>↗</Text> : null}
+      </View>
+      <Text style={styles.tileLabel}>{tile.label}</Text>
+      <Text style={[styles.tileValue, tile.big && styles.tileValueBig, tile.onPress && styles.tileValueLink]} numberOfLines={2}>
+        {tile.value}
+      </Text>
+    </>
   );
-}
-
-function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+  if (!tile.onPress) return <View style={style}>{content}</View>;
   return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue} numberOfLines={2}>{value}</Text>
-    </View>
+    <TouchableOpacity style={style} activeOpacity={0.7} onPress={tile.onPress}>
+      {content}
+    </TouchableOpacity>
   );
 }
 
 function TimelineRow({ entry, index }: { entry: PassportTimelineEntry; index: number }) {
   const meta = entry.status && entry.status in STATUS_META ? STATUS_META[entry.status as keyof typeof STATUS_META] : null;
   const slideStyle = useSlideUp(Math.min(index * TIMELINE_STAGGER_STEP_MS, MAX_TIMELINE_STAGGER_MS), 14);
+  const color = meta ? meta.color : COLORS.sage;
   return (
-    <Animated.View style={slideStyle}>
-    <BorderCard noPadding style={styles.timelineRow}>
-      <View style={styles.timelineRowInner}>
+    <Animated.View style={[styles.timelineItem, slideStyle]}>
+      <View style={styles.timelineRail}>
+        <View style={[styles.timelineDot, { backgroundColor: color }]} />
+        <View style={styles.timelineLine} />
+      </View>
+      <View style={[styles.timelineRow, { borderLeftColor: color }]}>
         <View style={{ flex: 1 }}>
           <Text style={styles.timelineSource}>
             {meta ? `${meta.emoji} ` : ''}{meta ? meta.label : SOURCE_LABEL[entry.source]}
@@ -82,48 +106,43 @@ function TimelineRow({ entry, index }: { entry: PassportTimelineEntry; index: nu
         </View>
         <Text style={styles.timelineDate}>{formatDate(entry.at)}</Text>
       </View>
-    </BorderCard>
-    </Animated.View>
-  );
-}
-
-// A dedicated component so it can be `key`ed on status at the call site below — that forces a
-// fresh mount (and so a fresh fade-in) whenever the status actually changes between refetches, a
-// cheap stand-in for a true crossfade without hand-tracking the previous value.
-function HealthBadge({ status }: { status: keyof typeof STATUS_META }) {
-  const fadeStyle = useFadeIn(0, 350);
-  const meta = STATUS_META[status];
-  return (
-    <Animated.View style={[styles.healthPill, { borderColor: meta.color }, fadeStyle]}>
-      <Text style={[styles.healthPillText, { color: meta.color }]}>
-        {meta.emoji} {meta.label}
-      </Text>
     </Animated.View>
   );
 }
 
 function CheckInControl({ treeId }: { treeId: string }) {
   const [expanded, setExpanded] = useState(false);
+  const [hint, setHint] = useState<string | null>(null);
   const logMutation = useLogOwnObservation();
   const { medium, success } = useHaptics();
 
   const handleCheckIn = useCallback(
     async (status: (typeof ACTIONABLE_STATUSES)[number]) => {
       medium();
+      setHint(null);
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        setHint('Camera access is needed to take the live photo for a health check-in.');
+        return;
+      }
       const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.85 });
-      const photo = result.canceled
-        ? undefined
-        : (() => {
-            const uri = result.assets[0].uri;
-            const filename = uri.split('/').pop() || 'observation.jpg';
-            const extension = filename.split('.').pop()?.toLowerCase();
-            const type = extension === 'png' ? 'image/png' : 'image/jpeg';
-            return { uri, name: filename, type };
-          })();
+      // Health only changes once a live photo is actually captured.
+      if (result.canceled || !result.assets?.[0]) {
+        setHint('No photo taken — health was not updated.');
+        return;
+      }
+      const uri = result.assets[0].uri;
+      const filename = uri.split('/').pop() || 'observation.jpg';
+      const extension = filename.split('.').pop()?.toLowerCase();
+      const type = extension === 'png' ? 'image/png' : 'image/jpeg';
 
-      await logMutation.mutateAsync({ treeId, status, photo });
-      success();
-      setExpanded(false);
+      try {
+        await logMutation.mutateAsync({ treeId, status, photo: { uri, name: filename, type } });
+        success();
+        setExpanded(false);
+      } catch {
+        setHint('Could not save the check-in. Please try again.');
+      }
     },
     [treeId, logMutation, medium, success],
   );
@@ -131,27 +150,92 @@ function CheckInControl({ treeId }: { treeId: string }) {
   if (!expanded) {
     return (
       <TouchableOpacity style={styles.checkInButton} onPress={() => setExpanded(true)}>
-        <Text style={styles.checkInButtonText}>How's it doing? Check in 🌱</Text>
+        <Text style={styles.checkInButtonText}>📸  How's it doing? Check in</Text>
       </TouchableOpacity>
     );
   }
 
   return (
-    <View style={styles.checkInRow}>
-      {ACTIONABLE_STATUSES.map((status) => (
-        <TouchableOpacity
-          key={status}
-          style={[styles.markButton, { borderColor: STATUS_META[status].color }]}
-          disabled={logMutation.isPending}
-          onPress={() => handleCheckIn(status)}
-        >
-          <Text style={styles.markButtonText}>
-            {logMutation.isPending ? '…' : `${STATUS_META[status].emoji} ${STATUS_META[status].label}`}
-          </Text>
-        </TouchableOpacity>
-      ))}
+    <View>
+      <View style={styles.checkInRow}>
+        {ACTIONABLE_STATUSES.map((status) => (
+          <TouchableOpacity
+            key={status}
+            style={[styles.markButton, { borderColor: STATUS_META[status].color, backgroundColor: `${STATUS_META[status].color}22` }]}
+            disabled={logMutation.isPending}
+            onPress={() => handleCheckIn(status)}
+          >
+            <Text style={styles.markButtonText}>
+              {logMutation.isPending ? '…' : `${STATUS_META[status].emoji} ${STATUS_META[status].label}`}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <Text style={[styles.checkInHint, hint ? styles.checkInHintWarn : null]}>
+        {hint ?? '📸 A live photo is required to update health.'}
+      </Text>
     </View>
   );
+}
+
+// Keyed on status at the call site so a status change remounts it and replays the fade-in.
+function HealthBanner({ status, children }: { status: keyof typeof STATUS_META; children?: React.ReactNode }) {
+  const fadeStyle = useFadeIn(0, 350);
+  const meta = STATUS_META[status];
+  return (
+    <Animated.View style={fadeStyle}>
+      <View style={styles.healthBanner}>
+        <View style={styles.healthTop}>
+          <Text style={styles.healthEmoji}>{meta.emoji}</Text>
+          <Text style={styles.healthCaption}>CURRENT HEALTH</Text>
+          <Text style={[styles.healthLabel, { color: meta.color }]}>{meta.label}</Text>
+        </View>
+        {children}
+      </View>
+    </Animated.View>
+  );
+}
+
+// Omitting `origin` makes Google Maps (app or web) start from the user's current location.
+function openDirections(lat: number, lng: number) {
+  Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`).catch(() => {});
+}
+
+function buildTiles(passport: TreePassport, navigation: any): Tile[] {
+  const tiles: Tile[] = [{ icon: '📅', label: 'Planted', value: formatDate(passport.plantedAt) }];
+  const openUser = (userId: string) => () => navigation.navigate('UserPublicProfile', { userId });
+
+  if (passport.kind === 'individual') {
+    const nursery = passport.nursery;
+    tiles.push({
+      icon: nursery ? '🏡' : '🌱',
+      label: nursery ? 'Nursery' : 'Source',
+      value: nursery ? nursery.nurseryName : 'Self-sourced',
+      onPress: nursery ? () => navigation.navigate('NurseryPublicProfile', { nurseryId: nursery.id }) : undefined,
+    });
+    tiles.push({ icon: '🌍', label: 'CO₂ absorbed', value: `${passport.co2Absorbed.toFixed(1)} kg`, big: true });
+    tiles.push({ icon: '⭐', label: 'XP earned', value: String(passport.xpEarned), big: true });
+  } else {
+    tiles.push({ icon: '🏢', label: 'NGO', value: passport.ngo.orgName, onPress: () => navigation.navigate('NgoPublicProfile', { ngoId: passport.ngo.id }) });
+    if (passport.drive) tiles.push({ icon: '🚩', label: 'Drive', value: passport.drive.title });
+    if (passport.zone) tiles.push({ icon: '🗺️', label: 'Zone', value: passport.zone.name });
+  }
+
+  if (passport.sourceUnit) {
+    tiles.push({ icon: '🪴', label: 'Sapling', value: passport.sourceUnit.speciesNameSnapshot });
+    if (passport.sourceUnit.ageAtSupplyLabel) tiles.push({ icon: '⏳', label: 'Age at supply', value: passport.sourceUnit.ageAtSupplyLabel });
+  }
+  if (passport.locationLabel) tiles.push({ icon: '📌', label: 'Location', value: passport.locationLabel, wide: true });
+  const { lat, lng } = passport;
+  if (lat != null && lng != null) {
+    tiles.push({ icon: '🧭', label: 'GPS · tap for directions', value: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, wide: true, onPress: () => openDirections(lat, lng) });
+  }
+  if (passport.kind === 'individual') {
+    tiles.push({ icon: '🧑‍🌾', label: 'Planted by', value: `${passport.owner.name} (@${passport.owner.handle})`, wide: true, onPress: openUser(passport.owner.id) });
+  } else if (passport.adopter) {
+    tiles.push({ icon: '💛', label: 'Adopted by', value: `${passport.adopter.name} (@${passport.adopter.handle})`, wide: true, onPress: openUser(passport.adopter.id) });
+  }
+  return tiles;
 }
 
 function PassportBody({ passport, navigation }: { passport: TreePassport; navigation: any }) {
@@ -162,127 +246,71 @@ function PassportBody({ passport, navigation }: { passport: TreePassport; naviga
   const speciesLabel = isIndividual ? `${passport.species.emoji} ${passport.species.commonName}` : `🌳 ${passport.speciesName}`;
   const verification = isIndividual ? VERIFICATION_META[passport.aiVerificationStatus] : null;
   const isDead = passport.healthStatus === 'dead';
+  const tiles = buildTiles(passport, navigation);
 
   return (
     <>
-      {passport.photoUrl ? (
-        <Image
-          source={{ uri: resolveMediaUrl(passport.photoUrl) }}
-          style={[styles.heroPhoto, isDead && styles.heroPhotoMemorial]}
-          resizeMode="cover"
-        />
-      ) : (
-        <View style={[styles.heroPlaceholder, isDead && styles.heroPhotoMemorial]}>
-          <Text style={styles.heroPlaceholderEmoji}>{speciesLabel.split(' ')[0]}</Text>
-        </View>
-      )}
-
-      <View style={styles.heroTextBlock}>
-        <Text style={styles.heroSpecies}>{speciesLabel}</Text>
-        <Text style={styles.heroName}>{nickname}</Text>
-        <View style={styles.publicIdChip}>
-          <Text style={styles.publicIdChipText}>ARTH #{passport.publicId}</Text>
+      <View style={styles.hero}>
+        {passport.photoUrl ? (
+          <Image
+            source={{ uri: resolveMediaUrl(passport.photoUrl) }}
+            style={[styles.heroPhoto, isDead && styles.heroPhotoMemorial]}
+            resizeMode="cover"
+          />
+        ) : (
+          <LinearGradient colors={[COLORS.mint, COLORS.sage]} style={[styles.heroPhoto, styles.heroPlaceholder]}>
+            <Text style={styles.heroPlaceholderEmoji}>{speciesLabel.split(' ')[0]}</Text>
+          </LinearGradient>
+        )}
+        <LinearGradient colors={['transparent', 'rgba(13,35,24,0.88)']} style={styles.heroOverlay} />
+        {verification ? (
+          <View style={[styles.heroBadge, { backgroundColor: verification.color }]}>
+            <Text style={styles.heroBadgeText}>✓ {verification.label}</Text>
+          </View>
+        ) : null}
+        <View style={styles.heroTextBlock}>
+          <Text style={styles.heroSpecies}>{speciesLabel}</Text>
+          <Text style={styles.heroName} numberOfLines={2}>{nickname}</Text>
+          <View style={styles.publicIdChip}>
+            <Text style={styles.publicIdChipText}>ARTH #{passport.publicId}</Text>
+          </View>
         </View>
       </View>
 
-      <Section title="Origin">
-        <BorderCard>
-          {isIndividual ? (
-            passport.nursery ? (
-              <InfoRow label="Nursery" value={passport.nursery.nurseryName} />
-            ) : (
-              <InfoRow label="Source" value="Self-sourced planting" />
-            )
-          ) : (
-            <>
-              <InfoRow label="NGO" value={passport.ngo.orgName} />
-              {passport.drive ? <InfoRow label="Drive" value={passport.drive.title} /> : null}
-              {passport.zone ? <InfoRow label="Zone" value={passport.zone.name} /> : null}
-            </>
-          )}
-          {passport.sourceUnit ? (
-            <>
-              <InfoRow label="Sapling" value={passport.sourceUnit.speciesNameSnapshot} />
-              {passport.sourceUnit.ageAtSupplyLabel ? (
-                <InfoRow label="Age at supply" value={passport.sourceUnit.ageAtSupplyLabel} />
-              ) : null}
-            </>
-          ) : null}
-        </BorderCard>
-      </Section>
+      {isDead ? (
+        <View style={styles.memorialCard}>
+          <Text style={styles.memorialTitle}>🕊️ This tree’s journey has ended</Text>
+          <Text style={styles.memorialBody}>
+            You gave {nickname} a beginning. Its story stays part of your forest.
+          </Text>
+          <TouchableOpacity
+            style={styles.memorialButton}
+            onPress={() =>
+              navigation.navigate('PlantTree', isIndividual ? { preselectSpeciesId: passport.species.id } : undefined)
+            }
+          >
+            <Text style={styles.memorialButtonText}>Plant a replacement 🌱</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <HealthBanner key={passport.healthStatus} status={passport.healthStatus}>
+          {isOwner ? <CheckInControl treeId={passport.id} /> : null}
+        </HealthBanner>
+      )}
 
-      <Section title="Planting">
-        <BorderCard>
-          <InfoRow label="Planted" value={formatDate(passport.plantedAt)} />
-          {passport.locationLabel ? <InfoRow label="Location" value={passport.locationLabel} /> : null}
-          {passport.lat != null && passport.lng != null ? (
-            <InfoRow label="GPS" value={`${passport.lat.toFixed(5)}, ${passport.lng.toFixed(5)}`} />
-          ) : null}
-        </BorderCard>
-      </Section>
+      <Text style={styles.gridHeading}>PASSPORT DETAILS</Text>
+      <View style={styles.grid}>
+        {tiles.map((tile, i) => (
+          <DetailTile key={tile.label} tile={tile} tone={TILE_TONES[i % TILE_TONES.length]} />
+        ))}
+      </View>
 
-      {verification ? (
-        <Section title="Verification">
-          <View style={[styles.verificationPill, { borderColor: verification.color }]}>
-            <Text style={[styles.verificationText, { color: verification.color }]}>{verification.label}</Text>
-          </View>
-        </Section>
-      ) : null}
-
-      <Section title={isDead ? 'This tree’s journey has ended' : 'Current health'}>
-        {isDead ? (
-          <BorderCard style={styles.memorialCard}>
-            <Text style={styles.memorialBody}>
-              You gave {nickname} a beginning. Its story stays part of your forest.
-            </Text>
-            <TouchableOpacity
-              style={styles.memorialButton}
-              onPress={() =>
-                navigation.navigate('PlantTree', isIndividual ? { preselectSpeciesId: passport.species.id } : undefined)
-              }
-            >
-              <Text style={styles.memorialButtonText}>Plant a replacement 🌱</Text>
-            </TouchableOpacity>
-          </BorderCard>
-        ) : (
-          <>
-            <HealthBadge key={passport.healthStatus} status={passport.healthStatus} />
-            {isOwner ? <CheckInControl treeId={passport.id} /> : null}
-          </>
-        )}
-      </Section>
-
-      {isIndividual ? (
-        <Section title="Impact">
-          <View style={styles.statsRow}>
-            <StatDisplay value={passport.co2Absorbed.toFixed(1)} label="kg CO₂" size="md" />
-            <StatDisplay value={passport.xpEarned} label="XP earned" size="md" />
-          </View>
-        </Section>
-      ) : null}
-
-      <Section title="People">
-        <BorderCard>
-          {isIndividual ? (
-            <InfoRow label="Planted by" value={`${passport.owner.name} (@${passport.owner.handle})`} />
-          ) : (
-            <>
-              <InfoRow label="NGO" value={passport.ngo.orgName} />
-              {passport.adopter ? (
-                <InfoRow label="Adopted by" value={`${passport.adopter.name} (@${passport.adopter.handle})`} />
-              ) : null}
-            </>
-          )}
-        </BorderCard>
-      </Section>
-
-      <Section title="Life timeline">
-        {passport.timeline.length === 0 ? (
-          <Text style={styles.emptyTimeline}>No history yet.</Text>
-        ) : (
-          passport.timeline.map((entry, index) => <TimelineRow key={entry.id} entry={entry} index={index} />)
-        )}
-      </Section>
+      <Text style={styles.gridHeading}>LIFE TIMELINE</Text>
+      {passport.timeline.length === 0 ? (
+        <Text style={styles.emptyTimeline}>No history yet.</Text>
+      ) : (
+        passport.timeline.map((entry, index) => <TimelineRow key={entry.id} entry={entry} index={index} />)
+      )}
     </>
   );
 }
@@ -295,7 +323,7 @@ export function TreePassportScreen({ navigation, route }: any) {
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
-      <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[COLORS.mintLight, COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -329,38 +357,59 @@ const styles = StyleSheet.create({
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
-  heroPhoto: { width: '100%', height: 220, borderRadius: RADIUS.lg, marginBottom: 4 },
+
+  hero: { width: '100%', height: 300, borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: 14 },
+  heroPhoto: { width: '100%', height: '100%' },
   heroPhotoMemorial: { opacity: 0.55 },
-  heroPlaceholder: { width: '100%', height: 220, borderRadius: RADIUS.lg, marginBottom: 4, backgroundColor: COLORS.beigeLight, alignItems: 'center', justifyContent: 'center' },
-  heroPlaceholderEmoji: { fontSize: 64 },
-  heroTextBlock: { alignItems: 'center', marginTop: 10, marginBottom: 18 },
-  heroSpecies: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600' },
-  heroName: { fontSize: 24, fontWeight: '800', color: COLORS.textPrimary, marginTop: 2 },
-  publicIdChip: { marginTop: 8, paddingVertical: 5, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: COLORS.warmBrown },
-  publicIdChipText: { fontSize: 12, fontWeight: '700', color: COLORS.warmBrown, letterSpacing: 0.5 },
-  section: { marginBottom: 20 },
-  sectionLabel: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
-  infoRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginTop: 6, gap: 12 },
-  infoLabel: { fontSize: 12, color: COLORS.textSecondary },
-  infoValue: { fontSize: 13, color: COLORS.textPrimary, fontWeight: '600', flex: 1, textAlign: 'right' },
-  verificationPill: { alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1.5 },
-  verificationText: { fontSize: 12, fontWeight: '700' },
-  healthPill: { alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1.5 },
-  healthPillText: { fontSize: 14, fontWeight: '700' },
-  checkInButton: { marginTop: 12, alignSelf: 'flex-start', paddingVertical: 10, paddingHorizontal: 16, borderRadius: RADIUS.md, backgroundColor: COLORS.sage },
-  checkInButtonText: { fontSize: 13, fontWeight: '700', color: COLORS.cream },
-  checkInRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  markButton: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: RADIUS.full, borderWidth: 1.5, backgroundColor: 'transparent' },
-  markButtonText: { fontSize: 12, fontWeight: '600', color: COLORS.textPrimary },
-  memorialCard: { gap: 12 },
+  heroPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  heroPlaceholderEmoji: { fontSize: 88 },
+  heroOverlay: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 170 },
+  heroBadge: { position: 'absolute', top: 14, right: 14, paddingVertical: 5, paddingHorizontal: 12, borderRadius: 999 },
+  heroBadgeText: { fontSize: 11, fontWeight: '800', color: COLORS.white },
+  heroTextBlock: { position: 'absolute', left: 18, right: 18, bottom: 16 },
+  heroSpecies: { fontSize: 13, color: COLORS.mint, fontWeight: '700' },
+  heroName: { fontSize: 28, fontWeight: '800', color: COLORS.white, marginTop: 2 },
+  publicIdChip: { alignSelf: 'flex-start', marginTop: 8, paddingVertical: 4, paddingHorizontal: 12, borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.35)', borderWidth: 1, borderColor: COLORS.sageLight },
+  publicIdChipText: { fontSize: 12, fontWeight: '700', color: COLORS.mint, letterSpacing: 0.8 },
+
+  healthBanner: { marginBottom: 20 },
+  healthTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  healthEmoji: { fontSize: 18 },
+  healthCaption: { fontSize: 10, fontWeight: '800', color: COLORS.textSecondary, letterSpacing: 1 },
+  healthLabel: { fontSize: 14, fontWeight: '800' },
+  checkInButton: { marginTop: 10, alignSelf: 'flex-start', paddingVertical: 10, paddingHorizontal: 18, borderRadius: RADIUS.full, backgroundColor: COLORS.forest },
+  checkInButtonText: { fontSize: 14, fontWeight: '800', color: COLORS.mint },
+  checkInRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  markButton: { paddingVertical: 9, paddingHorizontal: 14, borderRadius: RADIUS.full, borderWidth: 1.5 },
+  markButtonText: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
+  checkInHint: { fontSize: 11, color: COLORS.textSecondary, marginTop: 10 },
+  checkInHintWarn: { color: COLORS.danger, fontWeight: '700' },
+
+  memorialCard: { borderRadius: RADIUS.lg, padding: 16, marginBottom: 22, gap: 10, backgroundColor: 'rgba(110,99,85,0.14)', borderWidth: 1.5, borderColor: 'rgba(110,99,85,0.4)' },
+  memorialTitle: { fontSize: 16, fontWeight: '800', color: COLORS.textPrimary },
   memorialBody: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 19 },
-  memorialButton: { alignSelf: 'flex-start', paddingVertical: 10, paddingHorizontal: 16, borderRadius: RADIUS.md, backgroundColor: COLORS.sage },
-  memorialButtonText: { fontSize: 13, fontWeight: '700', color: COLORS.cream },
-  statsRow: { flexDirection: 'row', gap: 32 },
+  memorialButton: { alignSelf: 'flex-start', paddingVertical: 10, paddingHorizontal: 16, borderRadius: RADIUS.md, backgroundColor: COLORS.forest },
+  memorialButtonText: { fontSize: 13, fontWeight: '800', color: COLORS.mint },
+
+  gridHeading: { fontSize: 12, fontWeight: '800', color: COLORS.forest, letterSpacing: 1.5, marginBottom: 10, marginTop: 2 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
+  tile: { width: '48.2%', borderRadius: RADIUS.lg, borderWidth: 1.5, padding: 14, minHeight: 104 },
+  tileWide: { width: '100%', minHeight: 0 },
+  tileTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  tileChevron: { fontSize: 16, fontWeight: '800', color: COLORS.forest },
+  tileValueLink: { textDecorationLine: 'underline' },
+  tileIcon: { fontSize: 24 },
+  tileLabel: { fontSize: 10, fontWeight: '800', color: COLORS.textSecondary, letterSpacing: 0.8, textTransform: 'uppercase', marginTop: 8 },
+  tileValue: { fontSize: 14, fontWeight: '800', color: COLORS.textPrimary, marginTop: 2 },
+  tileValueBig: { fontSize: 22, color: COLORS.forest },
+
   emptyTimeline: { fontSize: 12, color: COLORS.textSecondary },
-  timelineRow: { marginBottom: 8 },
-  timelineRowInner: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 10, gap: 10 },
-  timelineSource: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary },
+  timelineItem: { flexDirection: 'row', gap: 10 },
+  timelineRail: { width: 14, alignItems: 'center' },
+  timelineDot: { width: 12, height: 12, borderRadius: 6, marginTop: 14 },
+  timelineLine: { flex: 1, width: 2, backgroundColor: 'rgba(135,168,120,0.4)', marginTop: 2 },
+  timelineRow: { flex: 1, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 10, gap: 10, marginBottom: 8, borderRadius: RADIUS.md, borderLeftWidth: 4, backgroundColor: 'rgba(135,168,120,0.12)' },
+  timelineSource: { fontSize: 13, fontWeight: '800', color: COLORS.textPrimary },
   timelineObserver: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
   timelineNote: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4 },
   timelineDate: { fontSize: 11, color: COLORS.textMuted },

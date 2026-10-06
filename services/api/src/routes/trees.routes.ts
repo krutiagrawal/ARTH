@@ -225,11 +225,10 @@ export default async function treesRoutes(fastify: FastifyInstance) {
     const parsed = logOwnObservationSchema.safeParse(fields);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
 
-    let photoUrl: string | undefined;
-    if (file) {
-      const buffer = await file.toBuffer();
-      photoUrl = await saveHealthCheckPhoto({ filename: file.filename, mimetype: file.mimetype, buffer });
-    }
+    // A live photo is required — health must not change without photographic evidence.
+    if (!file) throw new BadRequestError('A photo is required to update tree health.');
+    const buffer = await file.toBuffer();
+    const photoUrl = await saveHealthCheckPhoto({ filename: file.filename, mimetype: file.mimetype, buffer });
 
     const observation = await logOwnerObservation(fastify.prisma, request.user!.id, request.params.id, {
       ...parsed.data,
