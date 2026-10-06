@@ -112,7 +112,7 @@ export default async function treesRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const { kind, id } = request.params;
       if (kind !== 'tree' && kind !== 'planted-tree') throw new BadRequestError('Invalid passport kind');
-      const passport = await getPassportByInternalId(fastify.prisma, kind, id);
+      const passport = await getPassportByInternalId(fastify.prisma, kind, id, request.user?.id);
       reply.send(passport);
     },
   );

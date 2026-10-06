@@ -92,6 +92,14 @@ export interface PassportTimelineEntry {
   observer?: { id: string; name: string; handle: string } | null;
 }
 
+export interface PendingUpdate {
+  id: string;
+  photoUrl: string | null;
+  note: string | null;
+  at: string;
+  observer: { id: string; name: string; handle: string } | null;
+}
+
 export interface IndividualTreePassport {
   kind: 'individual';
   id: string;
@@ -103,6 +111,8 @@ export interface IndividualTreePassport {
   lat: number;
   lng: number;
   photoUrl: string | null;
+  latestPhotoUrl: string | null;
+  pendingUpdates: PendingUpdate[];
   co2Absorbed: number;
   xpEarned: number;
   aiVerificationStatus: 'unverified' | 'verified' | 'rejected';
@@ -124,6 +134,8 @@ export interface NgoTreePassport {
   lat: number | null;
   lng: number | null;
   photoUrl: string | null;
+  latestPhotoUrl: string | null;
+  pendingUpdates: PendingUpdate[];
   ngo: { id: string; orgName: string; logoUrl: string | null };
   drive: { id: string; title: string } | null;
   zone: { id: string; name: string } | null;
@@ -161,7 +173,7 @@ export interface ApiNearbyTree {
   speciesEmoji: string | null;
   photoUrl: string | null;
   healthStatus: TreeHealthStatus;
-  approxDistanceM: number;
+  distanceM: number;
   lat: number;
   lng: number;
 }

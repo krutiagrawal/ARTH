@@ -2,7 +2,7 @@ import { PrismaClient } from '@arth/db';
 import type { ActionableHealthStatus } from './plantedTree.service';
 import { requireApprovedNgoProfile } from './ngo.service';
 import { notify } from './notification.service';
-import { NotFoundError, BadRequestError } from '../utils/errors';
+import { NotFoundError, BadRequestError, ForbiddenError } from '../utils/errors';
 import { assertGpsNotMocked, assertObservationGpsAccuracy, assertCloseEnoughToObserve } from './plantingLocation.service';
 import type { LatLng } from '../utils/geo';
 
@@ -38,6 +38,22 @@ async function notifyOwnerOfObservation(
     actorUserId,
     data: { treeId: target.treeId, plantedTreeId: target.plantedTreeId, status },
     push: { title: 'Your tree was just observed 🌳', body: 'A new observation was added to its story.' },
+  });
+}
+
+async function notifyOwnerOfPendingUpdate(
+  prisma: PrismaClient,
+  target: { treeId?: string; plantedTreeId?: string },
+  actorUserId: string,
+  observationId: string,
+  ownerUserId: string,
+) {
+  await notify(prisma, {
+    userId: ownerUserId,
+    type: 'tree_update_received',
+    actorUserId,
+    data: { observationId, treeId: target.treeId, plantedTreeId: target.plantedTreeId },
+    push: { title: 'Someone sent an update on your tree 🌳', body: 'Review it and decide if it joins the tree’s story.' },
   });
 }
 
@@ -170,12 +186,17 @@ export async function logCommunityObservation(
     input.point,
   );
 
+  // Community updates wait for the owner's decision. A tree with nobody to decide (an NGO tree
+  // with no adopter) has no reviewer, so its update is accepted straight away rather than lost.
+  const ownerUserId = await findTreeOwnerUserId(prisma, target);
+
   const observation = await prisma.treeObservation.create({
     data: {
       treeId: target.treeId,
       plantedTreeId: target.plantedTreeId,
       observerUserId,
       observerRole: 'community',
+      reviewStatus: ownerUserId ? 'pending' : 'accepted',
       status: input.status,
       note: input.note,
       photoUrl: input.photoUrl,
@@ -186,7 +207,46 @@ export async function logCommunityObservation(
     },
   });
 
-  await notifyOwnerOfObservation(prisma, target, observerUserId, input.status);
+  if (ownerUserId) {
+    await notifyOwnerOfPendingUpdate(prisma, target, observerUserId, observation.id, ownerUserId);
+  }
 
   return observation;
+}
+
+// Owner's decision on a pending community update. Accepting only makes it visible on the
+// passport timeline — it never moves the tree's canonical healthStatus (see
+// logCommunityObservation's note above).
+export async function reviewCommunityObservation(
+  prisma: PrismaClient,
+  ownerUserId: string,
+  observationId: string,
+  decision: 'accepted' | 'rejected',
+) {
+  const observation = await prisma.treeObservation.findUnique({ where: { id: observationId } });
+  if (!observation || observation.observerRole !== 'community') throw new NotFoundError('Update not found');
+
+  const target = observation.treeId ? { treeId: observation.treeId } : { plantedTreeId: observation.plantedTreeId ?? undefined };
+  if ((await findTreeOwnerUserId(prisma, target)) !== ownerUserId) {
+    throw new ForbiddenError('Only the tree’s owner can review this update');
+  }
+  if (observation.reviewStatus !== 'pending') throw new BadRequestError('This update was already reviewed');
+
+  const updated = await prisma.treeObservation.update({
+    where: { id: observation.id },
+    data: { reviewStatus: decision, reviewedAt: new Date() },
+  });
+
+  await notify(prisma, {
+    userId: observation.observerUserId,
+    type: 'tree_update_decided',
+    actorUserId: ownerUserId,
+    data: { observationId, treeId: observation.treeId, plantedTreeId: observation.plantedTreeId, decision },
+    push: {
+      title: decision === 'accepted' ? 'Your tree update was accepted 🌱' : 'Your tree update was reviewed',
+      body: decision === 'accepted' ? 'The owner added it to the tree’s timeline.' : 'The owner chose not to add it to the timeline.',
+    },
+  });
+
+  return updated;
 }

@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { logCommunityObservationSchema } from '../schemas/treeObservations.schema';
 import { saveHealthCheckPhoto } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
-import { logCommunityObservation } from '../services/treeObservation.service';
+import { logCommunityObservation, reviewCommunityObservation } from '../services/treeObservation.service';
 import { BadRequestError } from '../utils/errors';
 
 // Any ARTH user physically near a tree submitting a geofenced observation (see
@@ -31,4 +31,11 @@ export default async function treeObservationsRoutes(fastify: FastifyInstance) {
     );
     reply.status(201).send(observation);
   });
+
+  // Owner decision on a pending community update — see reviewCommunityObservation.
+  for (const [action, decision] of [['accept', 'accepted'], ['reject', 'rejected']] as const) {
+    fastify.post<{ Params: { id: string } }>(`/:id/${action}`, async (request) => {
+      return reviewCommunityObservation(fastify.prisma, request.user!.id, request.params.id, decision);
+    });
+  }
 }

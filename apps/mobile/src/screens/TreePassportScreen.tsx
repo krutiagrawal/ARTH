@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Image, Linking } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Image } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,7 +8,9 @@ import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { useTreePassport, useLogOwnObservation } from '../hooks/useApiQueries';
+import { useTreePassport, useLogOwnObservation, useReviewTreeUpdate } from '../hooks/useApiQueries';
+import { useLiveDistance } from '../hooks/useLiveDistance';
+import { formatMeters } from '../utils/geo';
 import { useAuth } from '../context/AuthContext';
 import { useHaptics } from '../hooks/useHaptics';
 import { useSlideUp, useFadeIn } from '../hooks/useAnimations';
@@ -30,7 +32,7 @@ const VERIFICATION_META: Record<string, { color: string; label: string }> = {
 const OBSERVER_LABEL: Record<string, string> = {
   owner: '🌱 You',
   ngo: '🏢 NGO staff',
-  community: '👋 Community',
+  community: '📣 External update',
 };
 
 const SOURCE_LABEL: Record<PassportTimelineEntry['source'], string> = {
@@ -100,7 +102,13 @@ function TimelineRow({ entry, index }: { entry: PassportTimelineEntry; index: nu
             {meta ? `${meta.emoji} ` : ''}{meta ? meta.label : SOURCE_LABEL[entry.source]}
           </Text>
           {entry.observerRole ? (
-            <Text style={styles.timelineObserver}>{OBSERVER_LABEL[entry.observerRole]}</Text>
+            <Text style={styles.timelineObserver}>
+              {OBSERVER_LABEL[entry.observerRole]}
+              {entry.observerRole === 'community' && entry.observer ? ` · from @${entry.observer.handle}` : ''}
+            </Text>
+          ) : null}
+          {entry.photoUrl && entry.observerRole === 'community' ? (
+            <Image source={{ uri: resolveMediaUrl(entry.photoUrl) }} style={styles.timelinePhoto} />
           ) : null}
           {entry.note ? <Text style={styles.timelineNote}>{entry.note}</Text> : null}
         </View>
@@ -196,9 +204,89 @@ function HealthBanner({ status, children }: { status: keyof typeof STATUS_META; 
   );
 }
 
-// Omitting `origin` makes Google Maps (app or web) start from the user's current location.
-function openDirections(lat: number, lng: number) {
-  Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`).catch(() => {});
+function navigateToTree(navigation: any, passport: TreePassport, lat: number, lng: number) {
+  navigation.navigate('TreeNavigation', {
+    kind: passport.kind === 'individual' ? 'tree' : 'planted-tree',
+    id: passport.id,
+    lat,
+    lng,
+    species: passport.kind === 'individual' ? passport.species.commonName : passport.speciesName,
+    speciesEmoji: passport.kind === 'individual' ? passport.species.emoji : null,
+    publicId: passport.publicId,
+    latestPhotoUrl: passport.latestPhotoUrl,
+  });
+}
+
+// Live distance strip for visitors, with shortcuts into navigation and sending an update.
+function FindTreeBar({ passport, navigation }: { passport: TreePassport; navigation: any }) {
+  const { lat, lng } = passport;
+  const target = lat != null && lng != null ? { lat, lng } : null;
+  const { distanceM } = useLiveDistance(target);
+  if (!target) return null;
+  const isTree = passport.kind === 'individual';
+  return (
+    <View style={styles.findBar}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.findBarCaption}>YOU ARE</Text>
+        <Text style={styles.findBarDistance}>{distanceM == null ? '…' : `${formatMeters(distanceM)} away`}</Text>
+      </View>
+      <TouchableOpacity style={styles.findBarButton} onPress={() => navigateToTree(navigation, passport, target.lat, target.lng)}>
+        <Text style={styles.findBarButtonText}>🧭 Navigate</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.findBarButton, styles.findBarButtonAlt]}
+        onPress={() =>
+          navigation.navigate('LogCommunityObservation', {
+            kind: isTree ? 'tree' : 'planted-tree',
+            id: passport.id,
+            species: isTree ? passport.species.commonName : passport.speciesName,
+            speciesEmoji: isTree ? passport.species.emoji : null,
+            photoUrl: passport.latestPhotoUrl,
+            publicId: passport.publicId,
+          })
+        }
+      >
+        <Text style={styles.findBarButtonText}>📸 Send update</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// Owner-only: community updates waiting for a decision. Accepting adds it to the timeline,
+// labelled as an external update; declining discards it. Neither changes the tree's health.
+function PendingUpdates({ updates }: { updates: TreePassport['pendingUpdates'] }) {
+  const review = useReviewTreeUpdate();
+  if (updates.length === 0) return null;
+  return (
+    <View style={styles.pendingWrap}>
+      <Text style={styles.gridHeading}>📬 UPDATES AWAITING YOUR DECISION</Text>
+      {updates.map((u) => (
+        <View key={u.id} style={styles.pendingCard}>
+          {u.photoUrl ? <Image source={{ uri: resolveMediaUrl(u.photoUrl) }} style={styles.pendingPhoto} /> : null}
+          <Text style={styles.pendingFrom}>
+            From {u.observer ? `${u.observer.name} (@${u.observer.handle})` : 'a visitor'} · {formatDate(u.at)}
+          </Text>
+          {u.note ? <Text style={styles.pendingNote}>{u.note}</Text> : null}
+          <View style={styles.pendingActions}>
+            <TouchableOpacity
+              style={[styles.pendingButton, styles.pendingAccept]}
+              disabled={review.isPending}
+              onPress={() => review.mutate({ observationId: u.id, decision: 'accept' })}
+            >
+              <Text style={styles.pendingAcceptText}>✓ Add to timeline</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.pendingButton, styles.pendingReject]}
+              disabled={review.isPending}
+              onPress={() => review.mutate({ observationId: u.id, decision: 'reject' })}
+            >
+              <Text style={styles.pendingRejectText}>✕ Decline</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
 }
 
 function buildTiles(passport: TreePassport, navigation: any): Tile[] {
@@ -228,7 +316,7 @@ function buildTiles(passport: TreePassport, navigation: any): Tile[] {
   if (passport.locationLabel) tiles.push({ icon: '📌', label: 'Location', value: passport.locationLabel, wide: true });
   const { lat, lng } = passport;
   if (lat != null && lng != null) {
-    tiles.push({ icon: '🧭', label: 'GPS · tap for directions', value: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, wide: true, onPress: () => openDirections(lat, lng) });
+    tiles.push({ icon: '🧭', label: 'GPS · tap to navigate', value: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, wide: true, onPress: () => navigateToTree(navigation, passport, lat, lng) });
   }
   if (passport.kind === 'individual') {
     tiles.push({ icon: '🧑‍🌾', label: 'Planted by', value: `${passport.owner.name} (@${passport.owner.handle})`, wide: true, onPress: openUser(passport.owner.id) });
@@ -242,6 +330,7 @@ function PassportBody({ passport, navigation }: { passport: TreePassport; naviga
   const { user } = useAuth();
   const isIndividual = passport.kind === 'individual';
   const isOwner = isIndividual && passport.owner.id === user?.id;
+  const isTreeOwner = isOwner || (!isIndividual && !!user && passport.adopter?.id === user.id);
   const nickname = isIndividual ? passport.nickname : (passport.label ?? passport.speciesName);
   const speciesLabel = isIndividual ? `${passport.species.emoji} ${passport.species.commonName}` : `🌳 ${passport.speciesName}`;
   const verification = isIndividual ? VERIFICATION_META[passport.aiVerificationStatus] : null;
@@ -297,6 +386,9 @@ function PassportBody({ passport, navigation }: { passport: TreePassport; naviga
           {isOwner ? <CheckInControl treeId={passport.id} /> : null}
         </HealthBanner>
       )}
+
+      <PendingUpdates updates={passport.pendingUpdates} />
+      {!isTreeOwner ? <FindTreeBar passport={passport} navigation={navigation} /> : null}
 
       <Text style={styles.gridHeading}>PASSPORT DETAILS</Text>
       <View style={styles.grid}>
@@ -410,6 +502,24 @@ const styles = StyleSheet.create({
   timelineLine: { flex: 1, width: 2, backgroundColor: 'rgba(135,168,120,0.4)', marginTop: 2 },
   timelineRow: { flex: 1, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 10, gap: 10, marginBottom: 8, borderRadius: RADIUS.md, borderLeftWidth: 4, backgroundColor: 'rgba(135,168,120,0.12)' },
   timelineSource: { fontSize: 13, fontWeight: '800', color: COLORS.textPrimary },
+  timelinePhoto: { width: '100%', height: 140, borderRadius: RADIUS.md, marginTop: 8 },
+  findBar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 22, padding: 12, borderRadius: RADIUS.lg, backgroundColor: 'rgba(120,170,210,0.18)', borderWidth: 1.5, borderColor: 'rgba(120,170,210,0.45)' },
+  findBarCaption: { fontSize: 10, fontWeight: '800', color: COLORS.textSecondary, letterSpacing: 1 },
+  findBarDistance: { fontSize: 18, fontWeight: '800', color: COLORS.forest },
+  findBarButton: { paddingVertical: 9, paddingHorizontal: 12, borderRadius: RADIUS.full, backgroundColor: COLORS.forest },
+  findBarButtonAlt: { backgroundColor: COLORS.sageDark },
+  findBarButtonText: { fontSize: 12, fontWeight: '800', color: COLORS.mint },
+  pendingWrap: { marginBottom: 14 },
+  pendingCard: { padding: 12, marginBottom: 10, borderRadius: RADIUS.lg, backgroundColor: 'rgba(212,168,83,0.18)', borderWidth: 1.5, borderColor: 'rgba(212,168,83,0.5)', gap: 8 },
+  pendingPhoto: { width: '100%', height: 180, borderRadius: RADIUS.md },
+  pendingFrom: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
+  pendingNote: { fontSize: 14, color: COLORS.textPrimary },
+  pendingActions: { flexDirection: 'row', gap: 8 },
+  pendingButton: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: RADIUS.full, borderWidth: 1.5 },
+  pendingAccept: { backgroundColor: COLORS.forest, borderColor: COLORS.forest },
+  pendingAcceptText: { fontSize: 13, fontWeight: '800', color: COLORS.mint },
+  pendingReject: { backgroundColor: 'transparent', borderColor: COLORS.danger },
+  pendingRejectText: { fontSize: 13, fontWeight: '800', color: COLORS.danger },
   timelineObserver: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
   timelineNote: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4 },
   timelineDate: { fontSize: 11, color: COLORS.textMuted },

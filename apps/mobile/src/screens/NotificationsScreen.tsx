@@ -40,6 +40,12 @@ function describe(n: ApiNotification): string {
       return 'started following you';
     case 'post_like':
       return 'liked your post';
+    case 'tree_observation_logged':
+      return 'added an observation on your tree';
+    case 'tree_update_received':
+      return 'sent an update on your tree — review it';
+    case 'tree_update_decided':
+      return (n.data as any)?.decision === 'accepted' ? 'accepted your tree update' : 'reviewed your tree update';
     case 'new_post_from_followed':
       return 'shared a new update';
     case 'drive_reminder':
@@ -193,6 +199,10 @@ function iconFor(n: ApiNotification): string {
       return '🤝';
     case 'ngo_tree_adopted':
       return '🌳';
+    case 'tree_observation_logged':
+    case 'tree_update_received':
+    case 'tree_update_decided':
+      return '🌳';
     case 'ngo_streak_at_risk':
       return '🔥';
     case 'ngo_streak_broken':
@@ -335,6 +345,12 @@ export function NotificationsScreen({ navigation }: any) {
     (n: ApiNotification) => {
       if (n.postId) {
         navigation.navigate('PostDetail', { postId: n.postId });
+        return;
+      }
+      if (n.type === 'tree_observation_logged' || n.type === 'tree_update_received' || n.type === 'tree_update_decided') {
+        const d = n.data as any;
+        if (d?.treeId) navigation.navigate('TreePassport', { kind: 'tree', id: d.treeId });
+        else if (d?.plantedTreeId) navigation.navigate('TreePassport', { kind: 'planted-tree', id: d.plantedTreeId });
         return;
       }
       // Nurseries are the only recipients of a request notification; individual planters are the

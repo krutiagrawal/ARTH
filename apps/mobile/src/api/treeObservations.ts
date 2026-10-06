@@ -30,3 +30,7 @@ export async function logCommunityObservation(input: LogCommunityObservationInpu
 
   return apiFetch('/api/tree-observations', { method: 'POST', body: form, isForm: true });
 }
+
+export async function reviewTreeUpdate(observationId: string, decision: 'accept' | 'reject'): Promise<unknown> {
+  return apiFetch(`/api/tree-observations/${observationId}/${decision}`, { method: 'POST' });
+}

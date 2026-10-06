@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { View, StyleSheet, Dimensions, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
-import { Map, Camera, Marker, UserLocation, GeoJSONSource, Layer, type CameraRef } from '@maplibre/maplibre-react-native';
+import { LeafletPinMap, type LeafletPin, type LeafletCircle } from '../components/map/LeafletPinMap';
 import * as Location from 'expo-location';
 import Animated, {
   useSharedValue,
@@ -43,6 +43,19 @@ import { NOT_APPROVED_MESSAGE } from '../constants/plantingLocation';
 import { getCurrentPositionWithTimeout } from '../utils/location';
 
 const { width: SW } = Dimensions.get('window');
+
+// MapLibre needs a native module that Expo Go (and any older dev build) does not contain, and a
+// plain top-level import of it throws at module load — which makes the lazy-loaded Map tab fail
+// with "Lazy element type must resolve to a class or function". Load it defensively and fall back
+// to a Leaflet/OSM WebView (LeafletPinMap) when it is missing.
+let ML: any = null;
+try {
+  ML = require('@maplibre/maplibre-react-native');
+} catch {
+  ML = null;
+}
+const HAS_NATIVE_MAP = !!ML;
+const { Map, Camera, Marker, UserLocation, GeoJSONSource, Layer } = (ML ?? {}) as any;
 
 // [lng, lat] — MapLibre's coordinate order, opposite of react-native-maps' {latitude, longitude}.
 const INDIA_CENTER: [number, number] = [78.9629, 20.5937];
@@ -111,7 +124,7 @@ const STATUS_MODAL_CONTENT = {
 // the radii used here, tens of meters to ~90km) as a GeoJSON polygon, since MapLibre's own
 // "circle" layer type sizes in constant screen pixels, not real-world meters like the radii the
 // approved-planting-zone and tree distinctness circles need.
-function makeCirclePolygon(lat: number, lng: number, radiusMeters: number, points = 48): GeoJSON.Feature<GeoJSON.Polygon> {
+function makeCirclePolygon(lat: number, lng: number, radiusMeters: number, points = 48): { type: 'Feature'; geometry: { type: 'Polygon'; coordinates: number[][][] }; properties: Record<string, never> } {
   const EARTH_RADIUS_M = 6371000;
   const latRad = (lat * Math.PI) / 180;
   const coords: [number, number][] = [];
@@ -440,7 +453,7 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
   const [locationPending, setLocationPending] = useState(true);
   const [selectedTree, setSelectedTree] = useState<ApiTree | null>(null);
   const [selectedPlanting, setSelectedPlanting] = useState<ApiPlantingMapEntry | null>(null);
-  const cameraRef = useRef<CameraRef>(null);
+  const cameraRef = useRef<any>(null);
   const fadeStyle = useFadeIn(0, 400);
   const headerSlide = useSlideUp(0, 20, 350);
   const { user } = useAuth();
@@ -600,26 +613,66 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
     </View>
   );
 
+  // ---- Expo Go fallback: the same layers as the native map, as plain pin/circle data ----
+  const fallbackPins: LeafletPin[] = [];
+  const fallbackCircles: LeafletCircle[] = [];
+  if (!HAS_NATIVE_MAP) {
+    for (const tree of trees) {
+      const selected = selectedTree?.id === tree.id;
+      const color = GROWTH_COLOR[tree.growthStage - 1];
+      fallbackPins.push({ id: `tree:${tree.id}`, lat: tree.lat, lng: tree.lng, emoji: GROWTH_EMOJI[tree.growthStage - 1], bg: selected ? color : '#fff', border: color, selected });
+    }
+    for (const t of adoptableTrees) {
+      if (t.lat != null && t.lng != null) fallbackPins.push({ id: `adopt:${t.id}`, lat: t.lat, lng: t.lng, emoji: '🌳', border: COLORS.sage });
+    }
+    for (const d of drives) {
+      if (d.lat != null && d.lng != null) fallbackPins.push({ id: `drive:${d.id}`, lat: d.lat, lng: d.lng, emoji: '🤝', border: COLORS.golden });
+    }
+    if (!isNgo && scopeNgoId) {
+      for (const e of plantingPins) fallbackPins.push({ id: `planting:${e.driveId}`, lat: e.lat, lng: e.lng, emoji: '🌲', border: COLORS.forest });
+    }
+    for (const n of nurseries) {
+      if (n.lat != null && n.lng != null) fallbackPins.push({ id: `nursery:${n.id}`, lat: Number(n.lat), lng: Number(n.lng), emoji: '🌿', border: COLORS.earth });
+    }
+    if (!isNgo) {
+      for (const loc of approvedLocations) {
+        fallbackPins.push({ id: `approved:${loc.id}`, lat: loc.lat, lng: loc.lng, emoji: '🏞️', border: COLORS.forest });
+        fallbackCircles.push({ id: `approved_c_${loc.id}`, lat: loc.lat, lng: loc.lng, radiusMeters: loc.radiusMeters, fill: 'rgba(45,90,39,0.10)', stroke: 'rgba(45,90,39,0.45)' });
+      }
+    }
+  }
+
+  const handleFallbackPinPress = (pinId: string) => {
+    const sep = pinId.indexOf(':');
+    const kind = pinId.slice(0, sep);
+    const id = pinId.slice(sep + 1);
+    if (kind === 'tree') {
+      const tree = trees.find((t) => t.id === id);
+      if (tree) flyToTree(tree);
+    } else if (kind === 'adopt') {
+      navigation.navigate('AdoptTreeDetail', { treeId: id });
+    } else if (kind === 'drive') {
+      navigation.navigate('DriveDetail', { driveId: id });
+    } else if (kind === 'planting') {
+      const entry = plantingPins.find((e) => e.driveId === id);
+      if (entry) setSelectedPlanting(entry);
+    } else if (kind === 'nursery') {
+      navigation.navigate('NurseryPublicProfile', { nurseryId: id });
+    } else if (kind === 'approved') {
+      const loc = approvedLocations.find((l) => l.id === id);
+      if (loc) setInfoLocation(loc);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar style={isNight ? 'light' : 'dark'} />
 
       {/* Map */}
       <Animated.View style={[StyleSheet.absoluteFill, fadeStyle]}>
+        {HAS_NATIVE_MAP ? (
         <Map style={StyleSheet.absoluteFill} mapStyle={OSM_STYLE} compass={false} scaleBar={false}>
           <Camera ref={cameraRef} initialViewState={{ center: INDIA_CENTER, zoom: INDIA_ZOOM }} />
-
-          {trees.map(tree => (
-            <CircleOverlay
-              key={`c_${tree.id}`}
-              id={`c_${tree.id}`}
-              lat={tree.lat}
-              lng={tree.lng}
-              radiusMeters={selectedTree?.id === tree.id ? 90000 : 45000}
-              fillColor={GROWTH_COLOR[tree.growthStage - 1] + '1A'}
-              strokeColor={GROWTH_COLOR[tree.growthStage - 1] + '55'}
-            />
-          ))}
 
           {!isNgo && approvedLocations.map((loc) => (
             <CircleOverlay
@@ -702,6 +755,17 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
 
           <UserLocation animated accuracy={false} />
         </Map>
+        ) : (
+          <LeafletPinMap
+            ref={cameraRef}
+            pins={fallbackPins}
+            circles={fallbackCircles}
+            user={location ? { lat: location.coords.latitude, lng: location.coords.longitude } : null}
+            initialCenter={INDIA_CENTER}
+            initialZoom={INDIA_ZOOM}
+            onPinPress={handleFallbackPinPress}
+          />
+        )}
       </Animated.View>
 
       {/* Header */}

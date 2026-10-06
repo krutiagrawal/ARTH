@@ -32,7 +32,28 @@ interface TimelineEntry {
   observer?: { id: string; name: string; handle: string } | null;
 }
 
-async function buildIndividualPassport(prisma: PrismaClient, treeId: string) {
+interface ObservationRow {
+  id: string;
+  photoUrl: string | null;
+  note: string | null;
+  createdAt: Date;
+  reviewStatus: string;
+  observerUser: { id: string; name: string; handle: string } | null;
+}
+
+// Newest accepted photo, falling back to the planting photo — what a visitor compares against to
+// confirm they're looking at the right plant.
+function latestPhoto(plantedPhoto: string | null, accepted: ObservationRow[]): string | null {
+  return accepted.find((o) => o.photoUrl)?.photoUrl ?? plantedPhoto;
+}
+
+function toPendingUpdates(rows: ObservationRow[]) {
+  return rows
+    .filter((o) => o.reviewStatus === 'pending')
+    .map((o) => ({ id: o.id, photoUrl: o.photoUrl, note: o.note, at: o.createdAt, observer: o.observerUser }));
+}
+
+async function buildIndividualPassport(prisma: PrismaClient, treeId: string, requesterId?: string) {
   const tree = await prisma.tree.findFirst({
     where: { id: treeId, isDeleted: false },
     include: {
@@ -43,12 +64,16 @@ async function buildIndividualPassport(prisma: PrismaClient, treeId: string) {
         select: { id: true, speciesNameSnapshot: true, ageAtSupplyLabel: true, supplyDate: true, nurseryId: true },
       },
       observations: {
+        where: { reviewStatus: { not: 'rejected' } },
         orderBy: { createdAt: 'desc' },
         include: { observerUser: { select: { id: true, name: true, handle: true } } },
       },
     },
   });
   if (!tree) throw new NotFoundError('Tree not found');
+
+  const accepted = tree.observations.filter((o) => o.reviewStatus === 'accepted');
+  const pendingUpdates = requesterId === tree.userId ? toPendingUpdates(tree.observations) : [];
 
   const timeline: TimelineEntry[] = [
     { id: `${tree.id}-planted`, source: 'planted' as const, status: null, note: null, photoUrl: tree.photoUrl, at: tree.plantedAt },
@@ -64,7 +89,7 @@ async function buildIndividualPassport(prisma: PrismaClient, treeId: string) {
           },
         ]
       : []),
-    ...tree.observations.map((o) => ({
+    ...accepted.map((o) => ({
       id: o.id,
       source: 'observation' as const,
       status: o.status,
@@ -87,6 +112,8 @@ async function buildIndividualPassport(prisma: PrismaClient, treeId: string) {
     lat: Number(tree.lat),
     lng: Number(tree.lng),
     photoUrl: tree.photoUrl,
+    latestPhotoUrl: latestPhoto(tree.photoUrl, accepted),
+    pendingUpdates,
     co2Absorbed: Number(tree.co2Absorbed),
     xpEarned: tree.xpEarned,
     aiVerificationStatus: tree.aiVerificationStatus,
@@ -98,7 +125,7 @@ async function buildIndividualPassport(prisma: PrismaClient, treeId: string) {
   };
 }
 
-async function buildNgoPassport(prisma: PrismaClient, plantedTreeId: string) {
+async function buildNgoPassport(prisma: PrismaClient, plantedTreeId: string, requesterId?: string) {
   const tree = await prisma.plantedTree.findFirst({
     where: { id: plantedTreeId },
     include: {
@@ -110,6 +137,7 @@ async function buildNgoPassport(prisma: PrismaClient, plantedTreeId: string) {
       },
       healthChecks: { orderBy: { checkedAt: 'desc' } },
       observations: {
+        where: { reviewStatus: { not: 'rejected' } },
         orderBy: { createdAt: 'desc' },
         include: { observerUser: { select: { id: true, name: true, handle: true } } },
       },
@@ -119,6 +147,10 @@ async function buildNgoPassport(prisma: PrismaClient, plantedTreeId: string) {
     },
   });
   if (!tree) throw new NotFoundError('Tree not found');
+
+  const accepted = tree.observations.filter((o) => o.reviewStatus === 'accepted');
+  const adopterUser = tree.adoptableListings.find((l) => l.adoption)?.adoption?.user ?? null;
+  const pendingUpdates = requesterId && requesterId === adopterUser?.id ? toPendingUpdates(tree.observations) : [];
 
   const timeline: TimelineEntry[] = [
     { id: `${tree.id}-planted`, source: 'planted' as const, status: null, note: null, photoUrl: tree.photoUrl, at: tree.plantedAt },
@@ -130,7 +162,7 @@ async function buildNgoPassport(prisma: PrismaClient, plantedTreeId: string) {
       photoUrl: c.photoUrl,
       at: c.checkedAt,
     })),
-    ...tree.observations.map((o) => ({
+    ...accepted.map((o) => ({
       id: o.id,
       source: 'observation' as const,
       status: o.status,
@@ -142,7 +174,8 @@ async function buildNgoPassport(prisma: PrismaClient, plantedTreeId: string) {
     })),
   ].sort((a, b) => b.at.getTime() - a.at.getTime());
 
-  const latestStatus = timeline.find((e) => e.status)?.status ?? 'not_checked';
+  // Community updates are informational only and never move the canonical status.
+  const latestStatus = timeline.find((e) => e.status && e.observerRole !== 'community')?.status ?? 'not_checked';
   // An AdoptableTree listing created FROM this PlantedTree (Phase 5 writes this link) whose
   // Adoption has actually been claimed — a listing with no claimed Adoption yet contributes
   // nothing here.
@@ -159,6 +192,8 @@ async function buildNgoPassport(prisma: PrismaClient, plantedTreeId: string) {
     lat: tree.lat !== null ? Number(tree.lat) : null,
     lng: tree.lng !== null ? Number(tree.lng) : null,
     photoUrl: tree.photoUrl,
+    latestPhotoUrl: latestPhoto(tree.photoUrl, accepted),
+    pendingUpdates,
     ngo: tree.ngo,
     drive: tree.drive,
     zone: tree.zone,
@@ -169,13 +204,18 @@ async function buildNgoPassport(prisma: PrismaClient, plantedTreeId: string) {
   };
 }
 
-export async function getPassportByInternalId(prisma: PrismaClient, kind: 'tree' | 'planted-tree', id: string) {
-  return kind === 'tree' ? buildIndividualPassport(prisma, id) : buildNgoPassport(prisma, id);
+export async function getPassportByInternalId(
+  prisma: PrismaClient,
+  kind: 'tree' | 'planted-tree',
+  id: string,
+  requesterId?: string,
+) {
+  return kind === 'tree' ? buildIndividualPassport(prisma, id, requesterId) : buildNgoPassport(prisma, id, requesterId);
 }
 
-export async function getPassportByPublicId(prisma: PrismaClient, publicId: string) {
+export async function getPassportByPublicId(prisma: PrismaClient, publicId: string, requesterId?: string) {
   const resolution = await resolvePublicId(prisma, publicId);
   return resolution.kind === 'individual'
-    ? buildIndividualPassport(prisma, resolution.id)
-    : buildNgoPassport(prisma, resolution.id);
+    ? buildIndividualPassport(prisma, resolution.id, requesterId)
+    : buildNgoPassport(prisma, resolution.id, requesterId);
 }

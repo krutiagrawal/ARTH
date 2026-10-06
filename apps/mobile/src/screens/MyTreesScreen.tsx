@@ -6,11 +6,39 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { EmptyState } from '../components/common/EmptyState';
-import { TreeCard } from '../components/common/TreeCard';
 import { useTrees } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { STATUS_META } from '../constants/treeHealth';
 import type { TreeHealthStatus } from '../api/plantedTrees';
+import type { ApiTree } from '../api/trees';
+
+const GROWTH_STAGE_EMOJI = ['🌱', '🌿', '🌳', '🌲', '🎋'];
+const GROWTH_STAGE_LABEL = ['Seedling', 'Sprouting', 'Growing', 'Maturing', 'Flourishing'];
+
+// Tiles per row — 2 reads comfortably on phones; 3 also fits if tiles should be denser.
+const COLUMNS = 2;
+const GRID_GAP = 12;
+
+// Flat outlined tile (no fill / glass), matching the app's brown-outline card language.
+function TreeTile({ tree, onPress }: { tree: ApiTree; onPress: () => void }) {
+  const stageIndex = tree.growthStage - 1;
+  const health = STATUS_META[tree.healthStatus];
+  return (
+    <TouchableOpacity style={styles.tile} activeOpacity={0.8} onPress={onPress}>
+      <Text style={styles.tileEmoji}>{GROWTH_STAGE_EMOJI[stageIndex]}</Text>
+      <Text style={styles.tileName} numberOfLines={1}>{tree.nickname}</Text>
+      <Text style={styles.tileSpecies} numberOfLines={1}>{tree.species}</Text>
+      <View style={styles.growthBar}>
+        <View style={[styles.growthFill, { width: `${(tree.growthStage / 5) * 100}%` }]} />
+      </View>
+      <Text style={styles.tileMeta} numberOfLines={1}>{GROWTH_STAGE_LABEL[stageIndex]}</Text>
+      {tree.location ? <Text style={styles.tileMeta} numberOfLines={1}>📍 {tree.location.split(',')[0]}</Text> : null}
+      <View style={[styles.healthPill, { borderColor: health.color }]}>
+        <Text style={[styles.healthPillText, { color: health.color }]} numberOfLines={1}>{health.emoji} {health.label}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 // Display order for the counts row — healthy first (the reassuring headline number), then
 // anything that needs attention, "not checked" last since it's an absence-of-signal state.
@@ -71,16 +99,15 @@ export function MyTreesScreen({ navigation }: any) {
             ))}
           </View>
 
-          {(trees ?? []).map((tree) => (
-            <TreeCard
-              key={tree.id}
-              tree={tree}
-              size="card"
-              showHealthStatus
-              style={styles.treeCard}
-              onPress={() => navigation.navigate('TreePassport', { kind: 'tree', id: tree.id })}
-            />
-          ))}
+          <View style={styles.grid}>
+            {(trees ?? []).map((tree) => (
+              <TreeTile
+                key={tree.id}
+                tree={tree}
+                onPress={() => navigation.navigate('TreePassport', { kind: 'tree', id: tree.id })}
+              />
+            ))}
+          </View>
         </ScrollView>
       )}
     </View>
@@ -99,5 +126,14 @@ const styles = StyleSheet.create({
   countsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
   countPill: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1.5 },
   countPillText: { fontSize: 12, fontWeight: '700' },
-  treeCard: { marginBottom: 14 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
+  tile: { width: `${100 / COLUMNS - 2}%`, flexGrow: 1, alignItems: 'center', padding: 14, gap: 4, borderRadius: 20, borderWidth: 1.5, borderColor: COLORS.warmBrown, backgroundColor: 'transparent' },
+  tileEmoji: { fontSize: 34, marginBottom: 2 },
+  tileName: { fontSize: 15, fontWeight: '800', color: COLORS.textPrimary },
+  tileSpecies: { fontSize: 12, color: COLORS.textSecondary },
+  growthBar: { alignSelf: 'stretch', height: 5, borderRadius: 3, backgroundColor: 'rgba(160,114,74,0.2)', marginVertical: 4, overflow: 'hidden' },
+  growthFill: { height: '100%', borderRadius: 3, backgroundColor: COLORS.sageDark },
+  tileMeta: { fontSize: 11, color: COLORS.textSecondary },
+  healthPill: { marginTop: 4, paddingVertical: 3, paddingHorizontal: 8, borderRadius: 999, borderWidth: 1.5 },
+  healthPillText: { fontSize: 10, fontWeight: '700' },
 });

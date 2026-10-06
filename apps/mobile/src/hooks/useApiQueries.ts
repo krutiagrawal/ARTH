@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { fetchTrees, plantTree, verifyPlantingPhoto, fetchTreesMap, fetchTreePassport, fetchNearbyTrees, logOwnObservation, type PlantTreeInput, type LogOwnObservationInput } from '../api/trees';
-import { logCommunityObservation, type LogCommunityObservationInput } from '../api/treeObservations';
+import { logCommunityObservation, reviewTreeUpdate, type LogCommunityObservationInput } from '../api/treeObservations';
 import { fetchNgoPublicFollowers, fetchNurseryPublicFollowers } from '../api/publicFollowers';
 import { fetchApprovedLocations, checkPlantingEligibility } from '../api/plantingLocations';
 import { fetchSpecies, createSpecies, fetchNearbyStock } from '../api/species';
@@ -338,6 +338,15 @@ export function useLogCommunityObservation() {
       queryClient.invalidateQueries({ queryKey: ['trees'] });
       queryClient.invalidateQueries({ queryKey: ['trees', 'passport', input.targetKind, input.targetId] });
     },
+  });
+}
+
+export function useReviewTreeUpdate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ observationId, decision }: { observationId: string; decision: 'accept' | 'reject' }) =>
+      reviewTreeUpdate(observationId, decision),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['trees'] }),
   });
 }
 

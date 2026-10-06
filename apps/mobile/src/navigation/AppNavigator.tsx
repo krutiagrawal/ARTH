@@ -81,6 +81,7 @@ import { DriveDetailScreen } from '../screens/DriveDetailScreen';
 import { MyTreesScreen } from '../screens/MyTreesScreen';
 import { TreePassportScreen } from '../screens/TreePassportScreen';
 import { NearbyTreesScreen } from '../screens/NearbyTreesScreen';
+import { TreeNavigationScreen } from '../screens/TreeNavigationScreen';
 import { LogCommunityObservationScreen } from '../screens/LogCommunityObservationScreen';
 import { AdoptTreeListScreen } from '../screens/AdoptTreeListScreen';
 import { AdoptTreeDetailScreen } from '../screens/AdoptTreeDetailScreen';
@@ -412,6 +413,7 @@ export type RootStackParamList = {
   MyTrees: undefined;
   TreePassport: { kind: 'tree' | 'planted-tree'; id: string };
   NearbyTrees: undefined;
+  TreeNavigation: { kind: 'tree' | 'planted-tree'; id: string; lat: number; lng: number; species?: string; speciesEmoji?: string | null; publicId?: string; latestPhotoUrl?: string | null };
   LogCommunityObservation: {
     kind: 'tree' | 'planted-tree';
     id: string;
@@ -941,6 +943,7 @@ export function AppNavigator() {
         <Stack.Screen name="MyTrees" component={MyTreesScreen} />
         <Stack.Screen name="TreePassport" component={TreePassportScreen} />
         <Stack.Screen name="NearbyTrees" component={NearbyTreesScreen} />
+        <Stack.Screen name="TreeNavigation" component={TreeNavigationScreen} />
         <Stack.Screen name="LogCommunityObservation" component={LogCommunityObservationScreen} />
         <Stack.Screen name="AdoptTreeList" component={AdoptTreeListScreen} />
         <Stack.Screen name="AdoptTreeDetail" component={AdoptTreeDetailScreen} />

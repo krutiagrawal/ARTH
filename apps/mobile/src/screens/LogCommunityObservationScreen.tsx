@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, TextInput } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -34,6 +34,7 @@ export function LogCommunityObservationScreen({ navigation, route }: any) {
 
   const [stage, setStage] = useState<Stage>('confirm');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [note, setNote] = useState('');
   const [capturedPhoto, setCapturedPhoto] = useState<{ uri: string; name: string; type: string } | null>(null);
 
   const handleConfirm = useCallback(async () => {
@@ -77,6 +78,7 @@ export function LogCommunityObservationScreen({ navigation, route }: any) {
           targetKind: kind,
           targetId: id,
           status: healthStatus,
+          note: note.trim() || undefined,
           lat: freshPosition.coords.latitude,
           lng: freshPosition.coords.longitude,
           accuracy: freshPosition.coords.accuracy ?? 9999,
@@ -90,7 +92,7 @@ export function LogCommunityObservationScreen({ navigation, route }: any) {
         setStage('error');
       }
     },
-    [capturedPhoto, kind, id, logMutation, successHaptic],
+    [capturedPhoto, note, kind, id, logMutation, successHaptic],
   );
 
   return (
@@ -118,6 +120,7 @@ export function LogCommunityObservationScreen({ navigation, route }: any) {
                 <Text style={styles.heroPlaceholderEmoji}>{speciesEmoji ?? '🌳'}</Text>
               </View>
             )}
+            <Text style={styles.photoCaption}>LATEST PHOTO OF THIS PLANT</Text>
             <Text style={styles.confirmTitle}>Is this the tree you're looking at?</Text>
             <Text style={styles.confirmSpecies}>{speciesEmoji ? `${speciesEmoji} ` : ''}{species ?? 'ARTH tree'}</Text>
             {publicId ? <Text style={styles.confirmPublicId}>ARTH #{publicId}</Text> : null}
@@ -129,7 +132,17 @@ export function LogCommunityObservationScreen({ navigation, route }: any) {
 
         {stage === 'status' ? (
           <>
-            <Text style={styles.confirmTitle}>How does it look?</Text>
+            {capturedPhoto ? <Image source={{ uri: capturedPhoto.uri }} style={styles.heroPhoto} /> : null}
+            <TextInput
+              style={styles.noteInput}
+              value={note}
+              onChangeText={setNote}
+              placeholder="Add a short note for the owner (optional)"
+              placeholderTextColor={COLORS.textMuted}
+              maxLength={140}
+              multiline
+            />
+            <Text style={styles.confirmTitle}>How does it look? Tap to send</Text>
             <View style={styles.statusGrid}>
               {ACTIONABLE_STATUSES.map((status) => (
                 <TouchableOpacity
@@ -150,11 +163,11 @@ export function LogCommunityObservationScreen({ navigation, route }: any) {
 
         {stage === 'success' ? (
           <BorderCard style={styles.successCard}>
-            <Text style={styles.successTitle}>Observation confirmed ✓</Text>
+            <Text style={styles.successTitle}>Update sent ✓</Text>
             <Text style={styles.successBody}>
               {species ?? 'This tree'}{publicId ? ` #${publicId}` : ''}
             </Text>
-            <Text style={styles.successSub}>Your observation was added to its story.</Text>
+            <Text style={styles.successSub}>The owner was notified. If they accept it, it joins the tree’s timeline as an external update.</Text>
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={() => navigation.replace('TreePassport', { kind, id })}
@@ -188,6 +201,8 @@ const styles = StyleSheet.create({
   heroPhoto: { width: '100%', height: 200, borderRadius: RADIUS.lg, marginBottom: 16 },
   heroPlaceholder: { width: '100%', height: 200, borderRadius: RADIUS.lg, marginBottom: 16, backgroundColor: COLORS.beigeLight, alignItems: 'center', justifyContent: 'center' },
   heroPlaceholderEmoji: { fontSize: 56 },
+  photoCaption: { fontSize: 10, fontWeight: '800', letterSpacing: 1, color: COLORS.textSecondary, marginBottom: 6 },
+  noteInput: { width: '100%', minHeight: 64, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: 'rgba(135,168,120,0.5)', backgroundColor: 'rgba(135,168,120,0.12)', padding: 12, marginBottom: 16, fontSize: 14, color: COLORS.textPrimary, textAlignVertical: 'top' },
   confirmTitle: { fontSize: 18, fontWeight: '800', color: COLORS.textPrimary, textAlign: 'center', marginBottom: 6 },
   confirmSpecies: { fontSize: 14, color: COLORS.textSecondary, textAlign: 'center' },
   confirmPublicId: { fontSize: 12, color: COLORS.textMuted, marginTop: 4, textAlign: 'center' },

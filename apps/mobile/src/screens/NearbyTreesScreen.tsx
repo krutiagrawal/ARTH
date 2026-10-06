@@ -12,6 +12,7 @@ import { useMyLocation } from '../hooks/useMyLocation';
 import { useNearbyTrees } from '../hooks/useApiQueries';
 import { resolveMediaUrl } from '../api/client';
 import type { ApiNearbyTree } from '../api/trees';
+import { formatMeters } from '../utils/geo';
 
 function NearbyTreeRow({ tree, onPress }: { tree: ApiNearbyTree; onPress: () => void }) {
   return (
@@ -29,7 +30,7 @@ function NearbyTreeRow({ tree, onPress }: { tree: ApiNearbyTree; onPress: () => 
             <Text style={styles.species}>{tree.speciesEmoji ? `${tree.speciesEmoji} ` : ''}{tree.species}</Text>
             <Text style={styles.publicId}>ARTH #{tree.publicId}</Text>
           </View>
-          <Text style={styles.distance}>{tree.approxDistanceM}m</Text>
+          <Text style={styles.distance}>{formatMeters(tree.distanceM)}</Text>
         </View>
       </BorderCard>
     </TouchableOpacity>
@@ -65,21 +66,12 @@ export function NearbyTreesScreen({ navigation }: any) {
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.subtitle}>Tap a tree to confirm you're standing near it and log an observation.</Text>
+          <Text style={styles.subtitle}>Tap a tree to open its passport, get directions and send the owner an update.</Text>
           {trees.map((tree) => (
             <NearbyTreeRow
               key={`${tree.kind}-${tree.id}`}
               tree={tree}
-              onPress={() =>
-                navigation.navigate('LogCommunityObservation', {
-                  kind: tree.kind,
-                  id: tree.id,
-                  species: tree.species,
-                  speciesEmoji: tree.speciesEmoji,
-                  photoUrl: tree.photoUrl,
-                  publicId: tree.publicId,
-                })
-              }
+              onPress={() => navigation.navigate('TreePassport', { kind: tree.kind, id: tree.id })}
             />
           ))}
         </ScrollView>
