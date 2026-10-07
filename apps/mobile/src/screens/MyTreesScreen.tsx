@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,6 +11,10 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { STATUS_META } from '../constants/treeHealth';
 import type { TreeHealthStatus } from '../api/plantedTrees';
 import type { ApiTree } from '../api/trees';
+import { LeafletPinMap, type LeafletPin, type LeafletPinMapHandle } from '../components/map/LeafletPinMap';
+
+// Where the map opens before it fits to the user's trees (India-wide; replaced almost immediately).
+const DEFAULT_CENTER: [number, number] = [78.9629, 20.5937];
 
 const GROWTH_STAGE_EMOJI = ['🌱', '🌿', '🌳', '🌲', '🎋'];
 const GROWTH_STAGE_LABEL = ['Seedling', 'Sprouting', 'Growing', 'Maturing', 'Flourishing'];
@@ -44,8 +48,11 @@ function TreeTile({ tree, onPress }: { tree: ApiTree; onPress: () => void }) {
 // anything that needs attention, "not checked" last since it's an absence-of-signal state.
 const COUNT_ORDER: TreeHealthStatus[] = ['healthy', 'struggling', 'dead', 'removed', 'not_checked'];
 
-export function MyTreesScreen({ navigation }: any) {
+export function MyTreesScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
+  // Arriving from a fresh planting opens straight on the map of everything planted.
+  const [view, setView] = useState<'list' | 'map'>(route?.params?.view === 'map' ? 'map' : 'list');
+  const mapRef = useRef<LeafletPinMapHandle>(null);
   const { data: trees, isLoading, refetch } = useTrees(200);
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
@@ -63,12 +70,53 @@ export function MyTreesScreen({ navigation }: any) {
 
   const total = trees?.length ?? 0;
 
+  const pins = useMemo<LeafletPin[]>(
+    () =>
+      (trees ?? [])
+        .filter((t) => Number.isFinite(t.lat) && Number.isFinite(t.lng))
+        .map((t) => ({
+          id: t.id,
+          lat: t.lat,
+          lng: t.lng,
+          emoji: t.speciesEmoji || GROWTH_STAGE_EMOJI[t.growthStage - 1],
+          bg: COLORS.sageLight,
+          border: STATUS_META[t.healthStatus].color,
+        })),
+    [trees],
+  );
+
+  // Frame all the user's trees once the map page has loaded (it can't take commands before then).
+  useEffect(() => {
+    if (view !== 'map' || pins.length === 0) return;
+    const lats = pins.map((p) => p.lat);
+    const lngs = pins.map((p) => p.lng);
+    const timer = setTimeout(() => {
+      mapRef.current?.fitBounds([Math.min(...lngs), Math.min(...lats), Math.max(...lngs), Math.max(...lats)]);
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [view, pins]);
+
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
       <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
 
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+      {/* Map view fills the whole screen; the header and toggle float over it. */}
+      {!isLoading && total > 0 && view === 'map' && (
+        <View style={StyleSheet.absoluteFill}>
+          <LeafletPinMap
+            ref={mapRef}
+            pins={pins}
+            circles={[]}
+            user={null}
+            initialCenter={pins[0] ? [pins[0].lng, pins[0].lat] : DEFAULT_CENTER}
+            initialZoom={pins[0] ? 12 : 3.5}
+            onPinPress={(id) => navigation.navigate('TreePassport', { kind: 'tree', id })}
+          />
+        </View>
+      )}
+
+      <View style={[styles.header, { paddingTop: insets.top + 8 }, view === 'map' && total > 0 && styles.headerOverMap]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <View style={styles.backBlur}>
             <Text style={styles.backIcon}>←</Text>
@@ -78,11 +126,28 @@ export function MyTreesScreen({ navigation }: any) {
         <View style={{ width: 40 }} />
       </View>
 
+      {!isLoading && total > 0 && (
+        <View style={styles.toggleRow}>
+          {(['list', 'map'] as const).map((mode) => (
+            <TouchableOpacity
+              key={mode}
+              style={[styles.toggleChip, view === mode && styles.toggleChipActive]}
+              activeOpacity={0.8}
+              onPress={() => setView(mode)}
+            >
+              <Text style={[styles.toggleText, view === mode && styles.toggleTextActive]}>
+                {mode === 'list' ? '🌳  List' : '🗺️  Map'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : total === 0 ? (
         <EmptyState icon="🌱" title="No trees yet" body="Every tree you plant will show up here with its own story." />
-      ) : (
+      ) : view === 'map' ? null : (
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
@@ -122,6 +187,12 @@ const styles = StyleSheet.create({
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
+  toggleRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingBottom: 12 },
+  toggleChip: { paddingVertical: 8, paddingHorizontal: 18, borderRadius: 999, borderWidth: 1.5, borderColor: COLORS.warmBrown, backgroundColor: COLORS.cream },
+  toggleChipActive: { backgroundColor: COLORS.sageDark, borderColor: COLORS.sageDark },
+  toggleText: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary },
+  toggleTextActive: { color: COLORS.white },
+  headerOverMap: { backgroundColor: 'rgba(255,248,237,0.92)' },
   totalLine: { fontSize: 22, fontWeight: '800', color: COLORS.textPrimary, marginTop: 4, marginBottom: 10 },
   countsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
   countPill: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1.5 },

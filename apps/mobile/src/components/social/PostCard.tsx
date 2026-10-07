@@ -298,12 +298,13 @@ export function PostCard({
           <Text style={styles.plantTitle} numberOfLines={1}>
             {post.treeSpeciesEmoji || '🌳'} Planted {post.treeNickname}
           </Text>
-          {post.treeSpecies ? <Text style={styles.plantLine}>🌿 {post.treeSpecies}</Text> : null}
-          {post.treeLocation ? <Text style={styles.plantLine} numberOfLines={2}>📍 {post.treeLocation}</Text> : null}
-          <Text style={styles.plantLine}>
-            🕒 {new Date(post.treePlantedAt || post.createdAt).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
-          </Text>
-          {post.treePublicId ? <Text style={styles.plantLine}>🪪 #{post.treePublicId}</Text> : null}
+          {post.treeSpecies ? <PlantLine icon="🌿" text={post.treeSpecies} /> : null}
+          {post.treeLocation ? <PlantLine icon="📍" text={post.treeLocation} /> : null}
+          <PlantLine
+            icon="🕒"
+            text={new Date(post.treePlantedAt || post.createdAt).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+          />
+          {post.treePublicId ? <PlantLine icon="🪪" text={`#${post.treePublicId}`} /> : null}
         </View>
       ) : null}
 
@@ -317,7 +318,21 @@ export function PostCard({
   );
 }
 
+// Icon in its own fixed-width column so a wrapped value (long addresses) continues under the first
+// line of text instead of flowing back underneath the emoji.
+function PlantLine({ icon, text }: { icon: string; text: string }) {
+  return (
+    <View style={styles.plantLineRow}>
+      <Text style={[styles.plantLine, styles.plantLineIcon]}>{icon}</Text>
+      <Text style={[styles.plantLine, styles.plantLineText]}>{text}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  plantLineRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  plantLineIcon: { width: 22 },
+  plantLineText: { flex: 1 },
   plantCard: {
     marginHorizontal: 14,
     marginTop: 8,

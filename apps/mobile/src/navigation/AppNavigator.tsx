@@ -410,7 +410,7 @@ export type RootStackParamList = {
   FriendsList: { mode: 'requests' | 'squad' };
   Drives: undefined;
   DriveDetail: { driveId: string };
-  MyTrees: undefined;
+  MyTrees: { view?: 'list' | 'map' } | undefined;
   TreePassport: { kind: 'tree' | 'planted-tree'; id: string };
   NearbyTrees: undefined;
   TreeNavigation: { kind: 'tree' | 'planted-tree'; id: string; lat: number; lng: number; species?: string; speciesEmoji?: string | null; publicId?: string; latestPhotoUrl?: string | null };
@@ -540,7 +540,7 @@ function MainApp({ navigation }: any) {
       case 'Forest':
         return <ForestScreen navigation={navigation} />;
       case 'Plant':
-        return <PlantTreeScreen navigation={navigation} onNavigateTab={setActiveTab} />;
+        return <PlantTreeScreen navigation={navigation} />;
       case 'Map':
         return (
           <MapErrorBoundary>

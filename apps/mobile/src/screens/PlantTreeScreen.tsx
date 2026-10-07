@@ -327,7 +327,7 @@ function SuccessAnimation({ treeName, xpEarned, publicId, speciesName, speciesEm
   );
 }
 
-export function PlantTreeScreen({ navigation, route, onNavigateTab }: any) {
+export function PlantTreeScreen({ navigation, route }: any) {
   const verifiedLat: number | undefined = route?.params?.verifiedLat;
   const verifiedLng: number | undefined = route?.params?.verifiedLng;
   const isPreVerified = verifiedLat != null && verifiedLng != null;
@@ -624,11 +624,29 @@ export function PlantTreeScreen({ navigation, route, onNavigateTab }: any) {
   const handleDone = useCallback(() => {
     if (navigation.canGoBack()) {
       navigation.goBack();
-    } else {
-      // Opened as the Plant tab (nothing to go back to): "View My Forest" switches to the Forest tab.
-      onNavigateTab?.('Forest');
     }
-  }, [navigation, onNavigateTab]);
+  }, [navigation]);
+
+  // "View My Forest" opens My Trees, the full list of everything the user has planted (the Forest
+  // tab only shows a partial view).
+  const handleViewForest = useCallback(() => {
+    if (navigation.canGoBack()) {
+      // Opened as its own screen: swap it out so Back from My Trees doesn't land on this finished flow.
+      navigation.replace('MyTrees', { view: 'map' });
+      return;
+    }
+    // Opened as the Plant tab: push My Trees, and reset the flow so coming back starts fresh.
+    navigation.navigate('MyTrees', { view: 'map' });
+    setStage('upload');
+    setImageUri(null);
+    setSelectedSpeciesId(null);
+    setNickname('');
+    setCaption('');
+    setPlantedTree(null);
+    setPickedLocation(null);
+    setSearchText('');
+    setSearchOpen(false);
+  }, [navigation]);
 
   return (
     <View style={styles.container}>
@@ -961,7 +979,7 @@ export function PlantTreeScreen({ navigation, route, onNavigateTab }: any) {
           plantedAt={plantedTree?.plantedAt}
           topInset={insets.top}
           bottomPad={bottomNavClearance}
-          onDone={handleDone}
+          onDone={handleViewForest}
           onShare={() => {
             setShareCardReady(false);
             setShareVisible(true);
