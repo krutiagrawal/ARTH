@@ -14,6 +14,8 @@ import { FriendCard, FriendRequestRow } from '../components/social/FriendRow';
 import { useSoundSystem } from '../hooks/useSoundSystem';
 import { useFriends, useFriendRequests, useRingStatus } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 
 type Mode = 'requests' | 'squad';
 
@@ -29,7 +31,8 @@ export function FriendsListScreen({ navigation, route }: any) {
   const [query, setQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const { data: friends = [], refetch: refetchFriends } = useFriends();
+  const listQuery = useFriends();
+  const { data: friends = [], refetch: refetchFriends } = listQuery;
   const { data: friendRequests = [], refetch: refetchFriendRequests } = useFriendRequests();
   const ringStatus = useRingStatus({
     userIds: mode === 'squad' ? friends.map((f) => f.id) : friendRequests.map((r) => r.from.id),
@@ -79,6 +82,7 @@ export function FriendsListScreen({ navigation, route }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
+        {...infiniteScrollProps(listQuery)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         {list.length === 0 ? (
@@ -120,6 +124,7 @@ export function FriendsListScreen({ navigation, route }: any) {
                 ))}
           </BorderCard>
         )}
+        <PageFooter loading={listQuery.isFetchingNextPage} />
       </ScrollView>
 
       <Toast visible={!!toastMessage} message={toastMessage ?? ''} icon="🌱" onHide={() => setToastMessage(null)} />

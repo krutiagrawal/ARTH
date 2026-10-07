@@ -1,13 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
 import Link from 'next/link'
 import { Star } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
-import { proxy } from '@/lib/memberProxy'
+import { usePagedList } from '@/hooks/usePagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
 function Stars({ rating }) {
   return (
@@ -19,15 +18,7 @@ function Stars({ rating }) {
 }
 
 export default function ReviewsClient() {
-  const [reviews, setReviews] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    proxy('/orders/reviews/mine')
-      .then(setReviews)
-      .catch((err) => toast.error(err.message || 'Could not load your reviews.'))
-      .finally(() => setLoading(false))
-  }, [])
+  const { items: reviews, loading, loadingMore, hasMore, loadMore } = usePagedList('/orders/reviews/mine', {}, { errorMessage: 'Could not load your reviews.' })
 
   return (
     <DashboardPageShell className="space-y-6">
@@ -60,6 +51,7 @@ export default function ReviewsClient() {
               <p className="mt-1.5 text-xs text-muted-foreground/70">{new Date(r.createdAt).toLocaleDateString()}</p>
             </Link>
           ))}
+          <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
         </div>
       )}
     </DashboardPageShell>

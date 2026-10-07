@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { HandCoins, Download } from 'lucide-react'
 import DataTable from '@/components/dashboard/DataTable'
+import { usePageState, PAGE_SIZE } from '@/hooks/usePageState'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import StatTile from '@/components/dashboard/StatTile'
@@ -28,17 +29,21 @@ export default function DonationsClient() {
     return params.toString()
   }, [filters])
 
+  const [page, setPage] = usePageState(queryString)
+  const [total, setTotal] = useState(0)
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await proxy(`/ngo/donations${queryString ? `?${queryString}` : ''}`)
+      const res = await proxy(`/ngo/donations?${queryString ? `${queryString}&` : ''}page=${page}&take=${PAGE_SIZE}`)
       setDonations(res.donations)
+      setTotal(res.total ?? 0)
     } catch {
       setDonations([])
     } finally {
       setLoading(false)
     }
-  }, [queryString])
+  }, [queryString, page])
 
   useEffect(() => {
     load()
@@ -171,6 +176,7 @@ export default function DonationsClient() {
       <DataTable
         columns={columns}
         data={donations}
+        serverPagination={{ page, pageSize: PAGE_SIZE, total, onPageChange: setPage }}
         loading={loading}
         searchKey="campaignTitle"
         searchPlaceholder="Search by campaign…"

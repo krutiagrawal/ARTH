@@ -1,6 +1,8 @@
 import { GroupMemberRole, PrismaClient } from '@arth/db';
 import { generateInviteCode } from '../utils/inviteCode';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../utils/errors';
+import { getUsersCo2Kg } from './treeImpact.service';
+import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
 
 interface UpdateProfileInput {
   groupName?: string;
@@ -63,13 +65,16 @@ export async function regenerateInviteCode(prisma: PrismaClient, userId: string)
   return prisma.groupProfile.update({ where: { id: group.id }, data: { inviteCode: generateInviteCode() } });
 }
 
-export async function listMembers(prisma: PrismaClient, userId: string) {
+export async function listMembers(prisma: PrismaClient, userId: string, q: CursorQuery = {}) {
   const group = await requireOwnGroup(prisma, userId);
-  return prisma.groupMember.findMany({
+  const { take, args } = cursorArgs(q, 30);
+  const rows = await prisma.groupMember.findMany({
     where: { groupId: group.id },
-    orderBy: [{ role: 'asc' }, { joinedAt: 'asc' }],
+    orderBy: [{ role: 'asc' }, { joinedAt: 'asc' }, { id: 'asc' }],
     include: { user: { select: { id: true, name: true, handle: true, avatarEmoji: true, treesPlantedCount: true, xp: true } } },
+    ...args,
   });
+  return toCursorPage(rows, take);
 }
 
 export async function setMemberRole(prisma: PrismaClient, userId: string, memberUserId: string, role: GroupMemberRole) {
@@ -101,7 +106,7 @@ export async function getOwnStats(prisma: PrismaClient, userId: string) {
 
   const members = await prisma.groupMember.findMany({
     where: { groupId: group.id },
-    select: { user: { select: { treesPlantedCount: true, xp: true, totalCo2Absorbed: true } } },
+    select: { userId: true, user: { select: { treesPlantedCount: true, xp: true } } },
   });
 
   const xpTotal = members.reduce((sum, m) => sum + m.user.xp, 0);
@@ -111,7 +116,7 @@ export async function getOwnStats(prisma: PrismaClient, userId: string) {
     treesPlantedTotal: members.reduce((sum, m) => sum + m.user.treesPlantedCount, 0),
     xpTotal,
     level: Math.floor(xpTotal / XP_PER_LEVEL) + 1,
-    co2AbsorbedTotal: members.reduce((sum, m) => sum + Number(m.user.totalCo2Absorbed), 0),
+    co2AbsorbedTotal: await getUsersCo2Kg(prisma, members.map((m) => m.userId)),
   };
 }
 

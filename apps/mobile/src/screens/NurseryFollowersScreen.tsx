@@ -18,6 +18,7 @@ import {
 import type { ApiFollower } from '../api/nurseryFollowers';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
 
 function FollowerRow({ follower, isPending, onAccept, onDecline, onRemove }: {
   follower: ApiFollower;
@@ -57,7 +58,8 @@ export function NurseryFollowersScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<'accepted' | 'pending'>('accepted');
   const [query, setQuery] = useState('');
-  const { data, isLoading, refetch } = useNurseryFollowers({ status: tab, q: query.trim() || undefined });
+  const listQuery = useNurseryFollowers({ status: tab, q: query.trim() || undefined });
+  const { data, isLoading, refetch } = listQuery;
   const acceptMutation = useAcceptNurseryFollowRequest();
   const declineMutation = useDeclineNurseryFollowRequest();
   const removeMutation = useRemoveNurseryFollower();
@@ -97,6 +99,9 @@ export function NurseryFollowersScreen({ navigation }: any) {
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 20 }} />
       ) : (
         <FlatList
+          onEndReached={() => { if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) listQuery.fetchNextPage(); }}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={<PageFooter loading={listQuery.isFetchingNextPage} />}
           data={followers}
           keyExtractor={(f) => f.followId}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}

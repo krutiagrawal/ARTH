@@ -74,10 +74,10 @@ export default async function groupRoutes(fastify: FastifyInstance) {
     reply.send(await groupService.getLeaderboard(fastify.prisma, group.id, limit));
   });
 
-  fastify.get('/members', async (request, reply) => {
-    const members = await groupService.listMembers(fastify.prisma, request.user!.id);
-    reply.send(
-      members.map((m) => ({
+  fastify.get<{ Querystring: { cursor?: string; take?: string } }>('/members', async (request, reply) => {
+    const page = await groupService.listMembers(fastify.prisma, request.user!.id, request.query);
+    reply.send({
+      items: page.items.map((m) => ({
         userId: m.userId,
         role: m.role,
         joinedAt: m.joinedAt,
@@ -86,8 +86,9 @@ export default async function groupRoutes(fastify: FastifyInstance) {
         avatarEmoji: m.user.avatarEmoji,
         treesPlantedCount: m.user.treesPlantedCount,
         xp: m.user.xp,
-      }))
-    );
+      })),
+      nextCursor: page.nextCursor,
+    });
   });
 
   fastify.patch<{ Params: { userId: string } }>('/members/:userId/role', async (request, reply) => {
@@ -166,9 +167,9 @@ export default async function groupRoutes(fastify: FastifyInstance) {
     );
   });
 
-  fastify.get<{ Querystring: { take?: string } }>('/activity', async (request, reply) => {
+  fastify.get<{ Querystring: { take?: string; cursor?: string } }>('/activity', async (request, reply) => {
     const group = await groupService.getOwnProfile(fastify.prisma, request.user!.id);
     const take = Math.min(Number(request.query.take) || 30, 50);
-    reply.send(await getGroupActivity(fastify.prisma, group.id, request.user!.id, { take }));
+    reply.send(await getGroupActivity(fastify.prisma, group.id, request.user!.id, { take, before: request.query.cursor }));
   });
 }

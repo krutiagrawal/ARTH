@@ -1,4 +1,5 @@
 import { apiFetch } from './client';
+import { pagedPath, type Page } from '../hooks/useInfiniteList';
 import type { BulkRequirementStatus, BulkResponseStatus } from './nursery';
 
 // NGO-side counterpart to api/nursery.ts's bulk-requirement endpoints — same underlying
@@ -36,9 +37,8 @@ export interface ApiNgoBulkRequirement {
   responses?: ApiNgoBulkResponse[];
 }
 
-export async function fetchNgoBulkRequirements(status?: BulkRequirementStatus): Promise<ApiNgoBulkRequirement[]> {
-  const query = status ? `?status=${status}` : '';
-  return apiFetch<ApiNgoBulkRequirement[]>(`/api/ngo/bulk-requirements${query}`);
+export async function fetchNgoBulkRequirements(status?: BulkRequirementStatus, cursor?: string): Promise<Page<ApiNgoBulkRequirement>> {
+  return apiFetch<Page<ApiNgoBulkRequirement>>(pagedPath('/api/ngo/bulk-requirements', cursor, { status }));
 }
 
 export async function fetchNgoBulkRequirement(id: string): Promise<ApiNgoBulkRequirement> {

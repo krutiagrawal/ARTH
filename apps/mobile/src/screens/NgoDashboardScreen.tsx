@@ -8,6 +8,7 @@ import { BlurTargetView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
+import { formatKg } from '../utils/impact';
 import { FONTS } from '../constants/typography';
 import { SHADOWS } from '../constants/theme';
 import { EcoWidget } from '../components/common/EcoWidget';
@@ -346,8 +347,8 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
               />
               <EcoWidget
                 icon="🌍"
-                value={`${stats?.co2AbsorptionKg ?? 0}kg`}
-                label="CO₂"
+                value={`${formatKg(stats?.co2AbsorptionKg)}kg`}
+                label="CO₂ (est.)"
                 variant="glass"
                 dark
                 color={theme.accentColor}

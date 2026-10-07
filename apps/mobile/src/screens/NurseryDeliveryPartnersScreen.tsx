@@ -26,6 +26,8 @@ import { useApprovalGate } from '../hooks/useApprovalGate';
 import { ApiError } from '../api/client';
 import type { ApiDeliveryPartner } from '../api/deliveryPartners';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import { useEmailField } from '../hooks/useEmailField';
 import { usePhoneField } from '../hooks/usePhoneField';
 import { isValidPhone } from '../utils/validation';
@@ -68,7 +70,8 @@ function PartnerRow({
 
 export function NurseryDeliveryPartnersScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: partners = [], isLoading, refetch } = useDeliveryPartners();
+  const listQuery = useDeliveryPartners();
+  const { data: partners = [], isLoading, refetch } = listQuery;
   const createMutation = useCreateDeliveryPartner();
   const updateMutation = useUpdateDeliveryPartner();
   const deactivateMutation = useDeactivateDeliveryPartner();
@@ -203,11 +206,13 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
         <ScrollView
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
+          {...infiniteScrollProps(listQuery)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           {partners.map((p) => (
             <PartnerRow key={p.id} partner={p} onToggle={() => handleToggle(p)} onEdit={guard(() => openEdit(p))} />
           ))}
+          <PageFooter loading={listQuery.isFetchingNextPage} />
         </ScrollView>
       )}
 

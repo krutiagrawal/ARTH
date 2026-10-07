@@ -29,6 +29,7 @@ import { ApiError, resolveMediaUrl } from '../api/client';
 import { SPECIES_EMOJI_OPTIONS } from '../api/species';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
 import { fuzzyMatch } from '../utils/fuzzyMatch';
 
 const ENVIRONMENT_OPTIONS = ['terrace', 'garden', 'farm', 'roadside'];
@@ -83,7 +84,8 @@ function StockRow({ item, onPress, onDelete }: { item: ApiSaplingStock; onPress:
 
 export function NurseryStockScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: stock = [], isLoading, refetch } = useSaplingStock();
+  const listQuery = useSaplingStock();
+  const { data: stock = [], isLoading, refetch } = listQuery;
   const { data: speciesCatalog = [] } = useSpecies();
   const createMutation = useCreateSaplingStock();
   const deleteMutation = useDeleteSaplingStock();
@@ -238,6 +240,9 @@ export function NurseryStockScreen({ navigation }: any) {
       />
 
       <FlatList
+          onEndReached={() => { if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) listQuery.fetchNextPage(); }}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={<PageFooter loading={listQuery.isFetchingNextPage} />}
         data={stock}
         keyExtractor={(item) => item.id}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}

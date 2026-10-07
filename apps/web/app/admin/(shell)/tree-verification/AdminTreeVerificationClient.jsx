@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { TreePine, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -9,6 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import { proxy } from '@/lib/adminProxyClient'
+import { useTotalPagedList } from '@/hooks/useTotalPagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 import { resolveMediaUrl } from '@/lib/media'
 
 const STATUS_VARIANT = { unverified: 'outline', rejected: 'destructive' }
@@ -55,24 +57,14 @@ function TreeRow({ tree, onReview }) {
 }
 
 export default function AdminTreeVerificationClient() {
-  const [trees, setTrees] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await proxy('/admin/trees/review-queue')
-      setTrees(data.trees)
-    } catch (err) {
-      toast.error(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    load()
-  }, [load])
+  const {
+    items: trees,
+    loading,
+    loadingMore,
+    hasMore,
+    loadMore,
+    reload: load,
+  } = useTotalPagedList(proxy, '/admin/trees/review-queue', {}, { listKey: 'trees' })
 
   const handleReview = async (id, decision) => {
     await proxy(`/admin/trees/${id}/review`, { method: 'PATCH', body: { decision } })
@@ -101,6 +93,7 @@ export default function AdminTreeVerificationClient() {
           {trees.map((tree) => (
             <TreeRow key={tree.id} tree={tree} onReview={handleReview} />
           ))}
+          <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
         </div>
       )}
     </DashboardPageShell>

@@ -8,12 +8,14 @@ import { FONTS } from '../constants/typography';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { StatusModal } from '../components/common/StatusModal';
-import { useMyDrives, useNgoProfile } from '../hooks/useApiQueries';
+import { useMyDrivesPaged, useNgoProfile } from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { resolveMediaUrl } from '../api/client';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 
 function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
   const animStyle = useSlideUp(delay, 18);
@@ -45,7 +47,8 @@ function MetaRow({ icon, text, style }: { icon: string; text: string; style?: an
 
 export function NgoDrivesScreen({ navigation }: any) {
   const bottomClearance = useBottomNavClearance();
-  const { data: drives = [], isLoading, refetch } = useMyDrives();
+  const listQuery = useMyDrivesPaged();
+  const { data: drives = [], isLoading, refetch } = listQuery;
   const { data: profile, refetch: refetchProfile } = useNgoProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
   const { refreshing, onRefresh } = usePullToRefresh([refetch, refetchProfile]);
@@ -55,6 +58,7 @@ export function NgoDrivesScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
         showsVerticalScrollIndicator={false}
+        {...infiniteScrollProps(listQuery)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
@@ -119,6 +123,7 @@ export function NgoDrivesScreen({ navigation }: any) {
             </FadeInRow>
           );
         })}
+        <PageFooter loading={listQuery.isFetchingNextPage} />
       </ScrollView>
 
       <StatusModal {...statusModalProps} />

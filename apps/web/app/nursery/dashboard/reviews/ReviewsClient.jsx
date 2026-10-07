@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -9,6 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import { proxy } from '../proxy'
+import { usePagedList } from '@/hooks/usePagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
 function RatingStars({ rating }) {
   const r = Math.round(Number(rating) || 0)
@@ -71,23 +73,10 @@ function ReviewRow({ review, onRespond }) {
 }
 
 export default function ReviewsClient() {
-  const [reviews, setReviews] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      setReviews(await proxy('/nursery/reviews'))
-    } catch (err) {
-      toast.error(err.message || 'Could not load reviews.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    load()
-  }, [load])
+  const { items: reviews, loading, loadingMore, hasMore, loadMore, reload: load } = usePagedList('/nursery/reviews', {}, {
+    errorMessage: 'Could not load reviews.',
+    proxyFn: proxy,
+  })
 
   const respond = async (id, response) => {
     try {
@@ -119,6 +108,7 @@ export default function ReviewsClient() {
           {reviews.map((r) => (
             <ReviewRow key={r.id} review={r} onRespond={respond} />
           ))}
+          <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
         </div>
       )}
     </DashboardPageShell>

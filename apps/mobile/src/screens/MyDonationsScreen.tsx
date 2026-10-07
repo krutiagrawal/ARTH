@@ -10,6 +10,8 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useMyDonations } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import type { ApiMyDonation } from '../api/donations';
 
 const STATUS_COLOR: Record<string, any> = {
@@ -45,7 +47,8 @@ function DonationRow({ d, navigation }: { d: ApiMyDonation; navigation: any }) {
 
 export function MyDonationsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data, isLoading, refetch } = useMyDonations();
+  const listQuery = useMyDonations();
+  const { data, isLoading, refetch } = listQuery;
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
   const donations = data?.donations ?? [];
 
@@ -72,11 +75,13 @@ export function MyDonationsScreen({ navigation }: any) {
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
+          {...infiniteScrollProps(listQuery)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           {donations.map((d) => (
             <DonationRow key={d.id} d={d} navigation={navigation} />
           ))}
+          <PageFooter loading={listQuery.isFetchingNextPage} />
         </ScrollView>
       )}
     </View>

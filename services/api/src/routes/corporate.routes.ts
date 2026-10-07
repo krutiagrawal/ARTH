@@ -59,8 +59,8 @@ export default async function corporateRoutes(fastify: FastifyInstance) {
     reply.send(await corporateService.getOwnStats(fastify.prisma, request.user!.id));
   });
 
-  fastify.get('/sponsorships', async (request, reply) => {
-    reply.send(await corporateService.listSponsorships(fastify.prisma, request.user!.id));
+  fastify.get<{ Querystring: { cursor?: string; take?: string } }>('/sponsorships', async (request, reply) => {
+    reply.send(await corporateService.listSponsorships(fastify.prisma, request.user!.id, request.query));
   });
 
   fastify.post('/sponsorships', async (request, reply) => {

@@ -12,6 +12,7 @@ import { ImpactStatsCard } from '../components/common/ImpactStatsCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useNurseryImpact, useNurseryProfile } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { formatKg } from '../utils/impact';
 
 export function NurseryImpactScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -62,8 +63,8 @@ export function NurseryImpactScreen({ navigation }: any) {
               <Text style={styles.gridLabel}>NGO drives supported</Text>
             </BorderCard>
             <BorderCard style={styles.gridCard}>
-              <Text style={styles.gridValue}>{impact.estimatedCo2Kg.toFixed(0)}kg</Text>
-              <Text style={styles.gridLabel}>Est. CO₂ / year</Text>
+              <Text style={styles.gridValue}>{formatKg(impact.estimatedCo2Kg)}kg</Text>
+              <Text style={styles.gridLabel}>Est. CO₂ stored so far</Text>
             </BorderCard>
           </View>
 

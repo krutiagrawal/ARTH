@@ -1,5 +1,6 @@
 import { PrismaClient } from '@arth/db';
 import { ForbiddenError, NotFoundError } from '../utils/errors';
+import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
 
 interface UpdateProfileInput {
   companyName?: string;
@@ -53,13 +54,16 @@ export async function getOwnStats(prisma: PrismaClient, userId: string) {
   };
 }
 
-export async function listSponsorships(prisma: PrismaClient, userId: string) {
+export async function listSponsorships(prisma: PrismaClient, userId: string, q: CursorQuery = {}) {
   const profile = await getOwnProfile(prisma, userId);
-  return prisma.csrSponsorship.findMany({
+  const { take, args } = cursorArgs(q);
+  const rows = await prisma.csrSponsorship.findMany({
     where: { corporateId: profile.id },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     include: { drive: { select: { id: true, title: true } } },
+    ...args,
   });
+  return toCursorPage(rows, take);
 }
 
 export async function createSponsorship(prisma: PrismaClient, userId: string, input: SponsorshipInput) {

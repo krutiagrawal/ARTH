@@ -14,10 +14,10 @@ export interface ApiPublicFollowersPage {
 }
 
 /** Read-only accepted-followers list, visible to any visitor — not the owner-only inbox. */
-export async function fetchNgoPublicFollowers(ngoId: string): Promise<ApiPublicFollowersPage> {
-  return apiFetch<ApiPublicFollowersPage>(`/api/ngos/${ngoId}/followers`);
+export async function fetchNgoPublicFollowers(ngoId: string, page = 1): Promise<ApiPublicFollowersPage> {
+  return apiFetch<ApiPublicFollowersPage>(`/api/ngos/${ngoId}/followers?page=${page}&take=30`);
 }
 
-export async function fetchNurseryPublicFollowers(nurseryId: string): Promise<ApiPublicFollowersPage> {
-  return apiFetch<ApiPublicFollowersPage>(`/api/nurseries/${nurseryId}/followers`);
+export async function fetchNurseryPublicFollowers(nurseryId: string, page = 1): Promise<ApiPublicFollowersPage> {
+  return apiFetch<ApiPublicFollowersPage>(`/api/nurseries/${nurseryId}/followers?page=${page}&take=30`);
 }

@@ -12,6 +12,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import ReportDialog from '@/components/dashboard/ReportDialog'
 import { proxy } from '@/lib/memberProxy'
+import { usePagedList } from '@/hooks/usePagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 import { resolveMediaUrl } from '@/lib/media'
 
 function EmojiAvatar({ emoji, size = 'h-11 w-11', online = false, text = 'text-lg' }) {
@@ -146,8 +148,10 @@ function FollowingPanel() {
 }
 
 function FriendsPanel() {
-  const [friends, setFriends] = useState(null)
-  const [requests, setRequests] = useState(null)
+  const friendsList = usePagedList('/friends', {}, { take: 30, errorMessage: 'Could not load your friends.' })
+  const requestsList = usePagedList('/friends/requests', {}, { take: 30, errorMessage: 'Could not load friend requests.' })
+  const friends = friendsList.loading ? null : friendsList.items
+  const requests = requestsList.loading ? null : requestsList.items
   const [query, setQuery] = useState('')
   const [results, setResults] = useState(null)
   const [searching, setSearching] = useState(false)
@@ -155,11 +159,9 @@ function FriendsPanel() {
   const [reportTarget, setReportTarget] = useState(null)
 
   const load = () => {
-    proxy('/friends').then(setFriends).catch((err) => toast.error(err.message || 'Could not load your friends.'))
-    proxy('/friends/requests').then(setRequests).catch((err) => toast.error(err.message || 'Could not load friend requests.'))
+    friendsList.reload()
+    requestsList.reload()
   }
-
-  useEffect(load, [])
 
   const search = async (e) => {
     e.preventDefault()
@@ -293,11 +295,12 @@ function FriendsPanel() {
               </div>
             ))}
           </div>
+          <LoadMoreButton hasMore={requestsList.hasMore} loading={requestsList.loadingMore} onClick={requestsList.loadMore} />
         </div>
       )}
 
       <div>
-        <p className="eyebrow mb-3">{friends?.length ? `${friends.length} friend${friends.length === 1 ? '' : 's'}` : 'Your friends'}</p>
+        <p className="eyebrow mb-3">{friends?.length ? `${friends.length}${friendsList.hasMore ? '+' : ''} friend${friends.length === 1 ? '' : 's'}` : 'Your friends'}</p>
         {friends === null ? (
           <div className="grid gap-3 sm:grid-cols-2">
             <Skeleton className="h-20 w-full rounded-2xl" />
@@ -330,6 +333,7 @@ function FriendsPanel() {
             ))}
           </div>
         )}
+        <LoadMoreButton hasMore={friendsList.hasMore} loading={friendsList.loadingMore} onClick={friendsList.loadMore} />
       </div>
     </div>
   )

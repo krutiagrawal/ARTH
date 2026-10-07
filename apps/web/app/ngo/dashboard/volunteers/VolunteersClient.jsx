@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { MoreHorizontal, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -10,23 +10,16 @@ import DataTable from '@/components/dashboard/DataTable'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import { proxy } from '../proxy'
+import { usePagedList } from '@/hooks/usePagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
 export default function VolunteersClient() {
-  const [volunteers, setVolunteers] = useState([])
-  const [loading, setLoading] = useState(true)
   const [removingId, setRemovingId] = useState(null)
 
-  const load = useCallback(() => {
-    setLoading(true)
-    proxy('/ngo/volunteers')
-      .then(setVolunteers)
-      .catch(() => setVolunteers([]))
-      .finally(() => setLoading(false))
-  }, [])
-
-  useEffect(() => {
-    load()
-  }, [load])
+  const { items: volunteers, loading, loadingMore, hasMore, loadMore, reload: load } = usePagedList('/ngo/volunteers', {}, {
+    take: 30,
+    proxyFn: proxy,
+  })
 
   const handleRemove = async (volunteer) => {
     setRemovingId(volunteer.userId)
@@ -114,6 +107,7 @@ export default function VolunteersClient() {
           />
         }
       />
+      <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
     </DashboardPageShell>
   )
 }

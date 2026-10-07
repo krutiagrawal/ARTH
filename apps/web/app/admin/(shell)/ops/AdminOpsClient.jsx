@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { Ban, PackageSearch } from 'lucide-react'
@@ -12,6 +12,8 @@ import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
 import { proxy } from '@/lib/adminProxyClient'
+import { useTotalPagedList } from '@/hooks/useTotalPagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
 const TABS = [
   { value: 'drives', label: 'Drives', endpoint: '/admin/drives', listKey: 'drives' },
@@ -107,26 +109,13 @@ export default function AdminOpsClient() {
   const searchParams = useSearchParams()
   const initialTab = searchParams.get('tab')
   const [tab, setTab] = useState(TABS.some((t) => t.value === initialTab) ? initialTab : 'drives')
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
-
   const activeTab = TABS.find((t) => t.value === tab)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await proxy(activeTab.endpoint)
-      setItems(data[activeTab.listKey])
-    } catch (err) {
-      toast.error(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }, [activeTab])
-
-  useEffect(() => {
-    load()
-  }, [load])
+  const { items, loading, loadingMore, hasMore, loadMore, reload: load } = useTotalPagedList(
+    proxy,
+    activeTab.endpoint,
+    {},
+    { listKey: activeTab.listKey },
+  )
 
   const handleAction = async (id, reason) => {
     const path =
@@ -169,6 +158,7 @@ export default function AdminOpsClient() {
           {items.map((item) => (
             <Row key={item.id} tab={tab} item={item} onAction={handleAction} />
           ))}
+          <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
         </div>
       )}
     </DashboardPageShell>

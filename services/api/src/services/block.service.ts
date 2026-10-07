@@ -1,5 +1,6 @@
 import { PrismaClient } from '@arth/db';
 import { BadRequestError, NotFoundError } from '../utils/errors';
+import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
 
 /**
  * Blocks are stored one-directionally (who pressed the button) but enforced symmetrically: once
@@ -48,17 +49,19 @@ export function blockFilter(blocked: BlockedIds) {
   return clauses;
 }
 
-export async function listBlocks(prisma: PrismaClient, viewerId: string) {
+export async function listBlocks(prisma: PrismaClient, viewerId: string, q: CursorQuery = {}) {
+  const { take, args } = cursorArgs(q, 30);
   const blocks = await prisma.block.findMany({
     where: { blockerId: viewerId },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    ...args,
     include: {
       blockedUser: { select: { id: true, name: true, handle: true, avatarEmoji: true } },
       blockedNgo: { select: { id: true, orgName: true, logoUrl: true } },
     },
   });
 
-  return blocks.map((b) => ({
+  return toCursorPage(blocks, take, (b) => ({
     id: b.id,
     createdAt: b.createdAt,
     kind: b.blockedNgoId ? ('ngo' as const) : ('user' as const),

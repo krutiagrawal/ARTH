@@ -12,7 +12,7 @@ export default async function competitionsPublicRoutes(fastify: FastifyInstance)
     reply.send(competition);
   });
 
-  fastify.get<{ Params: { id: string } }>('/:id/entries', async (request, reply) => {
-    reply.send(await competitionService.listEntries(fastify.prisma, request.params.id));
+  fastify.get<{ Params: { id: string }; Querystring: { cursor?: string; take?: string } }>('/:id/entries', async (request, reply) => {
+    reply.send(await competitionService.listEntries(fastify.prisma, request.params.id, request.query));
   });
 }

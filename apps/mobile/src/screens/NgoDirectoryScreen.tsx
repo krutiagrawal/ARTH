@@ -11,11 +11,14 @@ import { EmptyState } from '../components/common/EmptyState';
 import { useBrowseNgos } from '../hooks/useApiQueries';
 import { resolveMediaUrl } from '../api/client';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 
 export function NgoDirectoryScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
-  const { data, isLoading, refetch } = useBrowseNgos({ q: query || undefined });
+  const listQuery = useBrowseNgos({ q: query || undefined });
+  const { data, isLoading, refetch } = listQuery;
   const ngos = data?.ngos ?? [];
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
@@ -51,6 +54,7 @@ export function NgoDirectoryScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
+        {...infiniteScrollProps(listQuery)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
@@ -80,6 +84,7 @@ export function NgoDirectoryScreen({ navigation }: any) {
             ))}
           </BorderCard>
         )}
+        <PageFooter loading={listQuery.isFetchingNextPage} />
       </ScrollView>
     </View>
   );

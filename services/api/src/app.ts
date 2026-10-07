@@ -57,6 +57,7 @@ import portfolioLikesRoutes from './routes/portfolioLikes.routes';
 import plantedTreesRoutes from './routes/plantedTrees.routes';
 import treeObservationsRoutes from './routes/treeObservations.routes';
 import competitionsPublicRoutes from './routes/competitions.public.routes';
+import httpCachePlugin from './plugins/httpCache';
 import competitionsRoutes from './routes/competitions.routes';
 import nurseryFollowersRoutes from './routes/nurseryFollowers.routes';
 import addressesRoutes from './routes/addresses.routes';
@@ -77,6 +78,7 @@ export async function buildApp() {
   await app.register(authPlugin);
   await app.register(multipartPlugin);
   await app.register(staticPlugin);
+  await app.register(httpCachePlugin);
 
   app.setErrorHandler((error: FastifyError | AppError, _request, reply) => {
     if (error instanceof AppError) {

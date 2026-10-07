@@ -15,6 +15,7 @@ import { useApprovalGate } from '@/components/dashboard/useApprovalGate'
 import { resolveMediaUrl } from '@/lib/media'
 import { useNurseryProfile } from '../NurseryProfileContext'
 import { useResourceCrud } from '@/lib/useResourceCrud'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 import { proxy } from '../proxy'
 import InventoryFormSheet from './InventoryFormSheet'
 
@@ -43,7 +44,9 @@ async function submitStock(path, method, payload, photoFile) {
 
 export default function InventoryClient() {
   const { profile } = useNurseryProfile()
-  const { items, loading, load, remove } = useResourceCrud(proxy, '/nursery/stock', '/nursery/stock')
+  const { items, loading, load, remove, hasMore, loadingMore, loadMore } = useResourceCrud(proxy, '/nursery/stock', '/nursery/stock', {
+    pageSize: 30,
+  })
   const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
 
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -191,6 +194,7 @@ export default function InventoryClient() {
           />
         }
       />
+      <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
 
       <InventoryFormSheet open={dialogOpen} onOpenChange={setDialogOpen} item={editing} submitting={submitting} onSubmit={handleSubmit} />
 

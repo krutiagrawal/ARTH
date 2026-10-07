@@ -129,7 +129,7 @@ export async function listOwnedCampaigns(prisma: PrismaClient, ngoUserId: string
       ...(filter.q ? { title: { contains: filter.q, mode: 'insensitive' as const } } : {}),
     },
     include: { ...campaignInclude, donations: { select: { amountCents: true, status: true } } },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     take,
     skip: (page - 1) * take,
   });

@@ -15,6 +15,8 @@ import { useApprovalGate } from '../hooks/useApprovalGate';
 import type { ApiNurseryReservation } from '../api/nursery';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import { ApiError } from '../api/client';
 
 function ReservationRow({ item, showActions, guard }: { item: ApiNurseryReservation; showActions: boolean; guard: <A extends any[]>(fn: (...a: A) => void) => (...a: A) => void }) {
@@ -75,7 +77,8 @@ function ReservationRow({ item, showActions, guard }: { item: ApiNurseryReservat
 
 export function NurseryReservationsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: reservations = [], isLoading, refetch } = useNurseryReservations();
+  const listQuery = useNurseryReservations();
+  const { data: reservations = [], isLoading, refetch } = listQuery;
   const { data: profile } = useNurseryProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
@@ -102,6 +105,7 @@ export function NurseryReservationsScreen({ navigation }: any) {
         <ScrollView
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
+          {...infiniteScrollProps(listQuery)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           {pending.length > 0 && (
@@ -120,6 +124,7 @@ export function NurseryReservationsScreen({ navigation }: any) {
               ))}
             </>
           )}
+          <PageFooter loading={listQuery.isFetchingNextPage} />
         </ScrollView>
       )}
 

@@ -10,6 +10,8 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useMyBulkResponses } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import type { ApiMyBulkResponse } from '../api/nursery';
 
 const STATUS_COLOR: Record<string, any> = {
@@ -45,7 +47,8 @@ function ResponseRow({ r }: { r: ApiMyBulkResponse }) {
  * of status, unlike NurseryBulkRequirementsScreen which only shows still-open requirements. */
 export function MyBulkResponsesScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: responses, isLoading, refetch } = useMyBulkResponses();
+  const listQuery = useMyBulkResponses();
+  const { data: responses, isLoading, refetch } = listQuery;
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
@@ -71,11 +74,13 @@ export function MyBulkResponsesScreen({ navigation }: any) {
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
+          {...infiniteScrollProps(listQuery)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           {responses.map((r) => (
             <ResponseRow key={r.id} r={r} />
           ))}
+          <PageFooter loading={listQuery.isFetchingNextPage} />
         </ScrollView>
       )}
     </View>

@@ -1,4 +1,5 @@
 import { apiFetch } from './client';
+import { pagedPath, type Page } from '../hooks/useInfiniteList';
 import type { ReservationStatus } from './nursery';
 
 export interface ApiMyReservation {
@@ -12,8 +13,8 @@ export interface ApiMyReservation {
   nursery?: { id: string; nurseryName: string; logoUrl: string | null };
 }
 
-export async function fetchMyReservations(): Promise<ApiMyReservation[]> {
-  return apiFetch<ApiMyReservation[]>('/api/reservations');
+export async function fetchMyReservations(cursor?: string): Promise<Page<ApiMyReservation>> {
+  return apiFetch<Page<ApiMyReservation>>(pagedPath('/api/reservations', cursor));
 }
 
 export async function cancelReservation(id: string): Promise<void> {

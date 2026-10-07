@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { ClipboardList, MapPin, CalendarDays, Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,8 @@ import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
 import DrawerFormShell, { fieldButtonClassName } from '@/components/dashboard/DrawerFormShell'
 import { fuzzyMatch } from '@/lib/fuzzyMatch'
 import { proxy } from '../proxy'
+import { usePagedList } from '@/hooks/usePagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
 const REQ_BADGE = {
   open: { label: 'Open', variant: 'outline' },
@@ -229,8 +231,6 @@ function CreateSheet({ open, onOpenChange, submitting, onSubmit }) {
 }
 
 export default function RequirementsClient() {
-  const [requirements, setRequirements] = useState([])
-  const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [cancelTarget, setCancelTarget] = useState(null)
@@ -242,20 +242,10 @@ export default function RequirementsClient() {
   const [rescheduleDate, setRescheduleDate] = useState('')
   const [rescheduleSubmitting, setRescheduleSubmitting] = useState(false)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      setRequirements(await proxy('/ngo/bulk-requirements'))
-    } catch (err) {
-      toast.error(err.message || 'Could not load bulk requirements.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    load()
-  }, [load])
+  const { items: requirements, loading, loadingMore, hasMore, loadMore, reload: load } = usePagedList('/ngo/bulk-requirements', {}, {
+    errorMessage: 'Could not load bulk requirements.',
+    proxyFn: proxy,
+  })
 
   const handleCreate = async (body) => {
     setSubmitting(true)
@@ -450,6 +440,7 @@ export default function RequirementsClient() {
               </div>
             )
           })}
+          <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
         </div>
       )}
 

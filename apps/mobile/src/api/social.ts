@@ -1,4 +1,5 @@
 import { apiFetch } from './client';
+import { pagedPath, type Page } from '../hooks/useInfiniteList';
 
 // ---------- Moderation ----------
 
@@ -44,8 +45,8 @@ export interface ApiMyReport {
   createdAt: string;
 }
 
-export async function fetchMyReports(): Promise<{ total: number; reports: ApiMyReport[] }> {
-  return apiFetch('/api/reports/mine');
+export async function fetchMyReports(page = 1): Promise<{ total: number; reports: ApiMyReport[] }> {
+  return apiFetch(`/api/reports/mine?page=${page}&take=25`);
 }
 
 export interface ApiBlock {
@@ -59,8 +60,8 @@ export interface ApiBlock {
   logoUrl: string | null;
 }
 
-export async function fetchBlocks(): Promise<ApiBlock[]> {
-  return apiFetch<ApiBlock[]>('/api/blocks');
+export async function fetchBlocks(cursor?: string): Promise<Page<ApiBlock>> {
+  return apiFetch<Page<ApiBlock>>(pagedPath('/api/blocks', cursor, {}, 30));
 }
 
 export async function blockTarget(input: { userId?: string; ngoId?: string }): Promise<void> {

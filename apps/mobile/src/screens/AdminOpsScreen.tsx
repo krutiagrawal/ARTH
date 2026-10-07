@@ -20,6 +20,8 @@ import {
   useRefundAdminOrder,
 } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
+import { PageFooter } from '../components/common/PageFooter';
 import { ApiError } from '../api/client';
 
 type Tab = 'drives' | 'donations' | 'orders';
@@ -63,6 +65,8 @@ export function AdminOpsScreen() {
         ? { ...donationsQuery, items: donationsQuery.data?.donations ?? [], listKey: 'donations' as const }
         : { ...ordersQuery, items: ordersQuery.data?.orders ?? [], listKey: 'orders' as const };
 
+  const activeQuery = tab === 'drives' ? drivesQuery : tab === 'donations' ? donationsQuery : ordersQuery;
+
   const working = cancelDrive.isPending || refundDonation.isPending || refundOrder.isPending;
 
   const confirmAction = async () => {
@@ -104,6 +108,7 @@ export function AdminOpsScreen() {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
         showsVerticalScrollIndicator={false}
+        {...infiniteScrollProps(activeQuery)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         {isLoading && <ActivityIndicator color={COLORS.mint} style={styles.loader} />}
@@ -144,6 +149,7 @@ export function AdminOpsScreen() {
             </View>
           </BorderCard>
         ))}
+        <PageFooter loading={activeQuery.isFetchingNextPage} />
       </ScrollView>
 
       <Sheet visible={Boolean(pending)} onClose={() => setPending(null)} title={tab === 'drives' ? 'Cancel this drive?' : 'Refund this transaction?'}>

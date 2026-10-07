@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import DataTable from '@/components/dashboard/DataTable'
+import { usePageState, PAGE_SIZE } from '@/hooks/usePageState'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
@@ -529,17 +530,21 @@ export default function AdminNgosClient() {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
 
+  const [page, setPage] = usePageState(filter)
+  const [total, setTotal] = useState(0)
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await proxy(`/admin/ngos?status=${filter}`)
+      const data = await proxy(`/admin/ngos?status=${filter}&page=${page}&take=${PAGE_SIZE}`)
       setNgos(data.ngos)
+      setTotal(data.total ?? 0)
     } catch (err) {
       toast.error(err.message)
     } finally {
       setLoading(false)
     }
-  }, [filter])
+  }, [filter, page])
 
   useEffect(() => {
     load()
@@ -610,6 +615,7 @@ export default function AdminNgosClient() {
       <DataTable
         columns={columns}
         data={ngos}
+        serverPagination={{ page, pageSize: PAGE_SIZE, total, onPageChange: setPage }}
         loading={loading}
         searchKey="orgName"
         searchPlaceholder="Search organizations…"

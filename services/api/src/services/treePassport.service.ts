@@ -1,5 +1,6 @@
 import { PrismaClient, isValidPublicId } from '@arth/db';
 import { NotFoundError } from '../utils/errors';
+import { treeImpactFields } from '../lib/treeImpact';
 
 const PUBLIC_PERSON_SELECT = { id: true, name: true, handle: true, avatarEmoji: true } as const;
 
@@ -114,7 +115,7 @@ async function buildIndividualPassport(prisma: PrismaClient, treeId: string, req
     photoUrl: tree.photoUrl,
     latestPhotoUrl: latestPhoto(tree.photoUrl, accepted),
     pendingUpdates,
-    co2Absorbed: Number(tree.co2Absorbed),
+    ...treeImpactFields(tree),
     xpEarned: tree.xpEarned,
     aiVerificationStatus: tree.aiVerificationStatus,
     healthStatus: tree.healthStatus,

@@ -10,6 +10,7 @@ import { assertGpsNotMocked, assertGpsAccuracy } from '../services/plantingLocat
 import { resolvePublicId, getPassportByInternalId } from '../services/treePassport.service';
 import { findNearbyTrees } from '../services/nearbyTrees.service';
 import { BadRequestError, NotFoundError } from '../utils/errors';
+import { treeImpactFields } from '../lib/treeImpact';
 
 const DEFAULT_NEARBY_RADIUS_METERS = 800;
 const MIN_NEARBY_RADIUS_METERS = 100;
@@ -40,7 +41,7 @@ function serializeTree(tree: any) {
     growthStage: tree.growthStage,
     healthStatus: tree.healthStatus,
     photoUri: tree.photoUrl,
-    co2Absorbed: Number(tree.co2Absorbed),
+    ...treeImpactFields(tree),
     xpEarned: tree.xpEarned,
     aiVerificationStatus: tree.aiVerificationStatus,
   };

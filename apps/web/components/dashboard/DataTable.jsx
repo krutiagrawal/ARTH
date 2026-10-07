@@ -22,6 +22,10 @@ import { cn } from '@/lib/utils'
  * CMS lists. Sorting/filtering/pagination are client-side over whatever page
  * of `data` is currently loaded.
  *
+ * `serverPagination` ({ page, pageSize, total, onPageChange }): the rows in `data` are
+ * one server page of `total`; the footer then drives page numbers from the server
+ * instead of slicing client-side. Sort/search still apply within the loaded page.
+ *
  * `enableRowSelection` + `onSelectionChange`: opt-in checkbox column (first
  * NGO Survival/Impact's bulk health-check action needs this) — everything
  * else omits the prop and gets the exact same table as before.
@@ -37,6 +41,7 @@ export default function DataTable({
   onRowClick,
   enableRowSelection = false,
   onSelectionChange,
+  serverPagination,
 }) {
   const [sorting, setSorting] = useState([])
   const [globalFilter, setGlobalFilter] = useState('')
@@ -74,7 +79,20 @@ export default function DataTable({
   const table = useReactTable({
     data,
     columns: tableColumns,
-    state: { sorting, globalFilter, rowSelection },
+    state: {
+      sorting,
+      globalFilter,
+      rowSelection,
+      ...(serverPagination
+        ? { pagination: { pageIndex: serverPagination.page - 1, pageSize: serverPagination.pageSize } }
+        : {}),
+    },
+    ...(serverPagination
+      ? {
+          manualPagination: true,
+          pageCount: Math.max(1, Math.ceil(serverPagination.total / serverPagination.pageSize)),
+        }
+      : {}),
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     onRowSelectionChange: setRowSelection,
@@ -185,7 +203,7 @@ export default function DataTable({
               variant="outline"
               size="sm"
               className="rounded-full"
-              onClick={() => table.previousPage()}
+              onClick={() => (serverPagination ? serverPagination.onPageChange(serverPagination.page - 1) : table.previousPage())}
               disabled={!table.getCanPreviousPage()}
             >
               Previous
@@ -194,7 +212,7 @@ export default function DataTable({
               variant="outline"
               size="sm"
               className="rounded-full"
-              onClick={() => table.nextPage()}
+              onClick={() => (serverPagination ? serverPagination.onPageChange(serverPagination.page + 1) : table.nextPage())}
               disabled={!table.getCanNextPage()}
             >
               Next

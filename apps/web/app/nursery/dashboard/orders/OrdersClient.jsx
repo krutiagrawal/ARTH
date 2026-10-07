@@ -1,8 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
 import { PackageSearch, Truck, MapPin } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -10,6 +9,8 @@ import DataTable from '@/components/dashboard/DataTable'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import { proxy } from '../proxy'
+import { usePagedList } from '@/hooks/usePagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
 const STATUS_VARIANT = {
   pending_payment: 'outline',
@@ -47,29 +48,14 @@ function rupees(cents) {
 
 export default function OrdersClient() {
   const router = useRouter()
-  const [orders, setOrders] = useState([])
-  const [loading, setLoading] = useState(true)
   const [fulfillmentType, setFulfillmentType] = useState('all')
   const [status, setStatus] = useState('')
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams()
-      if (status) params.set('status', status)
-      if (fulfillmentType !== 'all') params.set('fulfillmentType', fulfillmentType)
-      const qs = params.toString()
-      setOrders(await proxy(`/nursery/orders${qs ? `?${qs}` : ''}`))
-    } catch (err) {
-      toast.error(err.message || 'Could not load orders.')
-    } finally {
-      setLoading(false)
-    }
-  }, [status, fulfillmentType])
-
-  useEffect(() => {
-    load()
-  }, [load])
+  const { items: orders, loading, loadingMore, hasMore, loadMore } = usePagedList(
+    '/nursery/orders',
+    { status, fulfillmentType: fulfillmentType !== 'all' ? fulfillmentType : '' },
+    { errorMessage: 'Could not load orders.', proxyFn: proxy },
+  )
 
   const columns = useMemo(
     () => [
@@ -144,6 +130,7 @@ export default function OrdersClient() {
         onRowClick={(row) => router.push(`/nursery/dashboard/orders/${row.id}`)}
         emptyState={<EmptyState icon={PackageSearch} title="No orders yet" body="Orders placed against your stock will show up here." />}
       />
+      <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
     </DashboardPageShell>
   )
 }

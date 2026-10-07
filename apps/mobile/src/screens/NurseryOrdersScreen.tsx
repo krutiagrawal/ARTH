@@ -13,6 +13,8 @@ import { Sheet } from '../components/common/Sheet';
 import { useNurseryOrders } from '../hooks/useApiQueries';
 import type { ApiNurseryOrder, NurseryOrderStatus } from '../api/nursery';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { flattenPages, infiniteScrollProps } from '../hooks/useInfiniteList';
+import { PageFooter } from '../components/common/PageFooter';
 
 function formatRupees(cents: number) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`;
@@ -84,9 +86,11 @@ export function NurseryOrdersScreen({ navigation }: any) {
   const [statusTab, setStatusTab] = useState<NurseryOrderStatus | 'all'>('confirmed');
   const [showStatusSheet, setShowStatusSheet] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const { data: orders = [], isLoading, refetch } = useNurseryOrders({
+  const query = useNurseryOrders({
     status: statusTab === 'all' ? undefined : statusTab,
   });
+  const { isLoading, refetch } = query;
+  const orders = useMemo(() => flattenPages(query.data), [query.data]);
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const filteredOrders = useMemo(() => {
@@ -159,11 +163,13 @@ export function NurseryOrdersScreen({ navigation }: any) {
         <ScrollView
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
+          {...infiniteScrollProps(query)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           {filteredOrders.map((o) => (
             <OrderRow key={o.id} order={o} navigation={navigation} />
           ))}
+          <PageFooter loading={query.isFetchingNextPage} />
         </ScrollView>
       )}
     </View>

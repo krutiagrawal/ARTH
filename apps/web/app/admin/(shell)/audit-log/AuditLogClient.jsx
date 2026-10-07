@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { ScrollText } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import DataTable from '@/components/dashboard/DataTable'
+import { usePageState, PAGE_SIZE } from '@/hooks/usePageState'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 
@@ -26,12 +27,19 @@ export default function AuditLogClient() {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
 
+  const [page, setPage] = usePageState('logs')
+  const [total, setTotal] = useState(0)
+
   useEffect(() => {
-    proxy('/admin/action-logs')
-      .then((data) => setLogs(data.logs))
+    setLoading(true)
+    proxy(`/admin/action-logs?page=${page}&take=${PAGE_SIZE}`)
+      .then((data) => {
+        setLogs(data.logs)
+        setTotal(data.total ?? 0)
+      })
       .catch((err) => toast.error(err.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [page])
 
   const columns = useMemo(
     () => [
@@ -85,6 +93,7 @@ export default function AuditLogClient() {
       <DataTable
         columns={columns}
         data={logs}
+        serverPagination={{ page, pageSize: PAGE_SIZE, total, onPageChange: setPage }}
         loading={loading}
         emptyState={<EmptyState icon={ScrollText} title="No actions yet" body="Approve/reject/suspend actions on NGOs will show up here." />}
       />

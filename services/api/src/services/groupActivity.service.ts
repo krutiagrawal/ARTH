@@ -32,9 +32,12 @@ export async function getGroupActivity(
   prisma: PrismaClient,
   groupId: string,
   viewerId: string,
-  filter: { take?: number } = {}
-): Promise<GroupActivityItem[]> {
+  filter: { take?: number; before?: string } = {}
+): Promise<{ items: GroupActivityItem[]; nextCursor: string | null }> {
   const take = Math.min(filter.take ?? 30, 50);
+  // Merged from two tables, so the cursor is the last item's timestamp rather than a row id.
+  const beforeDate = filter.before ? new Date(filter.before) : null;
+  const before = beforeDate && !Number.isNaN(beforeDate.getTime()) ? { createdAt: { lt: beforeDate } } : {};
 
   const memberIds = (await prisma.groupMember.findMany({ where: { groupId }, select: { userId: true } })).map(
     (m) => m.userId
@@ -43,17 +46,17 @@ export async function getGroupActivity(
   const [activities, posts] = await Promise.all([
     memberIds.length > 0
       ? prisma.activityFeed.findMany({
-          where: { userId: { in: memberIds } },
+          where: { userId: { in: memberIds }, ...before },
           include: { user: { select: { id: true, name: true, handle: true, avatarEmoji: true } } },
           orderBy: { createdAt: 'desc' },
-          take,
+          take: take + 1,
         })
       : Promise.resolve([]),
     prisma.post.findMany({
-      where: { groupId },
+      where: { groupId, ...before },
       include: { ...postInclude, likes: { where: { userId: viewerId }, select: { id: true } }, saves: { where: { userId: viewerId }, select: { id: true } } },
       orderBy: { createdAt: 'desc' },
-      take,
+      take: take + 1,
     }),
   ]);
 
@@ -76,5 +79,7 @@ export async function getGroupActivity(
   ];
 
   merged.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  return merged.slice(0, take);
+  const hasMore = merged.length > take;
+  const items = merged.slice(0, take);
+  return { items, nextCursor: hasMore ? items[items.length - 1].createdAt.toISOString() : null };
 }

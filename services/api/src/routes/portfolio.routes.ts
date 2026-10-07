@@ -45,8 +45,8 @@ async function readMedia(request: any) {
 export default async function portfolioRoutes(fastify: FastifyInstance) {
   fastify.addHook('preHandler', fastify.requireRole(...ORG_ROLES));
 
-  fastify.get('/', async (request, reply) => {
-    reply.send(await portfolioService.listOwnPortfolio(fastify.prisma, request.user!.id));
+  fastify.get<{ Querystring: { cursor?: string; take?: string } }>('/', async (request, reply) => {
+    reply.send(await portfolioService.listOwnPortfolio(fastify.prisma, request.user!.id, request.query));
   });
 
   fastify.post('/', async (request, reply) => {

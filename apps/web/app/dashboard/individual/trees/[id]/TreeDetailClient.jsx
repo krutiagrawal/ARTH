@@ -12,6 +12,7 @@ import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import LocationActions from '@/components/dashboard-individual/LocationActions'
 import { proxy } from '@/lib/memberProxy'
 import { resolveMediaUrl } from '@/lib/media'
+import { formatKg, formatTreeAge } from '@/lib/impact'
 
 export default function TreeDetailClient({ id }) {
   const router = useRouter()
@@ -119,8 +120,11 @@ export default function TreeDetailClient({ id }) {
 
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-2xl border border-border/70 p-4 text-center">
-              <p className="text-xs text-muted-foreground">CO₂ absorbed</p>
-              <p className="font-serif text-xl mt-1">{Number(tree.co2Absorbed ?? 0).toFixed(1)} kg</p>
+              <p className="text-xs text-muted-foreground">CO₂ stored (est.)</p>
+              <p className="font-serif text-xl mt-1">{formatKg(tree.co2Absorbed)} kg</p>
+              {tree.oxygenKg !== undefined && (
+                <p className="text-[11px] text-muted-foreground mt-1">≈ {formatKg(tree.oxygenKg)} kg oxygen{tree.ageDays != null ? ` · ${formatTreeAge(tree.ageDays)} old` : ''}</p>
+              )}
             </div>
             <div className="rounded-2xl border border-border/70 p-4 text-center">
               <p className="text-xs text-muted-foreground flex items-center justify-center gap-1"><Zap className="h-3 w-3" /> XP earned</p>

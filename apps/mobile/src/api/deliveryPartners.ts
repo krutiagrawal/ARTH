@@ -1,4 +1,5 @@
 import { apiFetch } from './client';
+import { pagedPath, type Page } from '../hooks/useInfiniteList';
 
 // Nursery-side management of its delivery-partner roster. See deliveryPartnerApp.ts for the
 // partner's own mobile app endpoints.
@@ -32,8 +33,9 @@ export interface UpdateDeliveryPartnerInput {
   isActive?: boolean;
 }
 
-export async function fetchDeliveryPartners(): Promise<ApiDeliveryPartner[]> {
-  return apiFetch<ApiDeliveryPartner[]>('/api/nursery/delivery-partners');
+export async function fetchDeliveryPartners(cursor?: string): Promise<Page<ApiDeliveryPartner>> {
+  // 50 (the server max) so the dispatch picker sees nearly everyone without extra requests.
+  return apiFetch<Page<ApiDeliveryPartner>>(pagedPath('/api/nursery/delivery-partners', cursor, {}, 50));
 }
 
 export async function createDeliveryPartner(input: CreateDeliveryPartnerInput): Promise<ApiDeliveryPartner> {

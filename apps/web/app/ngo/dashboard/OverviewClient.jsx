@@ -33,6 +33,7 @@ import { useNgoProfile } from './NgoProfileContext'
 import { GROWTH_LEVEL_META } from './growth/GrowthClient'
 import { usePhoneField } from '@/lib/usePhoneField'
 import { isValidWebsite } from '@/lib/validation'
+import { formatKg } from '@/lib/impact'
 
 function StatusBanner({ profile, onResubmitted }) {
   if (profile.status === 'pending') {
@@ -396,7 +397,7 @@ export default function OverviewClient() {
                 { icon: TreePine, value: stats?.treesAvailable ?? 0, label: 'Trees available for adoption' },
                 { icon: Sprout, value: stats?.treesAdopted ?? 0, label: 'Trees adopted' },
                 { icon: MapPin, value: stats?.communitiesReached ?? 0, label: 'Communities reached' },
-                { icon: Cloud, value: `${stats?.co2AbsorptionKg ?? 0} kg`, label: 'CO2 absorption potential' },
+                { icon: Cloud, value: `${formatKg(stats?.co2AbsorptionKg)} kg`, label: 'CO₂ absorbed (estimated from species and age)' },
                 { icon: Heart, value: stats?.volunteersInvolved ?? 0, label: 'Volunteers involved' },
                 { icon: IndianRupee, value: `₹${((stats?.totalRaisedCents ?? 0) / 100).toLocaleString()}`, label: 'Donations received' },
               ]}

@@ -1,4 +1,5 @@
 import { apiFetch } from './client';
+import { pagedPath, type Page } from '../hooks/useInfiniteList';
 
 export interface ApiWishlistItem {
   id: string;
@@ -9,8 +10,8 @@ export interface ApiWishlistItem {
   stock: { id: string; species: string; priceCents: number | null; quantity: number; nursery: { id: string; nurseryName: string } } | null;
 }
 
-export async function fetchWishlist(): Promise<ApiWishlistItem[]> {
-  return apiFetch<ApiWishlistItem[]>('/api/wishlist');
+export async function fetchWishlist(cursor?: string): Promise<Page<ApiWishlistItem>> {
+  return apiFetch<Page<ApiWishlistItem>>(pagedPath('/api/wishlist', cursor, {}, 30));
 }
 
 export async function addWishlistItem(input: { nurseryId?: string; stockId?: string }): Promise<ApiWishlistItem> {

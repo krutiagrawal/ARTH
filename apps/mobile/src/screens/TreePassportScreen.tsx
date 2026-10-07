@@ -17,6 +17,7 @@ import { useSlideUp, useFadeIn } from '../hooks/useAnimations';
 import { resolveMediaUrl } from '../api/client';
 import { STATUS_META, ACTIONABLE_STATUSES } from '../constants/treeHealth';
 import type { TreePassport, PassportTimelineEntry } from '../api/trees';
+import { formatKg, formatTreeAge } from '../utils/impact';
 
 // Caps the per-row stagger so a long timeline still finishes revealing quickly rather than
 // crawling in one row at a time.
@@ -301,7 +302,10 @@ function buildTiles(passport: TreePassport, navigation: any): Tile[] {
       value: nursery ? nursery.nurseryName : 'Self-sourced',
       onPress: nursery ? () => navigation.navigate('NurseryPublicProfile', { nurseryId: nursery.id }) : undefined,
     });
-    tiles.push({ icon: '🌍', label: 'CO₂ absorbed', value: `${passport.co2Absorbed.toFixed(1)} kg`, big: true });
+    tiles.push({ icon: '🌍', label: 'CO₂ stored (est.)', value: `${formatKg(passport.co2Absorbed)} kg`, big: true });
+    if (passport.oxygenKg !== undefined) tiles.push({ icon: '💨', label: 'Oxygen released (est.)', value: `${formatKg(passport.oxygenKg)} kg`, big: true });
+    if (passport.ageDays !== undefined) tiles.push({ icon: '📅', label: 'Age', value: formatTreeAge(passport.ageDays) });
+    if (passport.estimatedHeightM !== undefined) tiles.push({ icon: '📏', label: 'Height (est.)', value: `${passport.estimatedHeightM.toFixed(1)} m` });
     tiles.push({ icon: '⭐', label: 'XP earned', value: String(passport.xpEarned), big: true });
   } else {
     tiles.push({ icon: '🏢', label: 'NGO', value: passport.ngo.orgName, onPress: () => navigation.navigate('NgoPublicProfile', { ngoId: passport.ngo.id }) });

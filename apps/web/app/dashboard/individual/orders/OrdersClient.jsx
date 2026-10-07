@@ -1,13 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { toast } from 'sonner'
 import { ChevronRight, Package } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
-import { proxy } from '@/lib/memberProxy'
+import { usePagedList } from '@/hooks/usePagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 import { cn } from '@/lib/utils'
 
 function formatRupees(cents) {
@@ -46,16 +45,7 @@ function BoxIllustration() {
 }
 
 export default function OrdersClient() {
-  const [orders, setOrders] = useState(null)
-
-  useEffect(() => {
-    proxy('/orders')
-      .then(setOrders)
-      .catch((err) => {
-        setOrders([])
-        toast.error(err.message || 'Could not load your orders.')
-      })
-  }, [])
+  const { items: orders, loading, loadingMore, hasMore, loadMore } = usePagedList('/orders', {}, { errorMessage: 'Could not load your orders.' })
 
   return (
     <DashboardPageShell className="max-w-3xl">
@@ -69,7 +59,7 @@ export default function OrdersClient() {
         </div>
       </div>
 
-      {orders === null ? (
+      {loading ? (
         <div className="space-y-3">
           <Skeleton className="h-24 w-full rounded-3xl" />
           <Skeleton className="h-24 w-full rounded-3xl" />
@@ -106,6 +96,7 @@ export default function OrdersClient() {
               </div>
             </Link>
           ))}
+          <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
         </div>
       )}
     </DashboardPageShell>

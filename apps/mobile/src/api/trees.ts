@@ -16,11 +16,21 @@ export interface ApiTree {
   healthStatus: TreeHealthStatus;
   photoUri: string | null;
   co2Absorbed: number;
+  /** Estimated from species and age, not measured. */
+  oxygenKg?: number;
+  co2NextYearKg?: number;
+  estimatedHeightM?: number;
+  estimatedDbhCm?: number;
+  ageDays?: number;
+  impactConfidence?: 'medium' | 'low';
   xpEarned: number;
 }
 
-export async function fetchTrees(params: { limit?: number } = {}): Promise<ApiTree[]> {
-  const query = params.limit ? `?limit=${params.limit}` : '';
+export async function fetchTrees(params: { limit?: number; page?: number } = {}): Promise<ApiTree[]> {
+  const q = new URLSearchParams();
+  if (params.limit) q.set('limit', String(params.limit));
+  if (params.page) q.set('page', String(params.page));
+  const query = q.toString() ? `?${q}` : '';
   return apiFetch<ApiTree[]>(`/api/trees${query}`);
 }
 
@@ -114,6 +124,13 @@ export interface IndividualTreePassport {
   latestPhotoUrl: string | null;
   pendingUpdates: PendingUpdate[];
   co2Absorbed: number;
+  /** Estimated from species and age, not measured. */
+  oxygenKg?: number;
+  co2NextYearKg?: number;
+  estimatedHeightM?: number;
+  estimatedDbhCm?: number;
+  ageDays?: number;
+  impactConfidence?: 'medium' | 'low';
   xpEarned: number;
   aiVerificationStatus: 'unverified' | 'verified' | 'rejected';
   healthStatus: TreeHealthStatus;

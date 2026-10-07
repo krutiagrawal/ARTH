@@ -8,6 +8,7 @@ import { evaluateNurseryAchievements } from './nurseryAchievement.service';
 import { getReputationSummary } from './nurseryReputation.service';
 import { maybeMarkOrderPlantationVerified } from './order.service';
 import { notify } from './notification.service';
+import { refreshUserCo2 } from './treeImpact.service';
 
 interface ListNgosFilter {
   status?: NgoApprovalStatus;
@@ -734,9 +735,11 @@ export async function reviewTree(
       await addXp(tx, tree.userId, tree.xpEarned, 'tree_planted', 'tree', tree.id);
       await tx.user.update({
         where: { id: tree.userId },
-        data: { treesPlantedCount: { increment: 1 }, totalCo2Absorbed: { increment: tree.co2Absorbed } },
+        data: { treesPlantedCount: { increment: 1 } },
       });
     }
+    // An approved tree now counts toward the owner's impact.
+    if (input.decision === 'approve') await refreshUserCo2(tx, tree.userId);
 
     await tx.adminActionLog.create({
       data: {

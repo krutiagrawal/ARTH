@@ -9,8 +9,8 @@ import { BadRequestError } from '../utils/errors';
 export default async function ngoBulkRequirementsRoutes(fastify: FastifyInstance) {
   fastify.addHook('preHandler', fastify.requireRole('ngo'));
 
-  fastify.get<{ Querystring: { status?: string } }>('/', async (request, reply) => {
-    reply.send(await bulkRequirementService.listMyRequirements(fastify.prisma, request.user!.id, request.query.status));
+  fastify.get<{ Querystring: { status?: string; cursor?: string; take?: string } }>('/', async (request, reply) => {
+    reply.send(await bulkRequirementService.listMyRequirements(fastify.prisma, request.user!.id, request.query.status, request.query));
   });
 
   fastify.post('/', async (request, reply) => {

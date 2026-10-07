@@ -10,6 +10,8 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useWishlist, useRemoveWishlistItem } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import type { ApiWishlistItem } from '../api/wishlist';
 
 function WishlistRow({ item, navigation }: { item: ApiWishlistItem; navigation: any }) {
@@ -44,7 +46,8 @@ function WishlistRow({ item, navigation }: { item: ApiWishlistItem; navigation: 
 
 export function WishlistScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: items, isLoading, refetch } = useWishlist();
+  const listQuery = useWishlist();
+  const { data: items, isLoading, refetch } = listQuery;
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
@@ -70,11 +73,13 @@ export function WishlistScreen({ navigation }: any) {
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
+          {...infiniteScrollProps(listQuery)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           {items.map((item) => (
             <WishlistRow key={item.id} item={item} navigation={navigation} />
           ))}
+          <PageFooter loading={listQuery.isFetchingNextPage} />
         </ScrollView>
       )}
     </View>

@@ -10,6 +10,8 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useMyReports } from '../hooks/useSocialQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import { REPORT_REASONS, type ApiMyReport } from '../api/social';
 
 const STATUS_LABEL: Record<string, string> = { open: 'Under review', actioned: 'Actioned', dismissed: 'Dismissed' };
@@ -42,7 +44,8 @@ function ReportRow({ report }: { report: ApiMyReport }) {
 /** Available to every role's account — content/accounts I've reported and what came of them. */
 export function MyReportsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data, isLoading, refetch } = useMyReports();
+  const listQuery = useMyReports();
+  const { data, isLoading, refetch } = listQuery;
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
   const reports = data?.reports ?? [];
 
@@ -69,11 +72,13 @@ export function MyReportsScreen({ navigation }: any) {
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
+          {...infiniteScrollProps(listQuery)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           {reports.map((r) => (
             <ReportRow key={r.id} report={r} />
           ))}
+          <PageFooter loading={listQuery.isFetchingNextPage} />
         </ScrollView>
       )}
     </View>

@@ -16,6 +16,7 @@ import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
 import { useApprovalGate } from '@/components/dashboard/useApprovalGate'
 import { useNgoProfile } from '../NgoProfileContext'
 import { useResourceCrud } from '@/lib/useResourceCrud'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 import { proxy } from '../proxy'
 
 const STATUS_VARIANT = { upcoming: 'default', completed: 'secondary', cancelled: 'destructive' }
@@ -23,7 +24,9 @@ const TRANSPORT_LABEL = { self_arrange: 'Self-arrange', ngo_provided: 'NGO trans
 
 export default function DrivesClient() {
   const { profile } = useNgoProfile()
-  const { items, loading, create, update, remove, runAction } = useResourceCrud(proxy, '/drives')
+  const { items, loading, create, update, remove, runAction, hasMore, loadingMore, loadMore } = useResourceCrud(proxy, '/drives', undefined, {
+    pageSize: 30,
+  })
   const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
 
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -229,6 +232,7 @@ export default function DrivesClient() {
           />
         }
       />
+      <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
 
       <DriveFormSheet
         open={dialogOpen}

@@ -1,4 +1,5 @@
 import { apiFetch, toFormFile } from './client';
+import { pagedPath, type Page } from '../hooks/useInfiniteList';
 
 export interface ApiGroupProfile {
   id: string;
@@ -73,8 +74,8 @@ export interface ApiGroupMember {
   xp: number;
 }
 
-export async function fetchGroupMembers(): Promise<ApiGroupMember[]> {
-  return apiFetch<ApiGroupMember[]>('/api/group/members');
+export async function fetchGroupMembers(cursor?: string): Promise<Page<ApiGroupMember>> {
+  return apiFetch<Page<ApiGroupMember>>(pagedPath('/api/group/members', cursor, {}, 30));
 }
 
 export async function setGroupMemberRole(userId: string, role: 'owner' | 'co_admin' | 'member'): Promise<void> {

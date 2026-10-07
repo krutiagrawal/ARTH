@@ -4,8 +4,8 @@ import { addWishlistItemSchema } from '../schemas/marketplace.schema';
 import { BadRequestError } from '../utils/errors';
 
 export default async function wishlistRoutes(fastify: FastifyInstance) {
-  fastify.get('/', async (request, reply) => {
-    reply.send(await wishlistService.listWishlist(fastify.prisma, request.user!.id));
+  fastify.get<{ Querystring: { cursor?: string; take?: string } }>('/', async (request, reply) => {
+    reply.send(await wishlistService.listWishlist(fastify.prisma, request.user!.id, request.query));
   });
 
   fastify.post('/', async (request, reply) => {

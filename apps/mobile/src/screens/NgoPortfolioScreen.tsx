@@ -14,6 +14,7 @@ import { useDeletePortfolioEntry, useMyPortfolio } from '../hooks/useSocialQueri
 import type { ApiPortfolioEntry } from '../api/portfolio';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
@@ -92,7 +93,8 @@ function EntryCard({
  * numbers are self-reported rather than backed by tree health checks.
  */
 export function NgoPortfolioScreen({ navigation }: any) {
-  const { data: entries = [], isLoading, refetch } = useMyPortfolio();
+  const listQuery = useMyPortfolio();
+  const { data: entries = [], isLoading, refetch } = listQuery;
   const deleteEntry = useDeletePortfolioEntry();
   const confirm = useConfirm();
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
@@ -119,6 +121,9 @@ export function NgoPortfolioScreen({ navigation }: any) {
         </View>
       ) : (
         <FlatList
+          onEndReached={() => { if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) listQuery.fetchNextPage(); }}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={<PageFooter loading={listQuery.isFetchingNextPage} />}
           data={entries}
           keyExtractor={(e) => e.id}
           contentContainerStyle={styles.list}

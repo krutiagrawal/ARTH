@@ -9,19 +9,29 @@ export const metadata = {
   description: 'Verified NGOs planting trees, running drives, and tracking impact on ARTH.',
 }
 
+const PAGE_SIZE = 18
+
 export default async function NgosPage({ searchParams }) {
-  const { q, city } = await searchParams
+  const { q, city, page: pageParam } = await searchParams
+  const page = Math.max(Number.parseInt(pageParam, 10) || 1, 1)
   const params = new URLSearchParams()
   if (q) params.set('q', q)
   if (city) params.set('city', city)
+  const filterQuery = params.toString()
+  params.set('page', String(page))
+  params.set('take', String(PAGE_SIZE))
 
   let ngos = []
+  let total = 0
   try {
-    const res = await apiRequest(`/api/ngos${params.toString() ? `?${params.toString()}` : ''}`)
+    const res = await apiRequest(`/api/ngos?${params.toString()}`)
     ngos = res.ngos
+    total = res.total ?? ngos.length
   } catch {
     ngos = []
   }
+  const pageCount = Math.max(Math.ceil(total / PAGE_SIZE), 1)
+  const pageHref = (n) => `/ngos?${filterQuery ? `${filterQuery}&` : ''}page=${n}`
 
   const cities = await prisma.city.findMany({ orderBy: { sortOrder: 'asc' } })
 
@@ -89,6 +99,28 @@ export default async function NgosPage({ searchParams }) {
             </Link>
           ))}
         </div>
+      )}
+
+      {pageCount > 1 && (
+        <nav className="mt-10 flex items-center justify-center gap-4 text-sm" aria-label="Pagination">
+          {page > 1 ? (
+            <Link href={pageHref(page - 1)} className="rounded-full border border-border/70 px-4 py-2 hover:border-primary/40">
+              Previous
+            </Link>
+          ) : (
+            <span className="rounded-full border border-border/40 px-4 py-2 text-muted-foreground/50">Previous</span>
+          )}
+          <span className="text-muted-foreground">
+            Page {page} of {pageCount}
+          </span>
+          {page < pageCount ? (
+            <Link href={pageHref(page + 1)} className="rounded-full border border-border/70 px-4 py-2 hover:border-primary/40">
+              Next
+            </Link>
+          ) : (
+            <span className="rounded-full border border-border/40 px-4 py-2 text-muted-foreground/50">Next</span>
+          )}
+        </nav>
       )}
     </div>
   )

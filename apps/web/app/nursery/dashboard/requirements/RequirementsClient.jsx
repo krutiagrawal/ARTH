@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { ClipboardList, MapPin, CalendarDays, Leaf } from 'lucide-react'
@@ -16,6 +16,8 @@ import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
 import DrawerFormShell, { fieldButtonClassName } from '@/components/dashboard/DrawerFormShell'
 import { resolveMediaUrl } from '@/lib/media'
 import { proxy } from '../proxy'
+import { usePagedList } from '@/hooks/usePagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
 const TABS = [
   { value: 'all', label: 'All' },
@@ -125,8 +127,6 @@ function RespondSheet({ open, onOpenChange, requirement, submitting, onSubmit, o
 
 export default function RequirementsClient() {
   const router = useRouter()
-  const [requirements, setRequirements] = useState([])
-  const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('all')
   const [respondFor, setRespondFor] = useState(null)
   const [submitting, setSubmitting] = useState(false)
@@ -135,20 +135,10 @@ export default function RequirementsClient() {
   const [handoffCode, setHandoffCode] = useState(null)
   const [insufficientStock, setInsufficientStock] = useState(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      setRequirements(await proxy('/nursery/bulk-requirements'))
-    } catch (err) {
-      toast.error(err.message || 'Could not load bulk requirements.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    load()
-  }, [load])
+  const { items: requirements, loading, loadingMore, hasMore, loadMore, reload: load } = usePagedList('/nursery/bulk-requirements', {}, {
+    errorMessage: 'Could not load bulk requirements.',
+    proxyFn: proxy,
+  })
 
   const filtered = useMemo(() => {
     if (tab === 'all') return requirements
@@ -286,6 +276,7 @@ export default function RequirementsClient() {
               </div>
             )
           })}
+          <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
         </div>
       )}
 

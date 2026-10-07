@@ -7,6 +7,7 @@ import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
 import { notify } from './notification.service';
 import { recordNgoContribution, recomputeReputation } from './ngoReputation.service';
 import { getLatestStatusByTree } from './plantedTree.service';
+import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
 
 interface PickupPointInput {
   address: string;
@@ -333,7 +334,7 @@ export async function listOwnedDrives(prisma: PrismaClient, ngoUserId: string, f
       ...(filter.q ? { title: { contains: filter.q, mode: 'insensitive' as const } } : {}),
     },
     include: driveInclude,
-    orderBy: { startsAt: 'desc' },
+    orderBy: [{ startsAt: 'desc' }, { id: 'desc' }],
     take,
     skip: (page - 1) * take,
   });
@@ -491,10 +492,12 @@ export async function listDriveSponsors(prisma: PrismaClient, ngoUserId: string,
 /** Plants the caller has sponsored, across every drive — the activity-hub counterpart to
  * listDriveSponsors above (that one is per-drive and NGO-owner-only; this one is cross-drive and
  * scoped to the sponsoring user). */
-export async function listMySponsorships(prisma: PrismaClient, userId: string) {
+export async function listMySponsorships(prisma: PrismaClient, userId: string, q: CursorQuery = {}) {
+  const { take, args } = cursorArgs(q);
   const sponsorships = await prisma.drivePlantSponsorship.findMany({
     where: { userId },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    ...args,
     include: {
       drivePlant: {
         include: { drive: { select: { id: true, title: true, ngo: { select: { orgName: true } } } } },
@@ -502,7 +505,7 @@ export async function listMySponsorships(prisma: PrismaClient, userId: string) {
     },
   });
 
-  return sponsorships.map((s) => ({
+  return toCursorPage(sponsorships, take, (s) => ({
     id: s.id,
     status: s.status,
     amountCents: s.amountCents,

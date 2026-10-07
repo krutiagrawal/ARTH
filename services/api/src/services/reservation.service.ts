@@ -1,6 +1,7 @@
 import { PrismaClient } from '@arth/db';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
 import { notify } from './notification.service';
+import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
 
 // User-facing half of the reservation flow — the nursery-side inbox (fulfil/decline) lives in
 // nursery.service.ts, mirroring how follow requests are created from follow.service.ts but
@@ -38,15 +39,18 @@ export async function createReservation(
   return reservation;
 }
 
-export async function listMyReservations(prisma: PrismaClient, userId: string) {
-  return prisma.saplingReservation.findMany({
+export async function listMyReservations(prisma: PrismaClient, userId: string, q: CursorQuery = {}) {
+  const { take, args } = cursorArgs(q);
+  const rows = await prisma.saplingReservation.findMany({
     where: { userId },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    ...args,
     include: {
       stock: { select: { species: true } },
       nursery: { select: { id: true, nurseryName: true, logoUrl: true } },
     },
   });
+  return toCursorPage(rows, take);
 }
 
 export async function cancelReservation(prisma: PrismaClient, userId: string, reservationId: string) {

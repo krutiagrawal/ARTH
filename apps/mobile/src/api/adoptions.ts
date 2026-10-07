@@ -1,4 +1,5 @@
 import { apiFetch, toFormFile } from './client';
+import { pagedPath, type Page } from '../hooks/useInfiniteList';
 
 export interface ApiAdoptableTree {
   id: string;
@@ -39,8 +40,8 @@ export async function adoptTree(id: string, message?: string): Promise<ApiAdopta
   });
 }
 
-export async function fetchMyAdoptions(): Promise<ApiAdoptableTree[]> {
-  return apiFetch<ApiAdoptableTree[]>('/api/adoptable-trees/my-adoptions');
+export async function fetchMyAdoptions(cursor?: string): Promise<Page<ApiAdoptableTree>> {
+  return apiFetch<Page<ApiAdoptableTree>>(pagedPath('/api/adoptable-trees/my-adoptions', cursor));
 }
 
 export async function releaseMyAdoption(id: string): Promise<ApiAdoptableTree> {
@@ -49,8 +50,8 @@ export async function releaseMyAdoption(id: string): Promise<ApiAdoptableTree> {
 
 // ---------- NGO-facing ----------
 
-export async function fetchMyAdoptableTrees(): Promise<ApiAdoptableTree[]> {
-  return apiFetch<ApiAdoptableTree[]>('/api/adoptable-trees/mine');
+export async function fetchMyAdoptableTrees(page?: number, take?: number): Promise<ApiAdoptableTree[]> {
+  return apiFetch<ApiAdoptableTree[]>(`/api/adoptable-trees/mine${page ? `?page=${page}&take=${take ?? 30}` : ''}`);
 }
 
 export interface CreateAdoptableTreeInput {

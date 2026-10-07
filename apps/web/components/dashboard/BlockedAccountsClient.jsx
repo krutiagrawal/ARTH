@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { ShieldOff, Ban } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -9,29 +9,20 @@ import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
 import { resolveMediaUrl } from '@/lib/media'
+import { usePagedList } from '@/hooks/usePagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
 /** Accounts I've blocked — shared by every role's dashboard (they all hit the same
  * GET/DELETE /api/blocks, scoped to whichever session's `proxy` is passed in). */
 export default function BlockedAccountsClient({ proxy }) {
-  const [blocks, setBlocks] = useState([])
-  const [loading, setLoading] = useState(true)
   const [unblockTarget, setUnblockTarget] = useState(null)
   const [working, setWorking] = useState(false)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      setBlocks(await proxy('/blocks'))
-    } catch (err) {
-      toast.error(err.message || 'Could not load blocked accounts.')
-    } finally {
-      setLoading(false)
-    }
-  }, [proxy])
-
-  useEffect(() => {
-    load()
-  }, [load])
+  const { items: blocks, loading, loadingMore, hasMore, loadMore, reload: load } = usePagedList('/blocks', {}, {
+    take: 30,
+    errorMessage: 'Could not load blocked accounts.',
+    proxyFn: proxy,
+  })
 
   const handleUnblock = async () => {
     if (!unblockTarget) return
@@ -85,6 +76,7 @@ export default function BlockedAccountsClient({ proxy }) {
               </Button>
             </div>
           ))}
+          <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
         </div>
       )}
 

@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Heart, Trash2, Sprout, Store } from 'lucide-react'
@@ -8,6 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import { proxy } from '@/lib/memberProxy'
+import { usePagedList } from '@/hooks/usePagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
 function money(cents) {
   if (cents == null) return null
@@ -15,10 +16,11 @@ function money(cents) {
 }
 
 export default function WishlistClient() {
-  const [items, setItems] = useState(null)
-
-  const load = () => proxy('/wishlist').then(setItems).catch((err) => toast.error(err.message || 'Could not load your wishlist.'))
-  useEffect(() => { load() }, [])
+  const { items: loaded, setItems, loading, loadingMore, hasMore, loadMore } = usePagedList('/wishlist', {}, {
+    take: 30,
+    errorMessage: 'Could not load your wishlist.',
+  })
+  const items = loading ? null : loaded
 
   const remove = async (id) => {
     try {
@@ -88,6 +90,7 @@ export default function WishlistClient() {
           })}
         </div>
       )}
+      <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
     </DashboardPageShell>
   )
 }

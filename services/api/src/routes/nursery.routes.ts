@@ -138,7 +138,7 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
     reply.send(await nurseryService.getImpact(fastify.prisma, request.user!.id));
   });
 
-  fastify.get<{ Querystring: { species?: string; native?: string; availability?: string; season?: string } }>(
+  fastify.get<{ Querystring: { species?: string; native?: string; availability?: string; season?: string; cursor?: string; take?: string } }>(
     '/stock',
     async (request, reply) => {
       reply.send(
@@ -147,6 +147,8 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
           native: request.query.native !== undefined ? isTrue(request.query.native) : undefined,
           availability: request.query.availability as any,
           season: request.query.season,
+          cursor: request.query.cursor,
+          take: request.query.take,
         }),
       );
     },
@@ -214,9 +216,9 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
     reply.send(await nurseryService.getBadges(fastify.prisma, request.user!.id));
   });
 
-  fastify.get<{ Querystring: { status?: string } }>('/reservations', async (request, reply) => {
-    const rows = await nurseryService.listReservations(fastify.prisma, request.user!.id, request.query.status);
-    reply.send(rows.map(serializeReservation));
+  fastify.get<{ Querystring: { status?: string; cursor?: string; take?: string } }>('/reservations', async (request, reply) => {
+    const page = await nurseryService.listReservations(fastify.prisma, request.user!.id, request.query.status, request.query);
+    reply.send({ items: page.items.map(serializeReservation), nextCursor: page.nextCursor });
   });
 
   fastify.post<{ Params: { id: string } }>('/reservations/:id/fulfill', async (request, reply) => {
@@ -239,12 +241,14 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
 
   // ---------- Marketplace orders (paid cart checkouts — distinct from the free /reservations flow) ----------
 
-  fastify.get<{ Querystring: { status?: string; fulfillmentType?: string } }>('/orders', async (request, reply) => {
+  fastify.get<{ Querystring: { status?: string; fulfillmentType?: string; cursor?: string; take?: string } }>('/orders', async (request, reply) => {
     const profile = await nurseryService.getOwnProfile(fastify.prisma, request.user!.id);
     reply.send(
       await orderService.listNurseryOrders(fastify.prisma, profile.id, {
         status: request.query.status,
         fulfillmentType: request.query.fulfillmentType,
+        cursor: request.query.cursor,
+        take: request.query.take,
       }),
     );
   });
@@ -310,8 +314,8 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
 
   // ---------- Reviews ----------
 
-  fastify.get('/reviews', async (request, reply) => {
-    reply.send(await nurseryService.listReviews(fastify.prisma, request.user!.id));
+  fastify.get<{ Querystring: { cursor?: string; take?: string } }>('/reviews', async (request, reply) => {
+    reply.send(await nurseryService.listReviews(fastify.prisma, request.user!.id, request.query));
   });
 
   fastify.post<{ Params: { id: string } }>('/reviews/:id/respond', async (request, reply) => {

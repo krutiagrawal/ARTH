@@ -2,6 +2,7 @@ import { PrismaClient } from '@arth/db';
 import { hashPassword } from '../utils/password';
 import { ConflictError, NotFoundError } from '../utils/errors';
 import * as nurseryService from './nursery.service';
+import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
 
 interface CreateDeliveryPartnerInput {
   email: string;
@@ -80,17 +81,19 @@ export async function createDeliveryPartner(prisma: PrismaClient, nurseryUserId:
   return serializePartner(profile);
 }
 
-export async function listDeliveryPartners(prisma: PrismaClient, nurseryUserId: string) {
+export async function listDeliveryPartners(prisma: PrismaClient, nurseryUserId: string, q: CursorQuery = {}) {
   const nursery = await nurseryService.getOwnProfile(prisma, nurseryUserId);
+  const { take, args } = cursorArgs(q, 30);
   const partners = await prisma.deliveryPartnerProfile.findMany({
     where: { nurseryId: nursery.id },
     include: {
       user: true,
       _count: { select: { deliveries: { where: { order: { status: 'out_for_delivery' } } } } },
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    ...args,
   });
-  return partners.map(serializePartner);
+  return toCursorPage(partners, take, serializePartner);
 }
 
 async function findOwnedPartnerOrThrow(prisma: PrismaClient, nurseryUserId: string, partnerId: string) {

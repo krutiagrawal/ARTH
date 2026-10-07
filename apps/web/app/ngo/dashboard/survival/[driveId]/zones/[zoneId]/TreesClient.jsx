@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import DataTable from '@/components/dashboard/DataTable'
+import { usePageState } from '@/hooks/usePageState'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
@@ -41,21 +42,26 @@ export default function TreesClient({ driveId, zoneId }) {
 
   const isUnzoned = zoneId === 'unzoned'
 
+  const TREES_PAGE_SIZE = 50
+  const [page, setPage] = usePageState(`${driveId}|${zoneId}`)
+  const [total, setTotal] = useState(0)
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const [zoneRes, treesRes] = await Promise.all([
         isUnzoned ? Promise.resolve({ id: null, name: 'Unzoned' }) : proxy(`/ngo/planted-trees/zones/${zoneId}`),
-        proxy(`/ngo/planted-trees?driveId=${driveId}&zoneId=${zoneId}&take=200`),
+        proxy(`/ngo/planted-trees?driveId=${driveId}&zoneId=${zoneId}&page=${page}&take=${TREES_PAGE_SIZE}`),
       ])
       setZoneInfo(zoneRes)
       setTrees(treesRes.trees)
+      setTotal(treesRes.total ?? 0)
     } catch (err) {
       toast.error(err.message || 'Could not load – please try again.')
     } finally {
       setLoading(false)
     }
-  }, [driveId, zoneId, isUnzoned])
+  }, [driveId, zoneId, isUnzoned, page])
 
   useEffect(() => {
     load()
@@ -174,6 +180,7 @@ export default function TreesClient({ driveId, zoneId }) {
       <DataTable
         columns={columns}
         data={filteredTrees}
+        serverPagination={{ page, pageSize: TREES_PAGE_SIZE, total, onPageChange: setPage }}
         loading={loading}
         searchKey="speciesName"
         searchPlaceholder="Search species…"

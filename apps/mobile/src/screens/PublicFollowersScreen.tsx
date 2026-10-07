@@ -11,6 +11,7 @@ import { EmptyState } from '../components/common/EmptyState';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useNgoPublicFollowers, useNurseryPublicFollowers } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
 import type { ApiPublicFollower } from '../api/publicFollowers';
 
 function FollowerRow({ follower, onPress }: { follower: ApiPublicFollower; onPress: () => void }) {
@@ -37,7 +38,8 @@ export function PublicFollowersScreen({ navigation, route }: any) {
 
   const ngoQuery = useNgoPublicFollowers(kind === 'ngo' ? id : undefined);
   const nurseryQuery = useNurseryPublicFollowers(kind === 'nursery' ? id : undefined);
-  const { data, isLoading, refetch } = kind === 'nursery' ? nurseryQuery : ngoQuery;
+  const listQuery = kind === 'nursery' ? nurseryQuery : ngoQuery;
+  const { data, isLoading, refetch } = listQuery;
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const followers = data?.followers ?? [];
@@ -53,6 +55,9 @@ export function PublicFollowersScreen({ navigation, route }: any) {
         <ActivityIndicator color={COLORS.forest} style={{ marginTop: 24 }} />
       ) : (
         <FlatList
+          onEndReached={() => { if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) listQuery.fetchNextPage(); }}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={<PageFooter loading={listQuery.isFetchingNextPage} />}
           data={followers}
           keyExtractor={(f) => f.id}
           contentContainerStyle={[styles.list, { paddingBottom: clearance }]}

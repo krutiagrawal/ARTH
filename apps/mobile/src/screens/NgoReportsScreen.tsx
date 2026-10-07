@@ -15,6 +15,7 @@ import { IconBadge } from '../components/common/IconBadge';
 import { useNgoReports } from '../hooks/useApiQueries';
 import { useFadeIn, useCountUp } from '../hooks/useAnimations';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { formatKg } from '../utils/impact';
 
 // Same tier set as NgoStreakBadgesScreen.tsx's NGO_GROWTH_LEVEL_META, kept as its own local copy
 // per that file's convention (not worth sharing for two usages).
@@ -190,8 +191,8 @@ export function NgoReportsScreen({ navigation }: any) {
             <KpiTile
               icon="🍃"
               color={COLORS.forest}
-              value={`${reports.co2AbsorptionKg}kg`}
-              label="CO₂ Potential"
+              value={`${formatKg(reports.co2AbsorptionKg)}kg`}
+              label="CO₂ absorbed (est.)"
               onPress={() => navigation.navigate('NgoManage', { initialSegment: 'trees' })}
             />
           </View>

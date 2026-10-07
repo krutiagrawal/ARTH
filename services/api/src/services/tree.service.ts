@@ -11,6 +11,7 @@ import { assertEligiblePlantingLocation, assertNoNearbyOwnPlanting } from './pla
 import { evaluateNurseryAchievements } from './nurseryAchievement.service';
 import { maybeMarkOrderPlantationVerified } from './order.service';
 import { notify } from './notification.service';
+import { refreshUserCo2 } from './treeImpact.service';
 
 const PUBLIC_ID_CREATE_ATTEMPTS = 5;
 
@@ -98,7 +99,9 @@ export async function plantTree(prisma: PrismaClient, input: PlantTreeInput) {
       }
     }
 
-    const co2Absorbed = species.co2KgPerYear ? Number(species.co2KgPerYear) / 12 : 1;
+    // Carbon impact is derived from species + age on read (lib/treeImpact.ts); a newly planted
+    // sapling has stored essentially nothing, so nothing is credited up front. The column stays 0.
+    const co2Absorbed = 0;
     const xpEarned = BASE_XP_PER_TREE;
 
     const tree = await createTreeWithPublicId((publicId) =>
@@ -163,9 +166,9 @@ export async function plantTree(prisma: PrismaClient, input: PlantTreeInput) {
       where: { id: input.userId },
       data: {
         treesPlantedCount: { increment: 1 },
-        totalCo2Absorbed: { increment: co2Absorbed },
       },
     });
+    await refreshUserCo2(tx, input.userId);
 
     await addXp(tx, input.userId, xpEarned, 'tree_planted', 'tree', tree.id);
     await recordPlantedToday(tx, input.userId);

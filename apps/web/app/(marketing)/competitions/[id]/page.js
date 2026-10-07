@@ -24,6 +24,9 @@ export async function generateMetadata({ params }) {
   }
 }
 
+// Entries load a page at a time; the client appends further pages from the API on request.
+const ENTRIES_PAGE_SIZE = 30
+
 export default async function Page({ params }) {
   const { id } = await params
   const comp = await prisma.competition.findUnique({ where: { id } })
@@ -32,7 +35,8 @@ export default async function Page({ params }) {
   const entries = await prisma.competitionEntry.findMany({
     where: { competitionId: id },
     include: { user: { select: { name: true } } },
-    orderBy: { votesCount: 'desc' },
+    orderBy: [{ votesCount: 'desc' }, { id: 'desc' }],
+    take: ENTRIES_PAGE_SIZE,
   })
   const serialisedEntries = entries.map((e) => ({
     ...e,
@@ -42,7 +46,7 @@ export default async function Page({ params }) {
   }))
 
   const serialisedComp = { ...comp, deadline: comp.deadline.toISOString() }
-  return <CompetitionDetailClient comp={serialisedComp} initialEntries={serialisedEntries} />
+  return <CompetitionDetailClient comp={serialisedComp} initialEntries={serialisedEntries} pageSize={ENTRIES_PAGE_SIZE} />
 }
 
 */

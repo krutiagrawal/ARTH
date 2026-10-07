@@ -2,24 +2,28 @@ import { FastifyInstance } from 'fastify';
 import { createFriendRequestSchema } from '../schemas/friends.schema';
 import { BadRequestError, ConflictError, NotFoundError } from '../utils/errors';
 import { notify } from '../services/notification.service';
+import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
 
 function otherUser(friendship: any, userId: string) {
   return friendship.requesterId === userId ? friendship.addressee : friendship.requester;
 }
 
 export default async function friendsRoutes(fastify: FastifyInstance) {
-  fastify.get('/', async (request, reply) => {
+  fastify.get<{ Querystring: CursorQuery }>('/', async (request, reply) => {
     const userId = request.user!.id;
+    const { take, args } = cursorArgs(request.query, 30);
     const friendships = await fastify.prisma.friendship.findMany({
       where: {
         status: 'accepted',
         OR: [{ requesterId: userId }, { addresseeId: userId }],
       },
       include: { requester: true, addressee: true },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      ...args,
     });
 
     reply.send(
-      friendships.map((friendship) => {
+      toCursorPage(friendships, take, (friendship) => {
         const friend = otherUser(friendship, userId);
         return {
           id: friend.id,
@@ -37,15 +41,18 @@ export default async function friendsRoutes(fastify: FastifyInstance) {
     );
   });
 
-  fastify.get('/requests', async (request, reply) => {
+  fastify.get<{ Querystring: CursorQuery }>('/requests', async (request, reply) => {
     const userId = request.user!.id;
+    const { take, args } = cursorArgs(request.query, 30);
     const requests = await fastify.prisma.friendship.findMany({
       where: { addresseeId: userId, status: 'pending' },
       include: { requester: true },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      ...args,
     });
 
     reply.send(
-      requests.map((r) => ({
+      toCursorPage(requests, take, (r) => ({
         id: r.id,
         from: { id: r.requester.id, name: r.requester.name, handle: r.requester.handle, avatar: r.requester.avatarEmoji },
         createdAt: r.createdAt,

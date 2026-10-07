@@ -10,6 +10,8 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useMyOrders } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { flattenPages, infiniteScrollProps } from '../hooks/useInfiniteList';
+import { PageFooter } from '../components/common/PageFooter';
 import type { ApiOrder, OrderStatus } from '../api/orders';
 
 function formatRupees(cents: number) {
@@ -59,7 +61,9 @@ function OrderRow({ order, onPress }: { order: ApiOrder; onPress: () => void }) 
 
 export function MyOrdersScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: orders, isLoading, refetch } = useMyOrders();
+  const query = useMyOrders();
+  const { isLoading, refetch } = query;
+  const orders = flattenPages(query.data);
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
@@ -79,17 +83,19 @@ export function MyOrdersScreen({ navigation }: any) {
 
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
-      ) : !orders || orders.length === 0 ? (
+      ) : orders.length === 0 ? (
         <EmptyState icon="📦" title="No orders yet" body="Saplings you buy from nurseries will show up here." />
       ) : (
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
+          {...infiniteScrollProps(query)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           {orders.map((order) => (
             <OrderRow key={order.id} order={order} onPress={() => navigation.navigate('OrderDetail', { orderId: order.id })} />
           ))}
+          <PageFooter loading={query.isFetchingNextPage} />
         </ScrollView>
       )}
     </View>

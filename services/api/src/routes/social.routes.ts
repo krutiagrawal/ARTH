@@ -124,8 +124,8 @@ export default async function socialRoutes(fastify: FastifyInstance) {
     reply.send(await reportService.listMyReports(fastify.prisma, request.user!.id, parsed.data));
   });
 
-  fastify.get('/blocks', async (request, reply) => {
-    reply.send(await blockService.listBlocks(fastify.prisma, request.user!.id));
+  fastify.get<{ Querystring: { cursor?: string; take?: string } }>('/blocks', async (request, reply) => {
+    reply.send(await blockService.listBlocks(fastify.prisma, request.user!.id, request.query));
   });
 
   fastify.post('/blocks', async (request, reply) => {

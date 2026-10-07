@@ -1,4 +1,5 @@
 import { apiFetch, toFormFile } from './client';
+import { pagedPath, type Page } from '../hooks/useInfiniteList';
 
 export interface Award {
   title: string;
@@ -72,7 +73,11 @@ export interface ApiNgoStats {
   communitiesReached: number;
   volunteersInvolved: number;
   totalDrives: number;
+  /** Estimated from each tree's species and age. */
   co2AbsorptionKg: number;
+  oxygenKg?: number;
+  impactTreesCounted?: number;
+  impactConfidence?: 'medium' | 'low';
   activity: unknown[];
   trustScore: number | null;
   growthLevel: 'seedling' | 'growing' | 'established' | 'evergreen';
@@ -172,8 +177,8 @@ export interface ApiVolunteer {
   lastActiveAt: string | null;
 }
 
-export async function fetchNgoVolunteers(): Promise<ApiVolunteer[]> {
-  return apiFetch<ApiVolunteer[]>('/api/ngo/volunteers');
+export async function fetchNgoVolunteers(cursor?: string): Promise<Page<ApiVolunteer>> {
+  return apiFetch<Page<ApiVolunteer>>(pagedPath('/api/ngo/volunteers', cursor, {}, 30));
 }
 
 /** Cancels this person's confirmed RSVPs to the NGO's *upcoming* drives only — past attendance

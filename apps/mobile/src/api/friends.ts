@@ -1,4 +1,5 @@
 import { apiFetch } from './client';
+import { pagedPath, type Page } from '../hooks/useInfiniteList';
 
 export interface ApiFriend {
   id: string;
@@ -27,12 +28,12 @@ export interface ApiUserSearchResult {
   level: number;
 }
 
-export async function fetchFriends(): Promise<ApiFriend[]> {
-  return apiFetch<ApiFriend[]>('/api/friends');
+export async function fetchFriends(cursor?: string): Promise<Page<ApiFriend>> {
+  return apiFetch<Page<ApiFriend>>(pagedPath('/api/friends', cursor, {}, 30));
 }
 
-export async function fetchFriendRequests(): Promise<ApiFriendRequest[]> {
-  return apiFetch<ApiFriendRequest[]>('/api/friends/requests');
+export async function fetchFriendRequests(cursor?: string): Promise<Page<ApiFriendRequest>> {
+  return apiFetch<Page<ApiFriendRequest>>(pagedPath('/api/friends/requests', cursor, {}, 30));
 }
 
 export async function searchUsers(query: string): Promise<ApiUserSearchResult[]> {

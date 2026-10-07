@@ -17,6 +17,7 @@ import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
 import { useApprovalGate } from '@/components/dashboard/useApprovalGate'
 import { useNgoProfile } from '../NgoProfileContext'
 import { useResourceCrud } from '@/lib/useResourceCrud'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 import { proxy } from '../proxy'
 import { campaignFields } from '../resourceFields'
 
@@ -28,7 +29,9 @@ function rupees(cents) {
 
 export default function CampaignsClient() {
   const { profile } = useNgoProfile()
-  const { items, loading, create, update, remove, runAction } = useResourceCrud(proxy, '/campaigns')
+  const { items, loading, create, update, remove, runAction, hasMore, loadingMore, loadMore } = useResourceCrud(proxy, '/campaigns', undefined, {
+    pageSize: 30,
+  })
   const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
 
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -196,6 +199,7 @@ export default function CampaignsClient() {
           />
         }
       />
+      <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
 
       <ResourceFormSheet
         open={dialogOpen}

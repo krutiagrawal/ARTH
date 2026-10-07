@@ -17,9 +17,9 @@ function serializeReservation(r: any) {
 export default async function reservationsRoutes(fastify: FastifyInstance) {
   fastify.addHook('preHandler', fastify.authenticate);
 
-  fastify.get('/', async (request, reply) => {
-    const rows = await reservationService.listMyReservations(fastify.prisma, request.user!.id);
-    reply.send(rows.map(serializeReservation));
+  fastify.get<{ Querystring: { cursor?: string; take?: string } }>('/', async (request, reply) => {
+    const page = await reservationService.listMyReservations(fastify.prisma, request.user!.id, request.query);
+    reply.send({ items: page.items.map(serializeReservation), nextCursor: page.nextCursor });
   });
 
   fastify.delete<{ Params: { id: string } }>('/:id', async (request, reply) => {

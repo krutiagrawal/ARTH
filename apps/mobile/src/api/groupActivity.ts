@@ -1,4 +1,5 @@
 import { apiFetch } from './client';
+import { pagedPath, type Page } from '../hooks/useInfiniteList';
 import type { ApiPost } from './posts';
 
 export type GroupActivityType =
@@ -29,11 +30,11 @@ export interface GroupPostEntry {
 export type GroupActivityItem = GroupActivityEntry | GroupPostEntry;
 
 // Owner-facing (role 'group').
-export async function fetchGroupActivity(take = 30): Promise<GroupActivityItem[]> {
-  return apiFetch<GroupActivityItem[]>(`/api/group/activity?take=${take}`);
+export async function fetchGroupActivity(cursor?: string): Promise<Page<GroupActivityItem>> {
+  return apiFetch<Page<GroupActivityItem>>(pagedPath('/api/group/activity', cursor, {}, 30));
 }
 
 // Member-facing (any authenticated user viewing a group they belong to).
-export async function fetchGroupActivityForMember(groupId: string, take = 30): Promise<GroupActivityItem[]> {
-  return apiFetch<GroupActivityItem[]>(`/api/groups/${groupId}/activity?take=${take}`);
+export async function fetchGroupActivityForMember(groupId: string, cursor?: string): Promise<Page<GroupActivityItem>> {
+  return apiFetch<Page<GroupActivityItem>>(pagedPath(`/api/groups/${groupId}/activity`, cursor, {}, 30));
 }

@@ -1,5 +1,6 @@
 import { PrismaClient, Prisma } from '@arth/db';
 import { ConflictError, ForbiddenError, NotFoundError } from '../utils/errors';
+import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
 
 export function listCompetitions(prisma: PrismaClient) {
   return prisma.competition.findMany({ orderBy: { deadline: 'asc' } });
@@ -9,12 +10,15 @@ export function getCompetition(prisma: PrismaClient, id: string) {
   return prisma.competition.findUnique({ where: { id } });
 }
 
-export function listEntries(prisma: PrismaClient, competitionId: string) {
-  return prisma.competitionEntry.findMany({
+export async function listEntries(prisma: PrismaClient, competitionId: string, q: CursorQuery = {}) {
+  const { take, args } = cursorArgs(q);
+  const rows = await prisma.competitionEntry.findMany({
     where: { competitionId },
     include: { user: { select: { name: true, avatarEmoji: true } } },
-    orderBy: { votesCount: 'desc' },
+    orderBy: [{ votesCount: 'desc' }, { id: 'desc' }],
+    ...args,
   });
+  return toCursorPage(rows, take);
 }
 
 export async function submitEntry(

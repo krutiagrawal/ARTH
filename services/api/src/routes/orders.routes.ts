@@ -4,8 +4,8 @@ import { checkoutSchema, submitOrderReviewSchema } from '../schemas/marketplace.
 import { BadRequestError } from '../utils/errors';
 
 export default async function ordersRoutes(fastify: FastifyInstance) {
-  fastify.get('/', async (request, reply) => {
-    reply.send(await orderService.listMyOrders(fastify.prisma, request.user!.id));
+  fastify.get<{ Querystring: { cursor?: string; take?: string } }>('/', async (request, reply) => {
+    reply.send(await orderService.listMyOrders(fastify.prisma, request.user!.id, request.query));
   });
 
   fastify.post('/checkout', async (request, reply) => {
@@ -16,8 +16,8 @@ export default async function ordersRoutes(fastify: FastifyInstance) {
     reply.status(201).send(result);
   });
 
-  fastify.get('/reviews/mine', async (request, reply) => {
-    reply.send(await orderService.listMyReviews(fastify.prisma, request.user!.id));
+  fastify.get<{ Querystring: { cursor?: string; take?: string } }>('/reviews/mine', async (request, reply) => {
+    reply.send(await orderService.listMyReviews(fastify.prisma, request.user!.id, request.query));
   });
 
   fastify.get<{ Params: { id: string } }>('/:id', async (request, reply) => {

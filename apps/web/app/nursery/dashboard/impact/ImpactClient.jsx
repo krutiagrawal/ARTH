@@ -8,6 +8,7 @@ import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import StatTile from '@/components/dashboard/StatTile'
 import { Skeleton } from '@/components/ui/skeleton'
 import { proxy } from '../proxy'
+import { formatKg } from '@/lib/impact'
 
 export default function ImpactClient() {
   const [impact, setImpact] = useState(null)
@@ -50,8 +51,8 @@ export default function ImpactClient() {
             <Cloud className="h-4 w-4" />
           </span>
           <div>
-            <p className="font-serif text-xl leading-none">{impact?.estimatedCo2Kg ?? 0} kg</p>
-            <p className="text-xs text-muted-foreground mt-1">Estimated CO₂ absorption potential.</p>
+            <p className="font-serif text-xl leading-none">{formatKg(impact?.estimatedCo2Kg)} kg</p>
+            <p className="text-xs text-muted-foreground mt-1">Estimated CO₂ stored so far, from each tree's species and age.</p>
           </div>
         </div>
       )}

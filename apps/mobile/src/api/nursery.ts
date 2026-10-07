@@ -1,4 +1,5 @@
 import { apiFetch, toFormFile } from './client';
+import { pagedPath, type Page } from '../hooks/useInfiniteList';
 
 export type NurseryGrowthLevel = 'seedling' | 'growing' | 'established' | 'evergreen';
 
@@ -197,6 +198,8 @@ export interface ApiNurseryImpact {
   speciesCount: number;
   ngoDrivesSupported: number;
   estimatedCo2Kg: number;
+  estimatedOxygenKg?: number;
+  impactConfidence?: 'medium' | 'low';
   monthlyTrend: { month: string; count: number }[];
 }
 
@@ -282,14 +285,15 @@ export interface StockFilter {
   season?: string;
 }
 
-export async function fetchSaplingStock(filter: StockFilter = {}): Promise<ApiSaplingStock[]> {
-  const query = new URLSearchParams();
-  if (filter.species) query.set('species', filter.species);
-  if (filter.native !== undefined) query.set('native', String(filter.native));
-  if (filter.availability) query.set('availability', filter.availability);
-  if (filter.season) query.set('season', filter.season);
-  const qs = query.toString();
-  return apiFetch<ApiSaplingStock[]>(`/api/nursery/stock${qs ? `?${qs}` : ''}`);
+export async function fetchSaplingStock(filter: StockFilter = {}, cursor?: string): Promise<Page<ApiSaplingStock>> {
+  return apiFetch<Page<ApiSaplingStock>>(
+    pagedPath('/api/nursery/stock', cursor, {
+      species: filter.species,
+      native: filter.native !== undefined ? String(filter.native) : undefined,
+      availability: filter.availability,
+      season: filter.season,
+    }),
+  );
 }
 
 function stockToForm(input: Partial<SaplingStockInput>): FormData {
@@ -372,9 +376,8 @@ export interface ApiNurseryReservation {
   requester?: { id: string; name: string; avatarEmoji: string };
 }
 
-export async function fetchNurseryReservations(status?: ReservationStatus): Promise<ApiNurseryReservation[]> {
-  const query = status ? `?status=${status}` : '';
-  return apiFetch<ApiNurseryReservation[]>(`/api/nursery/reservations${query}`);
+export async function fetchNurseryReservations(status?: ReservationStatus, cursor?: string): Promise<Page<ApiNurseryReservation>> {
+  return apiFetch<Page<ApiNurseryReservation>>(pagedPath('/api/nursery/reservations', cursor, { status }));
 }
 
 export async function fulfillReservation(id: string): Promise<ApiNurseryReservation> {
@@ -474,13 +477,11 @@ export interface NurseryOrdersFilter {
   fulfillmentType?: 'pickup' | 'delivery';
 }
 
-export async function fetchNurseryOrders(filter: NurseryOrdersFilter | NurseryOrderStatus = {}): Promise<ApiNurseryOrder[]> {
+export async function fetchNurseryOrders(filter: NurseryOrdersFilter | NurseryOrderStatus = {}, cursor?: string): Promise<Page<ApiNurseryOrder>> {
   const normalized: NurseryOrdersFilter = typeof filter === 'string' ? { status: filter } : filter;
-  const query = new URLSearchParams();
-  if (normalized.status) query.set('status', normalized.status);
-  if (normalized.fulfillmentType) query.set('fulfillmentType', normalized.fulfillmentType);
-  const qs = query.toString();
-  return apiFetch<ApiNurseryOrder[]>(`/api/nursery/orders${qs ? `?${qs}` : ''}`);
+  return apiFetch<Page<ApiNurseryOrder>>(
+    pagedPath('/api/nursery/orders', cursor, { status: normalized.status, fulfillmentType: normalized.fulfillmentType }),
+  );
 }
 
 export async function fetchNurseryOrder(id: string): Promise<ApiNurseryOrder> {
@@ -530,8 +531,8 @@ export interface ApiNurseryReview {
   user: { id: string; name: string; avatarEmoji: string };
 }
 
-export async function fetchNurseryReviews(): Promise<ApiNurseryReview[]> {
-  return apiFetch<ApiNurseryReview[]>('/api/nursery/reviews');
+export async function fetchNurseryReviews(cursor?: string): Promise<Page<ApiNurseryReview>> {
+  return apiFetch<Page<ApiNurseryReview>>(pagedPath('/api/nursery/reviews', cursor));
 }
 
 export async function respondToReview(id: string, response: string): Promise<ApiNurseryReview> {
@@ -584,9 +585,8 @@ export interface ApiBulkRequirement {
 /** No status filter returns only `open`/`partially_fulfilled` requirements server-side (see
  * bulkRequirement.service.ts's `listRelevantForNursery`) — there's no dedicated "everything"
  * mode, so a `fulfilled` requirement only shows up when explicitly requested with that status. */
-export async function fetchNurseryBulkRequirements(status?: BulkRequirementStatus): Promise<ApiBulkRequirement[]> {
-  const query = status ? `?status=${status}` : '';
-  return apiFetch<ApiBulkRequirement[]>(`/api/nursery/bulk-requirements${query}`);
+export async function fetchNurseryBulkRequirements(status?: BulkRequirementStatus, cursor?: string): Promise<Page<ApiBulkRequirement>> {
+  return apiFetch<Page<ApiBulkRequirement>>(pagedPath('/api/nursery/bulk-requirements', cursor, { status }));
 }
 
 export interface RespondToBulkRequirementInput {
@@ -619,8 +619,8 @@ export interface ApiMyBulkResponse {
 
 /** The nursery's full response history across every requirement status — the activity-hub view,
  * unlike fetchNurseryBulkRequirements which only returns still-open requirements. */
-export async function fetchMyBulkResponses(): Promise<ApiMyBulkResponse[]> {
-  return apiFetch<ApiMyBulkResponse[]>('/api/nursery/bulk-requirements/responses/mine');
+export async function fetchMyBulkResponses(cursor?: string): Promise<Page<ApiMyBulkResponse>> {
+  return apiFetch<Page<ApiMyBulkResponse>>(pagedPath('/api/nursery/bulk-requirements/responses/mine', cursor));
 }
 
 /** Nursery declares the physical handoff happened — not yet "fulfilled" on its own; the NGO must

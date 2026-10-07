@@ -6,7 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { EmptyState } from '../components/common/EmptyState';
-import { useTrees } from '../hooks/useApiQueries';
+import { useTreesMap, useTreesPaged } from '../hooks/useApiQueries';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
+import { PageFooter } from '../components/common/PageFooter';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { STATUS_META } from '../constants/treeHealth';
 import type { TreeHealthStatus } from '../api/plantedTrees';
@@ -53,8 +55,15 @@ export function MyTreesScreen({ navigation, route }: any) {
   // Arriving from a fresh planting opens straight on the map of everything planted.
   const [view, setView] = useState<'list' | 'map'>(route?.params?.view === 'map' ? 'map' : 'list');
   const mapRef = useRef<LeafletPinMapHandle>(null);
-  const { data: trees, isLoading, refetch } = useTrees(200);
-  const { refreshing, onRefresh } = usePullToRefresh(refetch);
+  // Counts, the total and the map pins cover everything (server-capped at 500); the grid below
+  // pages in 30 at a time so a big forest doesn't load in one go.
+  const { data: trees, isLoading, refetch } = useTreesMap({ scope: 'mine' });
+  const listQuery = useTreesPaged();
+  const pagedTrees = useMemo(() => {
+    const seen = new Set<string>();
+    return (listQuery.data?.pages ?? []).flat().filter((t) => (seen.has(t.id) ? false : (seen.add(t.id), true)));
+  }, [listQuery.data]);
+  const { refreshing, onRefresh } = usePullToRefresh([refetch, listQuery.refetch]);
 
   const counts = useMemo(() => {
     const tally: Record<TreeHealthStatus, number> = {
@@ -151,6 +160,7 @@ export function MyTreesScreen({ navigation, route }: any) {
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
+          {...infiniteScrollProps(listQuery)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           <Text style={styles.totalLine}>{total} {total === 1 ? 'tree' : 'trees'}</Text>
@@ -165,7 +175,7 @@ export function MyTreesScreen({ navigation, route }: any) {
           </View>
 
           <View style={styles.grid}>
-            {(trees ?? []).map((tree) => (
+            {pagedTrees.map((tree) => (
               <TreeTile
                 key={tree.id}
                 tree={tree}
@@ -173,6 +183,7 @@ export function MyTreesScreen({ navigation, route }: any) {
               />
             ))}
           </View>
+          <PageFooter loading={listQuery.isFetchingNextPage} />
         </ScrollView>
       )}
     </View>

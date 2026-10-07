@@ -8,6 +8,8 @@ import { EmptyState } from '../components/common/EmptyState';
 import { useGroupMembers, useSetGroupMemberRole, useRemoveGroupMember } from '../hooks/useApiQueries';
 import { useSlideUp } from '../hooks/useAnimations';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import type { ApiGroupMember } from '../api/group';
 import { useConfirm } from '../context/ConfirmDialogContext';
 
@@ -19,7 +21,8 @@ function FadeInRow({ delay, children }: { delay: number; children: React.ReactNo
 }
 
 export function GroupMembersScreen({ navigation }: any) {
-  const { data: members = [], isLoading, refetch } = useGroupMembers();
+  const listQuery = useGroupMembers();
+  const { data: members = [], isLoading, refetch } = listQuery;
   const setRole = useSetGroupMemberRole();
   const removeMember = useRemoveGroupMember();
   const confirm = useConfirm();
@@ -49,6 +52,7 @@ export function GroupMembersScreen({ navigation }: any) {
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
+      {...infiniteScrollProps(listQuery)}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
     >
       {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
@@ -74,6 +78,7 @@ export function GroupMembersScreen({ navigation }: any) {
           </TouchableOpacity>
         </FadeInRow>
       ))}
+      <PageFooter loading={listQuery.isFetchingNextPage} />
     </ScrollView>
   );
 }

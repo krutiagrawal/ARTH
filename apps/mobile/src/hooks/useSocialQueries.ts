@@ -5,6 +5,8 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
+import { totalPageParams, mergePages, totalInfinite, pageParams, flatItems } from './useInfiniteList';
+import type { ApiFollowersPage } from '../api/ngoFollowers';
 import {
   createPost,
   deletePost,
@@ -328,10 +330,12 @@ export function useToggleSave() {
 
 export function useNgoFollowers(params: { status?: FollowStatus; q?: string } = {}) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: socialKeys.followers(params.status, params.q),
-    queryFn: () => fetchFollowers(params),
+    queryFn: ({ pageParam }) => fetchFollowers({ ...params, page: pageParam, take: 30 }),
     enabled: isAuthenticated,
+    ...totalPageParams<ApiFollowersPage>((p) => p.followers),
+    select: mergePages<ApiFollowersPage, 'followers'>('followers'),
   });
 }
 
@@ -354,10 +358,12 @@ export const useRemoveFollower = () => useFollowerAction(removeFollower);
 
 export function useNurseryFollowers(params: { status?: FollowStatus; q?: string } = {}) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: socialKeys.nurseryFollowers(params.status, params.q),
-    queryFn: () => fetchNurseryFollowers(params),
+    queryFn: ({ pageParam }) => fetchNurseryFollowers({ ...params, page: pageParam, take: 30 }),
     enabled: isAuthenticated,
+    ...totalPageParams<ApiFollowersPage>((p) => p.followers),
+    select: mergePages<ApiFollowersPage, 'followers'>('followers'),
   });
 }
 
@@ -380,10 +386,12 @@ export const useRemoveNurseryFollower = () => useNurseryFollowerAction(removeNur
 
 export function useMyPortfolio(enabled: boolean = true) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: socialKeys.portfolio,
-    queryFn: fetchMyPortfolio,
+    queryFn: ({ pageParam }) => fetchMyPortfolio(pageParam),
     enabled: isAuthenticated && enabled,
+    ...pageParams<Awaited<ReturnType<typeof fetchMyPortfolio>>['items'][number]>(),
+    select: flatItems,
   });
 }
 
@@ -473,12 +481,23 @@ export function useReportContent() {
 
 export function useMyReports() {
   const { isAuthenticated } = useAuth();
-  return useQuery({ queryKey: socialKeys.myReports, queryFn: fetchMyReports, enabled: isAuthenticated });
+  return useInfiniteQuery({
+    queryKey: socialKeys.myReports,
+    queryFn: ({ pageParam }) => fetchMyReports(pageParam),
+    enabled: isAuthenticated,
+    ...totalInfinite<Awaited<ReturnType<typeof fetchMyReports>>, 'reports'>('reports'),
+  });
 }
 
 export function useBlocks() {
   const { isAuthenticated } = useAuth();
-  return useQuery({ queryKey: socialKeys.blocks, queryFn: fetchBlocks, enabled: isAuthenticated });
+  return useInfiniteQuery({
+    queryKey: socialKeys.blocks,
+    queryFn: ({ pageParam }) => fetchBlocks(pageParam),
+    enabled: isAuthenticated,
+    ...pageParams<Awaited<ReturnType<typeof fetchBlocks>>['items'][number]>(),
+    select: flatItems,
+  });
 }
 
 export function useBlockTarget() {
@@ -509,10 +528,11 @@ export function useUnblockTarget() {
 
 export function useAdminReports(status?: ReportStatus, targetType?: ReportTargetTypeFilter) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: socialKeys.adminReports(status, targetType),
-    queryFn: () => fetchAdminReports({ status, targetType }),
+    queryFn: ({ pageParam }) => fetchAdminReports({ status, targetType, page: pageParam, take: 25 }),
     enabled: isAuthenticated,
+    ...totalInfinite<Awaited<ReturnType<typeof fetchAdminReports>>, 'reports'>('reports'),
   });
 }
 

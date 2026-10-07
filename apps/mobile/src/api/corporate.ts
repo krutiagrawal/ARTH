@@ -1,4 +1,5 @@
 import { apiFetch, toFormFile } from './client';
+import { pagedPath, type Page } from '../hooks/useInfiniteList';
 
 export interface ApiCorporateProfile {
   id: string;
@@ -68,8 +69,8 @@ export interface CreateSponsorshipInput {
   note?: string;
 }
 
-export async function fetchSponsorships(): Promise<ApiCsrSponsorship[]> {
-  return apiFetch<ApiCsrSponsorship[]>('/api/corporate/sponsorships');
+export async function fetchSponsorships(cursor?: string): Promise<Page<ApiCsrSponsorship>> {
+  return apiFetch<Page<ApiCsrSponsorship>>(pagedPath('/api/corporate/sponsorships', cursor));
 }
 
 export async function createSponsorship(input: CreateSponsorshipInput): Promise<ApiCsrSponsorship> {

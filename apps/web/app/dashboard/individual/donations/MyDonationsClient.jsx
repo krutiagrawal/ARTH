@@ -1,14 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { toast } from 'sonner'
 import { HeartHandshake } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import { proxy } from '@/lib/memberProxy'
+import { useTotalPagedList } from '@/hooks/useTotalPagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
 const STATUS_VARIANT = {
   succeeded: 'secondary',
@@ -26,15 +26,12 @@ function formatAmount(cents, currency) {
 }
 
 export default function MyDonationsClient() {
-  const [data, setData] = useState(null)
-
-  useEffect(() => {
-    proxy('/campaigns/mine-donations')
-      .then(setData)
-      .catch((err) => toast.error(err.message || 'Could not load your donations.'))
-  }, [])
-
-  const donations = data?.donations ?? null
+  const { items, loading, loadingMore, hasMore, loadMore } = useTotalPagedList(proxy, '/campaigns/mine-donations', {}, {
+    listKey: 'donations',
+    take: 30,
+    errorMessage: 'Could not load your donations.',
+  })
+  const donations = loading ? null : items
 
   return (
     <DashboardPageShell>
@@ -73,6 +70,7 @@ export default function MyDonationsClient() {
             </div>
           ))
         )}
+        <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
       </div>
     </DashboardPageShell>
   )

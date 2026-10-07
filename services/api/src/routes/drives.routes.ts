@@ -73,8 +73,8 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
   });
 
   // Plants the calling user has sponsored, across every drive — for the activity hub.
-  fastify.get('/sponsorships/mine', async (request, reply) => {
-    reply.send(await driveService.listMySponsorships(fastify.prisma, request.user!.id));
+  fastify.get<{ Querystring: { cursor?: string; take?: string } }>('/sponsorships/mine', async (request, reply) => {
+    reply.send(await driveService.listMySponsorships(fastify.prisma, request.user!.id, request.query));
   });
 
   // Real PlantedTree health outcomes across every drive the user has sponsored — an aggregate,

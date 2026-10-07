@@ -4,6 +4,7 @@ import { notify } from './notification.service';
 import { evaluateNurseryAchievements } from './nurseryAchievement.service';
 import { recordNurseryContribution, recomputeReputation } from './nurseryReputation.service';
 import { haversineDistanceKm } from '../utils/geo';
+import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
 
 const NEARBY_FANOUT_RADIUS_KM = 25;
 
@@ -96,16 +97,19 @@ async function fanOutToNearbyNurseries(
   }
 }
 
-export async function listMyRequirements(prisma: PrismaClient, ngoUserId: string, status?: string) {
+export async function listMyRequirements(prisma: PrismaClient, ngoUserId: string, status?: string, q: CursorQuery = {}) {
   const ngo = await getOwnNgoProfile(prisma, ngoUserId);
-  return prisma.bulkRequirement.findMany({
+  const { take, args } = cursorArgs(q);
+  const rows = await prisma.bulkRequirement.findMany({
     where: { ngoId: ngo.id, ...(status ? { status: status as any } : {}) },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    ...args,
     include: {
       species: { select: { commonName: true } },
       responses: { include: { nursery: { select: { id: true, nurseryName: true, logoUrl: true } } } },
     },
   });
+  return toCursorPage(rows, take);
 }
 
 export async function getMyRequirement(prisma: PrismaClient, ngoUserId: string, requirementId: string) {
@@ -199,15 +203,19 @@ async function getNurseryStockQuantity(prisma: PrismaClient, nurseryId: string, 
 export async function listRelevantForNursery(
   prisma: PrismaClient,
   nurseryUserId: string,
-  filter: { status?: string } = {},
+  filter: { status?: string } & CursorQuery = {},
 ) {
   const nursery = await getOwnNurseryProfile(prisma, nurseryUserId);
+  const { take, args } = cursorArgs(filter);
 
-  const requirements = await prisma.bulkRequirement.findMany({
+  const rows = await prisma.bulkRequirement.findMany({
     where: { status: filter.status ? (filter.status as any) : { in: ['open', 'partially_fulfilled'] } },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    ...args,
     include: { species: { select: { commonName: true } }, ngo: { select: { orgName: true, logoUrl: true } }, responses: { where: { nurseryId: nursery.id } } },
   });
+  const hasMore = rows.length > take;
+  const requirements = hasMore ? rows.slice(0, take) : rows;
 
   // One grouped query for every species referenced in this list, instead of one query per
   // requirement, so this stays cheap regardless of how many requirements are shown.
@@ -221,7 +229,7 @@ export async function listRelevantForNursery(
     : [];
   const stockMap = new Map(stockBySpecies.map((s) => [s.speciesId as string, s._sum.quantity ?? 0]));
 
-  return requirements.map((r) => ({
+  const items = requirements.map((r) => ({
     ...r,
     distanceKm:
       nursery.lat != null && nursery.lng != null && r.lat != null && r.lng != null
@@ -231,24 +239,27 @@ export async function listRelevantForNursery(
     // null means "not checkable" (requirement has no specific species) — distinct from 0 (checked, none in stock).
     myStockQuantity: r.speciesId ? stockMap.get(r.speciesId) ?? 0 : null,
   }));
+  return { items, nextCursor: hasMore ? requirements[requirements.length - 1].id : null };
 }
 
 /** The nursery's full response history, every status — unlike listRelevantForNursery (which only
  * returns still-open/partially-fulfilled requirements with the nursery's response attached), this
  * is the activity-hub view: every offer this nursery has ever made, regardless of what happened
  * to the requirement since. */
-export async function listMyResponses(prisma: PrismaClient, nurseryUserId: string) {
+export async function listMyResponses(prisma: PrismaClient, nurseryUserId: string, q: CursorQuery = {}) {
   const nursery = await getOwnNurseryProfile(prisma, nurseryUserId);
+  const { take, args } = cursorArgs(q);
 
   const responses = await prisma.bulkRequirementResponse.findMany({
     where: { nurseryId: nursery.id },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    ...args,
     include: {
       requirement: { include: { species: { select: { commonName: true } }, ngo: { select: { orgName: true } } } },
     },
   });
 
-  return responses.map((r) => ({
+  return toCursorPage(responses, take, (r) => ({
     id: r.id,
     status: r.status,
     quantityOffered: r.quantityOffered,

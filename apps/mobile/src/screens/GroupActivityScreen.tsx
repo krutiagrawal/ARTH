@@ -13,6 +13,7 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useGroupActivity, useGroupActivityForMember } from '../hooks/useApiQueries';
 import { useToggleLike, useToggleSave, useDeletePost } from '../hooks/useSocialQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
 import type { GroupActivityItem } from '../api/groupActivity';
 import type { ApiPost } from '../api/posts';
 
@@ -66,7 +67,8 @@ export function GroupActivityScreen({ navigation, route }: GroupActivityScreenPr
 
   const ownerQuery = useGroupActivity({ enabled: !groupId });
   const memberQuery = useGroupActivityForMember(groupId);
-  const { data: items = [], isLoading, refetch } = groupId ? memberQuery : ownerQuery;
+  const listQuery = groupId ? memberQuery : ownerQuery;
+  const { data: items = [], isLoading, refetch } = listQuery;
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const toggleLike = useToggleLike();
@@ -100,6 +102,9 @@ export function GroupActivityScreen({ navigation, route }: GroupActivityScreenPr
         </View>
       ) : (
         <FlatList
+          onEndReached={() => { if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) listQuery.fetchNextPage(); }}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={<PageFooter loading={listQuery.isFetchingNextPage} />}
           data={items}
           keyExtractor={(item) => `${item.kind}-${item.id}`}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}

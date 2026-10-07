@@ -32,6 +32,8 @@ import {
 import { ApiError } from '../api/client';
 import type { ApiNgoBulkRequirement } from '../api/ngoBulkRequirements';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import { isBulkRequirementOverdue } from '../utils/bulkRequirement';
 import { reverseGeocode } from '../api/geocode';
 import { SPECIES_EMOJI_OPTIONS } from '../api/species';
@@ -212,7 +214,8 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
 
 export function NgoBulkRequirementsScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
-  const { data: requirements = [], isLoading, refetch } = useNgoBulkRequirements();
+  const listQuery = useNgoBulkRequirements();
+  const { data: requirements = [], isLoading, refetch } = listQuery;
   const createMutation = useCreateNgoBulkRequirement();
   const { data: speciesCatalog = [] } = useSpecies();
   const createSpeciesMutation = useCreateSpecies();
@@ -359,11 +362,13 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          {...infiniteScrollProps(listQuery)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           {requirements.map((r) => (
             <RequirementCard key={r.id} item={r} onPress={() => setSelectedId(r.id)} />
           ))}
+          <PageFooter loading={listQuery.isFetchingNextPage} />
         </ScrollView>
       )}
 

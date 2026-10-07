@@ -7,11 +7,13 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { IconBadge } from '../components/common/IconBadge';
 import { StatusModal } from '../components/common/StatusModal';
-import { useMyAdoptableTrees, useNgoProfile, useRemoveAdoptableTree, useReleaseAdoption } from '../hooks/useApiQueries';
+import { useMyAdoptableTreesPaged, useNgoProfile, useRemoveAdoptableTree, useReleaseAdoption } from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import type { ApiAdoptableTree } from '../api/adoptions';
 
@@ -36,7 +38,8 @@ function StatusPill({ label, color }: { label: string; color: string }) {
 
 export function NgoTreesScreen({ navigation }: any) {
   const bottomClearance = useBottomNavClearance();
-  const { data: trees = [], isLoading, refetch } = useMyAdoptableTrees();
+  const listQuery = useMyAdoptableTreesPaged();
+  const { data: trees = [], isLoading, refetch } = listQuery;
   const { data: profile } = useNgoProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'NGO', profile?.rejectionReason);
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
@@ -74,6 +77,7 @@ export function NgoTreesScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
         showsVerticalScrollIndicator={false}
+        {...infiniteScrollProps(listQuery)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
@@ -114,6 +118,7 @@ export function NgoTreesScreen({ navigation }: any) {
             </BorderCard>
           </FadeInRow>
         ))}
+        <PageFooter loading={listQuery.isFetchingNextPage} />
       </ScrollView>
 
       <StatusModal {...statusModalProps} />

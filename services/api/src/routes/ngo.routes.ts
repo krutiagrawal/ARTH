@@ -175,8 +175,8 @@ export default async function ngoRoutes(fastify: FastifyInstance) {
     reply.header('Content-Type', 'text/csv').header('Content-Disposition', 'attachment; filename="donations.csv"').send(csv);
   });
 
-  fastify.get('/volunteers', async (request, reply) => {
-    const volunteers = await ngoService.getOwnVolunteers(fastify.prisma, request.user!.id);
+  fastify.get<{ Querystring: { cursor?: string; take?: string } }>('/volunteers', async (request, reply) => {
+    const volunteers = await ngoService.getOwnVolunteers(fastify.prisma, request.user!.id, request.query);
     reply.send(volunteers);
   });
 

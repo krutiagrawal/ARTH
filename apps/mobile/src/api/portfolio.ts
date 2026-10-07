@@ -1,4 +1,5 @@
 import { apiFetch, toFormFile } from './client';
+import { pagedPath, type Page } from '../hooks/useInfiniteList';
 import type { PickedPhoto } from './posts';
 
 export interface ApiPortfolioMedia {
@@ -61,8 +62,8 @@ function toForm(input: Partial<PortfolioInput>): FormData {
   return form;
 }
 
-export async function fetchMyPortfolio(): Promise<ApiPortfolioEntry[]> {
-  return apiFetch<ApiPortfolioEntry[]>('/api/ngo/portfolio');
+export async function fetchMyPortfolio(cursor?: string): Promise<Page<ApiPortfolioEntry>> {
+  return apiFetch<Page<ApiPortfolioEntry>>(pagedPath('/api/ngo/portfolio', cursor));
 }
 
 export async function fetchNgoPortfolio(ngoId: string): Promise<ApiPortfolioEntry[]> {

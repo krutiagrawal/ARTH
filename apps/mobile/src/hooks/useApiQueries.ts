@@ -1,4 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import { pageParams, totalPageParams, mergePages, totalInfinite, flatItems, arrayPageParams, flatArrays } from './useInfiniteList';
+import type { ApiPublicFollowersPage } from '../api/publicFollowers';
 import { useAuth } from '../context/AuthContext';
 import { fetchTrees, plantTree, verifyPlantingPhoto, fetchTreesMap, fetchTreePassport, fetchNearbyTrees, logOwnObservation, type PlantTreeInput, type LogOwnObservationInput } from '../api/trees';
 import { logCommunityObservation, reviewTreeUpdate, type LogCommunityObservationInput } from '../api/treeObservations';
@@ -289,6 +291,8 @@ import {
 import { fetchAddresses, createAddress, updateAddress, deleteAddress, UpsertAddressInput } from '../api/addresses';
 import { fetchCart, addCartItem, updateCartItem, removeCartItem, clearCart } from '../api/cart';
 import { fetchMyOrders, fetchMyOrder, checkout, cancelOrder, submitOrderReview, fetchMyReviews } from '../api/orders';
+import type { ApiOrder, ApiMyReview } from '../api/orders';
+import type { ApiNurseryOrder } from '../api/nursery';
 import { fetchWishlist, addWishlistItem, removeWishlistItem } from '../api/wishlist';
 
 export function useTrees(limit?: number, enabled: boolean = true) {
@@ -297,6 +301,21 @@ export function useTrees(limit?: number, enabled: boolean = true) {
     queryKey: ['trees', limit],
     queryFn: () => fetchTrees({ limit }),
     enabled: isAuthenticated && enabled,
+  });
+}
+
+const TREES_PAGE_SIZE = 30;
+
+/** The user's own trees, a page at a time (the endpoint returns a bare array, so a short page means the end). */
+export function useTreesPaged() {
+  const { isAuthenticated } = useAuth();
+  return useInfiniteQuery({
+    queryKey: ['trees', 'paged'],
+    queryFn: ({ pageParam }) => fetchTrees({ limit: TREES_PAGE_SIZE, page: pageParam }),
+    enabled: isAuthenticated,
+    initialPageParam: 1,
+    getNextPageParam: (last, all) => (last.length === TREES_PAGE_SIZE ? all.length + 1 : undefined),
+    maxPages: 10,
   });
 }
 
@@ -503,19 +522,23 @@ export function usePublicNurseryLeaderboardPage(page: number) {
 
 export function useFriends() {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['friends'],
-    queryFn: fetchFriends,
+    queryFn: ({ pageParam }) => fetchFriends(pageParam),
     enabled: isAuthenticated,
+    ...pageParams<Awaited<ReturnType<typeof fetchFriends>>['items'][number]>(),
+    select: flatItems,
   });
 }
 
 export function useFriendRequests() {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['friends', 'requests'],
-    queryFn: fetchFriendRequests,
+    queryFn: ({ pageParam }) => fetchFriendRequests(pageParam),
     enabled: isAuthenticated,
+    ...pageParams<Awaited<ReturnType<typeof fetchFriendRequests>>['items'][number]>(),
+    select: flatItems,
   });
 }
 
@@ -590,19 +613,23 @@ export function useUserAchievements(userId: string | undefined) {
 
 export function useNgoPublicFollowers(ngoId: string | undefined) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['ngo', 'public', ngoId, 'followers'],
-    queryFn: () => fetchNgoPublicFollowers(ngoId as string),
+    queryFn: ({ pageParam }) => fetchNgoPublicFollowers(ngoId as string, pageParam),
     enabled: isAuthenticated && !!ngoId,
+    ...totalPageParams<ApiPublicFollowersPage>((p) => p.followers),
+    select: mergePages<ApiPublicFollowersPage, 'followers'>('followers'),
   });
 }
 
 export function useNurseryPublicFollowers(nurseryId: string | undefined) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['nursery', 'public', nurseryId, 'followers'],
-    queryFn: () => fetchNurseryPublicFollowers(nurseryId as string),
+    queryFn: ({ pageParam }) => fetchNurseryPublicFollowers(nurseryId as string, pageParam),
     enabled: isAuthenticated && !!nurseryId,
+    ...totalPageParams<ApiPublicFollowersPage>((p) => p.followers),
+    select: mergePages<ApiPublicFollowersPage, 'followers'>('followers'),
   });
 }
 
@@ -995,7 +1022,13 @@ export function useAdoptTree() {
 
 export function useMyAdoptions() {
   const { isAuthenticated } = useAuth();
-  return useQuery({ queryKey: ['adoptable-trees', 'my-adoptions'], queryFn: fetchMyAdoptions, enabled: isAuthenticated });
+  return useInfiniteQuery({
+    queryKey: ['adoptable-trees', 'my-adoptions'],
+    queryFn: ({ pageParam }) => fetchMyAdoptions(pageParam),
+    enabled: isAuthenticated,
+    ...pageParams<Awaited<ReturnType<typeof fetchMyAdoptions>>['items'][number]>(),
+    select: flatItems,
+  });
 }
 
 export function useReleaseMyAdoption() {
@@ -1025,10 +1058,12 @@ export function useJoinedDrives() {
 
 export function useMySponsorships() {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['drives', 'sponsorships', 'mine'],
-    queryFn: fetchMySponsorships,
+    queryFn: ({ pageParam }) => fetchMySponsorships(pageParam),
     enabled: isAuthenticated,
+    ...pageParams<Awaited<ReturnType<typeof fetchMySponsorships>>['items'][number]>(),
+    select: flatItems,
   });
 }
 
@@ -1069,11 +1104,25 @@ export function useGroupDrives(groupId: string | undefined) {
 
 // ---------- NGO-facing ----------
 
+const OWNED_PAGE_SIZE = 30;
+
+/** Paged twin of useMyDrives for the NGO Drives list; the plain hook stays a single request for pickers/maps. */
+export function useMyDrivesPaged() {
+  const { isAuthenticated } = useAuth();
+  return useInfiniteQuery({
+    queryKey: ['drives', 'mine', 'paged'],
+    queryFn: ({ pageParam }) => fetchMyDrives(pageParam, OWNED_PAGE_SIZE),
+    enabled: isAuthenticated,
+    ...arrayPageParams<Awaited<ReturnType<typeof fetchMyDrives>>[number]>(OWNED_PAGE_SIZE),
+    select: flatArrays,
+  });
+}
+
 export function useMyDrives(enabled: boolean = true) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['drives', 'mine'],
-    queryFn: fetchMyDrives,
+    queryFn: () => fetchMyDrives(),
     enabled: isAuthenticated && enabled,
   });
 }
@@ -1115,11 +1164,23 @@ export function useCreateDrive() {
   });
 }
 
+/** Paged twin of useMyAdoptableTrees for the NGO Trees list. */
+export function useMyAdoptableTreesPaged() {
+  const { isAuthenticated } = useAuth();
+  return useInfiniteQuery({
+    queryKey: ['adoptable-trees', 'mine', 'paged'],
+    queryFn: ({ pageParam }) => fetchMyAdoptableTrees(pageParam, OWNED_PAGE_SIZE),
+    enabled: isAuthenticated,
+    ...arrayPageParams<Awaited<ReturnType<typeof fetchMyAdoptableTrees>>[number]>(OWNED_PAGE_SIZE),
+    select: flatArrays,
+  });
+}
+
 export function useMyAdoptableTrees(enabled: boolean = true) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['adoptable-trees', 'mine'],
-    queryFn: fetchMyAdoptableTrees,
+    queryFn: () => fetchMyAdoptableTrees(),
     enabled: isAuthenticated && enabled,
   });
 }
@@ -1175,19 +1236,22 @@ export function useCreateDonationIntent() {
 
 export function useMyCampaigns() {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['campaigns', 'mine'],
-    queryFn: fetchMyCampaigns,
+    queryFn: ({ pageParam }) => fetchMyCampaigns(pageParam, OWNED_PAGE_SIZE),
     enabled: isAuthenticated,
+    ...arrayPageParams<Awaited<ReturnType<typeof fetchMyCampaigns>>[number]>(OWNED_PAGE_SIZE),
+    select: flatArrays,
   });
 }
 
 export function useMyDonations() {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['campaigns', 'mine-donations'],
-    queryFn: fetchMyDonations,
+    queryFn: ({ pageParam }) => fetchMyDonations({ page: pageParam, take: 30 }),
     enabled: isAuthenticated,
+    ...totalInfinite<Awaited<ReturnType<typeof fetchMyDonations>>, 'donations'>('donations'),
   });
 }
 
@@ -1271,10 +1335,11 @@ export function useNgoMonthlyRsvps(month: string) {
 
 export function useNgoDonations(filter: DonationsFilter = {}, enabled = true) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['ngo', 'donations', filter],
-    queryFn: () => fetchNgoDonations(filter),
+    queryFn: ({ pageParam }) => fetchNgoDonations({ ...filter, page: pageParam, take: 30 }),
     enabled: isAuthenticated && enabled,
+    ...totalInfinite<Awaited<ReturnType<typeof fetchNgoDonations>>, 'donations'>('donations'),
   });
 }
 
@@ -1289,10 +1354,12 @@ export function useNgoDonationsSummary() {
 
 export function useNgoVolunteers() {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['ngo', 'volunteers'],
-    queryFn: fetchNgoVolunteers,
+    queryFn: ({ pageParam }) => fetchNgoVolunteers(pageParam),
     enabled: isAuthenticated,
+    ...pageParams<Awaited<ReturnType<typeof fetchNgoVolunteers>>['items'][number]>(),
+    select: flatItems,
   });
 }
 
@@ -1343,10 +1410,11 @@ export function useDeleteStaff() {
 
 export function usePlantedTrees(filter: ListPlantedTreesFilter = {}) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['ngo', 'planted-trees', filter],
-    queryFn: () => fetchPlantedTrees(filter),
+    queryFn: ({ pageParam }) => fetchPlantedTrees({ take: 50, ...filter, page: pageParam }),
     enabled: isAuthenticated,
+    ...totalInfinite<Awaited<ReturnType<typeof fetchPlantedTrees>>, 'trees'>('trees'),
   });
 }
 
@@ -1590,10 +1658,11 @@ export function useDeleteUpdate() {
 
 export function useBrowseNgos(params: { q?: string; city?: string } = {}) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['ngos', 'browse', params],
-    queryFn: () => browseNgos(params),
+    queryFn: ({ pageParam }) => browseNgos({ ...params, page: pageParam, take: 20 }),
     enabled: isAuthenticated,
+    ...totalInfinite<Awaited<ReturnType<typeof browseNgos>>, 'ngos'>('ngos'),
   });
 }
 
@@ -1696,10 +1765,11 @@ export function useAdminOverview() {
 
 export function useAdminNgos(filter: AdminNgosFilter = {}) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['admin', 'ngos', filter],
-    queryFn: () => fetchAdminNgos(filter),
+    queryFn: ({ pageParam }) => fetchAdminNgos({ ...filter, page: pageParam, take: 30 }),
     enabled: isAuthenticated,
+    ...totalInfinite<Awaited<ReturnType<typeof fetchAdminNgos>>, 'ngos'>('ngos'),
   });
 }
 
@@ -1745,10 +1815,11 @@ export function useAdminActionLogs(params: AdminActionLogsParams = {}) {
 
 export function useAdminNurseries(filter: AdminOrgFilter = {}) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['admin', 'nurseries', filter],
-    queryFn: () => fetchAdminNurseries(filter),
+    queryFn: ({ pageParam }) => fetchAdminNurseries({ ...filter, page: pageParam, take: 30 }),
     enabled: isAuthenticated,
+    ...totalInfinite<Awaited<ReturnType<typeof fetchAdminNurseries>>, 'nurseries'>('nurseries'),
   });
 }
 
@@ -1776,10 +1847,11 @@ export function useSetAdminNurseryStatus() {
 
 export function useAdminCorporates(filter: AdminOrgFilter = {}) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['admin', 'corporates', filter],
-    queryFn: () => fetchAdminCorporates(filter),
+    queryFn: ({ pageParam }) => fetchAdminCorporates({ ...filter, page: pageParam, take: 30 }),
     enabled: isAuthenticated,
+    ...totalInfinite<Awaited<ReturnType<typeof fetchAdminCorporates>>, 'corporates'>('corporates'),
   });
 }
 
@@ -1797,10 +1869,11 @@ export function useSetAdminCorporateStatus() {
 
 export function useAdminAccounts(filter: { q?: string; type?: AdminAccountType; page?: number; take?: number } = {}) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['admin', 'accounts', filter],
-    queryFn: () => searchAdminAccounts(filter),
+    queryFn: ({ pageParam }) => searchAdminAccounts({ ...filter, page: pageParam, take: 30 }),
     enabled: isAuthenticated,
+    ...totalInfinite<Awaited<ReturnType<typeof searchAdminAccounts>>, 'accounts'>('accounts'),
   });
 }
 
@@ -1829,10 +1902,11 @@ export function useUnblockAdminAccount() {
 
 export function useAdminTreeReviewQueue(params: { page?: number; take?: number } = {}) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['admin', 'trees', 'review-queue', params],
-    queryFn: () => fetchAdminTreeReviewQueue(params),
+    queryFn: ({ pageParam }) => fetchAdminTreeReviewQueue({ ...params, page: pageParam, take: 30 }),
     enabled: isAuthenticated,
+    ...totalInfinite<Awaited<ReturnType<typeof fetchAdminTreeReviewQueue>>, 'trees'>('trees'),
   });
 }
 
@@ -1849,7 +1923,7 @@ export function useReviewAdminTree() {
 
 export function useAdminDrives(params: { page?: number; take?: number } = {}) {
   const { isAuthenticated } = useAuth();
-  return useQuery({ queryKey: ['admin', 'drives', params], queryFn: () => fetchAdminDrives(params), enabled: isAuthenticated });
+  return useInfiniteQuery({ queryKey: ['admin', 'drives', params], queryFn: ({ pageParam }) => fetchAdminDrives({ ...params, page: pageParam, take: 30 }), enabled: isAuthenticated, ...totalInfinite<Awaited<ReturnType<typeof fetchAdminDrives>>, 'drives'>('drives') });
 }
 
 export function useCancelAdminDrive() {
@@ -1862,7 +1936,7 @@ export function useCancelAdminDrive() {
 
 export function useAdminDonations(params: { page?: number; take?: number } = {}) {
   const { isAuthenticated } = useAuth();
-  return useQuery({ queryKey: ['admin', 'donations', params], queryFn: () => fetchAdminDonations(params), enabled: isAuthenticated });
+  return useInfiniteQuery({ queryKey: ['admin', 'donations', params], queryFn: ({ pageParam }) => fetchAdminDonations({ ...params, page: pageParam, take: 30 }), enabled: isAuthenticated, ...totalInfinite<Awaited<ReturnType<typeof fetchAdminDonations>>, 'donations'>('donations') });
 }
 
 export function useRefundAdminDonation() {
@@ -1875,7 +1949,7 @@ export function useRefundAdminDonation() {
 
 export function useAdminOrders(params: { page?: number; take?: number } = {}) {
   const { isAuthenticated } = useAuth();
-  return useQuery({ queryKey: ['admin', 'orders', params], queryFn: () => fetchAdminOrders(params), enabled: isAuthenticated });
+  return useInfiniteQuery({ queryKey: ['admin', 'orders', params], queryFn: ({ pageParam }) => fetchAdminOrders({ ...params, page: pageParam, take: 30 }), enabled: isAuthenticated, ...totalInfinite<Awaited<ReturnType<typeof fetchAdminOrders>>, 'orders'>('orders') });
 }
 
 export function useRefundAdminOrder() {
@@ -2004,10 +2078,12 @@ export function useSelectGroupTheme() {
 
 export function useGroupMembers() {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['group', 'members'],
-    queryFn: fetchGroupMembers,
+    queryFn: ({ pageParam }) => fetchGroupMembers(pageParam),
     enabled: isAuthenticated,
+    ...pageParams<Awaited<ReturnType<typeof fetchGroupMembers>>['items'][number]>(),
+    select: flatItems,
   });
 }
 
@@ -2067,10 +2143,12 @@ export function useGroupAchievements() {
 
 export function useGroupActivity(options?: { enabled?: boolean }) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['group', 'activity'],
-    queryFn: () => fetchGroupActivity(),
+    queryFn: ({ pageParam }) => fetchGroupActivity(pageParam),
     enabled: isAuthenticated && (options?.enabled ?? true),
+    ...pageParams<Awaited<ReturnType<typeof fetchGroupActivity>>['items'][number]>(),
+    select: flatItems,
   });
 }
 
@@ -2129,10 +2207,12 @@ export function useJoinGroupChallenge() {
 
 export function useGroupActivityForMember(groupId: string | undefined) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['groups', groupId, 'activity'],
-    queryFn: () => fetchGroupActivityForMember(groupId as string),
+    queryFn: ({ pageParam }) => fetchGroupActivityForMember(groupId as string, pageParam),
     enabled: isAuthenticated && Boolean(groupId),
+    ...pageParams<Awaited<ReturnType<typeof fetchGroupActivityForMember>>['items'][number]>(),
+    select: flatItems,
   });
 }
 
@@ -2211,10 +2291,12 @@ export function useNurseryImpact() {
 
 export function useSaplingStock(filter: StockFilter = {}) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['nursery', 'stock', filter],
-    queryFn: () => fetchSaplingStock(filter),
+    queryFn: ({ pageParam }) => fetchSaplingStock(filter, pageParam),
     enabled: isAuthenticated,
+    ...pageParams<Awaited<ReturnType<typeof fetchSaplingStock>>['items'][number]>(),
+    select: flatItems,
   });
 }
 
@@ -2281,10 +2363,12 @@ export function useNurseryPublicAchievements(nurseryId: string | undefined) {
 
 export function useNurseryReservations(status?: ReservationStatus) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['nursery', 'reservations', status],
-    queryFn: () => fetchNurseryReservations(status),
+    queryFn: ({ pageParam }) => fetchNurseryReservations(status, pageParam),
     enabled: isAuthenticated,
+    ...pageParams<Awaited<ReturnType<typeof fetchNurseryReservations>>['items'][number]>(),
+    select: flatItems,
   });
 }
 
@@ -2331,11 +2415,13 @@ export function useStockAnalytics() {
 
 export function useNurseryOrders(filter: NurseryOrdersFilter | NurseryOrderStatus = {}) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['nursery', 'orders', filter],
-    queryFn: () => fetchNurseryOrders(filter),
+    queryFn: ({ pageParam }) => fetchNurseryOrders(filter, pageParam),
     enabled: isAuthenticated,
+    // Polling an infinite query refetches every loaded page; maxPages keeps that bounded.
     refetchInterval: 15000,
+    ...pageParams<ApiNurseryOrder>(),
   });
 }
 
@@ -2409,10 +2495,12 @@ export function useCancelNurseryOrder() {
 
 export function useDeliveryPartners() {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['nursery', 'deliveryPartners'],
-    queryFn: fetchDeliveryPartners,
+    queryFn: ({ pageParam }) => fetchDeliveryPartners(pageParam),
     enabled: isAuthenticated,
+    ...pageParams<Awaited<ReturnType<typeof fetchDeliveryPartners>>['items'][number]>(),
+    select: flatItems,
   });
 }
 
@@ -2487,7 +2575,13 @@ export function useCompleteDelivery() {
 
 export function useNurseryReviews() {
   const { isAuthenticated } = useAuth();
-  return useQuery({ queryKey: ['nursery', 'reviews'], queryFn: fetchNurseryReviews, enabled: isAuthenticated });
+  return useInfiniteQuery({
+    queryKey: ['nursery', 'reviews'],
+    queryFn: ({ pageParam }) => fetchNurseryReviews(pageParam),
+    enabled: isAuthenticated,
+    ...pageParams<Awaited<ReturnType<typeof fetchNurseryReviews>>['items'][number]>(),
+    select: flatItems,
+  });
 }
 
 export function useRespondToReview() {
@@ -2502,19 +2596,23 @@ export function useRespondToReview() {
 
 export function useNurseryBulkRequirements(status?: BulkRequirementStatus) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['nursery', 'bulkRequirements', status],
-    queryFn: () => fetchNurseryBulkRequirements(status),
+    queryFn: ({ pageParam }) => fetchNurseryBulkRequirements(status, pageParam),
     enabled: isAuthenticated,
+    ...pageParams<Awaited<ReturnType<typeof fetchNurseryBulkRequirements>>['items'][number]>(),
+    select: flatItems,
   });
 }
 
 export function useMyBulkResponses() {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['nursery', 'bulkRequirements', 'responses', 'mine'],
-    queryFn: fetchMyBulkResponses,
+    queryFn: ({ pageParam }) => fetchMyBulkResponses(pageParam),
     enabled: isAuthenticated,
+    ...pageParams<Awaited<ReturnType<typeof fetchMyBulkResponses>>['items'][number]>(),
+    select: flatItems,
   });
 }
 
@@ -2524,17 +2622,8 @@ export function useMyBulkResponses() {
  * fulfilled) and merges them, so both the list screen and the "detail" screen (which just looks
  * up one id out of this combined set) share the same cached data. */
 export function useNurseryBulkRequirementsCombined() {
-  const { isAuthenticated } = useAuth();
-  const openQuery = useQuery({
-    queryKey: ['nursery', 'bulkRequirements', undefined],
-    queryFn: () => fetchNurseryBulkRequirements(),
-    enabled: isAuthenticated,
-  });
-  const fulfilledQuery = useQuery({
-    queryKey: ['nursery', 'bulkRequirements', 'fulfilled'],
-    queryFn: () => fetchNurseryBulkRequirements('fulfilled'),
-    enabled: isAuthenticated,
-  });
+  const openQuery = useNurseryBulkRequirements();
+  const fulfilledQuery = useNurseryBulkRequirements('fulfilled');
 
   const byId = new Map<string, import('../api/nursery').ApiBulkRequirement>();
   for (const r of openQuery.data ?? []) byId.set(r.id, r);
@@ -2544,6 +2633,13 @@ export function useNurseryBulkRequirementsCombined() {
     data: Array.from(byId.values()),
     isLoading: openQuery.isLoading || fulfilledQuery.isLoading,
     refetch: () => Promise.all([openQuery.refetch(), fulfilledQuery.refetch()]),
+    // The list screen shows both sets together, so "more" means either set has another page.
+    hasNextPage: !!openQuery.hasNextPage || !!fulfilledQuery.hasNextPage,
+    isFetchingNextPage: openQuery.isFetchingNextPage || fulfilledQuery.isFetchingNextPage,
+    fetchNextPage: () => {
+      if (openQuery.hasNextPage && !openQuery.isFetchingNextPage) openQuery.fetchNextPage();
+      if (fulfilledQuery.hasNextPage && !fulfilledQuery.isFetchingNextPage) fulfilledQuery.fetchNextPage();
+    },
   };
 }
 
@@ -2584,10 +2680,12 @@ export function useMarkBulkResponseHandedOff() {
 
 export function useNgoBulkRequirements(status?: BulkRequirementStatus) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['ngo', 'bulkRequirements', status],
-    queryFn: () => fetchNgoBulkRequirements(status),
+    queryFn: ({ pageParam }) => fetchNgoBulkRequirements(status, pageParam),
     enabled: isAuthenticated,
+    ...pageParams<Awaited<ReturnType<typeof fetchNgoBulkRequirements>>['items'][number]>(),
+    select: flatItems,
   });
 }
 
@@ -2656,10 +2754,11 @@ export function useConfirmNgoBulkResponseReceived() {
 
 export function useBrowseNurseries(params: { q?: string; city?: string; deliveryOnly?: boolean; minRating?: number; lat?: number; lng?: number; radiusKm?: number } = {}) {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['nurseries', 'browse', params],
-    queryFn: () => browseNurseries(params),
+    queryFn: ({ pageParam }) => browseNurseries({ ...params, page: pageParam, take: 20 }),
     enabled: isAuthenticated,
+    ...totalInfinite<Awaited<ReturnType<typeof browseNurseries>>, 'nurseries'>('nurseries'),
   });
 }
 
@@ -2707,10 +2806,12 @@ export function useCreateReservation() {
 
 export function useMyReservations() {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['reservations', 'mine'],
-    queryFn: fetchMyReservations,
+    queryFn: ({ pageParam }) => fetchMyReservations(pageParam),
     enabled: isAuthenticated,
+    ...pageParams<Awaited<ReturnType<typeof fetchMyReservations>>['items'][number]>(),
+    select: flatItems,
   });
 }
 
@@ -2760,10 +2861,12 @@ export function useCorporateStats() {
 
 export function useSponsorships() {
   const { isAuthenticated } = useAuth();
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['corporate', 'sponsorships'],
-    queryFn: fetchSponsorships,
+    queryFn: ({ pageParam }) => fetchSponsorships(pageParam),
     enabled: isAuthenticated,
+    ...pageParams<Awaited<ReturnType<typeof fetchSponsorships>>['items'][number]>(),
+    select: flatItems,
   });
 }
 
@@ -2870,12 +2973,24 @@ export function useClearCart() {
 
 export function useMyOrders() {
   const { isAuthenticated } = useAuth();
-  return useQuery({ queryKey: ['orders', 'mine'], queryFn: fetchMyOrders, enabled: isAuthenticated });
+  return useInfiniteQuery({
+    queryKey: ['orders', 'mine'],
+    queryFn: ({ pageParam }) => fetchMyOrders(pageParam),
+    enabled: isAuthenticated,
+    staleTime: 60_000,
+    ...pageParams<ApiOrder>(),
+  });
 }
 
 export function useMyReviews() {
   const { isAuthenticated } = useAuth();
-  return useQuery({ queryKey: ['orders', 'reviews', 'mine'], queryFn: fetchMyReviews, enabled: isAuthenticated });
+  return useInfiniteQuery({
+    queryKey: ['orders', 'reviews', 'mine'],
+    queryFn: ({ pageParam }) => fetchMyReviews(pageParam),
+    enabled: isAuthenticated,
+    staleTime: 60_000,
+    ...pageParams<ApiMyReview>(),
+  });
 }
 
 /** Polls every 8s while an order is out for delivery, so the tracking map keeps moving. */
@@ -2924,7 +3039,13 @@ export function useSubmitOrderReview() {
 
 export function useWishlist() {
   const { isAuthenticated } = useAuth();
-  return useQuery({ queryKey: ['wishlist'], queryFn: fetchWishlist, enabled: isAuthenticated });
+  return useInfiniteQuery({
+    queryKey: ['wishlist'],
+    queryFn: ({ pageParam }) => fetchWishlist(pageParam),
+    enabled: isAuthenticated,
+    ...pageParams<Awaited<ReturnType<typeof fetchWishlist>>['items'][number]>(),
+    select: flatItems,
+  });
 }
 
 export function useAddWishlistItem() {

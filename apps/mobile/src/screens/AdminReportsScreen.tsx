@@ -13,6 +13,7 @@ import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { resolveMediaUrl } from '../api/client';
 import { useActOnReport, useAdminReports } from '../hooks/useSocialQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
 import type { ApiAdminReport, ModerationAction, ReportStatus, ReportTargetTypeFilter } from '../api/admin';
 
 const FILTERS: { key: ReportStatus | undefined; label: string }[] = [
@@ -168,7 +169,8 @@ export function AdminReportsScreen() {
   const [pending, setPending] = useState<{ report: ApiAdminReport; action: ModerationAction } | null>(null);
   const [reason, setReason] = useState('');
 
-  const { data, isLoading, refetch } = useAdminReports(filter, targetTab);
+  const listQuery = useAdminReports(filter, targetTab);
+  const { data, isLoading, refetch } = listQuery;
   const act = useActOnReport();
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
@@ -229,6 +231,9 @@ export function AdminReportsScreen() {
         </View>
       ) : (
         <FlatList
+          onEndReached={() => { if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) listQuery.fetchNextPage(); }}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={<PageFooter loading={listQuery.isFetchingNextPage} />}
           data={data?.reports ?? []}
           keyExtractor={(r) => r.id}
           contentContainerStyle={[styles.list, { paddingBottom: clearance }]}

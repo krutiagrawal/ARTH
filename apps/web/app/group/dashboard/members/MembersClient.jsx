@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Users, MoreHorizontal } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -11,21 +11,18 @@ import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
 import { proxy } from '../proxy'
+import { usePagedList } from '@/hooks/usePagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
 const ROLE_LABEL = { owner: 'Owner', co_admin: 'Co-admin', member: 'Member' }
 
 export default function MembersClient() {
-  const [members, setMembers] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { items: members, loading, loadingMore, hasMore, loadMore, reload: load } = usePagedList('/group/members', {}, {
+    take: 30,
+    proxyFn: proxy,
+  })
   const [confirm, setConfirm] = useState(null)
   const [working, setWorking] = useState(false)
-
-  const load = () => {
-    setLoading(true)
-    proxy('/group/members').then(setMembers).catch(() => setMembers([])).finally(() => setLoading(false))
-  }
-
-  useEffect(load, [])
 
   const setRole = async (userId, role) => {
     try {
@@ -124,6 +121,7 @@ export default function MembersClient() {
         searchPlaceholder="Search members…"
         emptyState={<EmptyState icon={Users} title="No members yet" body="Share your invite code from the Overview page to bring people in." />}
       />
+      <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
 
       <ConfirmDialog
         open={!!confirm}

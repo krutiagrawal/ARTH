@@ -17,9 +17,11 @@ export interface ApiNurserySummary {
 }
 
 export async function browseNurseries(
-  params: { q?: string; city?: string; deliveryOnly?: boolean; minRating?: number; lat?: number; lng?: number; radiusKm?: number } = {},
+  params: { q?: string; city?: string; deliveryOnly?: boolean; minRating?: number; lat?: number; lng?: number; radiusKm?: number; page?: number; take?: number } = {},
 ): Promise<{ total: number; nurseries: ApiNurserySummary[] }> {
   const query = new URLSearchParams();
+  if (params.page) query.set('page', String(params.page));
+  if (params.take) query.set('take', String(params.take));
   if (params.q) query.set('q', params.q);
   if (params.city) query.set('city', params.city);
   if (params.deliveryOnly) query.set('deliveryOnly', 'true');

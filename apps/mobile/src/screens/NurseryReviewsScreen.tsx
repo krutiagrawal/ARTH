@@ -15,6 +15,8 @@ import { useNurseryReviews, useRespondToReview, useNurseryProfile } from '../hoo
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import type { ApiNurseryReview } from '../api/nursery';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 
 function ReviewRow({ review, guard }: { review: ApiNurseryReview; guard: <A extends any[]>(fn: (...a: A) => void) => (...a: A) => void }) {
   const respondMutation = useRespondToReview();
@@ -80,7 +82,8 @@ function ReviewRow({ review, guard }: { review: ApiNurseryReview; guard: <A exte
 
 export function NurseryReviewsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: reviews = [], isLoading, refetch } = useNurseryReviews();
+  const listQuery = useNurseryReviews();
+  const { data: reviews = [], isLoading, refetch } = listQuery;
   const { data: profile } = useNurseryProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
@@ -100,11 +103,13 @@ export function NurseryReviewsScreen({ navigation }: any) {
         <ScrollView
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
+          {...infiniteScrollProps(listQuery)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           {reviews.map((r) => (
             <ReviewRow key={r.id} review={r} guard={guard} />
           ))}
+          <PageFooter loading={listQuery.isFetchingNextPage} />
         </ScrollView>
       )}
 

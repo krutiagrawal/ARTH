@@ -16,6 +16,8 @@ import type { TreeHealthStatus } from '../api/plantedTrees';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
+import { PageFooter } from '../components/common/PageFooter';
 import { STATUS_META, ACTIONABLE_STATUSES } from '../constants/treeHealth';
 
 function FadeInRow({ delay, children }: { delay: number; children: React.ReactNode }) {
@@ -30,9 +32,8 @@ export function NgoZoneTreesScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
   // A null driveId is the "Independent Plantings" pseudo-plantation — those trees have no zone either
   // (zones only exist under a real drive), so there's no zoneId to filter by there.
-  const { data, isLoading, refetch } = usePlantedTrees(
-    driveId ? { driveId, zoneId: zoneId ?? 'unzoned', take: 200 } : { driveId: 'none', take: 200 },
-  );
+  const listQuery = usePlantedTrees(driveId ? { driveId, zoneId: zoneId ?? 'unzoned' } : { driveId: 'none' });
+  const { data, isLoading, refetch } = listQuery;
   const bulkMutation = useLogBulkHealthChecks();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<TreeHealthStatus | 'all'>('all');
@@ -105,6 +106,7 @@ export function NgoZoneTreesScreen({ navigation, route }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: (selected.size > 0 ? 100 : 32) + insets.bottom }]}
         showsVerticalScrollIndicator={false}
+        {...infiniteScrollProps(listQuery)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
@@ -142,6 +144,7 @@ export function NgoZoneTreesScreen({ navigation, route }: any) {
             </FadeInRow>
           );
         })}
+        <PageFooter loading={listQuery.isFetchingNextPage} />
       </ScrollView>
 
       {selected.size > 0 && (

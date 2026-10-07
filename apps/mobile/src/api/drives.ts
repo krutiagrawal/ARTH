@@ -1,4 +1,5 @@
 import { apiFetch, toFormFile } from './client';
+import { pagedPath, type Page } from '../hooks/useInfiniteList';
 
 export interface ApiDrivePickupPoint {
   id: string;
@@ -83,8 +84,8 @@ export interface ApiMySponsorship {
   ngoName: string;
 }
 
-export async function fetchMySponsorships(): Promise<ApiMySponsorship[]> {
-  return apiFetch<ApiMySponsorship[]>('/api/drives/sponsorships/mine');
+export async function fetchMySponsorships(cursor?: string): Promise<Page<ApiMySponsorship>> {
+  return apiFetch<Page<ApiMySponsorship>>(pagedPath('/api/drives/sponsorships/mine', cursor));
 }
 
 export interface ApiSponsorHealthRollup {
@@ -124,8 +125,8 @@ export async function fetchGroupDrives(groupId: string): Promise<ApiDrive[]> {
 
 // ---------- NGO-facing ----------
 
-export async function fetchMyDrives(): Promise<ApiDrive[]> {
-  return apiFetch<ApiDrive[]>('/api/drives/mine');
+export async function fetchMyDrives(page?: number, take?: number): Promise<ApiDrive[]> {
+  return apiFetch<ApiDrive[]>(`/api/drives/mine${page ? `?page=${page}&take=${take ?? 30}` : ''}`);
 }
 
 /** Cancels a drive the NGO organizes (e.g. rained out) — RSVPs stay recorded, the drive just

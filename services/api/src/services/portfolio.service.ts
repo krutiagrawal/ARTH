@@ -2,6 +2,7 @@ import { PrismaClient } from '@arth/db';
 import { BadRequestError, NotFoundError } from '../utils/errors';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
 import { createPost, deletePost, updatePostCaption } from './post.service';
+import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
 
 export const MAX_PORTFOLIO_MEDIA = 6;
 
@@ -31,14 +32,16 @@ export function serializePortfolioEntry(e: any, likedEntryIds?: Set<string>) {
 /** Newest work first; `sortOrder` lets an NGO pin a flagship project to the top. */
 const portfolioOrder = [{ sortOrder: 'desc' as const }, { happenedOn: 'desc' as const }];
 
-export async function listOwnPortfolio(prisma: PrismaClient, ngoUserId: string) {
+export async function listOwnPortfolio(prisma: PrismaClient, ngoUserId: string, q: CursorQuery = {}) {
   const ngo = await requireNgoProfile(prisma, ngoUserId);
+  const { take, args } = cursorArgs(q);
   const entries = await prisma.ngoPortfolioEntry.findMany({
     where: { ngoId: ngo.id },
-    orderBy: portfolioOrder,
+    orderBy: [...portfolioOrder, { id: 'desc' as const }],
     include: portfolioInclude,
+    ...args,
   });
-  return entries.map((e) => serializePortfolioEntry(e));
+  return toCursorPage(entries, take, (e) => serializePortfolioEntry(e));
 }
 
 export async function listPublicPortfolio(prisma: PrismaClient, ngoId: string, viewerId?: string) {

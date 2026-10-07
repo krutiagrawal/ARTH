@@ -19,6 +19,7 @@ import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
 import { useApprovalGate } from '@/components/dashboard/useApprovalGate'
 import { useNgoProfile } from '../NgoProfileContext'
 import { useResourceCrud } from '@/lib/useResourceCrud'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 import { proxy } from '../proxy'
 import { treeFields } from '../resourceFields'
 
@@ -26,7 +27,9 @@ const STATUS_VARIANT = { available: 'secondary', adopted: 'default', removed: 'o
 
 export default function TreesClient() {
   const { profile } = useNgoProfile()
-  const { items, loading, create, update, remove, runAction } = useResourceCrud(proxy, '/adoptable-trees')
+  const { items, loading, create, update, remove, runAction, hasMore, loadingMore, loadMore } = useResourceCrud(proxy, '/adoptable-trees', undefined, {
+    pageSize: 30,
+  })
   const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
   // Deep-linked from Reports ("Trees available"/"Trees adopted" stat tiles) — filters the list to
   // just that status instead of landing on everything mixed together.
@@ -213,6 +216,7 @@ export default function TreesClient() {
           />
         }
       />
+      <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
 
       <ResourceFormSheet
         open={dialogOpen}

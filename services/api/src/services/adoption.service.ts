@@ -4,6 +4,7 @@ import { geocodeAddress } from '../utils/geocode';
 import { haversineDistanceKm } from '../utils/geo';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
 import { notify } from './notification.service';
+import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
 
 interface CreateAdoptableTreeInput {
   nickname: string;
@@ -200,7 +201,7 @@ export async function listOwnedAdoptableTrees(prisma: PrismaClient, ngoUserId: s
       ...(filter.q ? { nickname: { contains: filter.q, mode: 'insensitive' as const } } : {}),
     },
     include: adoptableTreeInclude,
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     take,
     skip: (page - 1) * take,
   });
@@ -220,13 +221,15 @@ export async function releaseAdoption(prisma: PrismaClient, ngoUserId: string, t
   });
 }
 
-export async function listMyAdoptedTrees(prisma: PrismaClient, userId: string) {
+export async function listMyAdoptedTrees(prisma: PrismaClient, userId: string, q: CursorQuery = {}) {
+  const { take, args } = cursorArgs(q);
   const adoptions = await prisma.adoption.findMany({
     where: { userId },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     include: { adoptableTree: { include: adoptableTreeInclude } },
+    ...args,
   });
-  return adoptions.map((a) => a.adoptableTree);
+  return toCursorPage(adoptions, take, (a) => a.adoptableTree);
 }
 
 /** Self-service sibling of releaseAdoption (NGO-initiated) — the adopter gives up their own tree. */

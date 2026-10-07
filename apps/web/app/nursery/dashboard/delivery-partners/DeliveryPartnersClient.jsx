@@ -15,12 +15,18 @@ import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
 import { useApprovalGate } from '@/components/dashboard/useApprovalGate'
 import { useNurseryProfile } from '../NurseryProfileContext'
 import { useResourceCrud } from '@/lib/useResourceCrud'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 import { proxy } from '../proxy'
 import { deliveryPartnerCreateFields, deliveryPartnerEditFields } from '../resourceFields'
 
 export default function DeliveryPartnersClient() {
   const { profile } = useNurseryProfile()
-  const { items, loading, create, update, runAction } = useResourceCrud(proxy, '/nursery/delivery-partners', '/nursery/delivery-partners')
+  const { items, loading, create, update, runAction, hasMore, loadingMore, loadMore } = useResourceCrud(
+    proxy,
+    '/nursery/delivery-partners',
+    '/nursery/delivery-partners',
+    { pageSize: 30 },
+  )
   const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
 
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -171,6 +177,7 @@ export default function DeliveryPartnersClient() {
           />
         }
       />
+      <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
 
       <ResourceFormSheet
         open={dialogOpen}

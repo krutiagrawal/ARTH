@@ -1,4 +1,5 @@
 import { Prisma, GroupAchievementCriteriaType } from '@arth/db';
+import { getUsersCo2Kg } from './treeImpact.service';
 
 async function computeGroupProgress(
   tx: Prisma.TransactionClient,
@@ -25,11 +26,7 @@ async function computeGroupProgress(
         (m) => m.userId
       );
       if (memberIds.length === 0) return 0;
-      const members = await tx.user.findMany({
-        where: { id: { in: memberIds } },
-        select: { totalCo2Absorbed: true },
-      });
-      return members.reduce((sum, m) => sum + Number(m.totalCo2Absorbed), 0);
+      return getUsersCo2Kg(tx, memberIds);
     }
     case 'challenges_completed': {
       const challenges = await tx.groupChallenge.findMany({

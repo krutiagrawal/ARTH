@@ -16,6 +16,7 @@ import {
 } from '../hooks/useSocialQueries';
 import type { ApiFollower } from '../api/ngoFollowers';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
 
 function RequestRow({
   request,
@@ -73,7 +74,8 @@ function RequestRow({
  */
 export function NgoFollowerRequestsScreen({ navigation }: any) {
   const clearance = useBottomNavClearance();
-  const { data, isLoading, refetch } = useNgoFollowers({ status: 'pending' });
+  const listQuery = useNgoFollowers({ status: 'pending' });
+  const { data, isLoading, refetch } = listQuery;
   const accept = useAcceptFollowRequest();
   const decline = useDeclineFollowRequest();
   const busy = accept.isPending || decline.isPending;
@@ -113,6 +115,9 @@ export function NgoFollowerRequestsScreen({ navigation }: any) {
       )}
 
       <FlatList
+          onEndReached={() => { if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) listQuery.fetchNextPage(); }}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={<PageFooter loading={listQuery.isFetchingNextPage} />}
         data={requests}
         keyExtractor={(r) => r.followId}
         renderItem={({ item }) => (

@@ -14,6 +14,8 @@ import { useApprovalGate } from '../hooks/useApprovalGate';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 
 function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
   const animStyle = useSlideUp(delay, 18);
@@ -22,7 +24,8 @@ function FadeInRow({ delay, children, style }: { delay: number; children: React.
 
 export function NgoVolunteersScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: volunteers = [], isLoading, refetch } = useNgoVolunteers();
+  const listQuery = useNgoVolunteers();
+  const { data: volunteers = [], isLoading, refetch } = listQuery;
   const removeMutation = useRemoveNgoVolunteer();
   const confirm = useConfirm();
   const { data: profile } = useNgoProfile();
@@ -58,6 +61,7 @@ export function NgoVolunteersScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
+        {...infiniteScrollProps(listQuery)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         <Text style={styles.hint}>People who've RSVP'd to your drives – attendance count and last activity.</Text>
@@ -90,6 +94,7 @@ export function NgoVolunteersScreen({ navigation }: any) {
             </BorderCard>
           </FadeInRow>
         ))}
+        <PageFooter loading={listQuery.isFetchingNextPage} />
       </ScrollView>
 
       <StatusModal {...statusModalProps} />

@@ -18,11 +18,14 @@ function useCountdown(deadline) {
   return { d, h, m, s }
 }
 
-export default function CompetitionDetailClient({ comp, initialEntries }) {
+export default function CompetitionDetailClient({ comp, initialEntries, pageSize }) {
   const { user } = useAuth()
   const isLoggedIn = Boolean(user)
   const { d, h, m, s } = useCountdown(comp.deadline)
   const [entries, setEntries] = useState(initialEntries)
+  // A full first page means there may be more; the cursor is the last server-loaded entry's id.
+  const [nextCursor, setNextCursor] = useState(initialEntries.length === pageSize ? initialEntries[initialEntries.length - 1].id : null)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -48,6 +51,24 @@ export default function CompetitionDetailClient({ comp, initialEntries }) {
       setError(err.message || 'Something went wrong.')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const loadMore = async () => {
+    if (!nextCursor || loadingMore) return
+    setLoadingMore(true)
+    try {
+      const page = await proxy(`/competitions/${comp.id}/entries?cursor=${encodeURIComponent(nextCursor)}&take=${pageSize}`)
+      setEntries((es) => {
+        const seen = new Set(es.map((e) => e.id))
+        const fresh = page.items.filter((e) => !seen.has(e.id)).map((e) => ({ ...e, votes: e.votesCount, hasVoted: false }))
+        return [...es, ...fresh]
+      })
+      setNextCursor(page.nextCursor)
+    } catch (err) {
+      setError(err.message || 'Could not load more entries.')
+    } finally {
+      setLoadingMore(false)
     }
   }
 
@@ -105,6 +126,13 @@ export default function CompetitionDetailClient({ comp, initialEntries }) {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+        {nextCursor && (
+          <div className="mt-6 flex justify-center">
+            <button onClick={loadMore} disabled={loadingMore} className="rounded-full border border-border px-5 py-2 text-sm hover:bg-secondary disabled:opacity-50">
+              {loadingMore ? 'Loading…' : 'Load more'}
+            </button>
           </div>
         )}
 

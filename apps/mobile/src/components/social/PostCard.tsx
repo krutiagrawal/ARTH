@@ -331,12 +331,14 @@ function PlantLine({ icon, text }: { icon: string; text: string }) {
 
 const styles = StyleSheet.create({
   plantLineRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  plantLineIcon: { width: 22 },
+  plantLineIcon: { width: 18 },
   plantLineText: { flex: 1 },
+  // Full width of the post: no side margin, so its edges line up with the caption and the like/save row.
   plantCard: {
-    marginHorizontal: 14,
-    marginTop: 8,
-    padding: 12,
+    alignSelf: 'stretch',
+    // Tighter side padding gives the address more line width, so it wraps onto fewer lines.
+    paddingVertical: 10,
+    paddingHorizontal: 10,
     borderRadius: 12,
     backgroundColor: 'rgba(94,133,80,0.14)',
     borderWidth: 1,

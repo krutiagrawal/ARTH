@@ -12,12 +12,15 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useAdminTreeReviewQueue, useReviewAdminTree } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import { resolveMediaUrl } from '../api/client';
 
 export function AdminTreeReviewScreen() {
   const insets = useSafeAreaInsets();
   const bottomClearance = useBottomNavClearance();
-  const { data, isLoading, refetch } = useAdminTreeReviewQueue();
+  const listQuery = useAdminTreeReviewQueue();
+  const { data, isLoading, refetch } = listQuery;
   const reviewMutation = useReviewAdminTree();
   const trees = data?.trees ?? [];
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
@@ -35,6 +38,7 @@ export function AdminTreeReviewScreen() {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
         showsVerticalScrollIndicator={false}
+        {...infiniteScrollProps(listQuery)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         {isLoading && <ActivityIndicator color={COLORS.mint} style={styles.loader} />}
@@ -79,6 +83,7 @@ export function AdminTreeReviewScreen() {
             </View>
           </BorderCard>
         ))}
+        <PageFooter loading={listQuery.isFetchingNextPage} />
       </ScrollView>
     </View>
   );

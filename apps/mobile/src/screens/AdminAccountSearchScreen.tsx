@@ -15,6 +15,8 @@ import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useAdminAccounts, useBlockAdminAccount, useUnblockAdminAccount } from '../hooks/useApiQueries';
 import { useSlideUp } from '../hooks/useAnimations';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import { ApiError } from '../api/client';
 import type { AdminAccountType, ApiAdminAccount } from '../api/admin';
 
@@ -51,7 +53,8 @@ export function AdminAccountSearchScreen() {
     return () => clearTimeout(timer);
   }, [query]);
 
-  const { data, isLoading, refetch } = useAdminAccounts({ q: debouncedQuery || undefined, type: type || undefined, take: 30 });
+  const listQuery = useAdminAccounts({ q: debouncedQuery || undefined, type: type || undefined, take: 30 });
+  const { data, isLoading, refetch } = listQuery;
   const accounts = data?.accounts ?? [];
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
@@ -113,6 +116,7 @@ export function AdminAccountSearchScreen() {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
         showsVerticalScrollIndicator={false}
+        {...infiniteScrollProps(listQuery)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         {isLoading && <ActivityIndicator color={COLORS.mint} style={styles.loader} />}
@@ -144,6 +148,7 @@ export function AdminAccountSearchScreen() {
             </FadeInRow>
           );
         })}
+        <PageFooter loading={listQuery.isFetchingNextPage} />
       </ScrollView>
 
       <Sheet visible={Boolean(selected)} onClose={() => setSelected(null)} title={selected ? orgNameFor(selected) || selected.name : ''}>

@@ -13,6 +13,8 @@ import { useApprovalGate } from '../hooks/useApprovalGate';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 
 function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
   const animStyle = useSlideUp(delay, 18);
@@ -34,7 +36,8 @@ function StatusPill({ label, color }: { label: string; color: string }) {
 
 export function NgoCampaignsScreen({ navigation }: any) {
   const bottomClearance = useBottomNavClearance();
-  const { data: campaigns = [], isLoading, refetch } = useMyCampaigns();
+  const listQuery = useMyCampaigns();
+  const { data: campaigns = [], isLoading, refetch } = listQuery;
   const closeMutation = useCloseCampaign();
   const reopenMutation = useReopenCampaign();
   const { data: profile, refetch: refetchProfile } = useNgoProfile();
@@ -46,6 +49,7 @@ export function NgoCampaignsScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
         showsVerticalScrollIndicator={false}
+        {...infiniteScrollProps(listQuery)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
@@ -96,6 +100,7 @@ export function NgoCampaignsScreen({ navigation }: any) {
             </FadeInRow>
           );
         })}
+        <PageFooter loading={listQuery.isFetchingNextPage} />
       </ScrollView>
 
       <StatusModal {...statusModalProps} />

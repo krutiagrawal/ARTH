@@ -48,14 +48,17 @@ export interface ApiMyDonation {
   ngoName: string;
 }
 
-export async function fetchMyDonations(): Promise<{ total: number; donations: ApiMyDonation[] }> {
-  return apiFetch('/api/campaigns/mine-donations');
+export async function fetchMyDonations(params: { page?: number; take?: number } = {}): Promise<{ total: number; donations: ApiMyDonation[] }> {
+  const qs = new URLSearchParams();
+  if (params.page) qs.set('page', String(params.page));
+  if (params.take) qs.set('take', String(params.take));
+  return apiFetch(`/api/campaigns/mine-donations${qs.toString() ? `?${qs}` : ''}`);
 }
 
 // ---------- NGO-facing ----------
 
-export async function fetchMyCampaigns(): Promise<ApiCampaign[]> {
-  return apiFetch<ApiCampaign[]>('/api/campaigns/mine');
+export async function fetchMyCampaigns(page?: number, take?: number): Promise<ApiCampaign[]> {
+  return apiFetch<ApiCampaign[]>(`/api/campaigns/mine${page ? `?page=${page}&take=${take ?? 30}` : ''}`);
 }
 
 export interface CreateCampaignInput {

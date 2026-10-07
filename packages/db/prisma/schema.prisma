@@ -1202,6 +1202,7 @@ model Order {
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([nurseryId, status])
+  @@index([nurseryId, createdAt(sort: Desc)])
   @@map("orders")
 }
 
@@ -1281,6 +1282,7 @@ model OrderReview {
   deliveryPartner DeliveryPartnerProfile? @relation(fields: [deliveryPartnerId], references: [id])
 
   @@index([nurseryId])
+  @@index([userId, createdAt(sort: Desc)])
   @@index([deliveryPartnerId])
   @@map("order_reviews")
 }
@@ -2106,6 +2108,7 @@ model Donation {
 
   @@index([campaignId])
   @@index([userId])
+  @@index([userId, createdAt(sort: Desc)])
   @@map("donations")
 }
 
@@ -2148,7 +2151,9 @@ model Follow {
   @@unique([followerId, ngoId])
   @@unique([followerId, nurseryId])
   @@index([ngoId, status])
+  @@index([ngoId, status, createdAt(sort: Desc)])
   @@index([nurseryId, status])
+  @@index([nurseryId, status, createdAt(sort: Desc)])
   @@index([followerId])
   @@map("follows")
 }
@@ -2445,6 +2450,7 @@ model PlantedTree {
   adoptableListings AdoptableTree[]
 
   @@index([ngoId])
+  @@index([ngoId, plantedAt(sort: Desc)])
   @@index([driveId])
   @@index([zoneId])
   @@index([plantedAt])

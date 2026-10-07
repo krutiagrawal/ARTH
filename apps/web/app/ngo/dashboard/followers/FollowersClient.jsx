@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { Users, TreePine, Check, X, UserMinus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,8 @@ import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
 import { proxy } from '../proxy'
+import { useTotalPagedList } from '@/hooks/useTotalPagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
 const TABS = [
   { value: 'accepted', label: 'Followers' },
@@ -18,25 +20,18 @@ const TABS = [
 ]
 
 export default function FollowersClient() {
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('accepted')
   const [removeTarget, setRemoveTarget] = useState(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      setData(await proxy(`/ngo/followers?status=${tab}`))
-    } catch (err) {
-      toast.error(err.message || 'Could not load followers.')
-    } finally {
-      setLoading(false)
-    }
-  }, [tab])
-
-  useEffect(() => {
-    load()
-  }, [load])
+  const {
+    items: followers,
+    meta: data,
+    loading,
+    loadingMore,
+    hasMore,
+    loadMore,
+    reload: load,
+  } = useTotalPagedList(proxy, '/ngo/followers', { status: tab }, { listKey: 'followers', take: 30, errorMessage: 'Could not load followers.' })
 
   const act = async (followId, action) => {
     try {
@@ -82,11 +77,11 @@ export default function FollowersClient() {
           <Skeleton className="h-16 w-full" />
           <Skeleton className="h-16 w-full" />
         </div>
-      ) : !data?.followers?.length ? (
+      ) : !followers.length ? (
         <EmptyState icon={Users} title={tab === 'pending' ? 'No pending requests' : 'No followers yet'} body="People who follow your organization will show up here." />
       ) : (
         <div className="max-w-2xl divide-y divide-border/60 rounded-3xl border border-border/70 bg-card soft-shadow">
-          {data.followers.map((f) => (
+          {followers.map((f) => (
             <div key={f.followId} className="flex items-center justify-between gap-3 p-4">
               <div className="flex items-center gap-3 min-w-0">
                 <span className="text-xl">{f.user.avatarEmoji || '🙂'}</span>
@@ -113,6 +108,7 @@ export default function FollowersClient() {
               )}
             </div>
           ))}
+          <div className="p-3"><LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} /></div>
         </div>
       )}
 

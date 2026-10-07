@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import DataTable from '@/components/dashboard/DataTable'
+import { usePageState, PAGE_SIZE } from '@/hooks/usePageState'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
@@ -211,17 +212,21 @@ export default function AdminCorporatesClient() {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
 
+  const [page, setPage] = usePageState(filter)
+  const [total, setTotal] = useState(0)
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await proxy(`/admin/corporates?status=${filter}`)
+      const data = await proxy(`/admin/corporates?status=${filter}&page=${page}&take=${PAGE_SIZE}`)
       setCorporates(data.corporates)
+      setTotal(data.total ?? 0)
     } catch (err) {
       toast.error(err.message)
     } finally {
       setLoading(false)
     }
-  }, [filter])
+  }, [filter, page])
 
   useEffect(() => {
     load()
@@ -292,6 +297,7 @@ export default function AdminCorporatesClient() {
       <DataTable
         columns={columns}
         data={corporates}
+        serverPagination={{ page, pageSize: PAGE_SIZE, total, onPageChange: setPage }}
         loading={loading}
         searchKey="companyName"
         searchPlaceholder="Search companies…"

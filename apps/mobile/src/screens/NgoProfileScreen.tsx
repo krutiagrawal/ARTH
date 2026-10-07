@@ -45,6 +45,7 @@ import type { NgoStreakWeek } from '../api/ngoStreaks';
 import type { ApiCampaign } from '../api/donations';
 import type { ApiAdoptableTree } from '../api/adoptions';
 import type { ApiDrive } from '../api/drives';
+import { formatKg } from '../utils/impact';
 
 function formatPastWorkDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
@@ -355,9 +356,9 @@ export function NgoProfileScreen({ route, navigation }: any) {
                     <View style={styles.contributionsRow}>
                       <View style={styles.contributionsStat}>
                         <Text style={styles.contributionsNum}>
-                          {isOwn ? ownStats.data?.co2AbsorptionKg ?? 0 : publicProfile.data?.impact?.total ?? 0}
+                          {isOwn ? formatKg(ownStats.data?.co2AbsorptionKg) : publicProfile.data?.impact?.total ?? 0}
                         </Text>
-                        <Text style={styles.contributionsLabel}>{isOwn ? 'kg CO₂ absorbed' : 'Trees tracked'}</Text>
+                        <Text style={styles.contributionsLabel}>{isOwn ? 'kg CO₂ absorbed (est.)' : 'Trees tracked'}</Text>
                       </View>
                       <View style={styles.contributionsStat}>
                         <Text style={styles.contributionsNum}>
@@ -372,6 +373,11 @@ export function NgoProfileScreen({ route, navigation }: any) {
                         <Text style={styles.contributionsLabel}>{isOwn ? 'Volunteers' : 'Followers'}</Text>
                       </View>
                     </View>
+                    {isOwn && ownStats.data?.oxygenKg !== undefined && (
+                      <Text style={styles.contributionsLabel}>
+                        ≈ {formatKg(ownStats.data.oxygenKg)} kg oxygen released · estimated from each tree's species and age, and it grows as they do
+                      </Text>
+                    )}
                   </BorderCard>
 
                   {!isOwn && (publicProfile.data?.impact?.total ?? 0) > 0 && effectiveNgoId && (

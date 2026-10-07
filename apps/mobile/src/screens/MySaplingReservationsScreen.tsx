@@ -10,6 +10,8 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useMyReservations, useCancelReservation } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import { resolveMediaUrl } from '../api/client';
 import type { ApiMyReservation } from '../api/reservations';
 import { useConfirm } from '../context/ConfirmDialogContext';
@@ -57,7 +59,8 @@ function ReservationCard({ item }: { item: ApiMyReservation }) {
 
 export function MySaplingReservationsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: reservations = [], isLoading, refetch } = useMyReservations();
+  const listQuery = useMyReservations();
+  const { data: reservations = [], isLoading, refetch } = listQuery;
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
@@ -83,11 +86,13 @@ export function MySaplingReservationsScreen({ navigation }: any) {
         <ScrollView
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
+          {...infiniteScrollProps(listQuery)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           {reservations.map((r) => (
             <ReservationCard key={r.id} item={r} />
           ))}
+          <PageFooter loading={listQuery.isFetchingNextPage} />
         </ScrollView>
       )}
     </View>

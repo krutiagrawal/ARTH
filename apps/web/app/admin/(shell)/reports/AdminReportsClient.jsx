@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { Flag, ShieldBan, EyeOff, Eye, Trash2, Check } from 'lucide-react'
@@ -12,6 +12,8 @@ import EmptyState from '@/components/dashboard/EmptyState'
 import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { proxy } from '@/lib/adminProxyClient'
+import { useTotalPagedList } from '@/hooks/useTotalPagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
 // 'accounts' is a shorthand the backend expands to targetType in (user, ngo,
 // nursery, corporate) — this is the queue's default tab, since account
@@ -129,27 +131,16 @@ export default function AdminReportsClient() {
   const initialStatus = searchParams.get('status')
   const [tab, setTab] = useState(TABS.some((t) => t.value === initialTab) ? initialTab : 'accounts')
   const [status, setStatus] = useState(STATUS_FILTERS.includes(initialStatus) ? initialStatus : 'open')
-  const [reports, setReports] = useState([])
-  const [accountOpenCount, setAccountOpenCount] = useState(0)
-  const [loading, setLoading] = useState(true)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams({ targetType: tab, status })
-      const data = await proxy(`/admin/reports?${params.toString()}`)
-      setReports(data.reports)
-      setAccountOpenCount(data.accountOpenCount ?? 0)
-    } catch (err) {
-      toast.error(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }, [tab, status])
-
-  useEffect(() => {
-    load()
-  }, [load])
+  const {
+    items: reports,
+    meta,
+    loading,
+    loadingMore,
+    hasMore,
+    loadMore,
+    reload: load,
+  } = useTotalPagedList(proxy, '/admin/reports', { targetType: tab, status }, { listKey: 'reports', take: 25 })
+  const accountOpenCount = meta?.accountOpenCount ?? 0
 
   const handleAction = async (id, action, reason) => {
     await proxy(`/admin/reports/${id}`, { method: 'PATCH', body: { action, reason: reason || undefined } })
@@ -207,6 +198,7 @@ export default function AdminReportsClient() {
           {reports.map((report) => (
             <ReportRow key={report.id} report={report} onAction={handleAction} />
           ))}
+          <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
         </div>
       )}
     </DashboardPageShell>

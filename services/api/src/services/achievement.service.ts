@@ -1,4 +1,5 @@
 import { Prisma, AchievementCriteriaType, Rarity } from '@arth/db';
+import { getUserImpact } from './treeImpact.service';
 import { addXp } from './xp.service';
 
 const RARITY_XP: Record<Rarity, number> = { common: 25, rare: 50, epic: 100, legendary: 200 };
@@ -23,8 +24,8 @@ async function computeProgress(
       return user.streakCurrent;
     }
     case 'co2_absorbed': {
-      const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
-      return Math.floor(Number(user.totalCo2Absorbed));
+      // Live estimate from the user's trees' species and age, not a stored per-planting credit.
+      return Math.floor((await getUserImpact(tx, userId)).co2Kg);
     }
     case 'species_diversity': {
       const distinct = await tx.tree.findMany({

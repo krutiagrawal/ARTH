@@ -5,6 +5,8 @@ import { recordNurseryContribution, recomputeReputation, getReputationSummary } 
 import { evaluateNurseryAchievements } from './nurseryAchievement.service';
 import { startOfUtcDay, addDays } from './streak.service';
 import { geocodeAddress } from '../utils/geocode';
+import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
+import { getNurseryImpactTotals } from './treeImpact.service';
 
 interface UpdateProfileInput {
   nurseryName?: string;
@@ -238,9 +240,10 @@ function withAvailability<T extends { quantity: number; lowStockThreshold: numbe
   return { ...item, availabilityStatus: deriveAvailability(item.quantity, item.lowStockThreshold) };
 }
 
-export async function listStock(prisma: PrismaClient, userId: string, filter: StockFilter = {}) {
+export async function listStock(prisma: PrismaClient, userId: string, filter: StockFilter & CursorQuery = {}) {
   const profile = await getOwnProfile(prisma, userId);
-  const rows = await prisma.saplingStock.findMany({
+  const { take, args } = cursorArgs(filter);
+  const fetched = await prisma.saplingStock.findMany({
     where: {
       nurseryId: profile.id,
       ...(filter.species ? { species: { contains: filter.species, mode: 'insensitive' } } : {}),
@@ -248,10 +251,18 @@ export async function listStock(prisma: PrismaClient, userId: string, filter: St
       ...(filter.season ? { speciesRef: { plantingSeasons: { has: filter.season } } } : {}),
     },
     include: { speciesRef: true },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    ...args,
   });
+  const hasMore = fetched.length > take;
+  const rows = hasMore ? fetched.slice(0, take) : fetched;
   const withStatus = rows.map(withAvailability);
-  return filter.availability ? withStatus.filter((r) => r.availabilityStatus === filter.availability) : withStatus;
+  // Availability is derived from quantity/thresholds, not a column, so it filters the page after the
+  // fetch; a filtered page can be short while `nextCursor` still points at more rows.
+  return {
+    items: filter.availability ? withStatus.filter((r) => r.availabilityStatus === filter.availability) : withStatus,
+    nextCursor: hasMore ? rows[rows.length - 1].id : null,
+  };
 }
 
 export async function createStock(prisma: PrismaClient, userId: string, input: StockInput) {
@@ -371,13 +382,16 @@ export async function respondToReview(prisma: PrismaClient, userId: string, revi
   });
 }
 
-export async function listReviews(prisma: PrismaClient, userId: string) {
+export async function listReviews(prisma: PrismaClient, userId: string, q: CursorQuery = {}) {
   const profile = await getOwnProfile(prisma, userId);
-  return prisma.orderReview.findMany({
+  const { take, args } = cursorArgs(q);
+  const rows = await prisma.orderReview.findMany({
     where: { nurseryId: profile.id },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     include: { user: { select: { id: true, name: true, avatarEmoji: true } } },
+    ...args,
   });
+  return toCursorPage(rows, take);
 }
 
 export async function deleteStock(prisma: PrismaClient, userId: string, stockId: string) {
@@ -424,13 +438,16 @@ export async function getPublicBadges(prisma: PrismaClient, nurseryId: string) {
 
 // ---------- Reservations (nursery-side inbox) ----------
 
-export async function listReservations(prisma: PrismaClient, userId: string, status?: string) {
+export async function listReservations(prisma: PrismaClient, userId: string, status?: string, q: CursorQuery = {}) {
   const profile = await getOwnProfile(prisma, userId);
-  return prisma.saplingReservation.findMany({
+  const { take, args } = cursorArgs(q);
+  const rows = await prisma.saplingReservation.findMany({
     where: { nurseryId: profile.id, ...(status ? { status: status as any } : {}) },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     include: { stock: { select: { species: true } }, user: { select: { id: true, name: true, avatarEmoji: true } } },
+    ...args,
   });
+  return toCursorPage(rows, take);
 }
 
 export async function fulfillReservation(prisma: PrismaClient, userId: string, reservationId: string) {
@@ -623,14 +640,14 @@ export async function getDashboardSummary(prisma: PrismaClient, userId: string) 
 export async function getImpact(prisma: PrismaClient, userId: string) {
   const profile = await getOwnProfile(prisma, userId);
 
-  const [treesGrowingThroughYou, plantedUnits, speciesCount, co2Agg, fulfilledResponses, sixMonthUnits] = await Promise.all([
+  const [treesGrowingThroughYou, plantedUnits, speciesCount, impactTotals, fulfilledResponses, sixMonthUnits] = await Promise.all([
     prisma.tree.count({ where: { nurseryId: profile.id, aiVerificationStatus: 'verified' } }),
     prisma.arthSaplingUnit.findMany({
       where: { nurseryId: profile.id, status: 'planted' },
       include: { tree: { select: { aiVerificationStatus: true } } },
     }),
     prisma.saplingStock.count({ where: { nurseryId: profile.id } }),
-    prisma.tree.aggregate({ where: { nurseryId: profile.id }, _sum: { co2Absorbed: true } }),
+    getNurseryImpactTotals(prisma, profile.id),
     prisma.bulkRequirementResponse.findMany({
       where: { nurseryId: profile.id, status: 'fulfilled' },
       include: { requirement: { select: { ngoId: true, driveId: true } } },
@@ -657,7 +674,10 @@ export async function getImpact(prisma: PrismaClient, userId: string) {
     verificationPercentage,
     speciesCount,
     ngoDrivesSupported,
-    estimatedCo2Kg: Number(co2Agg._sum.co2Absorbed ?? 0),
+    // Estimated from each tree's species and age (lib/treeImpact.ts), for verified, living trees.
+    estimatedCo2Kg: impactTotals.co2Kg,
+    estimatedOxygenKg: impactTotals.oxygenKg,
+    impactConfidence: impactTotals.confidence,
     monthlyTrend: Array.from(monthlyTrend.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([month, count]) => ({ month, count })),

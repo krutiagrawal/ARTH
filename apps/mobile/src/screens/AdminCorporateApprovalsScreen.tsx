@@ -14,6 +14,8 @@ import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useAdminCorporates } from '../hooks/useApiQueries';
 import { useSlideUp } from '../hooks/useAnimations';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import type { NgoApprovalStatus } from '../api/admin';
 
 const FILTERS: { key: NgoApprovalStatus | 'all'; label: string }[] = [
@@ -52,12 +54,13 @@ export function AdminCorporateApprovalsScreen({ navigation }: any) {
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
 
-  const { data, isLoading, refetch } = useAdminCorporates({
+  const listQuery = useAdminCorporates({
     status: filter === 'all' ? undefined : filter,
     q: query.trim() || undefined,
     page,
     take: TAKE,
   });
+  const { data, isLoading, refetch } = listQuery;
 
   const corporates = data?.corporates ?? [];
   const total = data?.total ?? 0;
@@ -106,6 +109,7 @@ export function AdminCorporateApprovalsScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance }]}
         showsVerticalScrollIndicator={false}
+        {...infiniteScrollProps(listQuery)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         {isLoading && <ActivityIndicator color={COLORS.mint} style={styles.loader} />}
@@ -145,6 +149,7 @@ export function AdminCorporateApprovalsScreen({ navigation }: any) {
             style={styles.loadMore}
           />
         )}
+        <PageFooter loading={listQuery.isFetchingNextPage} />
       </ScrollView>
     </View>
   );

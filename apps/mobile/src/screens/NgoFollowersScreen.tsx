@@ -13,6 +13,7 @@ import { useNgoFollowers, useRemoveFollower } from '../hooks/useSocialQueries';
 import type { ApiFollower } from '../api/ngoFollowers';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
 
 function FollowerRow({ follower, onRemove }: { follower: ApiFollower; onRemove: () => void }) {
   return (
@@ -41,10 +42,11 @@ function FollowerRow({ follower, onRemove }: { follower: ApiFollower; onRemove: 
 export function NgoFollowersScreen({ navigation }: any) {
   const [query, setQuery] = useState('');
   const clearance = useBottomNavClearance();
-  const { data, isLoading, refetch } = useNgoFollowers({
+  const listQuery = useNgoFollowers({
     status: 'accepted',
     q: query.trim() || undefined,
   });
+  const { data, isLoading, refetch } = listQuery;
   const removeFollower = useRemoveFollower();
   const confirm = useConfirm();
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
@@ -107,6 +109,9 @@ export function NgoFollowersScreen({ navigation }: any) {
       </Text>
 
       <FlatList
+          onEndReached={() => { if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) listQuery.fetchNextPage(); }}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={<PageFooter loading={listQuery.isFetchingNextPage} />}
         data={followers}
         keyExtractor={(f) => f.followId}
         renderItem={({ item }) => <FollowerRow follower={item} onRemove={() => confirmRemove(item)} />}

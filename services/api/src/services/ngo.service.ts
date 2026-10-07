@@ -2,6 +2,8 @@ import { PrismaClient, NgoOrgType, Prisma } from '@arth/db';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
 import { notify } from './notification.service';
 import { computeSurvivalStats } from './plantedTree.service';
+import { parseTake } from '../utils/pagination';
+import { getNgoImpactTotals } from './treeImpact.service';
 
 const RECENT_ACTIVITY_LIMIT = 10;
 
@@ -165,8 +167,7 @@ export async function getOwnStats(prisma: PrismaClient, userId: string) {
     recentRsvps,
     recentDonations,
     recentAdoptions,
-    adoptedTreeSpecies,
-    activeSpecies,
+    impact,
   ] = await Promise.all([
     prisma.donationCampaign.count({ where: { ngoId: ngo.id, status: 'active' } }),
     prisma.drive.count({ where: { ngoId: ngo.id, status: 'upcoming' } }),
@@ -220,16 +221,7 @@ export async function getOwnStats(prisma: PrismaClient, userId: string) {
         user: { select: { name: true, handle: true } },
       },
     }),
-    // AdoptableTree.speciesName is free text, not FK'd to TreeSpecies, so
-    // CO2 is estimated by name match below rather than joined directly.
-    prisma.adoptableTree.findMany({
-      where: { ngoId: ngo.id, status: 'adopted' },
-      select: { speciesName: true },
-    }),
-    prisma.treeSpecies.findMany({
-      where: { isActive: true },
-      select: { commonName: true, co2KgPerYear: true },
-    }),
+    getNgoImpactTotals(prisma, ngo.id),
   ]);
 
   const treesAvailable = treeCounts.find((t) => t.status === 'available')?._count ?? 0;
@@ -237,27 +229,6 @@ export async function getOwnStats(prisma: PrismaClient, userId: string) {
   const totalRaisedCents = campaignDonations.reduce((sum, d) => sum + d.amountCents, 0);
   const communitiesReached = distinctLocations.filter((d) => d.city?.trim()).length;
   const volunteersInvolved = distinctVolunteers.length;
-
-  // CO2 absorption potential — sum each adopted tree's species-specific
-  // co2KgPerYear (matched case-insensitively by name, since speciesName is
-  // free text); trees whose species doesn't match any catalog entry fall
-  // back to the average rate across active species, so every adopted tree
-  // still contributes an estimate.
-  const speciesRateByName = new Map(
-    activeSpecies
-      .filter((s) => s.co2KgPerYear != null)
-      .map((s) => [s.commonName.trim().toLowerCase(), Number(s.co2KgPerYear)])
-  );
-  const fallbackRates = [...speciesRateByName.values()];
-  const fallbackRate = fallbackRates.length
-    ? fallbackRates.reduce((sum, r) => sum + r, 0) / fallbackRates.length
-    : 0;
-  const co2AbsorptionKg = Math.round(
-    adoptedTreeSpecies.reduce((sum, t) => {
-      const rate = speciesRateByName.get(t.speciesName.trim().toLowerCase()) ?? fallbackRate;
-      return sum + rate;
-    }, 0)
-  );
 
   const activity = [
     ...recentRsvps.map((r) => ({
@@ -293,7 +264,11 @@ export async function getOwnStats(prisma: PrismaClient, userId: string) {
     communitiesReached,
     volunteersInvolved,
     totalDrives,
-    co2AbsorptionKg,
+    // Estimated from each tree's species and age (see lib/treeImpact.ts), not a flat per-tree rate.
+    co2AbsorptionKg: impact.co2Kg,
+    oxygenKg: impact.oxygenKg,
+    impactTreesCounted: impact.treesCounted,
+    impactConfidence: impact.confidence,
     activity,
     trustScore: ngo.trustScore,
     growthLevel: ngo.growthLevel,
@@ -383,41 +358,49 @@ export async function getOwnDonationsSummary(prisma: PrismaClient, userId: strin
 // for volunteersInvolved: any user with a confirmed RSVP to one of this
 // NGO's drives. This aggregates that into a per-person list for the
 // Volunteers dashboard page.
-export async function getOwnVolunteers(prisma: PrismaClient, userId: string) {
+export async function getOwnVolunteers(prisma: PrismaClient, userId: string, q: { cursor?: string; take?: number | string } = {}) {
   const ngo = await requireNgoProfile(prisma, userId);
+  const take = parseTake(q.take, 30, 100);
+  // A volunteer has no record of their own, so the page is a window over the per-user rollup of
+  // RSVPs; the cursor is just the offset into that ordering.
+  const offset = Math.max(Number.parseInt(q.cursor ?? '0', 10) || 0, 0);
+  const where = { status: 'confirmed' as const, drive: { ngoId: ngo.id } };
 
-  const rsvps = await prisma.driveRsvp.findMany({
-    where: { status: 'confirmed', drive: { ngoId: ngo.id } },
-    select: { userId: true, createdAt: true, attended: true },
+  const grouped = await prisma.driveRsvp.groupBy({
+    by: ['userId'],
+    where,
+    _count: { _all: true },
+    _max: { createdAt: true },
+    orderBy: [{ _max: { createdAt: 'desc' } }, { userId: 'asc' }],
+    take: take + 1,
+    skip: offset,
   });
+  const hasMore = grouped.length > take;
+  const page = hasMore ? grouped.slice(0, take) : grouped;
+  const ids = page.map((g) => g.userId);
 
-  const byUser = new Map<string, { count: number; attendedCount: number; hasAttendanceData: boolean; lastActiveAt: Date }>();
-  for (const r of rsvps) {
-    const entry = byUser.get(r.userId) ?? { count: 0, attendedCount: 0, hasAttendanceData: false, lastActiveAt: r.createdAt };
-    entry.count += 1;
-    if (r.attended !== null) entry.hasAttendanceData = true;
-    if (r.attended === true) entry.attendedCount += 1;
-    if (r.createdAt > entry.lastActiveAt) entry.lastActiveAt = r.createdAt;
-    byUser.set(r.userId, entry);
-  }
-
-  const users = await prisma.user.findMany({
-    where: { id: { in: [...byUser.keys()] } },
-    select: { id: true, name: true, handle: true },
-  });
+  // Attendance for just this page's volunteers: how many rows have a recorded value, and how many were attended.
+  const [recorded, attended, users] = await Promise.all([
+    prisma.driveRsvp.groupBy({ by: ['userId'], where: { ...where, userId: { in: ids }, attended: { not: null } }, _count: { _all: true } }),
+    prisma.driveRsvp.groupBy({ by: ['userId'], where: { ...where, userId: { in: ids }, attended: true }, _count: { _all: true } }),
+    prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, handle: true } }),
+  ]);
+  const recordedBy = new Map(recorded.map((r) => [r.userId, r._count._all]));
+  const attendedBy = new Map(attended.map((r) => [r.userId, r._count._all]));
   const userById = new Map(users.map((u) => [u.id, u]));
 
-  return [...byUser.entries()]
-    .map(([userId, entry]) => ({
-      userId,
-      name: userById.get(userId)?.name ?? 'Unknown',
-      handle: userById.get(userId)?.handle ?? '',
+  return {
+    items: page.map((g) => ({
+      userId: g.userId,
+      name: userById.get(g.userId)?.name ?? 'Unknown',
+      handle: userById.get(g.userId)?.handle ?? '',
       // Once the NGO has recorded attendance for this person, that's the real count; until then,
       // the RSVP count is the best available signal.
-      drivesAttended: entry.hasAttendanceData ? entry.attendedCount : entry.count,
-      lastActiveAt: entry.lastActiveAt,
-    }))
-    .sort((a, b) => (b.lastActiveAt?.getTime() ?? 0) - (a.lastActiveAt?.getTime() ?? 0));
+      drivesAttended: (recordedBy.get(g.userId) ?? 0) > 0 ? attendedBy.get(g.userId) ?? 0 : g._count._all,
+      lastActiveAt: g._max.createdAt,
+    })),
+    nextCursor: hasMore ? String(offset + take) : null,
+  };
 }
 
 /**

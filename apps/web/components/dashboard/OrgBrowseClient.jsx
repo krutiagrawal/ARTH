@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import ReportDialog from '@/components/dashboard/ReportDialog'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 import { resolveMediaUrl } from '@/lib/media'
 
 /**
@@ -18,6 +19,8 @@ import { resolveMediaUrl } from '@/lib/media'
  * Takes that role's own session `proxy` so the follow/report actions post as that role's
  * account, not the individual/member session (see ReportDialog's own `proxy` prop for why).
  */
+const BROWSE_PAGE_SIZE = 20
+
 export default function OrgBrowseClient({ proxy }) {
   const [tab, setTab] = useState('ngos')
   const [query, setQuery] = useState('')
@@ -26,13 +29,16 @@ export default function OrgBrowseClient({ proxy }) {
   const [followedNgoIds, setFollowedNgoIds] = useState(new Set())
   const [followedNurseryIds, setFollowedNurseryIds] = useState(new Set())
   const [loading, setLoading] = useState(true)
+  const [ngoTotal, setNgoTotal] = useState(0)
+  const [nurseryTotal, setNurseryTotal] = useState(0)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [busyId, setBusyId] = useState(null)
   const [reportTarget, setReportTarget] = useState(null) // { targetType, targetId, targetLabel }
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const qs = query ? `?q=${encodeURIComponent(query)}` : ''
+      const qs = `?take=${BROWSE_PAGE_SIZE}${query ? `&q=${encodeURIComponent(query)}` : ''}`
       const [ngoRes, nurseryRes, followedNgos, followedNurseries] = await Promise.all([
         proxy(`/ngos${qs}`),
         proxy(`/nurseries${qs}`),
@@ -41,6 +47,8 @@ export default function OrgBrowseClient({ proxy }) {
       ])
       setNgos(ngoRes.ngos || [])
       setNurseries(nurseryRes.nurseries || [])
+      setNgoTotal(ngoRes.total ?? 0)
+      setNurseryTotal(nurseryRes.total ?? 0)
       setFollowedNgoIds(new Set((followedNgos || []).map((n) => n.id)))
       setFollowedNurseryIds(new Set((followedNurseries || []).map((n) => n.id)))
     } catch (err) {
@@ -53,6 +61,29 @@ export default function OrgBrowseClient({ proxy }) {
   useEffect(() => {
     load()
   }, [load])
+
+  // Appends the next page of whichever tab is showing (page = how many full pages are loaded + 1).
+  const loadMore = async () => {
+    const isNgo = tab === 'ngos'
+    const current = isNgo ? ngos : nurseries
+    if (loadingMore || current.length >= (isNgo ? ngoTotal : nurseryTotal)) return
+    setLoadingMore(true)
+    try {
+      const page = Math.floor(current.length / BROWSE_PAGE_SIZE) + 1
+      const qs = `?take=${BROWSE_PAGE_SIZE}&page=${page + 1}${query ? `&q=${encodeURIComponent(query)}` : ''}`
+      const res = await proxy(`/${isNgo ? 'ngos' : 'nurseries'}${qs}`)
+      const append = (prev, more) => {
+        const seen = new Set(prev.map((r) => r.id))
+        return [...prev, ...more.filter((r) => !seen.has(r.id))]
+      }
+      if (isNgo) setNgos((prev) => append(prev, res.ngos || []))
+      else setNurseries((prev) => append(prev, res.nurseries || []))
+    } catch (err) {
+      toast.error(err.message || 'Could not load more.')
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   const toggleFollowNgo = async (id, following) => {
     setBusyId(id)
@@ -165,6 +196,7 @@ export default function OrgBrowseClient({ proxy }) {
           })}
         </div>
       )}
+      <LoadMoreButton hasMore={rows.length < (tab === 'ngos' ? ngoTotal : nurseryTotal)} loading={loadingMore} onClick={loadMore} />
 
       <ReportDialog
         open={Boolean(reportTarget)}

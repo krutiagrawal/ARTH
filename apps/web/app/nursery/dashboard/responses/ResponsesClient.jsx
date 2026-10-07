@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
 import { Handshake } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import { proxy } from '../proxy'
+import { usePagedList } from '@/hooks/usePagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
 const STATUS_VARIANT = {
   proposed: 'secondary',
@@ -21,15 +21,10 @@ const STATUS_VARIANT = {
 /** Every offer this nursery has ever made to an NGO's bulk requirement, regardless of status —
  * unlike RequirementsClient, which only shows still-open requirements. */
 export default function ResponsesClient() {
-  const [responses, setResponses] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    proxy('/nursery/bulk-requirements/responses/mine')
-      .then(setResponses)
-      .catch((err) => toast.error(err.message || 'Could not load your responses.'))
-      .finally(() => setLoading(false))
-  }, [])
+  const { items: responses, loading, loadingMore, hasMore, loadMore } = usePagedList('/nursery/bulk-requirements/responses/mine', {}, {
+    errorMessage: 'Could not load your responses.',
+    proxyFn: proxy,
+  })
 
   return (
     <DashboardPageShell className="space-y-6">
@@ -62,6 +57,7 @@ export default function ResponsesClient() {
               <Badge variant={STATUS_VARIANT[r.status] || 'outline'} className="shrink-0 capitalize">{r.status.replace('_', ' ')}</Badge>
             </div>
           ))}
+          <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
         </div>
       )}
     </DashboardPageShell>

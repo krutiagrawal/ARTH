@@ -11,6 +11,8 @@ import { EmptyState } from '../components/common/EmptyState';
 import { useHaptics } from '../hooks/useHaptics';
 import { useMyAdoptions, useReleaseMyAdoption } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import type { ApiAdoptableTree } from '../api/adoptions';
 import { useConfirm } from '../context/ConfirmDialogContext';
 
@@ -50,7 +52,8 @@ function AdoptionRow({ tree, navigation }: { tree: ApiAdoptableTree; navigation:
 
 export function MyAdoptionsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: trees, isLoading, refetch } = useMyAdoptions();
+  const listQuery = useMyAdoptions();
+  const { data: trees, isLoading, refetch } = listQuery;
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
@@ -76,11 +79,13 @@ export function MyAdoptionsScreen({ navigation }: any) {
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
+          {...infiniteScrollProps(listQuery)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           {trees.map((t) => (
             <AdoptionRow key={t.id} tree={t} navigation={navigation} />
           ))}
+          <PageFooter loading={listQuery.isFetchingNextPage} />
         </ScrollView>
       )}
     </View>

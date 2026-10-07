@@ -1,27 +1,20 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
 import Link from 'next/link'
 import { Sprout } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
-import { proxy } from '@/lib/memberProxy'
+import { usePagedList } from '@/hooks/usePagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
 const STATUS_VARIANT = { succeeded: 'default', pending: 'secondary', failed: 'destructive', refunded: 'outline' }
 
 export default function SponsorshipsClient() {
-  const [sponsorships, setSponsorships] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    proxy('/drives/sponsorships/mine')
-      .then(setSponsorships)
-      .catch((err) => toast.error(err.message || 'Could not load your sponsorships.'))
-      .finally(() => setLoading(false))
-  }, [])
+  const { items: sponsorships, loading, loadingMore, hasMore, loadMore } = usePagedList('/drives/sponsorships/mine', {}, {
+    errorMessage: 'Could not load your sponsorships.',
+  })
 
   return (
     <DashboardPageShell className="space-y-6">
@@ -58,6 +51,7 @@ export default function SponsorshipsClient() {
               </div>
             </Link>
           ))}
+          <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
         </div>
       )}
     </DashboardPageShell>

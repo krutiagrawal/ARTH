@@ -6,6 +6,7 @@ import { notify } from './notification.service';
 import { recordNurseryContribution, recomputeReputation, refreshFulfilmentStreak } from './nurseryReputation.service';
 import { evaluateNurseryAchievements } from './nurseryAchievement.service';
 import { requireCheckoutableCart } from './cart.service';
+import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
 import { BadRequestError, ForbiddenError, NotFoundError, ServiceUnavailableError } from '../utils/errors';
 
 // Flat delivery fee below the free-delivery threshold — the platform default, used whenever a
@@ -382,9 +383,15 @@ export async function confirmOrderPayment(prisma: PrismaClient, paymentIntentId:
   await finalizeConfirmedOrder(prisma, order);
 }
 
-export async function listMyOrders(prisma: PrismaClient, userId: string) {
-  const orders = await prisma.order.findMany({ where: { userId }, include: orderInclude, orderBy: { createdAt: 'desc' } });
-  return orders.map(serializeOrder);
+export async function listMyOrders(prisma: PrismaClient, userId: string, q: CursorQuery = {}) {
+  const { take, args } = cursorArgs(q);
+  const orders = await prisma.order.findMany({
+    where: { userId },
+    include: orderInclude,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    ...args,
+  });
+  return toCursorPage(orders, take, serializeOrder);
 }
 
 export async function getMyOrder(prisma: PrismaClient, userId: string, orderId: string) {
@@ -550,14 +557,16 @@ export async function submitOrderReview(
 }
 
 /** Reviews the caller has written — a flat list, unlike getMyOrder's per-order access. */
-export async function listMyReviews(prisma: PrismaClient, userId: string) {
+export async function listMyReviews(prisma: PrismaClient, userId: string, q: CursorQuery = {}) {
+  const { take, args } = cursorArgs(q);
   const reviews = await prisma.orderReview.findMany({
     where: { userId },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     include: { nursery: { select: { id: true, nurseryName: true, logoUrl: true } } },
+    ...args,
   });
 
-  return reviews.map((r) => ({
+  return toCursorPage(reviews, take, (r) => ({
     id: r.id,
     orderId: r.orderId,
     nurseryId: r.nurseryId,
@@ -575,8 +584,9 @@ export async function listMyReviews(prisma: PrismaClient, userId: string) {
 export async function listNurseryOrders(
   prisma: PrismaClient,
   nurseryId: string,
-  filter: { status?: string; fulfillmentType?: string } = {},
+  filter: { status?: string; fulfillmentType?: string } & CursorQuery = {},
 ) {
+  const { take, args } = cursorArgs(filter);
   const orders = await prisma.order.findMany({
     where: {
       nurseryId,
@@ -584,9 +594,10 @@ export async function listNurseryOrders(
       ...(filter.fulfillmentType ? { fulfillmentType: filter.fulfillmentType as any } : {}),
     },
     include: { items: true, address: true, user: { select: { id: true, name: true, handle: true } } },
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    ...args,
   });
-  return orders;
+  return toCursorPage(orders, take);
 }
 
 async function findNurseryOrderOrThrow(prisma: PrismaClient, nurseryId: string, orderId: string) {

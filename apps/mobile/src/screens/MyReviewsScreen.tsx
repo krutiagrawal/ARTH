@@ -10,6 +10,8 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useMyReviews } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { flattenPages, infiniteScrollProps } from '../hooks/useInfiniteList';
+import { PageFooter } from '../components/common/PageFooter';
 import type { ApiMyReview } from '../api/orders';
 
 function Stars({ rating }: { rating: number }) {
@@ -33,7 +35,9 @@ function ReviewRow({ r, navigation }: { r: ApiMyReview; navigation: any }) {
 
 export function MyReviewsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { data: reviews, isLoading, refetch } = useMyReviews();
+  const query = useMyReviews();
+  const { isLoading, refetch } = query;
+  const reviews = flattenPages(query.data);
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   return (
@@ -53,17 +57,19 @@ export function MyReviewsScreen({ navigation }: any) {
 
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
-      ) : !reviews || reviews.length === 0 ? (
+      ) : reviews.length === 0 ? (
         <EmptyState icon="⭐" title="No reviews yet" body="Reviews you leave for nurseries will show up here." />
       ) : (
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
+          {...infiniteScrollProps(query)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           {reviews.map((r) => (
             <ReviewRow key={r.id} r={r} navigation={navigation} />
           ))}
+          <PageFooter loading={query.isFetchingNextPage} />
         </ScrollView>
       )}
     </View>

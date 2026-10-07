@@ -15,8 +15,10 @@ export interface ApiNgoSummary {
   city: string | null;
 }
 
-export async function browseNgos(params: { q?: string; city?: string } = {}): Promise<{ total: number; ngos: ApiNgoSummary[] }> {
+export async function browseNgos(params: { q?: string; city?: string; page?: number; take?: number } = {}): Promise<{ total: number; ngos: ApiNgoSummary[] }> {
   const query = new URLSearchParams();
+  if (params.page) query.set('page', String(params.page));
+  if (params.take) query.set('take', String(params.take));
   if (params.q) query.set('q', params.q);
   if (params.city) query.set('city', params.city);
   const qs = query.toString();

@@ -15,6 +15,7 @@ import type { ApiCsrSponsorship } from '../api/corporate';
 import { ApiError } from '../api/client';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
 
 function SponsorshipRow({ item, onDelete }: { item: ApiCsrSponsorship; onDelete: () => void }) {
   return (
@@ -33,7 +34,8 @@ function SponsorshipRow({ item, onDelete }: { item: ApiCsrSponsorship; onDelete:
 export function CorporateSponsorshipsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { data: profile, refetch: refetchProfile } = useCorporateProfile();
-  const { data: sponsorships = [], isLoading, refetch: refetchSponsorships } = useSponsorships();
+  const listQuery = useSponsorships();
+  const { data: sponsorships = [], isLoading, refetch: refetchSponsorships } = listQuery;
   const createMutation = useCreateSponsorship();
   const deleteMutation = useDeleteSponsorship();
   const confirm = useConfirm();
@@ -112,6 +114,9 @@ export function CorporateSponsorshipsScreen({ navigation }: any) {
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 20 }} />
       ) : (
         <FlatList
+          onEndReached={() => { if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) listQuery.fetchNextPage(); }}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={<PageFooter loading={listQuery.isFetchingNextPage} />}
           data={sponsorships}
           keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}

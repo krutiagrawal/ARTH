@@ -22,6 +22,7 @@ import StatTile from '@/components/dashboard/StatTile'
 import { Skeleton } from '@/components/ui/skeleton'
 import { proxy } from '../proxy'
 import { GROWTH_LEVEL_META } from '../growth/GrowthClient'
+import { formatKg } from '@/lib/impact'
 
 function TrendChart({ title, data, color, href }) {
   return (
@@ -94,12 +95,12 @@ export default function ReportsClient() {
           loading={loading}
         />
         <StatTile
-          label="CO2 absorption potential"
-          value={`${reports?.co2AbsorptionKg ?? 0} kg`}
+          label="CO₂ absorbed (est.)"
+          value={`${formatKg(reports?.co2AbsorptionKg)} kg`}
           icon={Cloud}
           tone="sand"
           href="/ngo/dashboard/trees?status=adopted"
-          description="Estimated from adopted trees"
+          description={reports?.oxygenKg !== undefined ? `≈ ${formatKg(reports.oxygenKg)} kg oxygen · estimated from each tree's species and age` : "Estimated from each tree's species and age"}
           loading={loading}
         />
         <StatTile

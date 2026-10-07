@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import DataTable from '@/components/dashboard/DataTable'
+import { usePageState, PAGE_SIZE } from '@/hooks/usePageState'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
@@ -110,6 +111,9 @@ export default function AdminAccountsClient() {
     return () => clearTimeout(timer)
   }, [q])
 
+  const [page, setPage] = usePageState(`${debouncedQ}|${type}|${blockedOnly}`)
+  const [total, setTotal] = useState(0)
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -117,14 +121,17 @@ export default function AdminAccountsClient() {
       if (debouncedQ) params.set('q', debouncedQ)
       if (type) params.set('type', type)
       if (blockedOnly) params.set('isBlocked', '1')
+      params.set('page', String(page))
+      params.set('take', String(PAGE_SIZE))
       const data = await proxy(`/admin/accounts?${params.toString()}`)
       setAccounts(data.accounts)
+      setTotal(data.total ?? 0)
     } catch (err) {
       toast.error(err.message)
     } finally {
       setLoading(false)
     }
-  }, [debouncedQ, type, blockedOnly])
+  }, [debouncedQ, type, blockedOnly, page])
 
   useEffect(() => {
     load()
@@ -243,6 +250,7 @@ export default function AdminAccountsClient() {
       <DataTable
         columns={columns}
         data={accounts}
+        serverPagination={{ page, pageSize: PAGE_SIZE, total, onPageChange: setPage }}
         loading={loading}
         emptyState={<EmptyState icon={Users} title="No matching accounts" body="Try a different search or filter." />}
       />

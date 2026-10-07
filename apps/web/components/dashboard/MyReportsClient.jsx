@@ -1,12 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import { toast } from 'sonner'
 import { Flag } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
+import { useTotalPagedList } from '@/hooks/useTotalPagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
 const STATUS_VARIANT = { open: 'secondary', actioned: 'default', dismissed: 'outline' }
 const STATUS_LABEL = { open: 'Under review', actioned: 'Actioned', dismissed: 'Dismissed' }
@@ -33,24 +33,11 @@ const REASON_LABEL = {
 /** Reports I've filed — shared by every role's dashboard, hitting GET /api/reports/mine
  * scoped to whichever session's `proxy` is passed in. */
 export default function MyReportsClient({ proxy }) {
-  const [reports, setReports] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const data = await proxy('/reports/mine')
-      setReports(data.reports || [])
-    } catch (err) {
-      toast.error(err.message || 'Could not load your reports.')
-    } finally {
-      setLoading(false)
-    }
-  }, [proxy])
-
-  useEffect(() => {
-    load()
-  }, [load])
+  const { items: reports, loading, loadingMore, hasMore, loadMore } = useTotalPagedList(proxy, '/reports/mine', {}, {
+    listKey: 'reports',
+    take: 25,
+    errorMessage: 'Could not load your reports.',
+  })
 
   return (
     <DashboardPageShell className="space-y-6">
@@ -80,6 +67,7 @@ export default function MyReportsClient({ proxy }) {
               <Badge variant={STATUS_VARIANT[r.status] || 'outline'} className="shrink-0">{STATUS_LABEL[r.status] || r.status}</Badge>
             </div>
           ))}
+          <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
         </div>
       )}
     </DashboardPageShell>

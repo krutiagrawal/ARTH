@@ -65,9 +65,9 @@ export default async function adoptionsRoutes(fastify: FastifyInstance) {
     reply.send(serializeAdoptableTree(tree));
   });
 
-  fastify.get('/my-adoptions', async (request, reply) => {
-    const trees = await adoptionService.listMyAdoptedTrees(fastify.prisma, request.user!.id);
-    reply.send(trees.map((t) => serializeAdoptableTree(t, { includeAdopter: true })));
+  fastify.get<{ Querystring: { cursor?: string; take?: string } }>('/my-adoptions', async (request, reply) => {
+    const page = await adoptionService.listMyAdoptedTrees(fastify.prisma, request.user!.id, request.query);
+    reply.send({ items: page.items.map((t) => serializeAdoptableTree(t, { includeAdopter: true })), nextCursor: page.nextCursor });
   });
 
   fastify.post('/', { preHandler: [fastify.requireRole(...ORG_ROLES)] }, async (request, reply) => {

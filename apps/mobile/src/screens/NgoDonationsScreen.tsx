@@ -18,6 +18,8 @@ import { useNgoDonations, useNgoDonationsSummary } from '../hooks/useApiQueries'
 import type { DonationsFilter } from '../api/ngo';
 import { useSlideUp } from '../hooks/useAnimations';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 
 const STATUS_BADGE: Record<string, { icon: string; color: string }> = {
   succeeded: { icon: '💰', color: COLORS.sage },
@@ -42,7 +44,8 @@ const STATUS_FILTERS: { key: DonationsFilter['status'] | 'all'; label: string }[
 export function NgoDonationsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [statusFilter, setStatusFilter] = useState<DonationsFilter['status'] | 'all'>('all');
-  const { data, isLoading, refetch } = useNgoDonations(statusFilter === 'all' ? {} : { status: statusFilter });
+  const listQuery = useNgoDonations(statusFilter === 'all' ? {} : { status: statusFilter });
+  const { data, isLoading, refetch } = listQuery;
   const { data: summary = [], refetch: refetchSummary } = useNgoDonationsSummary();
   const donations = data?.donations ?? [];
   const { refreshing, onRefresh } = usePullToRefresh([refetch, refetchSummary]);
@@ -57,6 +60,7 @@ export function NgoDonationsScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
+        {...infiniteScrollProps(listQuery)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         {summary.length > 0 && (
@@ -120,6 +124,7 @@ export function NgoDonationsScreen({ navigation }: any) {
             </BorderCard>
           </FadeInRow>
         ))}
+        <PageFooter loading={listQuery.isFetchingNextPage} />
       </ScrollView>
     </View>
   );

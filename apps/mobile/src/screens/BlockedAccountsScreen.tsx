@@ -11,12 +11,14 @@ import { EmptyState } from '../components/common/EmptyState';
 import { resolveMediaUrl } from '../api/client';
 import { useBlocks, useUnblockTarget } from '../hooks/useSocialQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
 import type { ApiBlock } from '../api/social';
 import { useConfirm } from '../context/ConfirmDialogContext';
 
 /** Manage blocked people and organisations. Reachable from Settings. */
 export function BlockedAccountsScreen({ navigation }: any) {
-  const { data: blocks = [], isLoading, refetch } = useBlocks();
+  const listQuery = useBlocks();
+  const { data: blocks = [], isLoading, refetch } = listQuery;
   const unblock = useUnblockTarget();
   const confirm = useConfirm();
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
@@ -47,6 +49,9 @@ export function BlockedAccountsScreen({ navigation }: any) {
         </View>
       ) : (
         <FlatList
+          onEndReached={() => { if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) listQuery.fetchNextPage(); }}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={<PageFooter loading={listQuery.isFetchingNextPage} />}
           data={blocks}
           keyExtractor={(b) => b.id}
           contentContainerStyle={styles.list}

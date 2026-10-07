@@ -74,10 +74,10 @@ export default async function groupsRoutes(fastify: FastifyInstance) {
     reply.status(201).send(participant);
   });
 
-  fastify.get<{ Params: { id: string }; Querystring: { take?: string } }>('/:id/activity', async (request, reply) => {
+  fastify.get<{ Params: { id: string }; Querystring: { take?: string; cursor?: string } }>('/:id/activity', async (request, reply) => {
     await groupService.getGroupForMember(fastify.prisma, request.user!.id, request.params.id);
     const take = Math.min(Number(request.query.take) || 30, 50);
-    reply.send(await getGroupActivity(fastify.prisma, request.params.id, request.user!.id, { take }));
+    reply.send(await getGroupActivity(fastify.prisma, request.params.id, request.user!.id, { take, before: request.query.cursor }));
   });
 
   // Achievements aren't sensitive — visible to any authenticated user, not just members.

@@ -1,23 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { toast } from 'sonner'
 import { Camera, MapPin, Sprout } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
-import { proxy } from '@/lib/memberProxy'
+import { useArrayPagedList } from '@/hooks/useArrayPagedList'
+import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 import { resolveMediaUrl } from '@/lib/media'
+import { formatKg } from '@/lib/impact'
 
 export default function TreesClient() {
-  const [trees, setTrees] = useState(null)
-
-  useEffect(() => {
-    proxy('/trees').then(setTrees).catch((err) => {
-      setTrees([])
-      toast.error(err.message || 'Could not load your trees.')
-    })
-  }, [])
+  const { items: trees, hasMore, loadingMore, loadMore } = useArrayPagedList('/trees', { errorMessage: 'Could not load your trees.' })
 
   return (
     <DashboardPageShell>
@@ -38,7 +31,7 @@ export default function TreesClient() {
       </div>
 
       <div>
-        <p className="eyebrow mb-4">{trees?.length ? `${trees.length} tree${trees.length === 1 ? '' : 's'}` : 'Gallery'}</p>
+        <p className="eyebrow mb-4">{trees?.length ? `${trees.length}${hasMore ? '+' : ''} tree${trees.length === 1 ? '' : 's'}` : 'Gallery'}</p>
         {trees === null ? (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <Skeleton className="h-56 w-full rounded-3xl" />
@@ -83,12 +76,13 @@ export default function TreesClient() {
                       <MapPin className="h-3 w-3" /> {t.location}
                     </p>
                   )}
-                  <p className="text-xs text-muted-foreground mt-2">{Number(t.co2Absorbed ?? 0).toFixed(1)} kg CO₂ absorbed</p>
+                  <p className="text-xs text-muted-foreground mt-2">{formatKg(t.co2Absorbed)} kg CO₂ stored (est.)</p>
                 </div>
               </Link>
             ))}
           </div>
         )}
+        <LoadMoreButton hasMore={hasMore} loading={loadingMore} onClick={loadMore} />
       </div>
     </DashboardPageShell>
   )

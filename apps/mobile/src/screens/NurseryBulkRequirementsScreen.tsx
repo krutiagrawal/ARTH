@@ -12,6 +12,8 @@ import { EmptyState } from '../components/common/EmptyState';
 import { useNurseryBulkRequirementsCombined } from '../hooks/useApiQueries';
 import type { ApiBulkRequirement } from '../api/nursery';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import { isBulkRequirementOverdue } from '../utils/bulkRequirement';
 
 type FilterTab = 'open' | 'responded' | 'accepted' | 'completed';
@@ -84,7 +86,8 @@ function badgeColor(status: string) {
 export function NurseryBulkRequirementsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<FilterTab>('open');
-  const { data: requirements = [], isLoading, refetch } = useNurseryBulkRequirementsCombined();
+  const listQuery = useNurseryBulkRequirementsCombined();
+  const { data: requirements = [], isLoading, refetch } = listQuery;
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const filtered = useMemo(() => requirements.filter((r) => matchesTab(r, tab)), [requirements, tab]);
@@ -112,11 +115,13 @@ export function NurseryBulkRequirementsScreen({ navigation }: any) {
         <ScrollView
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
+          {...infiniteScrollProps(listQuery)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           {filtered.map((r) => (
             <RequirementRow key={r.id} item={r} navigation={navigation} />
           ))}
+          <PageFooter loading={listQuery.isFetchingNextPage} />
         </ScrollView>
       )}
     </View>

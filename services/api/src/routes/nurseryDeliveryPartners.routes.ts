@@ -12,8 +12,8 @@ function isTrue(v: unknown) {
 export default async function nurseryDeliveryPartnersRoutes(fastify: FastifyInstance) {
   fastify.addHook('preHandler', fastify.requireRole('nursery'));
 
-  fastify.get('/', async (request, reply) => {
-    reply.send(await deliveryPartnerService.listDeliveryPartners(fastify.prisma, request.user!.id));
+  fastify.get<{ Querystring: { cursor?: string; take?: string } }>('/', async (request, reply) => {
+    reply.send(await deliveryPartnerService.listDeliveryPartners(fastify.prisma, request.user!.id, request.query));
   });
 
   fastify.post('/', async (request, reply) => {

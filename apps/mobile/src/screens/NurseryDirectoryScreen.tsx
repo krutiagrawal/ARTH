@@ -12,6 +12,8 @@ import { useBrowseNurseries } from '../hooks/useApiQueries';
 import { useMyLocation } from '../hooks/useMyLocation';
 import { resolveMediaUrl } from '../api/client';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PageFooter } from '../components/common/PageFooter';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
 
 export function NurseryDirectoryScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -19,12 +21,13 @@ export function NurseryDirectoryScreen({ navigation }: any) {
   const [deliveryOnly, setDeliveryOnly] = useState(false);
   const [nearbyOnly, setNearbyOnly] = useState(false);
   const { coords } = useMyLocation();
-  const { data, isLoading, refetch } = useBrowseNurseries({
+  const listQuery = useBrowseNurseries({
     q: query || undefined,
     deliveryOnly: deliveryOnly || undefined,
     lat: nearbyOnly ? coords?.lat : undefined,
     lng: nearbyOnly ? coords?.lng : undefined,
   });
+  const { data, isLoading, refetch } = listQuery;
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
   const nurseries = data?.nurseries ?? [];
 
@@ -62,6 +65,7 @@ export function NurseryDirectoryScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
+        {...infiniteScrollProps(listQuery)}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
@@ -100,6 +104,7 @@ export function NurseryDirectoryScreen({ navigation }: any) {
             ))}
           </BorderCard>
         )}
+        <PageFooter loading={listQuery.isFetchingNextPage} />
       </ScrollView>
     </View>
   );

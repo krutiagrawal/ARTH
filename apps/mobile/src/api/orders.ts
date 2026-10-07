@@ -1,4 +1,5 @@
 import { apiFetch } from './client';
+import { pagedPath, type Page } from '../hooks/useInfiniteList';
 import type { ApiAddress } from './addresses';
 
 export type OrderFulfillmentType = 'pickup' | 'delivery';
@@ -89,8 +90,8 @@ export interface ApiOrder {
   review: ApiOrderReview | null;
 }
 
-export async function fetchMyOrders(): Promise<ApiOrder[]> {
-  return apiFetch<ApiOrder[]>('/api/orders');
+export async function fetchMyOrders(cursor?: string): Promise<Page<ApiOrder>> {
+  return apiFetch<Page<ApiOrder>>(pagedPath('/api/orders', cursor));
 }
 
 export async function fetchMyOrder(id: string): Promise<ApiOrder> {
@@ -127,6 +128,6 @@ export interface ApiMyReview {
   createdAt: string;
 }
 
-export async function fetchMyReviews(): Promise<ApiMyReview[]> {
-  return apiFetch<ApiMyReview[]>('/api/orders/reviews/mine');
+export async function fetchMyReviews(cursor?: string): Promise<Page<ApiMyReview>> {
+  return apiFetch<Page<ApiMyReview>>(pagedPath('/api/orders/reviews/mine', cursor));
 }
