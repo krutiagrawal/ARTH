@@ -7,8 +7,12 @@ export interface ApiAddressSuggestion {
   city: string | null;
 }
 
-export async function searchAddress(query: string): Promise<ApiAddressSuggestion[]> {
-  return apiFetch<ApiAddressSuggestion[]>(`/api/geocode/search?q=${encodeURIComponent(query)}`);
+export async function searchAddress(
+  query: string,
+  near?: { lat: number; lng: number },
+): Promise<ApiAddressSuggestion[]> {
+  const bias = near ? `&lat=${near.lat}&lng=${near.lng}` : '';
+  return apiFetch<ApiAddressSuggestion[]>(`/api/geocode/search?q=${encodeURIComponent(query)}${bias}`);
 }
 
 export async function reverseGeocode(lat: number, lng: number): Promise<ApiAddressSuggestion | null> {

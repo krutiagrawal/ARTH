@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Image, RefreshControl, AppState } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Image, RefreshControl, AppState, Keyboard } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import Animated, {
   useSharedValue,
@@ -38,6 +38,9 @@ import { ShareCardModal } from '../components/common/ShareCardModal';
 import { TreePlantedShareCard } from '../components/share/TreePlantedShareCard';
 import { NOT_APPROVED_MESSAGE } from '../constants/plantingLocation';
 import { getCurrentPositionWithTimeout } from '../utils/location';
+import { haversineMeters, formatMeters } from '../utils/geo';
+import { reverseGeocode, type ApiAddressSuggestion } from '../api/geocode';
+import { AddressSearchField } from '../components/common/AddressSearchField';
 import { getSpeciesCareTip } from '../constants/speciesCareTips';
 import { EFFECTIVE_WIDTH } from '../utils/responsive';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
@@ -65,6 +68,34 @@ interface LocationInfo {
   lat: number;
   lng: number;
   label: string;
+}
+
+// How far a manually-searched address may be from the real GPS fix and still count as "the same
+// place". Generous enough to absorb GPS drift and geocoder rounding, tight enough that you can't
+// claim a tree in another part of town.
+const MAX_PICKED_DISTANCE_M = 150;
+const MAX_LABEL_LENGTH = 200;
+
+// Full street-level address for a coordinate: the backend's Nominatim reverse lookup first (same
+// source the address/nursery screens use), then the device geocoder, then raw coordinates.
+async function resolveAddressLabel(lat: number, lng: number): Promise<string> {
+  try {
+    const result = await reverseGeocode(lat, lng);
+    if (result?.label) return result.label;
+  } catch {
+    // fall through to the on-device geocoder
+  }
+  try {
+    const [place] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
+    if (place) {
+      const parts = [place.name, place.street, place.district, place.city ?? place.subregion, place.region, place.postalCode, place.country]
+        .filter((part, i, arr) => !!part && arr.indexOf(part) === i);
+      if (parts.length) return parts.join(', ');
+    }
+  } catch {
+    // fall through to coordinates
+  }
+  return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 }
 
 // Highest, not BestForNavigation — that's meant for continuous watchPosition tracking; a single
@@ -158,6 +189,7 @@ interface SuccessProps {
   speciesName: string;
   speciesEmoji?: string;
   locationLabel?: string | null;
+  plantedAt?: string;
   topInset: number;
   bottomPad: number;
   onDone: () => void;
@@ -165,32 +197,20 @@ interface SuccessProps {
 }
 
 // Full-page celebration: deep-green scene with hills and trees, and a glossy sage "3D" card.
-function SuccessAnimation({ treeName, xpEarned, publicId, speciesName, speciesEmoji, locationLabel, topInset, bottomPad, onDone, onShare }: SuccessProps) {
+function SuccessAnimation({ treeName, xpEarned, publicId, speciesName, speciesEmoji, locationLabel, plantedAt, topInset, bottomPad, onDone, onShare }: SuccessProps) {
   const cardOpacity = useSharedValue(0);
   const cardScale = useSharedValue(0.82);
   const cardTiltX = useSharedValue(55);
   const glowOpacity = useSharedValue(0);
-  const checkScale = useSharedValue(0);
-  const textOpacity = useSharedValue(0);
-  const tilesOpacity = useSharedValue(0);
-  const idCardRotation = useSharedValue(90);
-  const idCardOpacity = useSharedValue(0);
 
   React.useEffect(() => {
     cardOpacity.value = withTiming(1, { duration: 400 });
     cardScale.value = withSpring(1, { damping: 11, stiffness: 110 });
     cardTiltX.value = withSpring(0, { damping: 12, stiffness: 90 });
-    checkScale.value = withDelay(250, withSpring(1, { damping: 8, stiffness: 150 }));
-    textOpacity.value = withDelay(650, withTiming(1, { duration: 500 }));
-    tilesOpacity.value = withDelay(950, withTiming(1, { duration: 500 }));
     glowOpacity.value = withDelay(
       500,
       withRepeat(withSequence(withTiming(0.55, { duration: 1400 }), withTiming(0.2, { duration: 1400 })), -1, true),
     );
-    if (publicId) {
-      idCardOpacity.value = withDelay(1300, withTiming(1, { duration: 300 }));
-      idCardRotation.value = withDelay(1300, withSpring(0, { damping: 10, stiffness: 120 }));
-    }
   }, []);
 
   // Backgrounding / locking the phone can leave reanimated's shared values reset or mid-flight,
@@ -202,11 +222,6 @@ function SuccessAnimation({ treeName, xpEarned, publicId, speciesName, speciesEm
       cardOpacity.value = 1;
       cardScale.value = 1;
       cardTiltX.value = 0;
-      checkScale.value = 1;
-      textOpacity.value = 1;
-      tilesOpacity.value = 1;
-      idCardOpacity.value = 1;
-      idCardRotation.value = 0;
     });
     return () => sub.remove();
   }, []);
@@ -216,20 +231,6 @@ function SuccessAnimation({ treeName, xpEarned, publicId, speciesName, speciesEm
     opacity: cardOpacity.value,
     transform: [{ perspective: 900 }, { scale: cardScale.value }, { rotateX: `${cardTiltX.value}deg` }],
   }));
-  const checkStyle = useAnimatedStyle(() => ({ transform: [{ scale: checkScale.value }] }));
-  const textStyle = useAnimatedStyle(() => ({
-    opacity: textOpacity.value,
-    transform: [{ translateY: 20 - textOpacity.value * 20 }],
-  }));
-  const tilesStyle = useAnimatedStyle(() => ({
-    opacity: tilesOpacity.value,
-    transform: [{ translateY: 16 - tilesOpacity.value * 16 }],
-  }));
-  const idCardStyle = useAnimatedStyle(() => ({
-    opacity: idCardOpacity.value,
-    transform: [{ perspective: 800 }, { rotateY: `${idCardRotation.value}deg` }],
-  }));
-
   return (
     <View style={styles.successRoot}>
       <LinearGradient colors={['#0D2318', '#1A3A16', '#2D5A27']} style={StyleSheet.absoluteFill} />
@@ -242,7 +243,7 @@ function SuccessAnimation({ treeName, xpEarned, publicId, speciesName, speciesEm
       <View style={styles.successHillFront} pointerEvents="none" />
 
       <ScrollView
-        contentContainerStyle={[styles.successScroll, { paddingTop: topInset + 12, paddingBottom: bottomPad + 90 }]}
+        contentContainerStyle={[styles.successScroll, { paddingTop: topInset + 12, paddingBottom: bottomPad + 190 }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={[styles.successCardWrap, cardStyle]}>
@@ -262,10 +263,10 @@ function SuccessAnimation({ treeName, xpEarned, publicId, speciesName, speciesEm
               <Text style={[styles.successSceneSide, { left: 22 }]}>🌿</Text>
               <Text style={[styles.successSceneSide, { right: 22 }]}>🌼</Text>
               <Text style={[styles.successSceneFly, { left: '30%' }]}>🦋</Text>
-              <Animated.Text style={[styles.successSceneTree, checkStyle]}>{speciesEmoji || '🌳'}</Animated.Text>
+              <Text style={styles.successSceneTree}>{speciesEmoji || '🌳'}</Text>
             </View>
 
-            <Animated.View style={[styles.successText, textStyle]}>
+            <View style={styles.successText}>
               <View style={styles.successXp}>
                 <Text style={styles.successXpText}>⭐  +{xpEarned} XP earned</Text>
               </View>
@@ -275,9 +276,9 @@ function SuccessAnimation({ treeName, xpEarned, publicId, speciesName, speciesEm
                   <Text style={styles.successTreeName}>"{treeName}"</Text> has joined your forest 🌲
                 </Text>
               </View>
-            </Animated.View>
+            </View>
 
-            <Animated.View style={[styles.successRows, tilesStyle]}>
+            <View style={styles.successRows}>
               <View style={styles.successRow}>
                 <View style={styles.successRowIcon}><Text style={styles.successRowEmoji}>🌳</Text></View>
                 <Text style={styles.successRowLabel}>Species</Text>
@@ -287,32 +288,32 @@ function SuccessAnimation({ treeName, xpEarned, publicId, speciesName, speciesEm
               <View style={styles.successRow}>
                 <View style={styles.successRowIcon}><Text style={styles.successRowEmoji}>📍</Text></View>
                 <Text style={styles.successRowLabel}>Planted at</Text>
-                <Text style={styles.successRowValue} numberOfLines={1}>{locationLabel || 'Your spot'}</Text>
+                <Text style={[styles.successRowValue, styles.successAddressValue]}>{locationLabel || 'Your spot'}</Text>
               </View>
               <View style={styles.successDivider} />
               <View style={styles.successRow}>
                 <View style={styles.successRowIcon}><Text style={styles.successRowEmoji}>📅</Text></View>
                 <Text style={styles.successRowLabel}>Date</Text>
                 <Text style={styles.successRowValue} numberOfLines={1}>
-                  {new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+                  {(plantedAt ? new Date(plantedAt) : new Date()).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
                 </Text>
               </View>
               {publicId ? (
                 <>
                   <View style={styles.successDivider} />
-                  <Animated.View style={[styles.successRow, idCardStyle]}>
+                  <View style={styles.successRow}>
                     <View style={styles.successRowIcon}><Text style={styles.successRowEmoji}>🪪</Text></View>
                     <Text style={styles.successRowLabel}>ARTH Tree ID</Text>
                     <Text style={styles.successRowValue} numberOfLines={1}>#{publicId}</Text>
-                  </Animated.View>
+                  </View>
                 </>
               ) : null}
-            </Animated.View>
+            </View>
 
-            <Animated.View style={[styles.successTip, tilesStyle]}>
+            <View style={styles.successTip}>
               <Text style={styles.successTipEmoji}>💧</Text>
               <Text style={styles.successTipText}>{getSpeciesCareTip(speciesName)}</Text>
-            </Animated.View>
+            </View>
           </LinearGradient>
         </Animated.View>
 
@@ -348,6 +349,30 @@ export function PlantTreeScreen({ navigation, route }: any) {
     isPreVerified ? { lat: verifiedLat!, lng: verifiedLng!, label: 'Verified planting spot' } : null
   );
   const [locationLoading, setLocationLoading] = useState(false);
+  // Manual override: the user searched for a different address than the auto-detected one. It is
+  // only honoured while its coordinates sit within MAX_PICKED_DISTANCE_M of the real GPS fix
+  // (`location`) - see pickedDistance / pickedMismatch below.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [pickedLocation, setPickedLocation] = useState<LocationInfo | null>(null);
+  const detailsScrollRef = useRef<ScrollView>(null);
+  const searchBlockY = useRef(0);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Pad the scroll content by the keyboard's height so the search box and its suggestion list can
+  // always be scrolled above the keyboard.
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
+  const scrollSearchIntoView = useCallback(() => {
+    setTimeout(() => detailsScrollRef.current?.scrollTo({ y: Math.max(searchBlockY.current - 90, 0), animated: true }), 250);
+  }, []);
   const [submitError, setSubmitError] = useState<string | null>(null);
   // Whether this exact location has been confirmed as an ARTH-approved spot. Coming in via the
   // map's "Plant where you are" button, it's already been checked — otherwise (direct-tab entry)
@@ -380,6 +405,32 @@ export function PlantTreeScreen({ navigation, route }: any) {
   );
   const { refreshing, onRefresh } = usePullToRefresh([refetchSpecies, refetchNearbyStock]);
 
+  const pickedDistance = location && pickedLocation ? haversineMeters(location, pickedLocation) : null;
+  const pickedMismatch = pickedDistance != null && pickedDistance > MAX_PICKED_DISTANCE_M;
+  const pickedVerified = pickedDistance != null && !pickedMismatch;
+
+  const handlePickSuggestion = useCallback((suggestion: ApiAddressSuggestion) => {
+    setPickedLocation({ lat: suggestion.lat, lng: suggestion.lng, label: suggestion.label });
+  }, []);
+
+  const handleResetToDetected = useCallback(() => {
+    setPickedLocation(null);
+    setSearchText('');
+    setSearchOpen(false);
+  }, []);
+
+  // Coming in pre-verified from the map, the label is just a placeholder - fill in the real address.
+  useEffect(() => {
+    if (!isPreVerified) return;
+    let cancelled = false;
+    resolveAddressLabel(verifiedLat!, verifiedLng!).then((label) => {
+      if (!cancelled) setLocation({ lat: verifiedLat!, lng: verifiedLng!, label });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isPreVerified, verifiedLat, verifiedLng]);
+
   const fetchLocation = useCallback(async () => {
     if (isPreVerified) return;
     setLocationLoading(true);
@@ -390,15 +441,11 @@ export function PlantTreeScreen({ navigation, route }: any) {
         return;
       }
       const position = await getCurrentPositionWithTimeout({ accuracy: PLANTING_LOCATION_ACCURACY });
-      const [place] = await Location.reverseGeocodeAsync({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      });
-      const label = place
-        ? [place.city ?? place.subregion, place.region ?? place.country].filter(Boolean).join(', ')
-        : `${position.coords.latitude.toFixed(3)}, ${position.coords.longitude.toFixed(3)}`;
+      const label = await resolveAddressLabel(position.coords.latitude, position.coords.longitude);
       setEligible(null);
-      setLocation({ lat: position.coords.latitude, lng: position.coords.longitude, label: label || 'Unknown location' });
+      setPickedLocation(null);
+      setSearchText('');
+      setLocation({ lat: position.coords.latitude, lng: position.coords.longitude, label });
     } catch {
       setLocation(null);
     } finally {
@@ -472,6 +519,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
   const [xpEarned, setXpEarned] = useState(0);
   const [plantedTree, setPlantedTree] = useState<ApiTree | null>(null);
   const [shareVisible, setShareVisible] = useState(false);
+  const [shareCardReady, setShareCardReady] = useState(false);
 
   // Guards the whole submit (location lookup + upload), not just the mutation, so rapid taps
   // can never plant the same tree twice.
@@ -488,7 +536,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
       submittingRef.current = false;
       setIsSubmitting(false);
     }
-  }, [selectedSpecies, imageUri, nickname, caption, location, plantTreeMutation, success]);
+  }, [selectedSpecies, imageUri, nickname, caption, location, pickedLocation, plantTreeMutation, success]);
 
   const submitTree = async () => {
     if (!selectedSpecies || !imageUri) return;
@@ -513,6 +561,20 @@ export function PlantTreeScreen({ navigation, route }: any) {
       return;
     }
 
+    // A manually-picked address must still match where the device really is right now.
+    let labelToSend = location?.label;
+    if (pickedLocation) {
+      const drift = haversineMeters(
+        { lat: freshPosition.coords.latitude, lng: freshPosition.coords.longitude },
+        pickedLocation,
+      );
+      if (drift > MAX_PICKED_DISTANCE_M) {
+        setSubmitError(`The address you selected is ${formatMeters(drift)} from your current location. Pick a closer address or use the detected one.`);
+        return;
+      }
+      labelToSend = pickedLocation.label;
+    }
+
     try {
       const filename = imageUri.split('/').pop() || 'tree.jpg';
       const extension = filename.split('.').pop()?.toLowerCase();
@@ -525,7 +587,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
         lng: freshPosition.coords.longitude,
         accuracy: freshPosition.coords.accuracy ?? undefined,
         mocked: freshPosition.mocked ?? false,
-        locationLabel: location?.label,
+        locationLabel: labelToSend?.slice(0, MAX_LABEL_LENGTH),
         caption: caption.trim() || undefined,
         photo: { uri: imageUri, name: filename, type: mimeType },
       });
@@ -640,7 +702,9 @@ export function PlantTreeScreen({ navigation, route }: any) {
 
       {stage === 'details' && (
         <ScrollView
-          contentContainerStyle={[styles.detailsContent, { paddingBottom: 120 }]}
+          ref={detailsScrollRef}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[styles.detailsContent, { paddingBottom: 120 + keyboardHeight }]}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
@@ -805,7 +869,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
             }}
           >
             <BorderCard style={styles.locationCard}>
-              <Text style={styles.locationIcon}>{eligible === false ? '⚠️' : '📍'}</Text>
+              <Text style={styles.locationIcon}>{eligible === false || pickedMismatch ? '⚠️' : '📍'}</Text>
               <View style={{ flex: 1 }}>
                 <Text style={styles.locationTitle}>
                   {locationLoading
@@ -816,6 +880,8 @@ export function PlantTreeScreen({ navigation, route }: any) {
                     ? 'Not an ARTH Approved Spot'
                     : checkEligibility.isPending
                     ? 'Checking approved spots...'
+                    : pickedVerified
+                    ? 'Location Selected'
                     : 'Location Detected'}
                 </Text>
                 <Text style={styles.locationValue}>
@@ -823,11 +889,50 @@ export function PlantTreeScreen({ navigation, route }: any) {
                     ? 'Finding your spot...'
                     : eligible === false
                     ? NOT_APPROVED_MESSAGE
-                    : location?.label ?? 'Tap to try again, or enable location in Settings'}
+                    : (pickedVerified ? pickedLocation!.label : location?.label) ?? 'Tap to try again, or enable location in Settings'}
                 </Text>
+                {pickedVerified && (
+                  <Text style={styles.locationVerified}>
+                    {'\u2713'} Verified: within {formatMeters(pickedDistance!)} of your GPS position
+                  </Text>
+                )}
               </View>
             </BorderCard>
           </TouchableOpacity>
+
+          {location && !locationLoading && (
+            <View style={styles.locationActions} onLayout={(e) => { searchBlockY.current = e.nativeEvent.layout.y; }}>
+              {!searchOpen ? (
+                <TouchableOpacity onPress={() => { setSearchOpen(true); scrollSearchIntoView(); }} hitSlop={8}>
+                  <Text style={styles.locationLink}>Not the right address? Search for it</Text>
+                </TouchableOpacity>
+              ) : (
+                <>
+                  <AddressSearchField
+                    label="Search address"
+                    value={searchText}
+                    onChangeText={(text) => {
+                      setSearchText(text);
+                      if (pickedLocation) setPickedLocation(null);
+                    }}
+                    onSelectSuggestion={handlePickSuggestion}
+                    placeholder="Type your street, area or landmark"
+                    inline
+                    near={location ?? undefined}
+                    onFocus={scrollSearchIntoView}
+                  />
+                  {pickedMismatch && (
+                    <Text style={styles.errorText}>
+                      That address is {formatMeters(pickedDistance!)} from where you are right now. Trees can only be planted where you are standing, so pick an address within {MAX_PICKED_DISTANCE_M} m of your location.
+                    </Text>
+                  )}
+                  <TouchableOpacity onPress={handleResetToDetected} hitSlop={8}>
+                    <Text style={styles.locationLink}>Use detected location instead</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          )}
 
           {submitError && <Text style={styles.errorText}>{submitError}</Text>}
 
@@ -837,7 +942,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
             variant="primary"
             size="lg"
             fullWidth
-            disabled={!selectedSpecies || isSubmitting || plantTreeMutation.isPending || eligible === false}
+            disabled={!selectedSpecies || isSubmitting || plantTreeMutation.isPending || eligible === false || pickedMismatch}
           />
         </ScrollView>
       )}
@@ -850,15 +955,25 @@ export function PlantTreeScreen({ navigation, route }: any) {
           speciesName={selectedSpecies?.commonName || plantedTree?.species || 'Tree'}
           speciesEmoji={plantedTree?.speciesEmoji || (selectedSpecies as any)?.emoji || '🌳'}
           locationLabel={plantedTree?.location}
+          plantedAt={plantedTree?.plantedAt}
           topInset={insets.top}
           bottomPad={bottomNavClearance}
           onDone={handleDone}
-          onShare={() => setShareVisible(true)}
+          onShare={() => {
+            setShareCardReady(false);
+            setShareVisible(true);
+          }}
         />
       )}
 
-      <ShareCardModal visible={shareVisible} onClose={() => setShareVisible(false)} title="Share your tree" caption="I just planted a tree with ARTH 🌱">
-        <TreePlantedShareCard tree={plantedTree} imageUri={imageUri} />
+      <ShareCardModal
+        visible={shareVisible}
+        onClose={() => setShareVisible(false)}
+        title="Share your tree"
+        caption="I just planted a tree with ARTH 🌱"
+        ready={shareCardReady}
+      >
+        <TreePlantedShareCard tree={plantedTree} imageUri={imageUri} onReady={() => setShareCardReady(true)} />
       </ShareCardModal>
 
       <StatusModal
@@ -1441,6 +1556,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#F6FBF2',
   },
+  // Same look as the other row values; just a touch smaller since addresses run long and wrap.
+  successAddressValue: { fontSize: 13, lineHeight: 18 },
+  locationActions: { gap: 8, marginBottom: 12, zIndex: 20 },
+  locationVerified: { fontSize: 12, fontWeight: '600', color: COLORS.sage, marginTop: 4 },
+  locationLink: { fontSize: 13, fontWeight: '700', color: COLORS.forest, textDecorationLine: 'underline' },
   successDivider: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.14)',

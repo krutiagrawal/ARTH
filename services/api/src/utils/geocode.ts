@@ -74,10 +74,65 @@ export interface AddressSuggestion {
 
 /** Live search-as-you-type suggestions for an address field. Also never throws — an empty list just
  * means "no suggestions yet", not a failed request. */
-export async function searchAddress(query: string): Promise<AddressSuggestion[]> {
+export async function searchAddress(query: string, near?: { lat: number; lng: number }): Promise<AddressSuggestion[]> {
   const trimmed = query.trim();
   if (trimmed.length < 3) return [];
 
+  // Nominatim alone is thin for street/building/landmark names in India, and its 1 req/s queue
+  // means a few keystrokes can time out into an empty list. Photon (OSM-based, built for
+  // search-as-you-type, no throttle needed) runs alongside it; Photon results come first since
+  // they're biased to the user's own position, then Nominatim fills any gaps.
+  const [photon, nominatim] = await Promise.all([searchPhoton(trimmed, near), searchNominatim(trimmed)]);
+
+  const merged: AddressSuggestion[] = [];
+  for (const s of [...photon, ...nominatim]) {
+    const duplicate = merged.some(
+      (m) => m.label === s.label || (Math.abs(m.lat - s.lat) < 0.0003 && Math.abs(m.lng - s.lng) < 0.0003),
+    );
+    if (!duplicate) merged.push(s);
+  }
+  return merged.slice(0, 12);
+}
+
+const PHOTON_URL = 'https://photon.komoot.io/api/';
+
+async function searchPhoton(query: string, near?: { lat: number; lng: number }): Promise<AddressSuggestion[]> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    // With the user's position, bias results toward it; otherwise box to the Pune area.
+    const area = near ? `&lat=${near.lat}&lon=${near.lng}` : '&bbox=73.65,18.30,74.05,18.75';
+    const response = await fetch(`${PHOTON_URL}?limit=10&lang=en&q=${encodeURIComponent(query)}${area}`, {
+      signal: controller.signal,
+      headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
+    });
+    if (!response.ok) return [];
+    const data = (await response.json()) as {
+      features?: Array<{
+        geometry?: { coordinates?: [number, number] };
+        properties?: Record<string, string | undefined>;
+      }>;
+    };
+    const out: AddressSuggestion[] = [];
+    for (const f of data.features ?? []) {
+      const [lng, lat] = f.geometry?.coordinates ?? [];
+      const p = f.properties ?? {};
+      if (lat === undefined || lng === undefined || !Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+      const street = [p.housenumber, p.street].filter(Boolean).join(' ');
+      const parts = [p.name, street, p.district ?? p.locality, p.city ?? p.county, p.state, p.postcode, p.country]
+        .filter((part, i, arr): part is string => !!part && arr.indexOf(part) === i);
+      if (!parts.length) continue;
+      out.push({ label: parts.join(', '), lat, lng, city: p.city ?? p.county ?? p.district ?? null });
+    }
+    return out;
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function searchNominatim(trimmed: string): Promise<AddressSuggestion[]> {
   const url = `${NOMINATIM_URL}?format=json&addressdetails=1&limit=10&viewbox=${PUNE_VIEWBOX}&bounded=1&q=${encodeURIComponent(trimmed)}`;
   const response = await throttledFetch(url);
   if (!response) return [];

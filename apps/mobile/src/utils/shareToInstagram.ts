@@ -45,3 +45,45 @@ export async function shareImageGeneric(imageUri: string, caption?: string) {
   const { default: Share } = mod as any;
   await Share.open({ url: imageUri, message: caption }).catch(() => {});
 }
+
+export type ShareTarget = 'whatsapp' | 'instagram' | 'instagramStory' | 'twitter' | 'other';
+
+const SOCIAL_KEY: Record<'whatsapp' | 'instagram' | 'twitter', string> = {
+  whatsapp: 'Whatsapp',
+  instagram: 'Instagram',
+  twitter: 'Twitter',
+};
+
+/**
+ * Shares an image straight into one specific app (WhatsApp, Instagram feed, X). Falls back to the
+ * generic OS share sheet when the app isn't installed or the direct call fails, so the button
+ * always does something useful.
+ */
+async function shareImageToApp(target: 'whatsapp' | 'instagram' | 'twitter', imageUri: string, caption?: string) {
+  const mod = loadShareModule();
+  if (!mod) return;
+  const { default: Share, Social } = mod as any;
+
+  try {
+    const result = await Share.shareSingle({
+      social: Social[SOCIAL_KEY[target]],
+      url: imageUri,
+      message: caption,
+      type: 'image/jpeg',
+    });
+    if (result?.success === false) throw new Error(result.message);
+  } catch {
+    await shareImageGeneric(imageUri, caption);
+  }
+}
+
+export function shareImage(target: ShareTarget, imageUri: string, caption?: string) {
+  switch (target) {
+    case 'instagramStory':
+      return shareImageToInstagramStory(imageUri, caption);
+    case 'other':
+      return shareImageGeneric(imageUri, caption);
+    default:
+      return shareImageToApp(target, imageUri, caption);
+  }
+}

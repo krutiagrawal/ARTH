@@ -20,7 +20,9 @@
       "infoPlist": {
         "LSApplicationQueriesSchemes": [
           "instagram",
-          "instagram-stories"
+          "instagram-stories",
+          "whatsapp",
+          "twitter"
         ]
       }
     },

@@ -21,6 +21,13 @@ interface AddressSearchFieldProps {
    * line — on, by default, since a resolved address is usually too long for one line. */
   multiline?: boolean;
   dark?: boolean;
+  /** Renders suggestions in normal flow (pushing content down) instead of floating over it. Use
+   * inside a ScrollView so the whole list can be scrolled into view - a floating dropdown extends
+   * past its parent's bounds, where it can't be scrolled to or reliably tapped. */
+  inline?: boolean;
+  /** Bias suggestions toward this position (e.g. the user's GPS fix). */
+  near?: { lat: number; lng: number };
+  onFocus?: () => void;
 }
 
 /**
@@ -38,6 +45,9 @@ export function AddressSearchField({
   placeholder,
   multiline = true,
   dark,
+  inline,
+  near,
+  onFocus,
 }: AddressSearchFieldProps) {
   const [suggestions, setSuggestions] = useState<ApiAddressSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -65,7 +75,7 @@ export function AddressSearchField({
     const id = ++requestIdRef.current;
     const timer = setTimeout(async () => {
       try {
-        const results = await searchAddress(query);
+        const results = await searchAddress(query, near);
         if (requestIdRef.current === id) setSuggestions(results);
       } catch {
         if (requestIdRef.current === id) setSuggestions([]);
@@ -106,7 +116,10 @@ export function AddressSearchField({
           onChangeText={onChangeText}
           placeholder={placeholder}
           multiline={multiline}
-          onFocus={() => setFocused(true)}
+          onFocus={() => {
+            setFocused(true);
+            onFocus?.();
+          }}
           // A tap on a suggestion fires after this blur — delay hiding the list long enough for
           // that press to land, or the list would vanish out from under the tap first.
           onBlur={() => setTimeout(() => setFocused(false), 150)}
@@ -114,7 +127,7 @@ export function AddressSearchField({
       </FormFieldShell>
 
       {focused && suggestions.length > 0 && (
-        <View style={[styles.dropdown, dark && styles.dropdownDark]}>
+        <View style={[styles.dropdown, inline && styles.dropdownInline, dark && styles.dropdownDark]}>
           {suggestions.map((suggestion, index) => (
             <TouchableOpacity
               key={`${suggestion.lat},${suggestion.lng}`}
@@ -152,6 +165,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     zIndex: 30,
   },
+  dropdownInline: { position: 'relative', top: undefined },
   dropdownDark: { backgroundColor: COLORS.nightSky, borderColor: 'rgba(255,255,255,0.25)' },
   suggestionRow: { paddingHorizontal: 14, paddingVertical: 10 },
   suggestionDivider: { borderTopWidth: 1, borderTopColor: 'rgba(139, 107, 71, 0.15)' },
