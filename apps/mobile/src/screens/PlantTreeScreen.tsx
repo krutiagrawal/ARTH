@@ -327,7 +327,7 @@ function SuccessAnimation({ treeName, xpEarned, publicId, speciesName, speciesEm
   );
 }
 
-export function PlantTreeScreen({ navigation, route }: any) {
+export function PlantTreeScreen({ navigation, route, onNavigateTab }: any) {
   const verifiedLat: number | undefined = route?.params?.verifiedLat;
   const verifiedLng: number | undefined = route?.params?.verifiedLng;
   const isPreVerified = verifiedLat != null && verifiedLng != null;
@@ -624,8 +624,11 @@ export function PlantTreeScreen({ navigation, route }: any) {
   const handleDone = useCallback(() => {
     if (navigation.canGoBack()) {
       navigation.goBack();
+    } else {
+      // Opened as the Plant tab (nothing to go back to): "View My Forest" switches to the Forest tab.
+      onNavigateTab?.('Forest');
     }
-  }, [navigation]);
+  }, [navigation, onNavigateTab]);
 
   return (
     <View style={styles.container}>

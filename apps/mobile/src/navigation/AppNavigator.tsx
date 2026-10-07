@@ -540,7 +540,7 @@ function MainApp({ navigation }: any) {
       case 'Forest':
         return <ForestScreen navigation={navigation} />;
       case 'Plant':
-        return <PlantTreeScreen navigation={navigation} />;
+        return <PlantTreeScreen navigation={navigation} onNavigateTab={setActiveTab} />;
       case 'Map':
         return (
           <MapErrorBoundary>
