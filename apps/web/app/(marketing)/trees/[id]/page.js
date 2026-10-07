@@ -30,14 +30,14 @@ export default async function App({ params }) {
           <Link href="/explore" className="mb-6 inline-flex items-center gap-2 text-sm opacity-80 hover:opacity-100"><ArrowLeft className="h-4 w-4" /> Back</Link>
           <p className="text-xs uppercase tracking-[0.22em] text-primary">Legacy tree</p>
           <h1 className="font-serif text-6xl md:text-8xl leading-[0.95] mt-3 text-balance">{t.name}</h1>
-          <p className="mt-6 max-w-2xl font-serif italic text-2xl leading-snug text-background/85">&ldquo;{t.quote}&rdquo;</p>
+          <p className="mt-6 max-w-2xl font-serif text-2xl leading-snug text-background/85">&ldquo;{t.quote}&rdquo;</p>
         </div>
       </section>
 
       <section className="container -mt-6 relative z-10 max-w-4xl">
         <div className="rounded-3xl border border-border/70 bg-card p-6 md:p-8 grid grid-cols-2 md:grid-cols-4 gap-6 soft-shadow">
           <div><div className="text-xs uppercase tracking-widest text-muted-foreground">Owner</div><div className="font-serif text-2xl mt-1">{t.owner}</div></div>
-          <div><div className="text-xs uppercase tracking-widest text-muted-foreground">Species</div><div className="font-serif text-xl mt-1 italic">{t.species}</div></div>
+          <div><div className="text-xs uppercase tracking-widest text-muted-foreground">Species</div><div className="font-serif text-xl mt-1">{t.species}</div></div>
           <div><div className="text-xs uppercase tracking-widest text-muted-foreground">Years alive</div><div className="font-serif text-2xl mt-1">{t.years}</div></div>
           <div><div className="text-xs uppercase tracking-widest text-muted-foreground">Location</div><div className="font-serif text-xl mt-1">{t.location}</div></div>
         </div>

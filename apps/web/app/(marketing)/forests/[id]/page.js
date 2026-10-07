@@ -54,7 +54,7 @@ export default async function App({ params }) {
             <p className="eyebrow flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{forest.location} · Field dispatch</p>
             <h1 className="font-serif text-5xl md:text-6xl leading-[1.02] mt-3">{forest.name}</h1>
 
-            <p className="mt-8 font-serif italic text-2xl md:text-3xl leading-snug text-foreground border-l-2 border-primary pl-5">
+            <p className="mt-8 font-serif text-2xl md:text-3xl leading-snug text-foreground border-l-2 border-primary pl-5">
               &ldquo;{forest.story}&rdquo;
             </p>
 

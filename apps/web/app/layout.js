@@ -1,5 +1,12 @@
 import './globals.css'
+import { Bricolage_Grotesque, Figtree } from 'next/font/google'
 import { Providers } from './providers'
+
+// Same pairing as the mobile app: Bricolage Grotesque for headings, Figtree for everything else.
+// next/font self-hosts them at build time and exposes CSS variables used by globals.css and the
+// Tailwind `font-sans` / `font-serif` families (kept as `font-serif` so existing classes still work).
+const fontDisplay = Bricolage_Grotesque({ subsets: ['latin'], variable: '--font-display', display: 'swap' })
+const fontBody = Figtree({ subsets: ['latin'], style: ['normal', 'italic'], variable: '--font-body', display: 'swap' })
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 const DEFAULT_TITLE = 'ARTH – Leave More Than Footprints.'
@@ -24,7 +31,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={`${fontDisplay.variable} ${fontBody.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{__html:'window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);'}} />
       </head>

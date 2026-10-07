@@ -17,6 +17,13 @@ module.exports = {
         }
       },
       extend: {
+        // Bound to the next/font variables set in app/layout.js. `serif` is kept as the name for
+        // the heading face so the ~135 existing `font-serif` usages pick up Bricolage Grotesque.
+        fontFamily: {
+          sans: ['var(--font-body)', 'system-ui', 'sans-serif'],
+          serif: ['var(--font-display)', 'system-ui', 'sans-serif'],
+          display: ['var(--font-display)', 'system-ui', 'sans-serif'],
+        },
         colors: {
           border: 'hsl(var(--border))',
           input: 'hsl(var(--input))',

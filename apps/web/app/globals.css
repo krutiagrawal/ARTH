@@ -96,13 +96,12 @@
   body {
     @apply bg-background text-foreground;
     overflow-x: hidden;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: var(--font-body), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    font-feature-settings: 'ss01', 'cv11';
   }
   h1, h2, h3, h4, h5, .font-serif {
-    font-family: 'Fraunces', ui-serif, Georgia, serif;
+    font-family: var(--font-display), system-ui, sans-serif;
     font-optical-sizing: auto;
     letter-spacing: -0.02em;
   }
@@ -116,8 +115,9 @@
   .bg-olive { background-color: hsl(var(--olive)); }
   .text-earth { color: hsl(var(--accent)); }
   .bg-earth { background-color: hsl(var(--accent)); }
-  .display { font-family: 'Fraunces', serif; font-weight: 300; letter-spacing: -0.035em; line-height: 0.92; }
-  .display em { font-style: italic; font-weight: 400; }
+  .display { font-family: var(--font-display), system-ui, sans-serif; font-weight: 600; letter-spacing: -0.03em; line-height: 0.98; }
+  /* Bricolage Grotesque has no italic, so emphasis is carried by weight rather than a faux slant. */
+  .display em { font-style: normal; font-weight: 800; }
   .eyebrow { font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
   .paper-grain {
     background-image:
