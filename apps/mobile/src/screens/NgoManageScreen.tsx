@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { FONTS } from '../constants/typography';
+import { FONTS, TEXT } from '../constants/typography';
 import { RADIUS } from '../constants/theme';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { LeafBranch } from '../components/common/LeafBranch';
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingBottom: 8 },
   backButton: { width: 32, height: 32, justifyContent: 'center', marginBottom: 4 },
   backIcon: { fontSize: 22, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { fontFamily: FONTS.displayBold, fontSize: 28, lineHeight: 37, color: COLORS.textPrimary },
+  headerTitle: { ...TEXT.title, color: COLORS.textPrimary },
   // The nested span needs the family repeated: the global font patch treats every <Text> on its
   // own, so a child that only sets a color would otherwise drop back to the body face mid-word.
   headerTitleAccent: { fontFamily: FONTS.displayBold, color: COLORS.forest },

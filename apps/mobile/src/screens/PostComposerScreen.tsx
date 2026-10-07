@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { FONTS } from '../constants/typography';
+import { FONTS, TEXT } from '../constants/typography';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
@@ -275,9 +275,7 @@ const styles = StyleSheet.create({
   },
   warningText: { fontSize: 12, lineHeight: 18, color: COLORS.textSecondary },
   label: {
-    fontFamily: FONTS.display,
-    fontSize: 15,
-    lineHeight: 20,
+    ...TEXT.heading,
     color: COLORS.textPrimary,
     marginTop: 16,
   },

@@ -5,6 +5,7 @@ import { COLORS, ON_DARK_SURFACE, ON_LIGHT_SURFACE } from '../../constants/color
 import { RADIUS, SPACING } from '../../constants/theme';
 import type { WeeklyStreakWeek } from '../../api/nurseryReputation';
 
+import { TEXT } from '../../constants/typography';
 interface ContributionStreakCardProps {
   icon: string;
   title: string;
@@ -70,7 +71,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 15, fontWeight: '700' },
   subtitle: { fontSize: 12, marginTop: 2 },
   statsRow: { flexDirection: 'row', gap: 28 },
-  statValue: { fontSize: 24, fontWeight: '900' },
+  statValue: { ...TEXT.statSmall, fontSize: 24 },
   statLabel: { fontSize: 11, marginTop: 2 },
   dotsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 2 },
   dot: { width: 10, height: 10, borderRadius: 5 },

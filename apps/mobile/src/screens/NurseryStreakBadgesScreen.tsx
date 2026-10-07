@@ -16,6 +16,7 @@ import { useNurseryReputation, useNurseryBadges } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { ApiAchievement } from '../api/achievements';
 
+import { TEXT } from '../constants/typography';
 export function NurseryStreakBadgesScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { data: reputation, refetch: refetchReputation } = useNurseryReputation(12);
@@ -154,12 +155,11 @@ const styles = StyleSheet.create({
   },
   dismissText: { fontSize: 13, color: COLORS.white, fontWeight: '700' },
   mascotSection: { alignItems: 'center', marginTop: 4 },
-  title: { fontSize: 26, fontWeight: '800', color: COLORS.textPrimary, textAlign: 'center', letterSpacing: -0.5 },
+  title: { ...TEXT.title, color: COLORS.textPrimary, textAlign: 'center' },
   subtitle: { fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 20, marginTop: -6 },
   card: { gap: 8 },
   growthRow: { gap: 6 },
   growthProgressText: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
   streaksWrap: { gap: 12 },
   badgesWrap: { marginTop: 8, gap: 8 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: COLORS.textPrimary, marginLeft: 4 },
-});
+  sectionTitle: { ...TEXT.heading, color: COLORS.textPrimary, marginLeft: 4 } });

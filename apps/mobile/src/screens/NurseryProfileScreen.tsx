@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { FONTS } from '../constants/typography';
+import { FONTS, TEXT } from '../constants/typography';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { LocationActions } from '../components/common/LocationActions';
@@ -400,9 +400,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   growthLevelValue: {
     textAlign: 'center',
-    fontFamily: FONTS.display,
-    fontSize: 13,
-    lineHeight: 18,
+    ...TEXT.heading,
     color: COLORS.textPrimary,
   },
   growthLevelEmoji: {
@@ -446,9 +444,9 @@ const styles = StyleSheet.create({
   aboutText: { fontSize: 13, color: COLORS.textSecondary, flex: 1 },
   tabBody: { paddingHorizontal: 16, paddingTop: 16 },
   contributionsCard: { gap: 12 },
-  contributionsTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
+  contributionsTitle: { ...TEXT.subheading, color: COLORS.textPrimary },
   contributionsRow: { flexDirection: 'row', justifyContent: 'space-around' },
   contributionsStat: { alignItems: 'center' },
-  contributionsNum: { fontSize: 22, fontWeight: '800', color: COLORS.textPrimary },
+  contributionsNum: { ...TEXT.statSmall, fontSize: 22, color: COLORS.textPrimary },
   contributionsLabel: { fontSize: 10, color: COLORS.textSecondary, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.4 },
 });

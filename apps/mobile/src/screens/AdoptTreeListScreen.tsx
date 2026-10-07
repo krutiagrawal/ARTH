@@ -12,6 +12,7 @@ import { useAdoptableTrees } from '../hooks/useApiQueries';
 import { useHaptics } from '../hooks/useHaptics';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
+import { TEXT } from '../constants/typography';
 export function AdoptTreeListScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { selection } = useHaptics();
@@ -82,12 +83,12 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
   loader: { marginTop: 40 },
   card: { marginBottom: 12 },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardTitle: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary },
+  cardTitle: { ...TEXT.subheading, color: COLORS.textPrimary },
   adoptedBadge: { backgroundColor: COLORS.sand, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
   adoptedBadgeText: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted },
   cardSubtitle: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },

@@ -19,6 +19,7 @@ import { ApiError } from '../api/client';
 import type { ApiDeliveryQueueItem } from '../api/deliveryPartnerApp';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
+import { TEXT } from '../constants/typography';
 // This screen must never import react-native-maps directly — Metro evaluates the whole package
 // on import, including its native MapView binding, which has no native module in Expo Go on
 // Android. React.lazy() defers that import until the map component actually mounts, and
@@ -251,9 +252,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(139, 107, 71, 0.30)',
     padding: 12,
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: 4,
+    ...TEXT.heading,
     textAlign: 'center',
     color: COLORS.textPrimary,
     marginBottom: 8,

@@ -14,6 +14,7 @@ import { STATUS_META } from '../constants/treeHealth';
 import { formatMeters } from '../utils/geo';
 import type { ApiNearbyTree } from '../api/trees';
 
+import { TEXT } from '../constants/typography';
 const GRID_GAP = 12;
 
 // Flat outlined tile (no fill / glass) — same brown-outline language as My Trees.
@@ -101,9 +102,9 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
-  count: { fontSize: 22, fontWeight: '800', color: COLORS.textPrimary, marginTop: 4 },
+  count: { ...TEXT.statSmall, fontSize: 22, color: COLORS.textPrimary, marginTop: 4 },
   subtitle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2, marginBottom: 16 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
   tile: { width: '48%', flexGrow: 1, padding: 10, gap: 4, borderRadius: 20, borderWidth: 1.5, borderColor: COLORS.warmBrown, backgroundColor: 'transparent' },

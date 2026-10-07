@@ -16,6 +16,7 @@ import { useSlideUp } from '../hooks/useAnimations';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { formatDueDate } from '../constants/treeHealth';
 
+import { TEXT } from '../constants/typography';
 function FadeInRow({ delay, children }: { delay: number; children: React.ReactNode }) {
   const animStyle = useSlideUp(delay, 18);
   return <Animated.View style={animStyle}>{children}</Animated.View>;
@@ -103,7 +104,7 @@ const styles = StyleSheet.create({
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
   addIcon: { fontSize: 20, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   statsBar: { paddingHorizontal: 20, paddingBottom: 10 },
   statsBarText: { fontSize: 11, color: COLORS.textSecondary },
   scrollContent: { paddingHorizontal: 20 },

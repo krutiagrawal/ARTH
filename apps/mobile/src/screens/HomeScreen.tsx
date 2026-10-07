@@ -22,6 +22,7 @@ import {
 } from '../hooks/useAnimations';
 import { useTimeTheme, isNightlikePeriod, type TimeTheme, type TimePeriod } from '../hooks/useTimeTheme';
 import { MuteButton } from '../components/common/MuteButton';
+import { NotificationBell } from '../components/social/NotificationBell';
 import { AmbientCreatures } from '../components/common/AmbientCreatures';
 import { TreeCard } from '../components/common/TreeCard';
 import { Sheet } from '../components/common/Sheet';
@@ -40,6 +41,7 @@ import { getHeroSeamColor } from '../utils/heroSeam';
 import { StoriesTray } from '../components/stories/StoriesTray';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
+import { TEXT } from '../constants/typography';
 const { width: SW, height: SH } = Dimensions.get('window');
 /** How tall the illustrated hero section is — sky/hills/lake (or the real illustration image)
  * plus the header text and stat row that sit on top of it. A normal-flow block, not a fixed
@@ -148,7 +150,8 @@ function HeroSection({
           )}
         </View>
         <View style={styles.headerRight}>
-          <MuteButton style={styles.muteInHeader} glass />
+          <MuteButton style={styles.muteInHeader} bare />
+          <NotificationBell onPress={() => navigation.navigate('Notifications')} />
           <TouchableOpacity style={styles.avatarButton} onPress={() => navigation.navigate('Profile')}>
             <LinearGradient
               colors={[COLORS.sageLight, COLORS.forest]}
@@ -726,9 +729,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
   userName: {
-    fontSize: 22,
-    fontWeight: '700',
-    letterSpacing: -0.3,
+    ...TEXT.heading,
     textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 5,
@@ -755,7 +756,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   muteInHeader: {
-    // positioned inline in the header row
+    // The bare mute icon sits in a 44dp box (13dp of empty space each side of the 18dp glyph),
+    // while the bell's box leaves only ~9dp. Pulling the mute box in by 13dp makes the
+    // sound->bell gap match the bell->avatar gap by eye.
+    marginRight: -13,
   },
   avatarButton: {
     position: 'relative',
@@ -842,8 +846,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   forestStatNum: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...TEXT.statSmall, fontSize: 16,
     color: COLORS.forestDeep,
   },
   forestStatLabel: {
@@ -888,8 +891,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   growCtaTitle: {
-    fontSize: 17,
-    fontWeight: '700',
+    ...TEXT.button,
     color: COLORS.white,
   },
   growCtaSubtitle: {
@@ -949,8 +951,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   xpLevel: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...TEXT.statSmall, fontSize: 16,
     color: COLORS.amberLight,
   },
   xpSubLabel: {
@@ -988,8 +989,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...TEXT.heading,
     color: COLORS.white,
     textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 0, height: 1 },
@@ -1027,8 +1027,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   missionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    ...TEXT.heading,
     color: COLORS.white,
   },
   missionList: {

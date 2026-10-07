@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { FONTS } from '../constants/typography';
+import { FONTS, TEXT } from '../constants/typography';
 import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { IconBadge } from '../components/common/IconBadge';
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 20 },
   leaf: { right: -18 },
-  title: { fontFamily: FONTS.displayBold, fontSize: 32, lineHeight: 42, color: COLORS.textPrimary },
+  title: { ...TEXT.title, color: COLORS.textPrimary },
   subtitle: { fontSize: 13, color: COLORS.textSecondary, marginTop: 4, marginBottom: 22 },
 
   // Taller than the old rows and borderless (the `warm` variant no longer draws one), so each
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   card: { marginBottom: 14 },
   cardRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 18, paddingHorizontal: 16 },
   cardTextColumn: { flex: 1 },
-  cardTitle: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary },
+  cardTitle: { ...TEXT.subheading, color: COLORS.textPrimary },
   cardBody: { fontSize: 13, color: COLORS.textSecondary, marginTop: 3 },
   chevron: { fontSize: 24, color: COLORS.textMuted, fontWeight: '400' },
 

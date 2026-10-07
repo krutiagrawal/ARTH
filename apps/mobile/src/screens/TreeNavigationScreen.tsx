@@ -10,6 +10,7 @@ import { useLiveDistance } from '../hooks/useLiveDistance';
 import { formatMeters, haversineMeters, type LatLng } from '../utils/geo';
 import { buildLeafletHtml } from '../utils/leafletMapHtml';
 
+import { TEXT } from '../constants/typography';
 // Mirrors the server's strict observation radius (plantingLocation.service.ts) — the "Send
 // update" button only appears once the user is this close; the server re-checks it regardless.
 const ARRIVED_RADIUS_M = 15;
@@ -148,7 +149,7 @@ const styles = StyleSheet.create({
   backIcon: { fontSize: 24, fontWeight: '700', color: COLORS.textPrimary },
   panel: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 16, borderTopLeftRadius: RADIUS.lg, borderTopRightRadius: RADIUS.lg, backgroundColor: 'rgba(255,248,237,0.96)', gap: 6 },
   panelSpecies: { fontSize: 13, fontWeight: '700', color: COLORS.textSecondary },
-  distance: { fontSize: 34, fontWeight: '800', color: COLORS.forest },
+  distance: { ...TEXT.title, color: COLORS.forest },
   panelHint: { fontSize: 12, color: COLORS.textSecondary },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   sendButton: { marginTop: 8, alignItems: 'center', paddingVertical: 13, borderRadius: RADIUS.md, backgroundColor: COLORS.forest },

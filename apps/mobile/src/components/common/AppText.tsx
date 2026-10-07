@@ -10,7 +10,7 @@ import { BODY_FACE_BY_WEIGHT, FONTS } from '../../constants/typography';
 import { ms } from '../../utils/responsive';
 
 /**
- * Drop-in replacements for React Native's `Text` and `TextInput` that default to Nunito Sans.
+ * Drop-in replacements for React Native's `Text` and `TextInput` that default to Figtree.
  *
  * React Native has no global font setting. The usual workarounds don't apply here: `defaultProps`
  * was removed in React 19, and RN 0.81 defines `Text`/`TextInput` as plain function components
@@ -23,11 +23,11 @@ import { ms } from '../../utils/responsive';
  *
  * Two rules, both load-bearing:
  *  - A style that already names a `fontFamily` is passed through untouched. That's how the
- *    Baloo 2 display styles (`FONTS.display`) keep their rounded face, and how a nested `<Text>` span
+ *    Bricolage Grotesque display styles (`FONTS.display`) keep their rounded face, and how a nested `<Text>` span
  *    can opt into inheriting its parent's face.
  *  - `fontWeight` is cleared whenever a face is applied. A named face already encodes its weight,
  *    and Android honours one or the other rather than combining them — pairing
- *    `NunitoSans_700Bold` with `fontWeight: '700'` can actually render *lighter* than the face
+ *    `Figtree_700Bold` with `fontWeight: '700'` can actually render *lighter* than the face
  *    alone.
  */
 

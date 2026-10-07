@@ -12,6 +12,7 @@ import { StreakCalendar } from '../components/common/StreakCalendar';
 import { useGroupProfile, useGroupStreakCalendar } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
+import { TEXT } from '../constants/typography';
 export function GroupStreakScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { data: profile, refetch: refetchProfile } = useGroupProfile();
@@ -91,14 +92,14 @@ const styles = StyleSheet.create({
   dismissButton: { padding: 8, marginLeft: -8 },
   dismissText: { fontSize: 14, color: COLORS.white, fontWeight: '600' },
   mascotSection: { alignItems: 'center', marginTop: 4 },
-  title: { fontSize: 26, fontWeight: '800', color: COLORS.white, textAlign: 'center', letterSpacing: -0.5 },
+  title: { ...TEXT.title, color: COLORS.white, textAlign: 'center' },
   subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.85)', textAlign: 'center', lineHeight: 20, marginTop: -6 },
   streakCountContainer: { ...SHADOWS.golden },
   streakCountGradient: { borderRadius: RADIUS.xxl, padding: 24, flexDirection: 'row', alignItems: 'center', gap: 16 },
   heartEmoji: { fontSize: 48 },
   streakCountContent: { flex: 1 },
-  streakCountNum: { fontSize: 52, fontWeight: '900', color: COLORS.white, lineHeight: 58, letterSpacing: -2 },
-  streakCountLabel: { fontSize: 16, fontWeight: '700', color: COLORS.white },
+  streakCountNum: { ...TEXT.stat, fontSize: 52, lineHeight: 58, color: COLORS.white },
+  streakCountLabel: { ...TEXT.statSmall, fontSize: 16, color: COLORS.white },
   recordCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
   recordIcon: { fontSize: 28 },
   recordTitle: { fontSize: 13, color: COLORS.white, fontWeight: '500' },

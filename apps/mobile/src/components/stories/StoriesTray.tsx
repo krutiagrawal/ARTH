@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { Text } from '../common/AppText';
 import { COLORS } from '../../constants/colors';
-import { FONTS } from '../../constants/typography';
+import { FONTS, TEXT } from '../../constants/typography';
 import { useStoryFeed } from '../../hooks/useApiQueries';
 import { useMarkStoryViewed } from '../../hooks/useSocialQueries';
 import { resolveMediaUrl } from '../../api/client';
@@ -88,9 +88,7 @@ export function StoriesTray({ title = "Today's stories", tone = 'onDark' }: Stor
 const styles = StyleSheet.create({
   wrap: { marginBottom: 8 },
   title: {
-    fontFamily: FONTS.display,
-    fontSize: 17,
-    lineHeight: 23,
+    ...TEXT.heading,
     color: COLORS.white,
     marginBottom: 10,
   },

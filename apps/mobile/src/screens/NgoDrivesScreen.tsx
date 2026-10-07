@@ -3,7 +3,7 @@ import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicato
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { COLORS } from '../constants/colors';
-import { FONTS } from '../constants/typography';
+import { FONTS, TEXT } from '../constants/typography';
 
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 12 },
   loader: { marginTop: 40 },
-  sectionTitle: { fontFamily: FONTS.display, fontSize: 17, lineHeight: 23, color: COLORS.textPrimary, marginBottom: 12 },
+  sectionTitle: { ...TEXT.heading, color: COLORS.textPrimary, marginBottom: 12 },
 
   card: { marginBottom: 16, borderRadius: 20 },
   cardInner: { flexDirection: 'row', gap: 14, padding: 12 },
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
 
   cardBody: { flex: 1, justifyContent: 'space-between', paddingVertical: 2 },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  cardTitle: { flex: 1, fontFamily: FONTS.display, fontSize: 18, lineHeight: 24, color: COLORS.textPrimary },
+  cardTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary },
 
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
   metaIcon: { fontSize: 12 },

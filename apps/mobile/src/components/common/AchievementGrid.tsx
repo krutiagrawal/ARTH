@@ -5,7 +5,7 @@ import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
 import { RADIUS, SPACING } from '../../constants/theme';
-import { TYPOGRAPHY } from '../../constants/typography';
+import { TYPOGRAPHY, TEXT } from '../../constants/typography';
 import { Sheet } from './Sheet';
 import { AnimatedButton } from './AnimatedButton';
 import { ShareCardModal } from './ShareCardModal';
@@ -178,8 +178,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionTitleDark: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...TEXT.heading,
     color: COLORS.textPrimary,
   },
   seeAllDark: {

@@ -16,6 +16,7 @@ import { PageFooter } from '../components/common/PageFooter';
 import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import { resolveMediaUrl } from '../api/client';
 
+import { TEXT } from '../constants/typography';
 export function AdminTreeReviewScreen() {
   const insets = useSafeAreaInsets();
   const bottomClearance = useBottomNavClearance();
@@ -92,7 +93,7 @@ export function AdminTreeReviewScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingHorizontal: 20, paddingBottom: 12 },
-  headerTitle: { fontSize: 22, fontWeight: '700', color: ON_DARK_SURFACE.primary },
+  headerTitle: { ...TEXT.heading, color: ON_DARK_SURFACE.primary },
   headerSubtitle: { fontSize: 12, color: ON_DARK_SURFACE.secondary, marginTop: 6, lineHeight: 17 },
   scrollContent: { paddingHorizontal: 20 },
   loader: { marginTop: 40 },

@@ -19,6 +19,7 @@ import { STATUS_META, ACTIONABLE_STATUSES } from '../constants/treeHealth';
 import type { TreePassport, PassportTimelineEntry } from '../api/trees';
 import { formatKg, formatTreeAge } from '../utils/impact';
 
+import { TEXT } from '../constants/typography';
 // Caps the per-row stagger so a long timeline still finishes revealing quickly rather than
 // crawling in one row at a time.
 const MAX_TIMELINE_STAGGER_MS = 300;
@@ -451,7 +452,7 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
 
   hero: { width: '100%', height: 300, borderRadius: RADIUS.lg, overflow: 'hidden', marginBottom: 14 },
@@ -464,7 +465,7 @@ const styles = StyleSheet.create({
   heroBadgeText: { fontSize: 11, fontWeight: '800', color: COLORS.white },
   heroTextBlock: { position: 'absolute', left: 18, right: 18, bottom: 16 },
   heroSpecies: { fontSize: 13, color: COLORS.mint, fontWeight: '700' },
-  heroName: { fontSize: 28, fontWeight: '800', color: COLORS.white, marginTop: 2 },
+  heroName: { ...TEXT.title, color: COLORS.white, marginTop: 2 },
   publicIdChip: { alignSelf: 'flex-start', marginTop: 8, paddingVertical: 4, paddingHorizontal: 12, borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.35)', borderWidth: 1, borderColor: COLORS.sageLight },
   publicIdChipText: { fontSize: 12, fontWeight: '700', color: COLORS.mint, letterSpacing: 0.8 },
 
@@ -482,7 +483,7 @@ const styles = StyleSheet.create({
   checkInHintWarn: { color: COLORS.danger, fontWeight: '700' },
 
   memorialCard: { borderRadius: RADIUS.lg, padding: 16, marginBottom: 22, gap: 10, backgroundColor: 'rgba(110,99,85,0.14)', borderWidth: 1.5, borderColor: 'rgba(110,99,85,0.4)' },
-  memorialTitle: { fontSize: 16, fontWeight: '800', color: COLORS.textPrimary },
+  memorialTitle: { ...TEXT.subheading, color: COLORS.textPrimary },
   memorialBody: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 19 },
   memorialButton: { alignSelf: 'flex-start', paddingVertical: 10, paddingHorizontal: 16, borderRadius: RADIUS.md, backgroundColor: COLORS.forest },
   memorialButtonText: { fontSize: 13, fontWeight: '800', color: COLORS.mint },
@@ -497,7 +498,7 @@ const styles = StyleSheet.create({
   tileIcon: { fontSize: 24 },
   tileLabel: { fontSize: 10, fontWeight: '800', color: COLORS.textSecondary, letterSpacing: 0.8, textTransform: 'uppercase', marginTop: 8 },
   tileValue: { fontSize: 14, fontWeight: '800', color: COLORS.textPrimary, marginTop: 2 },
-  tileValueBig: { fontSize: 22, color: COLORS.forest },
+  tileValueBig: { ...TEXT.statSmall, fontSize: 22, color: COLORS.forest },
 
   emptyTimeline: { fontSize: 12, color: COLORS.textSecondary },
   timelineItem: { flexDirection: 'row', gap: 10 },
@@ -509,7 +510,7 @@ const styles = StyleSheet.create({
   timelinePhoto: { width: '100%', height: 140, borderRadius: RADIUS.md, marginTop: 8 },
   findBar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 22, padding: 12, borderRadius: RADIUS.lg, backgroundColor: 'rgba(120,170,210,0.18)', borderWidth: 1.5, borderColor: 'rgba(120,170,210,0.45)' },
   findBarCaption: { fontSize: 10, fontWeight: '800', color: COLORS.textSecondary, letterSpacing: 1 },
-  findBarDistance: { fontSize: 18, fontWeight: '800', color: COLORS.forest },
+  findBarDistance: { ...TEXT.subheading, color: COLORS.forest },
   findBarButton: { paddingVertical: 9, paddingHorizontal: 12, borderRadius: RADIUS.full, backgroundColor: COLORS.forest },
   findBarButtonAlt: { backgroundColor: COLORS.sageDark },
   findBarButtonText: { fontSize: 12, fontWeight: '800', color: COLORS.mint },

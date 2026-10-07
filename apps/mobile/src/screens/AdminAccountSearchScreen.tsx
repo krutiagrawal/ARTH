@@ -20,6 +20,7 @@ import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import { ApiError } from '../api/client';
 import type { AdminAccountType, ApiAdminAccount } from '../api/admin';
 
+import { TEXT } from '../constants/typography';
 const TYPE_FILTERS: { key: AdminAccountType | ''; label: string }[] = [
   { key: '', label: 'All' },
   { key: 'user', label: 'Users' },
@@ -210,7 +211,7 @@ export function AdminAccountSearchScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingHorizontal: 20, paddingBottom: 12 },
-  headerTitle: { fontSize: 22, fontWeight: '700', color: ON_DARK_SURFACE.primary },
+  headerTitle: { ...TEXT.heading, color: ON_DARK_SURFACE.primary },
   filterBar: { paddingHorizontal: 20, marginBottom: 8, gap: 10 },
   searchInput: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: RADIUS.md, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: ON_DARK_SURFACE.primary },
   chipRow: { gap: 8, paddingRight: 20 },
@@ -222,7 +223,7 @@ const styles = StyleSheet.create({
   loader: { marginTop: 40 },
   card: { marginBottom: 12 },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  cardTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: ON_DARK_SURFACE.primary },
+  cardTitle: { flex: 1,...TEXT.subheading, color: ON_DARK_SURFACE.primary },
   statusChip: { borderWidth: 1, borderRadius: RADIUS.full, paddingHorizontal: 10, paddingVertical: 3 },
   statusChipText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   cardMeta: { fontSize: 12, color: ON_DARK_SURFACE.secondary, marginTop: 6 },

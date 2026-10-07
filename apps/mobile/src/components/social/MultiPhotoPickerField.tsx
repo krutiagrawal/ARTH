@@ -4,7 +4,7 @@ import { Text } from '../common/AppText';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS } from '../../constants/colors';
 import { RADIUS, SPACING } from '../../constants/theme';
-import { FONTS } from '../../constants/typography';
+import { FONTS, TEXT } from '../../constants/typography';
 import { useHaptics } from '../../hooks/useHaptics';
 import { useConfirm } from '../../context/ConfirmDialogContext';
 import { assetToPhoto, usePhotoPreviewUri, type PickedPhoto } from '../common/PhotoPickerField';
@@ -178,7 +178,7 @@ const THUMB = 92;
 const styles = StyleSheet.create({
   wrap: { marginTop: 6, gap: 10 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  label: { fontFamily: FONTS.display, fontSize: 16, lineHeight: 22, color: COLORS.textPrimary },
+  label: { ...TEXT.heading, color: COLORS.textPrimary },
   counter: { fontSize: 12, fontWeight: '700', color: COLORS.textMuted },
   strip: { gap: 10, paddingRight: 4 },
   thumbWrap: {
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   },
   moveBtn: { flex: 1, alignItems: 'center', paddingVertical: 3 },
   moveBtnDisabled: { opacity: 0.25 },
-  moveText: { color: COLORS.white, fontSize: 16, fontWeight: '800', lineHeight: 18 },
+  moveText: { color: COLORS.white,...TEXT.subheading, },
   actions: { flexDirection: 'row', gap: 10 },
   action: {
     flex: 1,

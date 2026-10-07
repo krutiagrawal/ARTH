@@ -16,6 +16,7 @@ import { ApiError } from '../api/client';
 import type { ApiOrderItem, OrderFulfillmentType, OrderStatus } from '../api/orders';
 import { SUNLIGHT_LABEL, WATER_LABEL } from '../constants/plantingGuide';
 
+import { TEXT } from '../constants/typography';
 // This screen must never import react-native-maps directly (or anything re-exported from it,
 // like AnimatedRegion) — Metro evaluates the whole package on import, including its native
 // MapView binding, which has no native module in Expo Go on Android. React.lazy() defers that
@@ -335,7 +336,7 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
   timeline: { flexDirection: 'row', marginBottom: 20, marginTop: 8 },
   timelineStep: { flex: 1, alignItems: 'center' },
@@ -347,17 +348,17 @@ const styles = StyleSheet.create({
   timelineLineDone: { backgroundColor: COLORS.forest },
   mapPlaceholder: { height: 180, borderRadius: RADIUS.lg, marginBottom: 16 },
   otpLabel: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
-  otpValue: { fontSize: 28, fontWeight: '800', color: COLORS.textPrimary, letterSpacing: 6, marginTop: 4 },
+  otpValue: { ...TEXT.stat, fontSize: 28, color: COLORS.textPrimary,marginTop: 4 },
   callButton: { marginBottom: 12, padding: 14, borderRadius: RADIUS.lg, backgroundColor: 'rgba(94,133,80,0.1)', alignItems: 'center' },
   callButtonText: { fontSize: 14, fontWeight: '700', color: COLORS.forest },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, marginTop: 12, marginBottom: 8 },
+  sectionTitle: { ...TEXT.subheading, color: COLORS.textPrimary, marginTop: 12, marginBottom: 8 },
   card: { marginBottom: 16 },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
   summaryLabel: { fontSize: 13, color: COLORS.textSecondary },
   summaryValue: { fontSize: 13, color: COLORS.textPrimary, fontWeight: '600' },
   divider: { height: 1, backgroundColor: 'rgba(94,133,80,0.15)', marginVertical: 8 },
   totalLabel: { fontSize: 15, color: COLORS.textPrimary, fontWeight: '700' },
-  totalValue: { fontSize: 17, color: COLORS.textPrimary, fontWeight: '800' },
+  totalValue: { ...TEXT.statSmall, fontSize: 17, color: COLORS.textPrimary },
   addressText: { fontSize: 13, lineHeight: 19, color: COLORS.textPrimary },
   guideHeading: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 6 },
   guideLine: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 20 },

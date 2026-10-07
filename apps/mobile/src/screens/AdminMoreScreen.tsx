@@ -14,6 +14,7 @@ import { useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
+import { TEXT } from '../constants/typography';
 interface MenuItem {
   emoji: string;
   title: string;
@@ -87,12 +88,12 @@ export function AdminMoreScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 20 },
-  title: { fontSize: 32, fontWeight: '800', color: ON_DARK_SURFACE.primary },
+  title: { ...TEXT.title, color: ON_DARK_SURFACE.primary },
   subtitle: { fontSize: 13, color: ON_DARK_SURFACE.secondary, marginTop: 4, marginBottom: 22 },
   card: { marginBottom: 14 },
   cardRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 18, paddingHorizontal: 16 },
   cardTextColumn: { flex: 1 },
-  cardTitle: { fontSize: 17, fontWeight: '700', color: ON_DARK_SURFACE.primary },
+  cardTitle: { ...TEXT.subheading, color: ON_DARK_SURFACE.primary },
   cardBody: { fontSize: 13, color: ON_DARK_SURFACE.secondary, marginTop: 3 },
   chevron: { fontSize: 24, color: ON_DARK_SURFACE.muted, fontWeight: '400' },
   signOutButton: { alignSelf: 'center', marginTop: 12, paddingVertical: 10, paddingHorizontal: 20, borderRadius: RADIUS.full },

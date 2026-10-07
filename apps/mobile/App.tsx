@@ -9,18 +9,17 @@ import { syncAndroidNavigationBarStyle } from './src/utils/androidNavigationBar'
 // Per-face subpath imports, not the package roots. Importing from the root pulls that package's
 // index, which requires every .ttf it ships — including all the italics we never use — and Metro
 // then bundles ~1.8 MB of dead font data.
-import { Baloo2_500Medium } from '@expo-google-fonts/baloo-2/500Medium';
-import { Baloo2_600SemiBold } from '@expo-google-fonts/baloo-2/600SemiBold';
-import { Baloo2_700Bold } from '@expo-google-fonts/baloo-2/700Bold';
-import { Baloo2_800ExtraBold } from '@expo-google-fonts/baloo-2/800ExtraBold';
-import { NunitoSans_200ExtraLight } from '@expo-google-fonts/nunito-sans/200ExtraLight';
-import { NunitoSans_300Light } from '@expo-google-fonts/nunito-sans/300Light';
-import { NunitoSans_400Regular } from '@expo-google-fonts/nunito-sans/400Regular';
-import { NunitoSans_500Medium } from '@expo-google-fonts/nunito-sans/500Medium';
-import { NunitoSans_600SemiBold } from '@expo-google-fonts/nunito-sans/600SemiBold';
-import { NunitoSans_700Bold } from '@expo-google-fonts/nunito-sans/700Bold';
-import { NunitoSans_800ExtraBold } from '@expo-google-fonts/nunito-sans/800ExtraBold';
-import { NunitoSans_900Black } from '@expo-google-fonts/nunito-sans/900Black';
+import { BricolageGrotesque_500Medium } from '@expo-google-fonts/bricolage-grotesque/500Medium';
+import { BricolageGrotesque_600SemiBold } from '@expo-google-fonts/bricolage-grotesque/600SemiBold';
+import { BricolageGrotesque_700Bold } from '@expo-google-fonts/bricolage-grotesque/700Bold';
+import { BricolageGrotesque_800ExtraBold } from '@expo-google-fonts/bricolage-grotesque/800ExtraBold';
+import { Figtree_300Light } from '@expo-google-fonts/figtree/300Light';
+import { Figtree_400Regular } from '@expo-google-fonts/figtree/400Regular';
+import { Figtree_500Medium } from '@expo-google-fonts/figtree/500Medium';
+import { Figtree_600SemiBold } from '@expo-google-fonts/figtree/600SemiBold';
+import { Figtree_700Bold } from '@expo-google-fonts/figtree/700Bold';
+import { Figtree_800ExtraBold } from '@expo-google-fonts/figtree/800ExtraBold';
+import { Figtree_900Black } from '@expo-google-fonts/figtree/900Black';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { SoundProvider } from './src/context/SoundContext';
@@ -74,22 +73,21 @@ function AppProviders({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Every face AppText can map a weight onto, plus the four Baloo 2 display faces.
+/** Every face AppText can map a weight onto, plus the four Bricolage Grotesque display faces.
  * All of them must be registered up front: a weight whose face isn't loaded silently falls back
  * to the system font, which shows up as one stray paragraph in the wrong typeface. */
 const FONT_MAP = {
-  Baloo2_500Medium,
-  Baloo2_600SemiBold,
-  Baloo2_700Bold,
-  Baloo2_800ExtraBold,
-  NunitoSans_200ExtraLight,
-  NunitoSans_300Light,
-  NunitoSans_400Regular,
-  NunitoSans_500Medium,
-  NunitoSans_600SemiBold,
-  NunitoSans_700Bold,
-  NunitoSans_800ExtraBold,
-  NunitoSans_900Black,
+  BricolageGrotesque_500Medium,
+  BricolageGrotesque_600SemiBold,
+  BricolageGrotesque_700Bold,
+  BricolageGrotesque_800ExtraBold,
+  Figtree_300Light,
+  Figtree_400Regular,
+  Figtree_500Medium,
+  Figtree_600SemiBold,
+  Figtree_700Bold,
+  Figtree_800ExtraBold,
+  Figtree_900Black,
 };
 
 export default function App() {
@@ -106,7 +104,7 @@ export default function App() {
   }, []);
 
   // No expo-splash-screen in this project, so hold on a plain cream field rather than letting
-  // the whole UI paint once in Roboto/SF and then reflow into Nunito.
+  // the whole UI paint once in Roboto/SF and then reflow into Figtree.
   if (!fontsLoaded && !fontError) {
     return <View style={[styles.root, styles.bootScreen]} />;
   }

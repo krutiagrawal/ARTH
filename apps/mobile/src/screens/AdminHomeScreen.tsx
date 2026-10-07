@@ -22,6 +22,7 @@ import { useAuth } from '../context/AuthContext';
 import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
+import { TEXT } from '../constants/typography';
 const { width: SW, height: SH } = Dimensions.get('window');
 const HERO_HEIGHT = SH * 0.4;
 /** Admin's non-hero chrome deliberately stays a fixed dark "control panel" tone regardless of
@@ -251,7 +252,7 @@ const styles = StyleSheet.create({
   heroBottomFade: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   header: { paddingHorizontal: 20, paddingBottom: 12, zIndex: 10 },
   eyebrow: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
-  title: { fontSize: 26, fontWeight: '700', marginTop: 4, textShadowColor: 'rgba(0,0,0,0.35)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 5 },
+  title: { ...TEXT.title, marginTop: 4, textShadowColor: 'rgba(0,0,0,0.35)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 5 },
   mascotSection: { paddingLeft: 8, marginBottom: 4 },
   loader: { marginTop: 40 },
   card: { marginBottom: 14 },
@@ -260,7 +261,7 @@ const styles = StyleSheet.create({
   linkCard: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 12 },
   linkEmoji: { fontSize: 26 },
   linkTextWrap: { flex: 1 },
-  linkTitle: { fontSize: 16, fontWeight: '700', color: ON_DARK_SURFACE.primary },
+  linkTitle: { ...TEXT.subheading, color: ON_DARK_SURFACE.primary },
   linkBody: { fontSize: 12, color: ON_DARK_SURFACE.secondary, marginTop: 2 },
   signOutButton: { alignSelf: 'center', marginTop: 20, paddingVertical: 10, paddingHorizontal: 20, borderRadius: RADIUS.full },
   signOutText: { fontSize: 14, color: ON_DARK_SURFACE.secondary, fontWeight: '600' },

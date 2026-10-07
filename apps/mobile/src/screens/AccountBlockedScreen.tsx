@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TouchableOpacity } from 'react-native';
 import { COLORS } from '../constants/colors';
-import { FONTS } from '../constants/typography';
+import { FONTS, TEXT } from '../constants/typography';
 import { RADIUS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   icon: { fontSize: 32 },
-  title: { fontFamily: FONTS.displayBold, fontSize: 22, color: '#fff', textAlign: 'center', lineHeight: 30 },
+  title: { ...TEXT.heading, color: '#fff', textAlign: 'center' },
   body: { fontSize: 14, color: 'rgba(255,255,255,0.75)', marginTop: 10, textAlign: 'center' },
   reason: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 8, fontStyle: 'italic', textAlign: 'center' },
   signOutButton: {

@@ -22,6 +22,7 @@ import { PRIVACY_POLICY_TEXT, TERMS_OF_SERVICE_TEXT } from '../constants/legalCo
 import { SettingsRow, SettingsSectionHeader, SettingsDivider } from '../components/common/SettingsRow';
 import { getThemeForHour, PERIOD_HOUR, type TimePeriod } from '../hooks/useTimeTheme';
 
+import { TEXT } from '../constants/typography';
 const DEFAULT_SETTINGS: ApiUserSettings = {
   haptics: true,
   notifications: true,
@@ -535,8 +536,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   headerTitleDark: {
-    fontSize: 20,
-    fontWeight: '700',
+    ...TEXT.heading,
     color: COLORS.textPrimary,
   },
   scrollContent: {
@@ -563,8 +563,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
   },
   profileCardName: {
-    fontSize: 17,
-    fontWeight: '700',
+    ...TEXT.subheading,
     color: COLORS.white,
   },
   profileCardHandle: {

@@ -15,6 +15,7 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { ApiAchievement } from '../api/achievements';
 import type { NgoGrowthLevel, NgoTrustScoreFactors } from '../api/ngoReputation';
 
+import { TEXT } from '../constants/typography';
 // Tenure + lifetime-impact tiers — independent of ARTH Trust Score. Same tier set as nursery's
 // GROWTH_LEVEL_META, kept as its own local copy since it's typed against NgoGrowthLevel and this
 // screen is the only NGO consumer (not worth a shared cross-role component for one usage each).
@@ -213,7 +214,7 @@ const styles = StyleSheet.create({
   },
   dismissText: { fontSize: 13, color: COLORS.white, fontWeight: '700' },
   mascotSection: { alignItems: 'center', marginTop: 4 },
-  title: { fontSize: 26, fontWeight: '800', color: COLORS.textPrimary, textAlign: 'center', letterSpacing: -0.5 },
+  title: { ...TEXT.title, color: COLORS.textPrimary, textAlign: 'center' },
   subtitle: { fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 20, marginTop: -6 },
   card: { gap: 8 },
   growthRow: { gap: 6 },
@@ -235,7 +236,7 @@ const styles = StyleSheet.create({
   trustGauge: { gap: 8 },
   trustHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   trustLabel: { fontSize: 13, fontWeight: '600', color: ON_LIGHT_SURFACE.secondary },
-  trustScore: { fontSize: 28, fontWeight: '900' },
+  trustScore: { ...TEXT.stat, fontSize: 28 },
   trustPendingLabel: { fontSize: 13, fontWeight: '600', color: ON_LIGHT_SURFACE.secondary },
   trustPendingValue: { fontSize: 15, fontWeight: '700', marginTop: 2, color: ON_LIGHT_SURFACE.muted },
   trustTrack: { height: 8, borderRadius: RADIUS.full, backgroundColor: COLORS.beige, overflow: 'hidden' },
@@ -247,12 +248,11 @@ const styles = StyleSheet.create({
 
   streaksWrap: { gap: 12 },
   leaderboardTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
-  leaderboardRank: { fontSize: 22, fontWeight: '900', color: COLORS.forest, marginTop: 2 },
+  leaderboardRank: { ...TEXT.heading, color: COLORS.forest, marginTop: 2 },
   leaderboardTotal: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
   leaderboardRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
   leaderboardEntryRank: { width: 30, fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
   leaderboardEntryName: { flex: 1, fontSize: 13, fontWeight: '600', color: COLORS.textPrimary },
   leaderboardEntryTrees: { fontSize: 12, color: COLORS.textSecondary },
   badgesWrap: { marginTop: 8, gap: 8 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: COLORS.textPrimary, marginLeft: 4 },
-});
+  sectionTitle: { ...TEXT.heading, color: COLORS.textPrimary, marginLeft: 4 } });

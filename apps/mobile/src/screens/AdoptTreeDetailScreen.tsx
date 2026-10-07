@@ -15,6 +15,7 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
 
+import { TEXT } from '../constants/typography';
 export function AdoptTreeDetailScreen({ navigation, route }: any) {
   const { treeId } = route.params as { treeId: string };
   const insets = useSafeAreaInsets();
@@ -145,11 +146,11 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   loader: { marginTop: 60 },
   scrollContent: { paddingHorizontal: 20 },
   card: { marginBottom: 20 },
-  title: { fontSize: 22, fontWeight: '700', color: COLORS.textPrimary },
+  title: { ...TEXT.heading, color: COLORS.textPrimary },
   ngoName: { fontSize: 14, color: COLORS.textSecondary, marginTop: 4 },
   divider: { height: 1, backgroundColor: 'rgba(94,133,80,0.15)', marginVertical: 14 },
   description: { fontSize: 14, lineHeight: 21, color: COLORS.textPrimary, marginBottom: 16 },

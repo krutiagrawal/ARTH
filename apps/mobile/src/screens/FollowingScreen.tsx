@@ -13,6 +13,7 @@ import { resolveMediaUrl } from '../api/client';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { ApiFollowedNgo, ApiFollowedNursery } from '../api/follow';
 
+import { TEXT } from '../constants/typography';
 function FollowedRow({
   id,
   name,
@@ -139,13 +140,13 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
   sectionLabel: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8, marginTop: 12 },
   row: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md, padding: 14, marginBottom: 10, gap: 10 },
   avatar: { width: 40, height: 40, borderRadius: 20 },
   avatarFallback: { backgroundColor: 'rgba(94,133,80,0.15)', alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { fontSize: 16, fontWeight: '700', color: COLORS.forest },
+  avatarInitial: { ...TEXT.subheading, color: COLORS.forest },
   title: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
   meta: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   unfollowButton: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.md, backgroundColor: 'rgba(194,74,59,0.1)' },

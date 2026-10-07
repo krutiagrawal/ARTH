@@ -9,6 +9,7 @@ import { StoryViewer } from './StoryViewer';
 import { useConfirm } from '../../context/ConfirmDialogContext';
 import { EFFECTIVE_WIDTH } from '../../utils/responsive';
 
+import { TEXT } from '../../constants/typography';
 const GAP = 8;
 const H_PADDING = 16 * 2; // ProfileScreen body horizontal padding (both sides)
 const THUMB = (EFFECTIVE_WIDTH - H_PADDING - GAP * 2) / 3;
@@ -99,8 +100,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...TEXT.heading,
     // Renders directly on ProfileScreen's cream background, not inside a dark card — must use
     // dark text (was COLORS.white, invisible on cream).
     color: COLORS.textPrimary,

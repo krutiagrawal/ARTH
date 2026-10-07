@@ -7,7 +7,7 @@ import { BlurView, BlurTargetView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { FONTS } from '../constants/typography';
+import { FONTS, TEXT } from '../constants/typography';
 import { SHADOWS, RADIUS } from '../constants/theme';
 import { EcoWidget } from '../components/common/EcoWidget';
 import { MuteButton } from '../components/common/MuteButton';
@@ -570,7 +570,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12, zIndex: 10 },
   headerLeft: { flex: 1, marginRight: 12 },
   greeting: { fontSize: 13, fontWeight: '500', letterSpacing: 0.3, textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
-  orgName: { fontFamily: FONTS.displayBold, fontSize: 24, lineHeight: 32, letterSpacing: -0.3, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 5 },
+  orgName: { ...TEXT.heading, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 5 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   bellButton: {
     width: 44,
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
   statusAction: { fontSize: 12, fontWeight: '700', marginTop: 6 },
   gridRow: { flexDirection: 'row', alignItems: 'stretch', gap: 10, marginBottom: 10 },
   gridTile: { flex: 1 },
-  sectionTitle: { fontFamily: FONTS.display, fontSize: 20, lineHeight: 27, marginTop: 20 },
+  sectionTitle: { ...TEXT.heading, marginTop: 20 },
   // A 2-row, 3-column icon grid — icons sit directly on the page (no per-item card), like a
   // payments-app quick-actions row, rather than another stack of boxed cards.
   dockGrid: { marginTop: 4 },

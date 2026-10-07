@@ -14,6 +14,7 @@ import { PageFooter } from '../components/common/PageFooter';
 import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import { REPORT_REASONS, type ApiMyReport } from '../api/social';
 
+import { TEXT } from '../constants/typography';
 const STATUS_LABEL: Record<string, string> = { open: 'Under review', actioned: 'Actioned', dismissed: 'Dismissed' };
 const TARGET_LABEL: Record<string, string> = {
   post: 'Post',
@@ -91,7 +92,7 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
   row: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md, padding: 14, marginBottom: 10 },
   title: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },

@@ -13,7 +13,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Svg, { Path } from 'react-native-svg';
 import { COLORS } from '../../constants/colors';
 import { RADIUS, SHADOWS, SPACING } from '../../constants/theme';
-import { FONTS } from '../../constants/typography';
+import { FONTS, TEXT } from '../../constants/typography';
 import { resolveMediaUrl } from '../../api/client';
 import type { ApiPost } from '../../api/posts';
 import { MediaCarousel } from './MediaCarousel';
@@ -371,9 +371,7 @@ const styles = StyleSheet.create({
   authorText: { flex: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   authorName: {
-    fontFamily: FONTS.display,
-    fontSize: 16,
-    lineHeight: 22,
+    ...TEXT.heading,
     color: COLORS.textPrimary,
     flexShrink: 1,
   },

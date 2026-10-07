@@ -42,6 +42,7 @@ import type { ApiPlantingMapEntry } from '../api/plantedTrees';
 import { NOT_APPROVED_MESSAGE } from '../constants/plantingLocation';
 import { getCurrentPositionWithTimeout } from '../utils/location';
 
+import { TEXT } from '../constants/typography';
 const { width: SW } = Dimensions.get('window');
 
 // MapLibre needs a native module that Expo Go (and any older dev build) does not contain, and a
@@ -936,7 +937,7 @@ const styles = StyleSheet.create({
   headerTitleRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, marginRight: 8 },
   mapBackBtn: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   mapBackBtnText: { fontSize: 20, fontWeight: '700', color: COLORS.textPrimary },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary },
+  headerTitle: { ...TEXT.heading, color: COLORS.textPrimary },
   headerSub: { fontSize: 12, color: COLORS.textPrimary, marginTop: 2 },
   indiaBtn: { backgroundColor: COLORS.sage, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 },
   indiaBtnText: { fontSize: 13, fontWeight: '600', color: 'white' },
@@ -1033,7 +1034,7 @@ const styles = StyleSheet.create({
   infoCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   infoCardIcon: { width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center' },
   infoCardEmoji: { fontSize: 28 },
-  infoCardNickname: { fontSize: 20, fontWeight: '700', color: COLORS.textPrimary },
+  infoCardNickname: { ...TEXT.heading, color: COLORS.textPrimary },
   infoCardSpecies: { fontSize: 14, color: COLORS.textPrimary, marginTop: 2 },
   infoCardStageBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 },
   infoCardStageText: { fontSize: 12, fontWeight: '600' },
@@ -1043,7 +1044,7 @@ const styles = StyleSheet.create({
   },
   infoCardStatsDark: { backgroundColor: 'rgba(255,255,255,0.1)' },
   infoCardStat: { flex: 1, alignItems: 'center' },
-  infoCardStatVal: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary },
+  infoCardStatVal: { ...TEXT.statSmall, fontSize: 17, color: COLORS.textPrimary },
   infoCardStatLabel: { fontSize: 11, color: COLORS.textPrimary, marginTop: 2 },
   infoCardDivider: { width: 1, height: 32, backgroundColor: 'rgba(0,0,0,0.08)' },
   infoCardDividerDark: { backgroundColor: 'rgba(255,255,255,0.15)' },

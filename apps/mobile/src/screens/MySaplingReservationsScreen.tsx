@@ -16,6 +16,7 @@ import { resolveMediaUrl } from '../api/client';
 import type { ApiMyReservation } from '../api/reservations';
 import { useConfirm } from '../context/ConfirmDialogContext';
 
+import { TEXT } from '../constants/typography';
 function ReservationCard({ item }: { item: ApiMyReservation }) {
   const cancelMutation = useCancelReservation();
   const confirm = useConfirm();
@@ -105,7 +106,7 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   list: { paddingHorizontal: SPACING.md, paddingTop: SPACING.sm },
   card: { borderRadius: RADIUS.md, padding: 14, marginBottom: 10, gap: 10 },
   cardRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },

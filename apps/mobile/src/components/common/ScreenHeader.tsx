@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Text } from './AppText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../../constants/colors';
-import { FONTS } from '../../constants/typography';
+import { FONTS, TEXT } from '../../constants/typography';
 
 /**
  * Header used by every pushed NGO screen: a back button, a title, and an
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
-  title: { flex: 1, fontFamily: FONTS.displayBold, fontSize: 23, lineHeight: 31, color: COLORS.textPrimary },
+  title: { flex: 1,...TEXT.heading, color: COLORS.textPrimary },
   titleCenter: { textAlign: 'center' },
   titleLeft: { textAlign: 'left' },
   subtitle: {

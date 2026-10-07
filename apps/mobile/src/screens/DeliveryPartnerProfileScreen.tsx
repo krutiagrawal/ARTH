@@ -12,6 +12,7 @@ import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useMyPartnerProfile } from '../hooks/useApiQueries';
 import { useAuth } from '../context/AuthContext';
 
+import { TEXT } from '../constants/typography';
 export function DeliveryPartnerProfileScreen({ navigation }: any) {
   const bottomNavClearance = useBottomNavClearance();
   const { data: profile, isLoading } = useMyPartnerProfile();
@@ -63,7 +64,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: SPACING.md, paddingTop: 8 },
   card: { marginBottom: 16 },
-  name: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary },
+  name: { ...TEXT.heading, color: COLORS.textPrimary },
   handle: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
   divider: { height: 1, backgroundColor: 'rgba(94,133,80,0.15)', marginVertical: 12 },
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },

@@ -25,6 +25,7 @@ import { ApiError } from '../api/client';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { isBulkRequirementOverdue } from '../utils/bulkRequirement';
 
+import { TEXT } from '../constants/typography';
 export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
   const requirementId: string = route?.params?.requirementId;
   const insets = useSafeAreaInsets();
@@ -277,7 +278,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: SPACING.md, paddingTop: 4 },
   card: { marginBottom: 16 },
-  ngoName: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary },
+  ngoName: { ...TEXT.heading, color: COLORS.textPrimary },
   species: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
   divider: { height: 1, backgroundColor: 'rgba(94,133,80,0.15)', marginVertical: 10 },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
@@ -298,6 +299,6 @@ const styles = StyleSheet.create({
   linkButtonDanger: { fontSize: 13, fontWeight: '700', color: COLORS.dangerDark },
   handoffCodeBox: { marginTop: 10, padding: 12, borderRadius: RADIUS.md, backgroundColor: 'rgba(94,133,80,0.1)', alignItems: 'center' },
   handoffCodeLabel: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary },
-  handoffCodeValue: { fontSize: 28, fontWeight: '800', color: COLORS.forest, letterSpacing: 4, marginTop: 4 },
+  handoffCodeValue: { ...TEXT.stat, fontSize: 28, color: COLORS.forest,marginTop: 4 },
   handoffCodeHint: { fontSize: 11, color: COLORS.textMuted, marginTop: 6, textAlign: 'center' },
 });

@@ -17,6 +17,7 @@ import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import type { ApiAdoptableTree } from '../api/adoptions';
 
+import { TEXT } from '../constants/typography';
 function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
   const animStyle = useSlideUp(delay, 18);
   return <Animated.View style={[animStyle, style]}>{children}</Animated.View>;
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
   card: { marginBottom: 12 },
   cardRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   cardBody: { flex: 1 },
-  cardTitle: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary },
+  cardTitle: { ...TEXT.subheading, color: COLORS.textPrimary },
   cardSubtitle: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, gap: 8 },
   metaText: { fontSize: 12, color: COLORS.textSecondary, flexShrink: 1 },

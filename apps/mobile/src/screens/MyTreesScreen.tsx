@@ -15,6 +15,7 @@ import type { TreeHealthStatus } from '../api/plantedTrees';
 import type { ApiTree } from '../api/trees';
 import { LeafletPinMap, type LeafletPin, type LeafletPinMapHandle } from '../components/map/LeafletPinMap';
 
+import { TEXT } from '../constants/typography';
 // Where the map opens before it fits to the user's trees (India-wide; replaced almost immediately).
 const DEFAULT_CENTER: [number, number] = [78.9629, 20.5937];
 
@@ -196,7 +197,7 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
   toggleRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingBottom: 12 },
   toggleChip: { paddingVertical: 8, paddingHorizontal: 18, borderRadius: 999, borderWidth: 1.5, borderColor: COLORS.warmBrown, backgroundColor: COLORS.cream },
@@ -204,7 +205,7 @@ const styles = StyleSheet.create({
   toggleText: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary },
   toggleTextActive: { color: COLORS.white },
   headerOverMap: { backgroundColor: 'rgba(255,248,237,0.92)' },
-  totalLine: { fontSize: 22, fontWeight: '800', color: COLORS.textPrimary, marginTop: 4, marginBottom: 10 },
+  totalLine: { ...TEXT.statSmall, fontSize: 22, color: COLORS.textPrimary, marginTop: 4, marginBottom: 10 },
   countsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
   countPill: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1.5 },
   countPillText: { fontSize: 12, fontWeight: '700' },

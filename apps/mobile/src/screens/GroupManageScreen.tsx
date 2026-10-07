@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { FONTS } from '../constants/typography';
+import { FONTS, TEXT } from '../constants/typography';
 import { RADIUS } from '../constants/theme';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { LeafBranch } from '../components/common/LeafBranch';
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   leaf: { top: 28, right: -20 },
   header: { paddingHorizontal: 20, paddingBottom: 8 },
-  headerTitle: { fontFamily: FONTS.displayBold, fontSize: 28, lineHeight: 37, color: COLORS.textPrimary },
+  headerTitle: { ...TEXT.title, color: COLORS.textPrimary },
   headerTitleAccent: { fontFamily: FONTS.displayBold, color: COLORS.forest },
   headerSubtitle: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
   newButton: { alignSelf: 'flex-start', marginHorizontal: 20, marginBottom: 14 },

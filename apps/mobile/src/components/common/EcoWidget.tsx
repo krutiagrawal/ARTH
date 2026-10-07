@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import Animated from 'react-native-reanimated';
 import { COLORS } from '../../constants/colors';
-import { TYPOGRAPHY } from '../../constants/typography';
+import { TYPOGRAPHY, TEXT } from '../../constants/typography';
 import { RADIUS, SHADOWS } from '../../constants/theme';
 import { GlassCard } from './GlassCard';
 import { BorderCard } from './BorderCard';
@@ -294,19 +294,16 @@ const styles = StyleSheet.create({
     fontSize: 28,
   },
   value: {
-    fontSize: 20,
-    fontWeight: '700',
+    ...TEXT.statSmall, fontSize: 20,
     marginBottom: 2,
   },
   valueWhite: {
-    fontSize: 20,
-    fontWeight: '700',
+    ...TEXT.statSmall, fontSize: 20,
     color: COLORS.white,
     marginBottom: 2,
   },
   glassValue: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...TEXT.statSmall, fontSize: 18,
     marginBottom: 2,
   },
   glassValueCompact: {
@@ -314,8 +311,7 @@ const styles = StyleSheet.create({
     marginBottom: 1,
   },
   minimalValue: {
-    fontSize: 18,
-    fontWeight: '700',
+  ...TEXT.statSmall, fontSize: 18,
   },
   label: {
     textAlign: 'center',

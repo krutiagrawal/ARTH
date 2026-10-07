@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, TextInput } from 'react-native';
-import { Text } from '../components/common/AppText';
+import { View, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
+import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -15,6 +15,7 @@ import { useHaptics } from '../hooks/useHaptics';
 import { resolveMediaUrl } from '../api/client';
 import { STATUS_META, ACTIONABLE_STATUSES } from '../constants/treeHealth';
 
+import { TEXT } from '../constants/typography';
 const OBSERVATION_LOCATION_ACCURACY = Location.Accuracy.Highest;
 
 type Stage = 'confirm' | 'status' | 'submitting' | 'success' | 'error';
@@ -196,14 +197,14 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20, alignItems: 'center' },
   heroPhoto: { width: '100%', height: 200, borderRadius: RADIUS.lg, marginBottom: 16 },
   heroPlaceholder: { width: '100%', height: 200, borderRadius: RADIUS.lg, marginBottom: 16, backgroundColor: COLORS.beigeLight, alignItems: 'center', justifyContent: 'center' },
   heroPlaceholderEmoji: { fontSize: 56 },
   photoCaption: { fontSize: 10, fontWeight: '800', letterSpacing: 1, color: COLORS.textSecondary, marginBottom: 6 },
   noteInput: { width: '100%', minHeight: 64, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: 'rgba(135,168,120,0.5)', backgroundColor: 'rgba(135,168,120,0.12)', padding: 12, marginBottom: 16, fontSize: 14, color: COLORS.textPrimary, textAlignVertical: 'top' },
-  confirmTitle: { fontSize: 18, fontWeight: '800', color: COLORS.textPrimary, textAlign: 'center', marginBottom: 6 },
+  confirmTitle: { ...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center', marginBottom: 6 },
   confirmSpecies: { fontSize: 14, color: COLORS.textSecondary, textAlign: 'center' },
   confirmPublicId: { fontSize: 12, color: COLORS.textMuted, marginTop: 4, textAlign: 'center' },
   primaryButton: { marginTop: 20, paddingVertical: 12, paddingHorizontal: 24, borderRadius: RADIUS.md, backgroundColor: COLORS.sage },
@@ -212,7 +213,7 @@ const styles = StyleSheet.create({
   markButton: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: RADIUS.full, borderWidth: 1.5, backgroundColor: 'transparent' },
   markButtonText: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary },
   successCard: { width: '100%', alignItems: 'center', gap: 6 },
-  successTitle: { fontSize: 18, fontWeight: '800', color: COLORS.sage },
+  successTitle: { ...TEXT.heading, color: COLORS.sage },
   successBody: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
   successSub: { fontSize: 13, color: COLORS.textSecondary, textAlign: 'center' },
   errorCard: { width: '100%', alignItems: 'center', gap: 6 },

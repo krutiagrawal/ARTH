@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
-import { FONTS } from '../constants/typography';
+import { FONTS, TEXT } from '../constants/typography';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { EmptyState } from '../components/common/EmptyState';
 import {
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: COLORS.mintLight, alignItems: 'center', justifyContent: 'center' },
   avatarEmoji: { fontSize: 21 },
   rowText: { flex: 1 },
-  name: { fontFamily: FONTS.display, fontSize: 15, lineHeight: 21, color: COLORS.textPrimary },
+  name: { ...TEXT.heading, color: COLORS.textPrimary },
   meta: { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
   actionsRow: { flexDirection: 'row', gap: 8 },
   acceptBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: RADIUS.full, backgroundColor: COLORS.forest },

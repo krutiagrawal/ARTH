@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { FONTS } from '../constants/typography';
+import { FONTS, TEXT } from '../constants/typography';
 import { RADIUS, SHADOWS, SPACING } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { Sheet } from '../components/common/Sheet';
@@ -37,7 +37,6 @@ import {
   useRingStatus,
 } from '../hooks/useApiQueries';
 import { FollowingFeedScreen } from './FollowingFeedScreen';
-import { NotificationBell } from '../components/social/NotificationBell';
 import { FriendCard, FriendRequestRow, formatRelativeTime } from '../components/social/FriendRow';
 import type { ApiChallenge, ApiChallengeFriend } from '../api/challenges';
 import type { LeaderboardEntry } from '../api/leaderboard';
@@ -571,23 +570,18 @@ export function CommunityScreen({ navigation }: any) {
       <StatusBar style="dark" />
       <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
 
-      {/* Header */}
+      {/* Header: title, with the NGO / Nursery directory pills on their own row beneath (together
+          they're wider than a phone screen). Adding friends lives on the Friends tab. */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <Text style={styles.headerTitleDark}>Community 🌱</Text>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <NotificationBell onPress={() => navigation.navigate('Notifications')} />
-          <TouchableOpacity style={styles.ngoButton} onPress={() => navigation.navigate('NgoDirectory')}>
-            <Text style={styles.ngoButtonText}>🌿 NGOs</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.ngoButton} onPress={() => navigation.navigate('NurseryDirectory')}>
-            <Text style={styles.ngoButtonText}>🌱 Nurseries</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.addFriendButton} onPress={() => setShowAddFriend(prev => !prev)}>
-            <LinearGradient colors={[COLORS.sageLight, COLORS.sage]} style={styles.addFriendGradient}>
-              <Text style={styles.addFriendText}>{showAddFriend ? 'Close' : '+ Add Friend'}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.headerTitleDark} numberOfLines={1}>Community 🌱</Text>
+      </View>
+      <View style={styles.directoryRow}>
+        <TouchableOpacity style={styles.ngoButton} onPress={() => navigation.navigate('NgoDirectory')}>
+          <Text style={styles.ngoButtonText}>🌿 NGOs</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.ngoButton} onPress={() => navigation.navigate('NurseryDirectory')}>
+          <Text style={styles.ngoButtonText}>🌱 Nurseries</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Tab bar */}
@@ -620,7 +614,7 @@ export function CommunityScreen({ navigation }: any) {
       >
         <GlobalCounter />
 
-        {showAddFriend && <AddFriendPanel onClose={() => setShowAddFriend(false)} navigation={navigation} />}
+        {activeTab === 'friends' && showAddFriend && <AddFriendPanel onClose={() => setShowAddFriend(false)} navigation={navigation} />}
 
         {activeTab === 'friends' && (
           <View style={styles.section}>
@@ -803,10 +797,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 12,
   },
+  directoryRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
   headerTitleDark: {
-    fontFamily: FONTS.displayBold,
-    fontSize: 26,
-    lineHeight: 34,
+    flexShrink: 1,
+    ...TEXT.title,
     color: COLORS.textPrimary,
   },
   ngoButton: {
@@ -822,19 +821,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: COLORS.forest,
-  },
-  addFriendButton: {
-    ...SHADOWS.sage,
-  },
-  addFriendGradient: {
-    borderRadius: RADIUS.full,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  addFriendText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.white,
   },
   tabBarDark: {
     flexDirection: 'row',
@@ -878,10 +864,8 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   globalCounterNum: {
-    fontSize: 42,
-    fontWeight: '900',
+    ...TEXT.stat, fontSize: 42,
     color: COLORS.white,
-    letterSpacing: -1,
   },
   globalCounterRow: {
     flexDirection: 'row',
@@ -913,8 +897,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionTitleDark: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...TEXT.heading,
     color: COLORS.textPrimary,
     marginBottom: 4,
     marginTop: 4,
@@ -1119,10 +1102,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   yourRankNumDark: {
-    fontSize: 36,
-    fontWeight: '900',
+    ...TEXT.stat, fontSize: 36,
     color: COLORS.textPrimary,
-    letterSpacing: -1,
   },
   yourRankOfDark: {
     fontSize: 14,
@@ -1209,8 +1190,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   leaderTreeNumDark: {
-    fontSize: 17,
-    fontWeight: '700',
+    ...TEXT.statSmall, fontSize: 17,
     color: COLORS.forest,
   },
   leaderTreeLabelDark: {

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, TextInput } from 'react-native';
-import { Text } from '../components/common/AppText';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Platform } from 'react-native';
+import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,6 +39,7 @@ import { reverseGeocode } from '../api/geocode';
 import { SPECIES_EMOJI_OPTIONS } from '../api/species';
 import { fuzzyMatch } from '../utils/fuzzyMatch';
 
+import { TEXT } from '../constants/typography';
 function RequirementCard({ item, onPress }: { item: ApiNgoBulkRequirement; onPress: () => void }) {
   const overdue = isBulkRequirementOverdue(item);
   return (
@@ -602,7 +603,7 @@ const styles = StyleSheet.create({
   locationNoticeText: { fontSize: 12, lineHeight: 16, marginBottom: 6 },
   locationNoticeOk: { color: COLORS.forest },
   locationNoticeWarn: { color: COLORS.golden },
-  sheetSpecies: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary },
+  sheetSpecies: { ...TEXT.subheading, color: COLORS.textPrimary },
   sheetMeta: { fontSize: 13, color: COLORS.textSecondary },
   sheetNotes: { fontSize: 13, color: COLORS.textPrimary, lineHeight: 19 },
   sheetSectionTitle: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, marginTop: 8 },

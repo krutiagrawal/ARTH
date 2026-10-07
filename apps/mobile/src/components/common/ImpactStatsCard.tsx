@@ -7,6 +7,7 @@ import { COLORS } from '../../constants/colors';
 import { RADIUS, SHADOWS } from '../../constants/theme';
 import { useSlideUp } from '../../hooks/useAnimations';
 
+import { TEXT } from '../../constants/typography';
 // Approximate one-way NY↔LA flight emissions per passenger, used only to give the CO₂ number a
 // relatable frame of reference — not a precise figure.
 const AVG_FLIGHT_CO2_KG = 180;
@@ -80,8 +81,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.md,
   },
   impactTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...TEXT.subheading,
     color: COLORS.white,
   },
   impactRow: {
@@ -92,8 +92,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   impactNum: {
-    fontSize: 24,
-    fontWeight: '800',
+    ...TEXT.statSmall, fontSize: 24,
     color: COLORS.white,
   },
   impactLabel: {

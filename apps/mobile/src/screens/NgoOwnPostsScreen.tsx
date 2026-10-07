@@ -3,7 +3,7 @@ import { View, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 
 import { Text } from '../components/common/AppText';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
-import { FONTS } from '../constants/typography';
+import { FONTS, TEXT } from '../constants/typography';
 import { EmptyState } from '../components/common/EmptyState';
 import { PostCard } from '../components/social/PostCard';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   stat: { flex: 1, alignItems: 'center' },
-  statValue: { fontFamily: FONTS.displayBold, fontSize: 24, lineHeight: 32, color: COLORS.forest },
+  statValue: { ...TEXT.heading, color: COLORS.forest },
   statLabel: {
     fontSize: 11,
     fontWeight: '700',

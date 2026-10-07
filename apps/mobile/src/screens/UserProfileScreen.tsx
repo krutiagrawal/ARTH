@@ -39,6 +39,7 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { getXpProgress } from '../constants/forestLevels';
 import type { ApiPost } from '../api/posts';
 
+import { TEXT } from '../constants/typography';
 function friendLabel(status: 'none' | 'pending' | 'accepted'): string {
   if (status === 'accepted') return 'Friends ✓';
   if (status === 'pending') return 'Requested';
@@ -393,9 +394,9 @@ const styles = StyleSheet.create({
   requestBannerDeclineText: { fontSize: 14, fontWeight: '800', color: COLORS.earthDark },
   tabBody: { paddingHorizontal: 16, paddingTop: 16 },
   contributionsCard: { gap: 12 },
-  contributionsTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
+  contributionsTitle: { ...TEXT.subheading, color: COLORS.textPrimary },
   contributionsRow: { flexDirection: 'row', justifyContent: 'space-around' },
   contributionsStat: { alignItems: 'center' },
-  contributionsNum: { fontSize: 22, fontWeight: '800', color: COLORS.textPrimary },
+  contributionsNum: { ...TEXT.statSmall, fontSize: 22, color: COLORS.textPrimary },
   contributionsLabel: { fontSize: 10, color: COLORS.textSecondary, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.4 },
 });

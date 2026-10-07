@@ -24,6 +24,7 @@ import { PRIVACY_POLICY_TEXT, TERMS_OF_SERVICE_TEXT } from '../constants/legalCo
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { getThemeForHour, PERIOD_HOUR, type TimePeriod } from '../hooks/useTimeTheme';
 
+import { TEXT } from '../constants/typography';
 const DEFAULT_SETTINGS: ApiUserSettings = {
   haptics: true,
   notifications: true,
@@ -436,7 +437,7 @@ const styles = StyleSheet.create({
   },
   profileCardLogo: { width: 52, height: 52 },
   profileCardEmoji: { fontSize: 26 },
-  profileCardName: { fontSize: 17, fontWeight: '700', color: COLORS.white },
+  profileCardName: { ...TEXT.subheading, color: COLORS.white },
   profileCardHandle: { fontSize: 13, color: COLORS.white, marginTop: 1 },
   editProfileButton: {
     backgroundColor: 'rgba(255,255,255,0.2)',

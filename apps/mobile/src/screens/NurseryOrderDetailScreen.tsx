@@ -29,6 +29,7 @@ import { useApprovalGate } from '../hooks/useApprovalGate';
 import { ApiError } from '../api/client';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
+import { TEXT } from '../constants/typography';
 function formatRupees(cents: number) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`;
 }
@@ -345,7 +346,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: SPACING.md },
   card: { marginBottom: 16 },
-  customer: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary },
+  customer: { ...TEXT.subheading, color: COLORS.textPrimary },
   handle: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
   fulfillmentTag: { alignSelf: 'flex-start', backgroundColor: 'rgba(94,133,80,0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, marginTop: 8 },
   fulfillmentTagText: { fontSize: 11, fontWeight: '700', color: COLORS.forest },
@@ -354,7 +355,7 @@ const styles = StyleSheet.create({
   summaryLabel: { fontSize: 13, color: COLORS.textSecondary },
   summaryValue: { fontSize: 13, color: COLORS.textPrimary, fontWeight: '600' },
   totalLabel: { fontSize: 15, color: COLORS.textPrimary, fontWeight: '700' },
-  totalValue: { fontSize: 17, color: COLORS.textPrimary, fontWeight: '800' },
+  totalValue: { ...TEXT.statSmall, fontSize: 17, color: COLORS.textPrimary },
   addressText: { fontSize: 13, lineHeight: 19, color: COLORS.textPrimary },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 8 },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 6, marginTop: 4 },

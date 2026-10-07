@@ -14,6 +14,7 @@ import { useNurseryImpact, useNurseryProfile } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { formatKg } from '../utils/impact';
 
+import { TEXT } from '../constants/typography';
 export function NurseryImpactScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { data: impact, isLoading, refetch } = useNurseryImpact();
@@ -104,7 +105,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: SPACING.md, paddingTop: 4 },
   gridRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
   gridCard: { flex: 1, alignItems: 'center', gap: 4 },
-  gridValue: { fontSize: 18, fontWeight: '800', color: COLORS.forest },
+  gridValue: { ...TEXT.statSmall, fontSize: 18, color: COLORS.forest },
   gridLabel: { fontSize: 11, color: COLORS.textSecondary, textAlign: 'center' },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, marginTop: 20, marginBottom: 8 },
   trendCard: { gap: 10 },

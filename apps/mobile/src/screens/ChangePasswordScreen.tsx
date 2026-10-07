@@ -13,6 +13,7 @@ import { BorderCard } from '../components/common/BorderCard';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
+import { TEXT } from '../constants/typography';
 export function ChangePasswordScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const changePasswordMutation = useChangePassword();
@@ -137,8 +138,7 @@ const styles = StyleSheet.create({
   },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...TEXT.heading,
     color: COLORS.textPrimary,
   },
   scrollContent: { paddingHorizontal: 16 },

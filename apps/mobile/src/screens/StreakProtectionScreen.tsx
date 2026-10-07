@@ -26,6 +26,7 @@ import { useAuth } from '../context/AuthContext';
 import { useProtectStreak } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
+import { TEXT } from '../constants/typography';
 const { width: SW, height: SH } = Dimensions.get('window');
 
 type ProtectionStage = 'warning' | 'choosing' | 'saved';
@@ -390,12 +391,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   messageTitle: {
-    fontSize: 30,
-    fontWeight: '800',
+    ...TEXT.title,
     color: COLORS.white,
     textAlign: 'center',
-    lineHeight: 38,
-    letterSpacing: -0.5,
     textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 8,
@@ -423,15 +421,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   streakCountNum: {
-    fontSize: 52,
-    fontWeight: '900',
+    ...TEXT.stat, fontSize: 52, lineHeight: 58,
     color: COLORS.white,
-    lineHeight: 58,
-    letterSpacing: -2,
   },
   streakCountLabel: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...TEXT.statSmall, fontSize: 16,
     color: COLORS.white,
   },
   streakCountSublabel: {
@@ -575,8 +569,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   savedTitle: {
-    fontSize: 32,
-    fontWeight: '800',
+    ...TEXT.title,
     color: COLORS.white,
     textAlign: 'center',
   },

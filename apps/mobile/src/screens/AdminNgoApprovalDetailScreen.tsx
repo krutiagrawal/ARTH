@@ -15,6 +15,7 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ApiError, resolveMediaUrl } from '../api/client';
 import type { ApiAdminNgo, ApiAdminNgoDocument, NgoApprovalStatus } from '../api/admin';
 
+import { TEXT } from '../constants/typography';
 const ORG_TYPE_LABELS: Record<string, string> = {
   trust: 'Trust',
   society: 'Society',
@@ -397,7 +398,7 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.white, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: ON_DARK_SURFACE.primary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: ON_DARK_SURFACE.primary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
   card: { marginBottom: 14 },
   cardTitle: { fontSize: 14, fontWeight: '700', color: ON_DARK_SURFACE.primary, textTransform: 'uppercase', letterSpacing: 0.5 },

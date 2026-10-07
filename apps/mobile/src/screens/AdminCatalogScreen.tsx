@@ -17,6 +17,7 @@ import { ADMIN_CATALOG_MODELS, coerceCatalogValue } from '../constants/adminCata
 import type { AdminCatalogModel } from '../api/admin';
 import { ApiError } from '../api/client';
 
+import { TEXT } from '../constants/typography';
 const MODEL_KEYS = Object.keys(ADMIN_CATALOG_MODELS) as AdminCatalogModel[];
 
 export function AdminCatalogScreen() {
@@ -206,7 +207,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingHorizontal: 20, paddingBottom: 12 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerTitle: { fontSize: 22, fontWeight: '700', color: ON_DARK_SURFACE.primary },
+  headerTitle: { ...TEXT.heading, color: ON_DARK_SURFACE.primary },
   filterBar: { paddingHorizontal: 20, marginBottom: 8 },
   chipRow: { gap: 8, paddingRight: 20 },
   chip: { borderRadius: RADIUS.full, paddingVertical: 8, paddingHorizontal: 16, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'transparent' },

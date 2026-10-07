@@ -14,6 +14,7 @@ import { useStockAnalytics, useStockLedger } from '../hooks/useApiQueries';
 import type { ApiStockLedgerEntry } from '../api/nursery';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
+import { TEXT } from '../constants/typography';
 const REASON_LABEL: Record<ApiStockLedgerEntry['reason'], string> = {
   manual_add: 'Added stock',
   manual_adjust: 'Adjusted stock',
@@ -95,7 +96,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: SPACING.md, paddingTop: SPACING.sm },
   gridRow: { flexDirection: 'row', alignItems: 'stretch', gap: 10, marginBottom: 10 },
   gridTile: { flex: 1 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, marginTop: 16, marginBottom: 8 },
+  sectionTitle: { ...TEXT.subheading, color: COLORS.textPrimary, marginTop: 16, marginBottom: 8 },
   ledgerRow: {
     flexDirection: 'row',
     alignItems: 'center',

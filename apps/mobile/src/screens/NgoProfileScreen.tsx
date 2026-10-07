@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { FONTS } from '../constants/typography';
+import { FONTS, TEXT } from '../constants/typography';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { ActionSheet, type ActionSheetOption } from '../components/social/ActionSheet';
@@ -489,10 +489,10 @@ const styles = StyleSheet.create({
   menuDots: { fontSize: 20, color: COLORS.textSecondary },
   tabBody: { paddingHorizontal: 16, paddingTop: 16 },
   contributionsCard: { gap: 12 },
-  contributionsTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
+  contributionsTitle: { ...TEXT.subheading, color: COLORS.textPrimary },
   contributionsRow: { flexDirection: 'row', justifyContent: 'space-around' },
   contributionsStat: { alignItems: 'center' },
-  contributionsNum: { fontSize: 22, fontWeight: '800', color: COLORS.textPrimary },
+  contributionsNum: { ...TEXT.statSmall, fontSize: 22, color: COLORS.textPrimary },
   contributionsLabel: { fontSize: 10, color: COLORS.textSecondary, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.4 },
   viewOnMapBtn: {
     alignSelf: 'flex-start',
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
   viewOnMapBtnText: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
   streakCard: { gap: 12, marginBottom: 16 },
   streakHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  streakTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
+  streakTitle: { ...TEXT.statSmall, fontSize: 16, color: COLORS.textPrimary },
   streakSub: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   streakBadge: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   streakBadgeNum: { fontSize: 24, fontWeight: '800', color: COLORS.streakFire },
@@ -539,7 +539,7 @@ const styles = StyleSheet.create({
   pastWorkCoverEmptyIcon: { fontSize: 30, opacity: 0.5 },
   pastWorkBody: { padding: 14, gap: 4 },
   pastWorkDate: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.textMuted },
-  pastWorkTitle: { fontFamily: FONTS.displayBold, fontSize: 17, lineHeight: 22, color: COLORS.textPrimary },
+  pastWorkTitle: { ...TEXT.heading, color: COLORS.textPrimary },
   pastWorkLocation: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   pastWorkStatRow: { flexDirection: 'row', gap: 16, marginTop: 6 },
   pastWorkStat: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },

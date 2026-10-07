@@ -13,6 +13,7 @@ import { useBlockTarget, useDeletePost, useSavedPosts, useToggleLike, useToggleS
 import type { ApiPost } from '../api/posts';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
+import { TEXT } from '../constants/typography';
 /** Available to every role's account — posts I've saved, regardless of what I'm logged in as. */
 export function SavedPostsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -97,7 +98,7 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   list: { paddingHorizontal: SPACING.md, paddingTop: SPACING.sm },
   footer: { marginVertical: SPACING.md },
 });

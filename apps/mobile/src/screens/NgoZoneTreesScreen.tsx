@@ -20,6 +20,7 @@ import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import { PageFooter } from '../components/common/PageFooter';
 import { STATUS_META, ACTIONABLE_STATUSES } from '../constants/treeHealth';
 
+import { TEXT } from '../constants/typography';
 function FadeInRow({ delay, children }: { delay: number; children: React.ReactNode }) {
   const animStyle = useSlideUp(delay, 18);
   return <Animated.View style={animStyle}>{children}</Animated.View>;
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
   addButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   filterScroll: { flexGrow: 0, height: 52 },
   filterRow: { alignItems: 'center', paddingHorizontal: 20, gap: 8, paddingBottom: 10 },
   // flexShrink: 0 keeps every chip at its own natural content width inside the horizontally

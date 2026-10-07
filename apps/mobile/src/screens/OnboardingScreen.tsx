@@ -24,6 +24,7 @@ import { ONBOARDING_PAGES } from '../data/dummyData';
 import { useFadeIn, useFloat } from '../hooks/useAnimations';
 import { syncAndroidNavigationBarStyle } from '../utils/androidNavigationBar';
 
+import { TEXT } from '../constants/typography';
 const { width: SW, height: SH } = Dimensions.get('window');
 
 const PAGE_GRADIENTS = [
@@ -269,12 +270,9 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   pageTitle: {
-    fontSize: 36,
-    fontWeight: '800',
+    ...TEXT.title,
     color: COLORS.white,
     textAlign: 'center',
-    lineHeight: 44,
-    letterSpacing: -1,
     marginBottom: 14,
     textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 0, height: 2 },

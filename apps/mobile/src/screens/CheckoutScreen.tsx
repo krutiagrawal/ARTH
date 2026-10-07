@@ -19,6 +19,7 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { reverseGeocode } from '../api/geocode';
 import { isValidPincode } from '../utils/validation';
 
+import { TEXT } from '../constants/typography';
 function formatRupees(cents: number) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`;
 }
@@ -280,9 +281,9 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, marginTop: 16, marginBottom: 8 },
+  sectionTitle: { ...TEXT.subheading, color: COLORS.textPrimary, marginTop: 16, marginBottom: 8 },
   addressRow: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md, padding: 14, marginBottom: 10, gap: 12 },
   addressRowSelected: { borderWidth: 1.5, borderColor: COLORS.forest },
   radioOuter: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: COLORS.sage, alignItems: 'center', justifyContent: 'center' },
@@ -313,6 +314,6 @@ const styles = StyleSheet.create({
   summaryValue: { fontSize: 13, color: COLORS.textPrimary, fontWeight: '600' },
   divider: { height: 1, backgroundColor: 'rgba(94,133,80,0.15)', marginVertical: 8 },
   totalLabel: { fontSize: 15, color: COLORS.textPrimary, fontWeight: '700' },
-  totalValue: { fontSize: 17, color: COLORS.textPrimary, fontWeight: '800' },
+  totalValue: { ...TEXT.statSmall, fontSize: 17, color: COLORS.textPrimary },
   errorText: { fontSize: 13, color: COLORS.dangerDark, textAlign: 'center', marginTop: 12 },
 });

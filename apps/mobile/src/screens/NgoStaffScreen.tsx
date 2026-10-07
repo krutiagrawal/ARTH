@@ -24,6 +24,7 @@ import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { isValidEmail, isValidPhone } from '../utils/validation';
 
+import { TEXT } from '../constants/typography';
 function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
   const animStyle = useSlideUp(delay, 18);
   return <Animated.View style={[animStyle, style]}>{children}</Animated.View>;
@@ -237,7 +238,7 @@ const styles = StyleSheet.create({
   card: { marginBottom: 12 },
   cardRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { width: 40, height: 40, borderRadius: 20 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
+  cardTitle: { ...TEXT.subheading, color: COLORS.textPrimary },
   cardRole: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
   cardMeta: { fontSize: 12, color: COLORS.textMuted, marginTop: 4 },
   rowActions: { alignItems: 'flex-end', gap: 8 },

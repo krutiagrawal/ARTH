@@ -24,6 +24,7 @@ import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import { PageFooter } from '../components/common/PageFooter';
 import { ApiError } from '../api/client';
 
+import { TEXT } from '../constants/typography';
 type Tab = 'drives' | 'donations' | 'orders';
 
 const TABS: { key: Tab; label: string }[] = [
@@ -182,7 +183,7 @@ export function AdminOpsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingHorizontal: 20, paddingBottom: 12 },
-  headerTitle: { fontSize: 22, fontWeight: '700', color: ON_DARK_SURFACE.primary },
+  headerTitle: { ...TEXT.heading, color: ON_DARK_SURFACE.primary },
   filterBar: { paddingHorizontal: 20, marginBottom: 8 },
   chipRow: { gap: 8, paddingRight: 20 },
   chip: { borderRadius: RADIUS.full, paddingVertical: 8, paddingHorizontal: 16, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'transparent' },

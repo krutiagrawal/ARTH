@@ -5,6 +5,7 @@ import { BorderCard } from '../common/BorderCard';
 import { COLORS } from '../../constants/colors';
 import type { ApiForestTheme } from '../../api/themes';
 
+import { TEXT } from '../../constants/typography';
 /** Shared by User and Group profiles — the only two roles with a forest-theme customization. */
 export function ForestThemesPicker({
   themes,
@@ -41,7 +42,7 @@ export function ForestThemesPicker({
 
 const styles = StyleSheet.create({
   wrap: { marginTop: 4 },
-  title: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 8 },
+  title: { ...TEXT.subheading, color: COLORS.textPrimary, marginBottom: 8 },
   card: { width: 110, marginRight: 8, alignItems: 'center', padding: 14, gap: 6 },
   cardLocked: { opacity: 0.6 },
   emoji: { fontSize: 32 },

@@ -56,6 +56,7 @@ import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
+import { TEXT } from '../constants/typography';
 const { width: SW, height: SH } = Dimensions.get('window');
 const FOREST_HEIGHT = SH;
 const BOTTOM_PANEL_HEIGHT = SH * 0.42;
@@ -816,8 +817,7 @@ const styles = StyleSheet.create({
   },
   drawCancelText: {
     color: COLORS.white,
-    fontSize: 16,
-    fontWeight: '700',
+  ...TEXT.subheading,
   },
   timePeriodLabel: {
     fontSize: 13,
@@ -851,8 +851,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statNum: {
-    fontSize: 17,
-    fontWeight: '700',
+    ...TEXT.statSmall, fontSize: 17,
     color: COLORS.forest,
   },
   statNumNight: {
@@ -980,8 +979,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   forestName: {
-    fontSize: 22,
-    fontWeight: '700',
+    ...TEXT.heading,
     color: COLORS.textPrimary,
   },
   levelBadge: {
@@ -998,8 +996,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...TEXT.subheading,
     color: COLORS.textPrimary,
     marginBottom: -4,
   },

@@ -14,6 +14,7 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PageFooter } from '../components/common/PageFooter';
 import { infiniteScrollProps } from '../hooks/useInfiniteList';
 
+import { TEXT } from '../constants/typography';
 export function NgoDirectoryScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
@@ -98,7 +99,7 @@ const styles = StyleSheet.create({
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
   feedIcon: { fontSize: 16 },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   searchWrap: { paddingHorizontal: 20, paddingBottom: 12 },
   searchInput: { backgroundColor: 'transparent', borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.warmBrown, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: COLORS.textPrimary },
   scrollContent: { paddingHorizontal: 20 },
@@ -109,7 +110,7 @@ const styles = StyleSheet.create({
   cardRow: { flexDirection: 'row', gap: 12 },
   logo: { width: 48, height: 48, borderRadius: 12 },
   logoPlaceholder: { width: 48, height: 48, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.06)', alignItems: 'center', justifyContent: 'center' },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
+  cardTitle: { ...TEXT.subheading, color: COLORS.textPrimary },
   cardMeta: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   cardBody: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4 },
 });

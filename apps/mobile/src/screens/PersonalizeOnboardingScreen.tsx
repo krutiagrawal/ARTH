@@ -16,6 +16,7 @@ import { usePersonalizeMe } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import type { PersonalizeInput } from '../api/users';
 
+import { TEXT } from '../constants/typography';
 type StepKey = 'space' | 'sunlight' | 'experience' | 'motivation' | 'species' | 'goal' | 'dob';
 type StepType = 'single' | 'multi' | 'number' | 'date';
 
@@ -332,10 +333,8 @@ const styles = StyleSheet.create({
   },
   emoji: { fontSize: 40, marginBottom: SPACING.md },
   question: {
-    fontSize: 26,
-    fontWeight: '800',
+    ...TEXT.title,
     color: COLORS.white,
-    lineHeight: 32,
     textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,

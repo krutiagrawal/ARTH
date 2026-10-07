@@ -14,6 +14,7 @@ import { useCart, useUpdateCartItem, useRemoveCartItem } from '../hooks/useApiQu
 import type { ApiCartItem } from '../api/cart';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
+import { TEXT } from '../constants/typography';
 function formatRupees(cents: number) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`;
 }
@@ -107,7 +108,7 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 20 },
   row: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md, padding: 14, marginBottom: 10 },
   species: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
@@ -116,9 +117,9 @@ const styles = StyleSheet.create({
   stepperRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   stepperButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.white, borderWidth: 1.5, borderColor: COLORS.sand, alignItems: 'center', justifyContent: 'center' },
   stepperButtonText: { fontSize: 18, fontWeight: '700', color: COLORS.forest },
-  stepperValue: { fontSize: 16, fontWeight: '800', color: COLORS.textPrimary, minWidth: 24, textAlign: 'center' },
+  stepperValue: { ...TEXT.statSmall, fontSize: 16, color: COLORS.textPrimary, minWidth: 24, textAlign: 'center' },
   footer: { paddingHorizontal: 20, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(94,133,80,0.15)' },
   subtotalRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   subtotalLabel: { fontSize: 14, color: COLORS.textSecondary, fontWeight: '600' },
-  subtotalValue: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '800' },
+  subtotalValue: { ...TEXT.statSmall, fontSize: 18, color: COLORS.textPrimary },
 });

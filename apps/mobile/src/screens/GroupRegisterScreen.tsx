@@ -4,7 +4,7 @@ import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
-import { TYPOGRAPHY } from '../constants/typography';
+import { TYPOGRAPHY, TEXT } from '../constants/typography';
 import { RADIUS, SPACING } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { PasswordInput } from '../components/common/PasswordInput';
@@ -194,10 +194,8 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xxl,
   },
   logo: {
-    fontSize: 32,
-    fontWeight: '900',
+    ...TEXT.title,
     color: COLORS.white,
-    letterSpacing: 6,
     textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.55)',
     textShadowOffset: { width: 0, height: 2 },

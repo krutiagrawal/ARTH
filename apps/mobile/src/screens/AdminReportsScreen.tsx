@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, GRADIENTS, ON_DARK_SURFACE } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
-import { FONTS } from '../constants/typography';
+import { FONTS, TEXT } from '../constants/typography';
 import { Sheet } from '../components/common/Sheet';
 import { EmptyState } from '../components/common/EmptyState';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
@@ -322,9 +322,7 @@ const styles = StyleSheet.create({
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { paddingHorizontal: 20, paddingBottom: 10 },
   title: {
-    fontFamily: FONTS.displayBold,
-    fontSize: 26,
-    lineHeight: 34,
+    ...TEXT.title,
     color: ON_DARK_SURFACE.primary,
   },
   subtitle: { fontSize: 13, color: ON_DARK_SURFACE.secondary, marginTop: 2 },

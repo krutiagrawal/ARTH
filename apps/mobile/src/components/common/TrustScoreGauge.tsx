@@ -5,6 +5,7 @@ import { COLORS, ON_DARK_SURFACE, ON_LIGHT_SURFACE } from '../../constants/color
 import { RADIUS, SPACING } from '../../constants/theme';
 import type { TrustScoreFactors } from '../../api/nurseryReputation';
 
+import { TEXT } from '../../constants/typography';
 function bandColor(score: number): string {
   if (score >= 85) return COLORS.sage;
   if (score >= 65) return COLORS.golden;
@@ -66,7 +67,7 @@ const styles = StyleSheet.create({
   container: { gap: 8 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   label: { fontSize: 13, fontWeight: '600' },
-  score: { fontSize: 28, fontWeight: '900' },
+  score: { ...TEXT.stat, fontSize: 28 },
   pendingLabel: { fontSize: 13, fontWeight: '600' },
   pendingValue: { fontSize: 15, fontWeight: '700', marginTop: 2 },
   track: { height: 8, borderRadius: RADIUS.full, backgroundColor: 'rgba(255,255,255,0.15)', overflow: 'hidden' },

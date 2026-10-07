@@ -1,59 +1,56 @@
 /**
- * Type system. Two families, deliberately far apart so headings read as "designed" rather than
- * as bigger body text:
- *   - Baloo 2 (rounded display) for display/headline text — screen titles, section headings.
- *   - Nunito Sans for everything else, including every numeral.
+ * Type system. Two families:
+ *   - Bricolage Grotesque for display/headline text — screen titles, section headings.
+ *   - Figtree for everything else, including every numeral.
  *
- * Nunito Sans is applied by `<Text>`/`<TextInput>` from src/components/common/AppText, which every
+ * Figtree is applied by `<Text>`/`<TextInput>` from src/components/common/AppText, which every
  * screen imports in place of the react-native originals; it maps each `fontWeight` onto the
- * matching named face, so ordinary text needs no `fontFamily` of its own. Baloo 2 is opt-in: set
- * `fontFamily: FONTS.display` on the styles that should carry it, or spread one of the display
- * TYPOGRAPHY entries below.
+ * matching named face, so ordinary text needs no `fontFamily` of its own. Bricolage is opt-in via
+ * the `TEXT.title` / `TEXT.heading` roles below (or `fontFamily: FONTS.display`).
+ *
+ * Screens should use the semantic `TEXT` roles at the bottom of this file rather than ad-hoc
+ * sizes and weights, so the same kind of content looks the same everywhere.
  *
  * IMPORTANT: a named face already encodes its weight. Never pair `fontFamily: FONTS.*Bold` with a
  * `fontWeight` — Android picks one and ignores the other, which reads as the wrong weight rather
  * than as an error. Use the face alone.
  *
- * IMPORTANT: Baloo 2 needs a taller line box than a normal sans. It carries a large x-height and
- * long descenders (the family also covers Devanagari), and Android clips them outright when
- * `lineHeight` drops much below ~1.3x the font size — a silent, device-specific bug that looks
- * like a cropped 'g'. Every display entry here sits at 1.30–1.36x for that reason; keep any new
- * one in that band. Baloo is also already tightly fitted, so the aggressive negative tracking the
- * previous serif wanted (-1 at 42px) collides here — the values below are much gentler.
+ * Display roles keep a ~1.3x line box for tall ascenders/descenders; keep any new display role in
+ * that band.
  */
 
 export const FONTS = {
-  // Display — Baloo 2
-  display: 'Baloo2_600SemiBold',
-  displayBold: 'Baloo2_700Bold',
-  displayHeavy: 'Baloo2_800ExtraBold',
-  displayMedium: 'Baloo2_500Medium',
-  // Body — Nunito Sans
-  body: 'NunitoSans_400Regular',
-  bodyMedium: 'NunitoSans_500Medium',
-  bodySemiBold: 'NunitoSans_600SemiBold',
-  bodyBold: 'NunitoSans_700Bold',
-  bodyExtraBold: 'NunitoSans_800ExtraBold',
+  // Display — Bricolage Grotesque
+  display: 'BricolageGrotesque_600SemiBold',
+  displayBold: 'BricolageGrotesque_700Bold',
+  displayHeavy: 'BricolageGrotesque_800ExtraBold',
+  displayMedium: 'BricolageGrotesque_500Medium',
+  // Body — Figtree
+  body: 'Figtree_400Regular',
+  bodyMedium: 'Figtree_500Medium',
+  bodySemiBold: 'Figtree_600SemiBold',
+  bodyBold: 'Figtree_700Bold',
+  bodyExtraBold: 'Figtree_800ExtraBold',
   mono: 'monospace',
 };
 
-/** Weight → Nunito Sans face, used by AppText's `<Text>`/`<TextInput>`. */
+/** Weight → Figtree face, used by AppText's `<Text>`/`<TextInput>`. */
 export const BODY_FACE_BY_WEIGHT: Record<string, string> = {
-  '100': 'NunitoSans_200ExtraLight',
-  '200': 'NunitoSans_200ExtraLight',
-  '300': 'NunitoSans_300Light',
+  '100': 'Figtree_300Light',
+  '200': 'Figtree_300Light',
+  '300': 'Figtree_300Light',
   '400': FONTS.body,
   '500': FONTS.bodyMedium,
   '600': FONTS.bodySemiBold,
   '700': FONTS.bodyBold,
   '800': FONTS.bodyExtraBold,
-  '900': 'NunitoSans_900Black',
+  '900': 'Figtree_900Black',
   normal: FONTS.body,
   bold: FONTS.bodyBold,
 };
 
 export const TYPOGRAPHY = {
-  // Display / Hero — Baloo 2. The jump from `displayXL` down to `h2` is intentionally steep;
+  // Display / Hero — Bricolage Grotesque. The jump from `displayXL` down to `h2` is intentionally steep;
   // a wide gap between the display and body scales is what carries the "two font" feel.
   displayXL: {
     fontSize: 52,
@@ -80,7 +77,7 @@ export const TYPOGRAPHY = {
     letterSpacing: -0.2,
   },
 
-  // Headings — h1/h2 are Baloo, h3/h4 drop to the sans so dense UI stays quiet.
+  // Headings — h1/h2 are Bricolage Grotesque, h3/h4 drop to the sans so dense UI stays quiet.
   h1: {
     fontSize: 23,
     fontFamily: FONTS.display,
@@ -135,7 +132,7 @@ export const TYPOGRAPHY = {
     letterSpacing: 0.8,
     textTransform: 'uppercase' as const,
   },
-  /** Small all-caps kicker that sits directly above a Baloo heading. Stays in the sans on purpose
+  /** Small all-caps kicker that sits directly above a Bricolage heading. Stays in the sans on purpose
    * — the contrast between a wide-tracked sans kicker and a tight rounded display line is what
    * makes the pairing look deliberate. Mirrors the web site's `.eyebrow`. */
   kicker: {
@@ -157,7 +154,7 @@ export const TYPOGRAPHY = {
     lineHeight: 40,
     letterSpacing: -1,
   },
-  // Numerals stay in the sans throughout — Baloo is reserved for headings, and mixing a rounded
+  // Numerals stay in the sans throughout — Bricolage is reserved for headings, and mixing a rounded
   // display figure into a row of sans ones (StatDisplay's sizes sit side by side) reads as a
   // mistake. This is also what keeps the admin console looking like a console.
   numberTiny: {
@@ -174,3 +171,44 @@ export const TYPOGRAPHY = {
     textTransform: 'uppercase' as const,
   },
 };
+
+/**
+ * Semantic text roles — the ONLY styles screens should reach for. Each role fixes the face
+ * (display vs body), size, weight and line height, so the same kind of content looks the same on
+ * every screen, and changing a font later means editing only FONTS above.
+ * Spread one into a style and add only layout/colour: `{ ...TEXT.heading, color }`.
+ *
+ *   title       Screen title / page hero heading            display, 28
+ *   heading     Section header, card title                  display, 20
+ *   subheading  Row title, list-item name, sub-section      body semibold, 16
+ *   body        Paragraphs, descriptions                    body regular, 15
+ *   bodySmall   Secondary descriptions, metadata            body regular, 13
+ *   caption     Timestamps, helper text, fine print         body regular, 12
+ *   label       ALL-CAPS kicker above a heading, tags       body bold, 11, tracked
+ *   button      Text inside buttons and tappable chips      body semibold, 15
+ *   stat        Big numeric figures (counts, scores, %)     body extrabold, 28
+ *   statSmall   Inline numeric figures in cards             body bold, 20
+ *
+ * Display roles keep a ~1.3x line box (see the Bricolage note above) — keep any new display role in
+ * that band. Glyph/emoji text (←, ×, 🌱) is not typography and should keep its own plain style.
+ */
+export const TEXT = {
+  title: { fontFamily: FONTS.displayBold, fontSize: 28, lineHeight: 37, letterSpacing: -0.2 },
+  heading: { fontFamily: FONTS.display, fontSize: 20, lineHeight: 27 },
+  subheading: { fontFamily: FONTS.bodySemiBold, fontSize: 16, lineHeight: 23 },
+  body: { fontFamily: FONTS.body, fontSize: 15, lineHeight: 22 },
+  bodySmall: { fontFamily: FONTS.body, fontSize: 13, lineHeight: 19 },
+  caption: { fontFamily: FONTS.body, fontSize: 12, lineHeight: 17, letterSpacing: 0.1 },
+  label: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 11,
+    lineHeight: 15,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase' as const,
+  },
+  button: { fontFamily: FONTS.bodySemiBold, fontSize: 15, lineHeight: 20 },
+  stat: { fontFamily: FONTS.bodyExtraBold, fontSize: 28, lineHeight: 34, letterSpacing: -0.5 },
+  statSmall: { fontFamily: FONTS.bodyBold, fontSize: 20, lineHeight: 26, letterSpacing: -0.2 },
+} as const;
+
+export type TextRole = keyof typeof TEXT;

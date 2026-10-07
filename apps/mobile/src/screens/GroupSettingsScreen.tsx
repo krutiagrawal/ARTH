@@ -29,6 +29,7 @@ import { PRIVACY_POLICY_TEXT, TERMS_OF_SERVICE_TEXT } from '../constants/legalCo
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
+import { TEXT } from '../constants/typography';
 const GROUP_TYPES: { value: 'family' | 'school' | 'club' | 'other'; label: string }[] = [
   { value: 'family', label: 'Family' },
   { value: 'school', label: 'School' },
@@ -508,7 +509,7 @@ const styles = StyleSheet.create({
   submitButton: { marginTop: 20 },
   inviteCard: { marginTop: 24, padding: 16, borderRadius: RADIUS.md, backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown, alignItems: 'center' },
   inviteLabel: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '600', textTransform: 'uppercase' },
-  inviteCode: { fontSize: 24, fontWeight: '800', color: COLORS.forest, letterSpacing: 4, marginTop: 6 },
+  inviteCode: { ...TEXT.heading, color: COLORS.forest,marginTop: 6 },
   regenerateText: { fontSize: 13, color: COLORS.coral, fontWeight: '700', marginTop: 12 },
   footer: { alignItems: 'center', gap: 6, paddingVertical: 16, marginTop: 8 },
   footerEmoji: { fontSize: 24 },

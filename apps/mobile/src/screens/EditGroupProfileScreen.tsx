@@ -12,6 +12,7 @@ import { BorderCard } from '../components/common/BorderCard';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
+import { TEXT } from '../constants/typography';
 const HANDLE_REGEX = /^[a-z0-9_]+$/;
 
 export function EditGroupProfileScreen({ navigation }: any) {
@@ -139,8 +140,7 @@ const styles = StyleSheet.create({
   },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...TEXT.heading,
     color: COLORS.textPrimary,
   },
   scrollContent: { paddingHorizontal: 16 },

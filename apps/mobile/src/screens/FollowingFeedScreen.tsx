@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
-import { FONTS } from '../constants/typography';
+import { FONTS, TEXT } from '../constants/typography';
 import { EmptyState } from '../components/common/EmptyState';
 import { PostCard } from '../components/social/PostCard';
 import { ReportSheet } from '../components/social/ReportSheet';
@@ -199,9 +199,7 @@ const styles = StyleSheet.create({
   },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: {
-    fontFamily: FONTS.displayBold,
-    fontSize: 22,
-    lineHeight: 29,
+    ...TEXT.heading,
     color: COLORS.textPrimary,
   },
   list: { paddingHorizontal: SPACING.md, paddingTop: SPACING.sm },

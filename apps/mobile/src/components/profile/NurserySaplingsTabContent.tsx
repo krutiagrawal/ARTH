@@ -16,6 +16,7 @@ import {
 } from '../../hooks/useApiQueries';
 import type { ApiSaplingStock } from '../../api/nursery';
 
+import { TEXT } from '../../constants/typography';
 /** The nursery owner uploading a new photo for one of their own listings — uploads immediately
  * on pick, no separate save step. */
 function OwnThumb({ item }: { item: ApiSaplingStock }) {
@@ -257,7 +258,7 @@ const styles = StyleSheet.create({
   soldOutText: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted },
   stepperRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   stepperButton: { width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.beige, alignItems: 'center', justifyContent: 'center' },
-  stepperButtonText: { fontSize: 16, fontWeight: '700', color: COLORS.forest },
+  stepperButtonText: { ...TEXT.button, color: COLORS.forest },
   stepperValue: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, minWidth: 18, textAlign: 'center' },
   manageLink: { alignSelf: 'center', paddingVertical: 8 },
   manageLinkText: { fontSize: 13, fontWeight: '700', color: COLORS.sageLight },

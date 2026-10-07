@@ -19,7 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { COLORS, GRADIENTS } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
-import { TYPOGRAPHY } from '../constants/typography';
+import { TYPOGRAPHY, TEXT } from '../constants/typography';
 import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { StatusModal } from '../components/common/StatusModal';
@@ -1045,8 +1045,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...TEXT.heading,
     color: COLORS.textPrimary,
   },
   uploadContent: {
@@ -1075,8 +1074,7 @@ const styles = StyleSheet.create({
     fontSize: 56,
   },
   uploadAreaTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...TEXT.heading,
     color: COLORS.forest,
   },
   uploadAreaSubtitle: {
@@ -1169,8 +1167,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   scanningText: {
-    fontSize: 20,
-    fontWeight: '700',
+    ...TEXT.heading,
     color: COLORS.textPrimary,
     textAlign: 'center',
   },
@@ -1230,8 +1227,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   aiResultSpecies: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...TEXT.subheading,
     color: COLORS.white,
   },
   aiResultConfidence: {
@@ -1483,14 +1479,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
   },
   successSubtitle: {
-    fontSize: 17,
-    fontWeight: '600',
+    ...TEXT.subheading,
     color: '#F6FBF2',
     textAlign: 'center',
   },
   successTreeName: {
-    fontSize: 19,
-    fontWeight: '900',
+    ...TEXT.heading,
     color: '#E8FBD6',
   },
   successXp: {

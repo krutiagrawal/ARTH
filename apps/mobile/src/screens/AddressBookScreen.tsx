@@ -18,6 +18,7 @@ import { isValidPincode } from '../utils/validation';
 import { ApiError } from '../api/client';
 import type { ApiAddress } from '../api/addresses';
 
+import { TEXT } from '../constants/typography';
 function AddressCard({ address }: { address: ApiAddress }) {
   const updateMutation = useUpdateAddress();
   const deleteMutation = useDeleteAddress();
@@ -202,7 +203,7 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
   row: { borderRadius: RADIUS.md, padding: 14, marginBottom: 10 },
   rowHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },

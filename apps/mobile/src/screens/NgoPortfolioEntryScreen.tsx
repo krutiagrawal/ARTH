@@ -14,7 +14,7 @@ import { StatusBar } from 'expo-status-bar';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
-import { FONTS } from '../constants/typography';
+import { FONTS, TEXT } from '../constants/typography';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { FormField, FormFieldShell } from '../components/common/FormField';
 import { AddressSearchField } from '../components/common/AddressSearchField';
@@ -256,9 +256,7 @@ const styles = StyleSheet.create({
   doneBtn: { alignSelf: 'flex-end', paddingHorizontal: 14, paddingVertical: 6 },
   doneText: { fontSize: 14, fontWeight: '800', color: COLORS.forest },
   sectionTitle: {
-    fontFamily: FONTS.display,
-    fontSize: 18,
-    lineHeight: 24,
+    ...TEXT.heading,
     color: COLORS.textPrimary,
     marginTop: 10,
   },

@@ -32,6 +32,7 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { getXpProgress } from '../constants/forestLevels';
 import type { ApiPost } from '../api/posts';
 
+import { TEXT } from '../constants/typography';
 export function GroupProfileScreen({ route, navigation }: any) {
   const groupId: string | undefined = route?.params?.groupId;
   const isOwn = !groupId;
@@ -241,12 +242,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   iconText: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
-  topBarTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center', marginHorizontal: 8 },
+  topBarTitle: { flex: 1,...TEXT.subheading, color: COLORS.textPrimary, textAlign: 'center', marginHorizontal: 8 },
   tabBody: { paddingHorizontal: 16, paddingTop: 16 },
   contributionsCard: { gap: 12 },
-  contributionsTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
+  contributionsTitle: { ...TEXT.subheading, color: COLORS.textPrimary },
   contributionsRow: { flexDirection: 'row', justifyContent: 'space-around' },
   contributionsStat: { alignItems: 'center' },
-  contributionsNum: { fontSize: 22, fontWeight: '800', color: COLORS.textPrimary },
+  contributionsNum: { ...TEXT.statSmall, fontSize: 22, color: COLORS.textPrimary },
   contributionsLabel: { fontSize: 10, color: COLORS.textMuted, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.4 },
 });

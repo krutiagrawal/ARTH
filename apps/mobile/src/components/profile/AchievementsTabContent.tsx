@@ -11,6 +11,7 @@ import { getForestLevelLabel, getXpProgress } from '../../constants/forestLevels
 import type { ApiAchievement } from '../../api/achievements';
 import type { StreakWeek } from '../../api/streaks';
 
+import { TEXT } from '../../constants/typography';
 /**
  * Everything that used to live directly on the profile dashboard — level/XP, streak, badges,
  * and the permanent story archive — now grouped into one tab instead of a long scroll.
@@ -74,6 +75,6 @@ const styles = StyleSheet.create({
   wrap: { paddingHorizontal: 16, paddingTop: 16, gap: 16 },
   xpCard: { gap: 8 },
   xpRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  xpLevelLabel: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary },
+  xpLevelLabel: { ...TEXT.statSmall, fontSize: 16, color: COLORS.textPrimary },
   xpSubLabel: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
 });

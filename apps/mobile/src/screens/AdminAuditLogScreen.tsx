@@ -15,6 +15,7 @@ import { useAdminActionLogs } from '../hooks/useApiQueries';
 import { useSlideUp } from '../hooks/useAnimations';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
+import { TEXT } from '../constants/typography';
 const TAKE = 25;
 
 function actionLabel(action: string) {
@@ -86,7 +87,7 @@ export function AdminAuditLogScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingHorizontal: 20, paddingBottom: 12 },
-  headerTitle: { fontSize: 22, fontWeight: '700', color: ON_DARK_SURFACE.primary },
+  headerTitle: { ...TEXT.heading, color: ON_DARK_SURFACE.primary },
   scrollContent: { paddingHorizontal: 20 },
   loader: { marginTop: 40 },
   card: { marginBottom: 12 },

@@ -4,6 +4,7 @@ import { Text } from './AppText';
 import { COLORS } from '../../constants/colors';
 import { RADIUS, SPACING } from '../../constants/theme';
 
+import { TEXT } from '../../constants/typography';
 interface OptionCardProps {
   icon?: string;
   label: string;
@@ -46,7 +47,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.mint,
   },
   icon: { fontSize: 24 },
-  label: { flex: 1, fontSize: 16, fontWeight: '700', color: COLORS.white },
+  label: { flex: 1,...TEXT.subheading, color: COLORS.white },
   labelSelected: { color: COLORS.white },
   indicator: {
     width: 24,

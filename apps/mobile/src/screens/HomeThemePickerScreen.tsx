@@ -17,6 +17,7 @@ import { useTimeTheme, getThemeForHour, PERIOD_HOUR, type TimePeriod } from '../
 import { useUpdateSettings } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
+import { TEXT } from '../constants/typography';
 export type HomeThemePickerRole = 'user' | 'ngo' | 'nursery';
 
 /** Swallows any navigation attempted from inside the full-homepage preview (tapping a mission,
@@ -198,7 +199,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.mintLight,
   },
   previewTextWrap: { padding: 16 },
-  previewGreeting: { fontSize: 22, fontWeight: '800' },
+  previewGreeting: { ...TEXT.heading },
   previewSubtitle: { fontSize: 14, fontWeight: '600', marginTop: 2 },
   caption: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 19 },
   sectionTitle: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, marginTop: 4 },

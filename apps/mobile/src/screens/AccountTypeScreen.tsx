@@ -11,6 +11,7 @@ import { FloatingParticles } from '../components/common/FloatingParticles';
 import { useSlideUp } from '../hooks/useAnimations';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
+import { TEXT } from '../constants/typography';
 interface AccountTypeOption {
   route: string;
   emoji: string;
@@ -107,11 +108,9 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: SPACING.lg },
   title: {
-    fontSize: 26,
-    fontWeight: '800',
+    ...TEXT.title,
     color: COLORS.white,
     textAlign: 'center',
-    letterSpacing: -0.5,
     marginBottom: 8,
   },
   subtitle: {
@@ -150,7 +149,7 @@ const styles = StyleSheet.create({
   },
   illustrationEmoji: { fontSize: 24 },
   cardText: { flex: 1 },
-  cardTitle: { fontSize: 17, fontWeight: '800', color: COLORS.white },
+  cardTitle: { ...TEXT.subheading, color: COLORS.white },
   cardBody: { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2, lineHeight: 17 },
   chevron: { fontSize: 24, color: 'rgba(255,255,255,0.6)', fontWeight: '600' },
   switchText: {

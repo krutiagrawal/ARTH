@@ -14,6 +14,7 @@ import { useConfirm } from '../context/ConfirmDialogContext';
 import { STATUS_META, ACTIONABLE_STATUSES } from '../constants/treeHealth';
 import type { ApiTreeHealthCheck } from '../api/plantedTrees';
 
+import { TEXT } from '../constants/typography';
 export function NgoTreeDetailScreen({ navigation, route }: any) {
   const { treeId } = route.params as { treeId: string };
   const insets = useSafeAreaInsets();
@@ -140,7 +141,7 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   loader: { marginTop: 60 },
   scrollContent: { paddingHorizontal: 20 },
   photo: { width: '100%', height: 180, borderRadius: RADIUS.lg, marginBottom: 14 },

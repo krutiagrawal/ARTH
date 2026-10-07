@@ -9,6 +9,7 @@ import { usePostStory } from '../../hooks/useApiQueries';
 import { useConfirm } from '../../context/ConfirmDialogContext';
 import { shareImageToInstagramStory } from '../../utils/shareToInstagram';
 
+import { TEXT } from '../../constants/typography';
 export function StoryPreviewModal({
   visible,
   imageBase64,
@@ -143,8 +144,7 @@ const styles = StyleSheet.create({
   },
   instagramButtonText: {
     color: COLORS.forest,
-    fontSize: 16,
-    fontWeight: '800',
+  ...TEXT.button,
   },
   postButton: {
     backgroundColor: COLORS.forest,
@@ -157,8 +157,7 @@ const styles = StyleSheet.create({
   },
   postButtonText: {
     color: COLORS.white,
-    fontSize: 16,
-    fontWeight: '800',
+  ...TEXT.button,
   },
   hint: {
     color: COLORS.textMuted,

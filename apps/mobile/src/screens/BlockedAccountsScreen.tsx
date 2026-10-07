@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
-import { FONTS } from '../constants/typography';
+import { FONTS, TEXT } from '../constants/typography';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { EmptyState } from '../components/common/EmptyState';
 import { resolveMediaUrl } from '../api/client';
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   avatarImage: { width: '100%', height: '100%' },
   avatarEmoji: { fontSize: 20 },
   rowText: { flex: 1 },
-  name: { fontFamily: FONTS.display, fontSize: 15, lineHeight: 21, color: COLORS.textPrimary },
+  name: { ...TEXT.heading, color: COLORS.textPrimary },
   meta: { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
   unblockBtn: {
     paddingHorizontal: 14,

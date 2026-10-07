@@ -5,6 +5,7 @@ import { COLORS } from '../../constants/colors';
 import { BorderCard } from './BorderCard';
 import type { StreakWeek } from '../../api/streaks';
 
+import { TEXT } from '../../constants/typography';
 /**
  * Weekly streak grid — extracted from `ProfileScreen.tsx` so it can be reused for a
  * non-`User` streak (e.g. an NGO's weekly-update streak), which passes its own `weeks`/
@@ -87,8 +88,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   streakCalTitleDark: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...TEXT.statSmall, fontSize: 16,
     color: COLORS.textPrimary,
   },
   streakCalSubDark: {
@@ -102,8 +102,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   streakCountNum: {
-    fontSize: 24,
-    fontWeight: '800',
+    ...TEXT.statSmall, fontSize: 24,
     color: COLORS.streakFire,
   },
   streakCountFire: {

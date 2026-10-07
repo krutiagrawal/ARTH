@@ -16,6 +16,7 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PageFooter } from '../components/common/PageFooter';
 import { infiniteScrollProps } from '../hooks/useInfiniteList';
 
+import { TEXT } from '../constants/typography';
 function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
   const animStyle = useSlideUp(delay, 18);
   return <Animated.View style={[animStyle, style]}>{children}</Animated.View>;
@@ -116,7 +117,7 @@ const styles = StyleSheet.create({
   cardRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   cardContent: { flex: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  cardTitle: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary, flexShrink: 1 },
+  cardTitle: { ...TEXT.subheading, color: COLORS.textPrimary, flexShrink: 1 },
   cardBody: { fontSize: 13, color: COLORS.textSecondary, marginTop: 4 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, gap: 8 },
   metaText: { fontSize: 12, color: COLORS.textSecondary, flexShrink: 1 },

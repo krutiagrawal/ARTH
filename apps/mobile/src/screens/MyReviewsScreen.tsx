@@ -14,6 +14,7 @@ import { flattenPages, infiniteScrollProps } from '../hooks/useInfiniteList';
 import { PageFooter } from '../components/common/PageFooter';
 import type { ApiMyReview } from '../api/orders';
 
+import { TEXT } from '../constants/typography';
 function Stars({ rating }: { rating: number }) {
   return <Text style={styles.stars}>{'★'.repeat(rating)}{'☆'.repeat(5 - rating)}</Text>;
 }
@@ -82,7 +83,7 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
   row: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md, padding: 14, marginBottom: 10 },
   title: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },

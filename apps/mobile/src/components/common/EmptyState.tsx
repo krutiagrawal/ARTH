@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { Text } from './AppText';
 import { COLORS } from '../../constants/colors';
-import { TYPOGRAPHY, FONTS } from '../../constants/typography';
+import { TYPOGRAPHY, FONTS, TEXT } from '../../constants/typography';
 import { SPACING } from '../../constants/theme';
 import { AnimatedButton } from './AnimatedButton';
 
@@ -75,9 +75,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   title: {
-    fontFamily: FONTS.displayBold,
-    fontSize: 20,
-    lineHeight: 27,
+    ...TEXT.heading,
     textAlign: 'center',
   },
   body: {

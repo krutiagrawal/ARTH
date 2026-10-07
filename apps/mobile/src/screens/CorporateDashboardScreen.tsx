@@ -7,7 +7,7 @@ import { BlurTargetView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { FONTS } from '../constants/typography';
+import { FONTS, TEXT } from '../constants/typography';
 import { SHADOWS } from '../constants/theme';
 import { EcoWidget } from '../components/common/EcoWidget';
 import { IconBadge } from '../components/common/IconBadge';
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   heroBottomFade: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12, zIndex: 10 },
   greeting: { fontSize: 13, fontWeight: '500', letterSpacing: 0.3, textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
-  orgName: { fontFamily: FONTS.displayBold, fontSize: 24, lineHeight: 32, letterSpacing: -0.3, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 5 },
+  orgName: { ...TEXT.heading, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 5 },
   avatarButton: {},
   avatar: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', ...SHADOWS.sage },
   avatarText: { fontSize: 22 },
@@ -245,11 +245,11 @@ const styles = StyleSheet.create({
   statusBody: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   gridRow: { flexDirection: 'row', alignItems: 'stretch', gap: 10, marginBottom: 10 },
   gridTile: { flex: 1 },
-  sectionTitle: { fontFamily: FONTS.display, fontSize: 20, lineHeight: 27, marginTop: 20 },
+  sectionTitle: { ...TEXT.heading, marginTop: 20 },
   actionCard: { marginBottom: 12, marginTop: 2 },
   actionRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   actionTextColumn: { flex: 1 },
-  actionTitle: { fontSize: 16, fontWeight: '700' },
+  actionTitle: { ...TEXT.button },
   actionBody: { fontSize: 12, marginTop: 2 },
   chevron: { fontSize: 22, fontWeight: '600' },
 });

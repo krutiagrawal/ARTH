@@ -13,6 +13,7 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { ApiSession } from '../api/users';
 import { useConfirm } from '../context/ConfirmDialogContext';
 
+import { TEXT } from '../constants/typography';
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
@@ -111,8 +112,7 @@ const styles = StyleSheet.create({
   },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...TEXT.heading,
     color: COLORS.textPrimary,
   },
   scrollContent: { paddingHorizontal: 16 },

@@ -8,6 +8,7 @@ import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
+import { TEXT } from '../constants/typography';
 export function StaticContentScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
   const { title, body } = route.params as { title: string; body: string };
@@ -65,8 +66,7 @@ const styles = StyleSheet.create({
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: {
     flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
+    ...TEXT.heading,
     color: COLORS.textPrimary,
     textAlign: 'center',
   },

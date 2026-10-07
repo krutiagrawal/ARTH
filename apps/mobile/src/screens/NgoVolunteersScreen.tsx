@@ -17,6 +17,7 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PageFooter } from '../components/common/PageFooter';
 import { infiniteScrollProps } from '../hooks/useInfiniteList';
 
+import { TEXT } from '../constants/typography';
 function FadeInRow({ delay, children, style }: { delay: number; children: React.ReactNode; style?: any }) {
   const animStyle = useSlideUp(delay, 18);
   return <Animated.View style={[animStyle, style]}>{children}</Animated.View>;
@@ -108,7 +109,7 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40 },
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary },
+  headerTitle: { ...TEXT.heading, color: COLORS.textPrimary },
   scrollContent: { paddingHorizontal: 20 },
   hint: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 14 },
   loader: { marginTop: 20 },

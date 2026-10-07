@@ -10,7 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle, G } from 'react-native-svg';
 import { COLORS } from '../../constants/colors';
-import { TYPOGRAPHY } from '../../constants/typography';
+import { TYPOGRAPHY, TEXT } from '../../constants/typography';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -114,8 +114,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...TEXT.subheading,
     textAlign: 'center',
   },
   percentage: {

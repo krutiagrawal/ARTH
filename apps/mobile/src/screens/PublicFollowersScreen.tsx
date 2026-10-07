@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
-import { FONTS } from '../constants/typography';
+import { FONTS, TEXT } from '../constants/typography';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { EmptyState } from '../components/common/EmptyState';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
   avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: COLORS.mintLight, alignItems: 'center', justifyContent: 'center' },
   avatarEmoji: { fontSize: 21 },
   rowText: { flex: 1 },
-  name: { fontFamily: FONTS.display, fontSize: 15, lineHeight: 21, color: COLORS.textPrimary },
+  name: { ...TEXT.heading, color: COLORS.textPrimary },
   meta: { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
   chevron: { fontSize: 20, color: COLORS.textMuted, fontWeight: '600' },
 });

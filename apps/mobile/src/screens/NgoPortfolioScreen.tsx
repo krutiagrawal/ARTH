@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
-import { FONTS } from '../constants/typography';
+import { FONTS, TEXT } from '../constants/typography';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { EmptyState } from '../components/common/EmptyState';
 import { AnimatedButton } from '../components/common/AnimatedButton';
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   list: { padding: SPACING.md, paddingBottom: SPACING.xl, gap: SPACING.md },
   intro: { gap: 10, marginBottom: 4 },
   introText: { fontSize: 13, lineHeight: 19, color: COLORS.textSecondary },
-  introTotal: { fontFamily: FONTS.display, fontSize: 17, lineHeight: 23, color: COLORS.forest },
+  introTotal: { ...TEXT.heading, color: COLORS.forest },
   addBtn: { alignSelf: 'flex-start' },
   card: {
     backgroundColor: 'transparent',
@@ -196,11 +196,11 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: COLORS.textMuted,
   },
-  title: { fontFamily: FONTS.displayBold, fontSize: 19, lineHeight: 25, color: COLORS.textPrimary },
+  title: { ...TEXT.heading, color: COLORS.textPrimary },
   location: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   statRow: { flexDirection: 'row', gap: 18, marginTop: 8 },
   stat: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  statValue: { fontSize: 16, fontWeight: '800', color: COLORS.forest },
+  statValue: { ...TEXT.statSmall, fontSize: 16, color: COLORS.forest },
   statLabel: { fontSize: 11, color: COLORS.textMuted },
   cardActions: {
     flexDirection: 'row',

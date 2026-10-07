@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Text } from '../common/AppText';
 import { COLORS } from '../../constants/colors';
 import { RADIUS, SHADOWS } from '../../constants/theme';
-import { FONTS } from '../../constants/typography';
+import { FONTS, TEXT } from '../../constants/typography';
 import { ProgressRing } from '../common/ProgressRing';
 import { StatDisplay } from '../common/StatDisplay';
 import { StoryRing, type StoryRingStatus } from '../common/StoryRing';
@@ -240,9 +240,7 @@ const styles = StyleSheet.create({
   },
   levelBadgeText: { fontSize: 10, fontWeight: '800', color: COLORS.white, letterSpacing: 0.4 },
   name: {
-    fontFamily: FONTS.displayBold,
-    fontSize: 23,
-    lineHeight: 30,
+    ...TEXT.heading,
     color: COLORS.textPrimary,
     textAlign: 'center',
   },
