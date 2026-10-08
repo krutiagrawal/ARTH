@@ -8,15 +8,17 @@ type Db = PrismaClient | Prisma.TransactionClient;
 export interface ImpactTotals {
   co2Kg: number;
   oxygenKg: number;
+  /** CO2 the counted trees are on course to add over the next 12 months. */
+  co2NextYearKg: number;
   treesCounted: number;
   /** 'low' if any counted tree is a palm/bamboo/shrub or a species outside the growth table. */
   confidence: ImpactConfidence;
 }
 
-const EMPTY: ImpactTotals = { co2Kg: 0, oxygenKg: 0, treesCounted: 0, confidence: 'medium' };
+const EMPTY: ImpactTotals = { co2Kg: 0, oxygenKg: 0, co2NextYearKg: 0, treesCounted: 0, confidence: 'medium' };
 
 function accumulate(
-  totals: { co2: number; o2: number; n: number; low: boolean },
+  totals: { co2: number; o2: number; next: number; n: number; low: boolean },
   ref: { key?: string | null; name?: string | null },
   plantedAt: Date,
   now: Date,
@@ -24,23 +26,24 @@ function accumulate(
   const e = estimateTreeImpact(ref, plantedAt, now);
   totals.co2 += e.co2Kg;
   totals.o2 += e.oxygenKg;
+  totals.next += e.co2NextYearKg;
   totals.n += 1;
   if (e.confidence === 'low') totals.low = true;
 }
 
-function finish(t: { co2: number; o2: number; n: number; low: boolean }): ImpactTotals {
-  return { co2Kg: round1(t.co2), oxygenKg: round1(t.o2), treesCounted: t.n, confidence: t.low ? 'low' : 'medium' };
+function finish(t: { co2: number; o2: number; next: number; n: number; low: boolean }): ImpactTotals {
+  return { co2Kg: round1(t.co2), oxygenKg: round1(t.o2), co2NextYearKg: round1(t.next), treesCounted: t.n, confidence: t.low ? 'low' : 'medium' };
 }
 
-/** Only trees whose photo passed verification (or an admin approved) count, matching when XP is awarded. */
-const COUNTED_INDIVIDUAL_TREE = { isDeleted: false, aiVerificationStatus: 'verified' as const };
+/** Everything planted counts, including trees still pending review; only AI/admin-rejected ones don't. */
+const COUNTED_INDIVIDUAL_TREE = { isDeleted: false, aiVerificationStatus: { in: ['verified', 'unverified'] as ('verified' | 'unverified')[] } };
 
 export async function getUserImpact(db: Db, userId: string, now = new Date()): Promise<ImpactTotals> {
   const trees = await db.tree.findMany({
     where: { userId, ...COUNTED_INDIVIDUAL_TREE },
     select: { plantedAt: true, healthStatus: true, species: { select: { key: true, commonName: true } } },
   });
-  const t = { co2: 0, o2: 0, n: 0, low: false };
+  const t = { co2: 0, o2: 0, next: 0, n: 0, low: false };
   for (const tree of trees) {
     if (!countsTowardImpact(tree.healthStatus)) continue;
     accumulate(t, { key: tree.species.key, name: tree.species.commonName }, tree.plantedAt, now);
@@ -68,10 +71,14 @@ export async function getUsersCo2Kg(db: Db, userIds: string[], now = new Date())
  * cache now: trees keep growing, so it is refreshed whenever the profile is read and whenever a
  * planting is confirmed, rather than written once at planting time.
  */
+export async function refreshUserImpact(db: Db, userId: string): Promise<ImpactTotals> {
+  const impact = await getUserImpact(db, userId);
+  await db.user.update({ where: { id: userId }, data: { totalCo2Absorbed: impact.co2Kg } });
+  return impact;
+}
+
 export async function refreshUserCo2(db: Db, userId: string): Promise<number> {
-  const { co2Kg } = await getUserImpact(db, userId);
-  await db.user.update({ where: { id: userId }, data: { totalCo2Absorbed: co2Kg } });
-  return co2Kg;
+  return (await refreshUserImpact(db, userId)).co2Kg;
 }
 
 export async function getNurseryImpactTotals(db: Db, nurseryId: string, now = new Date()): Promise<ImpactTotals> {
@@ -79,7 +86,7 @@ export async function getNurseryImpactTotals(db: Db, nurseryId: string, now = ne
     where: { nurseryId, ...COUNTED_INDIVIDUAL_TREE },
     select: { plantedAt: true, healthStatus: true, species: { select: { key: true, commonName: true } } },
   });
-  const t = { co2: 0, o2: 0, n: 0, low: false };
+  const t = { co2: 0, o2: 0, next: 0, n: 0, low: false };
   for (const tree of trees) {
     if (!countsTowardImpact(tree.healthStatus)) continue;
     accumulate(t, { key: tree.species.key, name: tree.species.commonName }, tree.plantedAt, now);
@@ -103,7 +110,7 @@ export async function getNgoImpactTotals(prisma: PrismaClient, ngoId: string, no
   ]);
   const statusByTree = await getLatestStatusByTree(prisma, planted.map((p) => p.id));
 
-  const t = { co2: 0, o2: 0, n: 0, low: false };
+  const t = { co2: 0, o2: 0, next: 0, n: 0, low: false };
   for (const tree of planted) {
     if (!countsTowardImpact(statusByTree.get(tree.id))) continue;
     accumulate(t, { name: tree.speciesName }, tree.plantedAt, now);

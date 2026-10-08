@@ -18,6 +18,8 @@ export interface ApiUser {
   streakFreezesAvailable: number;
   treesPlantedCount: number;
   totalCo2Absorbed: number;
+  /** Projected extra CO2 over the next 12 months; only present on GET /users/me. */
+  co2NextYearKg?: number;
   badgesCount: number;
   selectedForestThemeId: string | null;
   createdAt: string;

@@ -711,7 +711,7 @@ export async function reviewTree(
     const updated = await tx.tree.update({
       where: { id: treeId },
       data: {
-        aiVerificationStatus: input.decision === 'approve' ? 'verified' : tree.aiVerificationStatus,
+        aiVerificationStatus: input.decision === 'approve' ? 'verified' : tree.aiVerificationStatus === 'unverified' ? 'rejected' : tree.aiVerificationStatus,
         reviewedAt: new Date(),
         reviewedByAdminId: input.adminUserId,
       },
@@ -733,13 +733,16 @@ export async function reviewTree(
 
     if (shouldAwardWithheldXp) {
       await addXp(tx, tree.userId, tree.xpEarned, 'tree_planted', 'tree', tree.id);
-      await tx.user.update({
-        where: { id: tree.userId },
-        data: { treesPlantedCount: { increment: 1 } },
-      });
+      // An 'unverified' tree was already counted when planted; only a rejected one is new here.
+      if (tree.aiVerificationStatus === 'rejected') {
+        await tx.user.update({ where: { id: tree.userId }, data: { treesPlantedCount: { increment: 1 } } });
+      }
     }
-    // An approved tree now counts toward the owner's impact.
-    if (input.decision === 'approve') await refreshUserCo2(tx, tree.userId);
+    // An admin rejecting a pending tree takes back the count it was given when planted.
+    if (input.decision === 'reject' && tree.aiVerificationStatus === 'unverified') {
+      await tx.user.update({ where: { id: tree.userId }, data: { treesPlantedCount: { decrement: 1 } } });
+    }
+    await refreshUserCo2(tx, tree.userId);
 
     await tx.adminActionLog.create({
       data: {

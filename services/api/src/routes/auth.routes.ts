@@ -16,7 +16,7 @@ import * as authService from '../services/auth.service';
 import { BadRequestError } from '../utils/errors';
 import { saveNurseryVerificationPhoto, saveNgoVerificationDocument, saveNgoPastWorkPhoto } from '../services/upload.service';
 import { splitMultipartBody, splitMultipartNamedFiles } from '../utils/multipart';
-import { refreshUserCo2 } from '../services/treeImpact.service';
+import { refreshUserImpact } from '../services/treeImpact.service';
 
 const NGO_SINGLE_DOC_FIELDS = [
   'registrationCertificate',
@@ -229,9 +229,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
     });
 
     instance.get('/me', async (request, reply) => {
-      await refreshUserCo2(fastify.prisma, request.user!.id);
+      const impact = await refreshUserImpact(fastify.prisma, request.user!.id);
       const user = await fastify.prisma.user.findUniqueOrThrow({ where: { id: request.user!.id } });
-      reply.send(authService.toPublicUser(user));
+      reply.send({ ...authService.toPublicUser(user), co2NextYearKg: impact.co2NextYearKg });
     });
 
     instance.get('/sessions', async (request, reply) => {

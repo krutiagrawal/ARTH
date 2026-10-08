@@ -205,7 +205,8 @@ function HeroSection({
           <EcoWidget
             icon="💨"
             value={`${(user?.totalCo2Absorbed ?? 0).toFixed(1)}kg`}
-            label="CO₂"
+            label="CO₂ stored"
+            sublabel={user?.co2NextYearKg ? `+${user.co2NextYearKg.toFixed(1)}kg next yr` : undefined}
             variant="glass"
             dark
             color={homeTextColor(theme, theme.accentColor)}
@@ -349,7 +350,7 @@ function RecentTrees({ trees, navigation, blurTarget, previewPeriod }: { trees: 
   return (
     <Animated.View style={slideStyle}>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: theme.textOnSky }]}>Recent Plants</Text>
+        <Text style={[styles.missionTitle, { color: homeTextColor(theme, theme.textPrimaryOnCard) }]}>Recent Plants</Text>
         <TouchableOpacity onPress={() => navigation.navigate('MyTrees')}>
           <Text style={[styles.seeAll, { color: homeTextColor(theme, theme.accentColor) }]}>See all →</Text>
         </TouchableOpacity>
@@ -614,7 +615,7 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
         {todayFact ? (
           <View style={styles.ecoInsightSection}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.textOnSky }]}>Eco Insight</Text>
+              <Text style={[styles.missionTitle, { color: homeTextColor(theme, theme.textPrimaryOnCard) }]}>Eco Insight</Text>
               <TouchableOpacity onPress={() => navigation.navigate('EcoInsights')}>
                 <Text style={[styles.seeAll, { color: homeTextColor(theme, theme.accentColor) }]}>Learn more →</Text>
               </TouchableOpacity>

@@ -157,6 +157,9 @@ export async function plantTree(prisma: PrismaClient, input: PlantTreeInput) {
 
     if (input.aiVerificationStatus === 'rejected' || input.aiVerificationStatus === 'unverified') {
       if (input.aiVerificationStatus === 'unverified') {
+        // Pending-review trees still count as planted (KPI cards, impact); XP and the rest wait for approval.
+        await tx.user.update({ where: { id: input.userId }, data: { treesPlantedCount: { increment: 1 } } });
+        await refreshUserCo2(tx, input.userId);
         await completeMissionByType(tx, input.userId, 'plant', false);
       }
       return { tree, provenanceFollowUp: null as ProvenanceFollowUp | null };

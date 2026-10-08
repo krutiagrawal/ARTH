@@ -288,7 +288,10 @@ export function UserProfileScreen({ route, navigation }: any) {
                         <Text style={styles.contributionsNum}>
                           {isOwn ? Number(user?.totalCo2Absorbed ?? 0).toFixed(1) : '–'}kg
                         </Text>
-                        <Text style={styles.contributionsLabel}>CO₂ absorbed</Text>
+                        <Text style={styles.contributionsLabel}>CO₂ stored so far</Text>
+                        {isOwn && !!user?.co2NextYearKg && (
+                          <Text style={styles.contributionsLabel}>+{user.co2NextYearKg.toFixed(1)}kg expected next year</Text>
+                        )}
                       </View>
                       <View style={styles.contributionsStat}>
                         <Text style={styles.contributionsNum}>{treesPlanted}</Text>

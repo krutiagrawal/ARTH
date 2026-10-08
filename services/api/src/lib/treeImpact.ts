@@ -220,7 +220,7 @@ export const round1 = (n: number) => Math.round(n * 10) / 10;
  * didn't pass photo verification, or are dead/removed, contribute nothing.
  */
 export function treeImpactFields(tree: { plantedAt: Date; healthStatus: string; aiVerificationStatus: string; species?: { key?: string | null; commonName?: string | null } | null }) {
-  const counts = tree.aiVerificationStatus === 'verified' && countsTowardImpact(tree.healthStatus);
+  const counts = tree.aiVerificationStatus !== 'rejected' && countsTowardImpact(tree.healthStatus);
   const e = estimateTreeImpact({ key: tree.species?.key, name: tree.species?.commonName }, tree.plantedAt);
   return {
     co2Absorbed: counts ? round1(e.co2Kg) : 0,
