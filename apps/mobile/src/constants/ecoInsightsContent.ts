@@ -126,5 +126,5 @@ export const HOW_PLANTING_HELPS: PlantingStep[] = [
 export const ECO_CTA = {
   headline: 'Your Next Tree Starts Now',
   body: "Climate change isn't someone else's job — it's everyone's, starting with the next square foot of ground you plant on.",
-  buttonLabel: 'Plant a Tree 🌱',
+  buttonLabel: 'Plant a Tree',
 };

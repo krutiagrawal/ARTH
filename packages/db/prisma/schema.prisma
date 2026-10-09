@@ -76,6 +76,7 @@ enum GameKey {
   spot_difference
   co2_duel
   plant_grid
+  daily_lesson
 }
 
 enum GamePlayStatus {
@@ -1661,6 +1662,48 @@ model StreakHistory {
   @@unique([userId, activityDate])
   @@index([userId, activityDate(sort: Desc)])
   @@map("streak_history")
+}
+
+// A day's educational lesson (article + 5-question quiz). Content is admin-editable via the
+// catalog; `sections` is [{heading, body}] and `quiz` is [{q, options[4], answer, explanation}],
+// both validated on write (services/api/src/services/adminCatalog.service.ts).
+model DailyLesson {
+  id          String    @id @default(uuid())
+  key         String    @unique
+  title       String
+  emoji       String
+  tag         String
+  summary     String
+  readMinutes Int       @default(3) @map("read_minutes")
+  // Long-form article: [{heading, body (light markdown), image?}]. See games/lessonSchema.ts.
+  sections    Json
+  // {url, alt, caption?, credit, sourceUrl?} shown at the top of the article and on its card.
+  heroImage   Json?     @map("hero_image")
+  takeaway    String?
+  quiz        Json
+  sourceNote  String?   @map("source_note")
+  // Pins this lesson to a specific UTC date (e.g. World Environment Day); otherwise lessons cycle.
+  publishOn   DateTime? @map("publish_on") @db.Date
+  isActive    Boolean   @default(true) @map("is_active")
+  sortOrder   Int       @default(0) @map("sort_order")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  picks DailyLessonPick[]
+
+  @@map("daily_lessons")
+}
+
+// Which lesson a UTC day showed. Written on the first request of the day so every user sees the
+// same lesson even if admins add, remove or deactivate lessons mid-day.
+model DailyLessonPick {
+  id        String   @id @default(uuid())
+  playDate  DateTime @unique @map("play_date") @db.Date
+  lessonId  String   @map("lesson_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  lesson DailyLesson @relation(fields: [lessonId], references: [id], onDelete: Restrict)
+
+  @@map("daily_lesson_picks")
 }
 
 // One row per user per game per UTC day. The unique key is the once-a-day guarantee; the

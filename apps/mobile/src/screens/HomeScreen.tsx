@@ -349,7 +349,7 @@ function GamesCard({ games, navigation, blurTarget, previewPeriod }: { games: Ap
   const { data: homeSettings } = useSettings();
   const theme = useTimeTheme((previewPeriod !== undefined ? previewPeriod : (homeSettings?.pinnedTimeTheme ?? null)) as TimePeriod | null);
   const doneCount = games.filter((g) => g.status === 'won' || g.status === 'lost' || g.status === 'completed').length;
-  const total = games.length || 14;
+  const total = games.length || 15;
   const rowBg = theme.cardTint === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)';
 
   return (

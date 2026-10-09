@@ -58,7 +58,13 @@ export default function AdminCatalogClient() {
   const startEdit = (item) => {
     const initial = {}
     if (config.hasKey) initial.key = item.key
-    for (const f of config.fields) initial[f.name] = item[f.name] ?? (f.type === 'checkbox' ? false : '')
+    for (const f of config.fields) {
+      const value = item[f.name]
+      initial[f.name] =
+        f.type === 'json'
+          ? (value == null && !f.required ? '' : JSON.stringify(value ?? [], null, 2))
+          : (value ?? (f.type === 'checkbox' ? false : ''))
+    }
     if (config.fields.some((f) => f.type === 'date')) {
       for (const f of config.fields.filter((f) => f.type === 'date')) {
         initial[f.name] = item[f.name] ? new Date(item[f.name]).toISOString().slice(0, 10) : ''
@@ -248,15 +254,16 @@ export default function AdminCatalogClient() {
                       ))}
                     </select>
                   </>
-                ) : f.type === 'textarea' ? (
+                ) : f.type === 'textarea' || f.type === 'json' ? (
                   <>
                     <FieldLabel required={f.required}>{f.name}</FieldLabel>
                     <textarea
                       required={f.required}
-                      rows={3}
+                      rows={f.type === 'json' ? 14 : 3}
+                      spellCheck={f.type === 'json' ? false : undefined}
                       value={form[f.name] || ''}
                       onChange={(e) => setForm((s) => ({ ...s, [f.name]: e.target.value }))}
-                      className={fieldTextareaClassName}
+                      className={cn(fieldTextareaClassName, f.type === 'json' && 'font-mono text-xs')}
                     />
                   </>
                 ) : (

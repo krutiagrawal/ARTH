@@ -15,6 +15,7 @@ export const gameKeySchema = z.enum([
   'spot_difference',
   'co2_duel',
   'plant_grid',
+  'daily_lesson',
 ]);
 
 // A guess is a single string (a tree key, a word) or a list (4 board words, 16 grid cells).

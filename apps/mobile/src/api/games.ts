@@ -14,8 +14,9 @@ export type GameKey =
   | 'shadow_tree'
   | 'spot_difference'
   | 'co2_duel'
-  | 'plant_grid';
-export type GameCategory = 'word' | 'quick' | 'puzzle';
+  | 'plant_grid'
+  | 'daily_lesson';
+export type GameCategory = 'word' | 'quick' | 'puzzle' | 'learn';
 /** Games that share the generic "one option per round" screen. */
 export type RoundsGameKey = 'eco_quiz' | 'true_or_myth' | 'co2_duel' | 'shadow_tree' | 'waste_sort' | 'missing_letters';
 export type GameStatus = 'not_started' | 'in_progress' | 'won' | 'lost' | 'completed';
@@ -95,16 +96,52 @@ export interface GroveWordState extends GameBase {
   answer: string | null;
 }
 
+export interface RoundsPuzzle {
+  rounds: { prompt: string; options: string[]; visual: { emoji: string; silhouette?: boolean } | null }[];
+}
+
+export interface RoundsResult {
+  correctCount: number;
+  total: number;
+  review: { correct: number; chosen: number; explanation: string | null }[];
+}
+
 export interface RoundsGameState extends GameBase {
   key: RoundsGameKey;
-  puzzle: {
-    rounds: { prompt: string; options: string[]; visual: { emoji: string; silhouette?: boolean } | null }[];
-  };
-  result: {
-    correctCount: number;
-    total: number;
-    review: { correct: number; chosen: number; explanation: string | null }[];
-  } | null;
+  puzzle: RoundsPuzzle;
+  result: RoundsResult | null;
+}
+
+/** A credited article photo. Credit (photographer / licence) is always shown under it. */
+export interface LessonImage {
+  url: string;
+  alt: string;
+  caption?: string;
+  credit: string;
+  sourceUrl?: string;
+}
+
+export interface DailyLessonContent {
+  key: string;
+  title: string;
+  emoji: string;
+  tag: string;
+  summary: string;
+  readMinutes: number;
+  heroImage: LessonImage | null;
+  /** `body` is light markdown (see components/lesson/RichText). */
+  sections: { heading: string; body: string; image?: LessonImage }[];
+  takeaway: string | null;
+  sourceNote: string | null;
+}
+
+/** The daily lesson: an article plus a quiz shaped like the other rounds games. */
+export interface DailyLessonState extends GameBase {
+  key: 'daily_lesson';
+  /** Null when no lesson is available today. */
+  lesson: DailyLessonContent | null;
+  puzzle: RoundsPuzzle;
+  result: RoundsResult | null;
 }
 
 export interface SpeciesScrambleState extends GameBase {
@@ -163,7 +200,8 @@ export type ApiGameState =
   | EcoConnectionsState
   | SeedMemoryState
   | SpotDifferenceState
-  | PlantGridState;
+  | PlantGridState
+  | DailyLessonState;
 
 export type GuessInput = string | (string | number)[];
 export interface SubmitPayload {

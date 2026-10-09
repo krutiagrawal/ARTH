@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { seedDailyLessons } from './seedData/seedLessons';
 
 const prisma = new PrismaClient();
 
@@ -428,6 +429,7 @@ async function main() {
   await seedDailyMissions();
   await seedChallenges();
   await seedEcoFacts();
+  await seedDailyLessons(prisma);
   await seedAppConfig();
   await seedForestLevelTiers();
   await seedApprovedPlantingLocations();

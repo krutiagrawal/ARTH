@@ -4,7 +4,7 @@ import { evaluateAchievements } from './achievement.service';
 import { startOfUtcDay, recordActivityToday, isActiveDay } from './streak.service';
 import { BadRequestError, ConflictError } from '../utils/errors';
 import { GAMES, GAME_KEYS } from '../games';
-import { GameDefinition, GuessInput, PlayView, SubmitPayload, xpFor } from '../games/types';
+import { GameCategory, GameDefinition, GuessInput, PlayView, SubmitPayload, xpFor } from '../games/types';
 
 // The orchestration layer: status, state, and the shared payout path. Everything specific to one
 // game (puzzle, validation, scoring) lives in its module under src/games/.
@@ -16,7 +16,7 @@ export interface GameSummary {
   title: string;
   description: string;
   icon: string;
-  category: 'word' | 'quick' | 'puzzle';
+  category: GameCategory;
   status: 'not_started' | 'in_progress' | 'won' | 'lost' | 'completed';
   xpAwarded: number;
   maxXp: number;
@@ -60,12 +60,13 @@ function definitionFor(key: GameKey): GameDefinition {
 }
 
 /** The detail payload for one game today. Answers are only included once the play is finished. */
-function buildState(def: GameDefinition, play: GamePlay | null, date: Date) {
+function buildState(def: GameDefinition, play: GamePlay | null, date: Date, ctx?: unknown) {
   return {
     ...summarize(def, play),
     attempts: play?.attempts ?? 0,
     maxAttempts: def.maxAttempts,
-    ...def.state(date, toView(play)),
+    ...def.state(date, toView(play), ctx),
+    ...(def.describe && ctx !== undefined ? { description: def.describe(ctx) ?? def.meta.description } : {}),
   };
 }
 
@@ -80,7 +81,18 @@ export async function getGamesStatus(tx: Prisma.TransactionClient, userId: strin
     tx.streakHistory.findUnique({ where: { userId_activityDate: { userId, activityDate: today } } }),
     tx.user.findUniqueOrThrow({ where: { id: userId }, select: { streakCurrent: true } }),
   ]);
-  const games = GAME_KEYS.map((key) => summarize(definitionFor(key), plays.find((p) => p.gameKey === key)));
+  const games: GameSummary[] = [];
+  for (const key of GAME_KEYS) {
+    const def = definitionFor(key);
+    const play = plays.find((p) => p.gameKey === key) ?? null;
+    const summary = summarize(def, play);
+    // DB-backed games (the daily lesson) can show today's content on their hub card.
+    if (def.load && def.describe) {
+      const description = def.describe(await def.load(tx, today, toView(play)));
+      if (description) summary.description = description;
+    }
+    games.push(summary);
+  }
   return {
     games,
     completedCount: games.filter((g) => g.status !== 'not_started' && g.status !== 'in_progress').length,
@@ -92,7 +104,9 @@ export async function getGamesStatus(tx: Prisma.TransactionClient, userId: strin
 export async function getTodayGame(tx: Prisma.TransactionClient, userId: string, key: GameKey) {
   const today = startOfUtcDay(new Date());
   const play = await tx.gamePlay.findUnique({ where: { userId_gameKey_playDate: { userId, gameKey: key, playDate: today } } });
-  return buildState(definitionFor(key), play, today);
+  const def = definitionFor(key);
+  const ctx = def.load ? await def.load(tx, today, toView(play)) : undefined;
+  return buildState(def, play, today, ctx);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -181,7 +195,8 @@ export async function submitAnswers(tx: Prisma.TransactionClient, userId: string
 
   const today = startOfUtcDay(new Date());
   // Validate and score before touching the DB, so a bad payload never creates a play row.
-  const result = def.submit(today, payload);
+  const ctx = def.load ? await def.load(tx, today, null) : undefined;
+  const result = def.submit(today, payload, ctx);
 
   const play = await getOrCreatePlay(tx, userId, key, today);
   const reward = await finishGame(tx, userId, play, {
@@ -191,5 +206,5 @@ export async function submitAnswers(tx: Prisma.TransactionClient, userId: string
     guesses: [result.stored],
   });
   const finished = await tx.gamePlay.findUniqueOrThrow({ where: { id: play.id } });
-  return { game: buildState(def, finished, today), reward };
+  return { game: buildState(def, finished, today, ctx), reward };
 }

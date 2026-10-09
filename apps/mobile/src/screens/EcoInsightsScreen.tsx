@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Image } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS, GRADIENTS } from '../constants/colors';
 import { RADIUS, SPACING, SHADOWS } from '../constants/theme';
-import { TYPOGRAPHY } from '../constants/typography';
+import { TEXT, TYPOGRAPHY } from '../constants/typography';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { SectionHeader } from '../components/common/SectionHeader';
 import { GlassCard } from '../components/common/GlassCard';
@@ -20,7 +20,9 @@ import { ShareCardModal } from '../components/common/ShareCardModal';
 import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
 import { useHaptics } from '../hooks/useHaptics';
 import { useAuth } from '../context/AuthContext';
-import { useEcoFacts } from '../hooks/useApiQueries';
+import { useEcoFacts, useTodayGame } from '../hooks/useApiQueries';
+import { resolveMediaUrl } from '../api/client';
+import type { DailyLessonState } from '../api/games';
 import {
   ECO_HERO,
   WHY_IT_MATTERS,
@@ -44,6 +46,61 @@ const PILLS: { key: PillKey; icon: string; label: string }[] = [
   { key: 'facts', icon: '💡', label: 'Did You Know' },
 ];
 
+/** Entry point to the day's lesson + quiz. Reads the same query as the lesson screen. */
+function TodayLessonCard({ game, onPress }: { game: DailyLessonState; onPress: () => void }) {
+  const { light } = useHaptics();
+  const [thumbFailed, setThumbFailed] = useState(false);
+  const lesson = game.lesson!;
+  const done = game.status === 'completed';
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.88}
+      onPress={() => {
+        light();
+        onPress();
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={`Today's lesson: ${lesson.title}`}
+    >
+      <GlassCard variant={done ? 'sage' : 'golden'} style={styles.lessonCard}>
+        <View style={styles.lessonTopRow}>
+          <Text style={styles.lessonKicker}>TODAY'S LESSON</Text>
+          <View style={styles.lessonTag}>
+            <Text style={styles.lessonTagText}>{lesson.tag.toUpperCase()}</Text>
+          </View>
+        </View>
+        <View style={styles.lessonBody}>
+          {lesson.heroImage && !thumbFailed ? (
+            <Image
+              source={{ uri: resolveMediaUrl(lesson.heroImage.url), headers: { 'User-Agent': 'ARTH-app/1.0 (https://arth.app)' } }}
+              style={styles.lessonThumb}
+              accessibilityLabel={lesson.heroImage.alt}
+              onError={() => setThumbFailed(true)}
+            />
+          ) : (
+            <Text style={styles.lessonEmoji}>{lesson.emoji}</Text>
+          )}
+          <View style={{ flex: 1 }}>
+            <Text style={styles.lessonTitle}>{lesson.title}</Text>
+            <Text style={styles.lessonSummary} numberOfLines={2}>
+              {lesson.summary}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.lessonFooter}>
+          <Text style={styles.lessonMeta}>
+            {done
+              ? `✅ Done · ${game.result?.correctCount ?? 0}/${game.result?.total ?? 5} correct · +${game.xpAwarded} XP`
+              : `${lesson.readMinutes} min read · 5-question quiz · up to +${game.maxXp} XP`}
+          </Text>
+          <Text style={styles.lessonCta}>{done ? 'Review →' : 'Start →'}</Text>
+        </View>
+      </GlassCard>
+    </TouchableOpacity>
+  );
+}
+
 function FactCard({ fact }: { fact: EcoFact }) {
   return (
     <GlassCard variant="sage" style={styles.factCard}>
@@ -63,9 +120,11 @@ export function EcoInsightsScreen({ navigation }: any) {
   const { user } = useAuth();
   const { light } = useHaptics();
   const { data: ecoFacts = [], refetch } = useEcoFacts();
+  const { data: lessonGame, refetch: refetchLesson } = useTodayGame<DailyLessonState>('daily_lesson');
   const [activePill, setActivePill] = useState<PillKey>('why');
   const [impactShareVisible, setImpactShareVisible] = useState(false);
-  const { refreshing, onRefresh } = usePullToRefresh(refetch);
+  const { refreshing, onRefresh } = usePullToRefresh([refetch, refetchLesson]);
+  const lessonStyle = useSlideUp(60, 20);
 
   const heroStyle = useFadeIn(0);
   const impactStyle = useSlideUp(100, 20);
@@ -101,6 +160,12 @@ export function EcoInsightsScreen({ navigation }: any) {
             <Text style={styles.heroBody}>{ECO_HERO.body}</Text>
           </LinearGradient>
         </Animated.View>
+
+        {lessonGame?.lesson ? (
+          <Animated.View style={[styles.section, lessonStyle]}>
+            <TodayLessonCard game={lessonGame} onPress={() => navigation.navigate('DailyLesson')} />
+          </Animated.View>
+        ) : null}
 
         <Animated.View style={[styles.section, impactStyle]}>
           <View style={styles.impactHeaderRow}>
@@ -185,10 +250,10 @@ export function EcoInsightsScreen({ navigation }: any) {
             <Text style={styles.ctaBody}>{ECO_CTA.body}</Text>
             <AnimatedButton
               label={ECO_CTA.buttonLabel}
-              variant="primary"
-              gradientColors={['#7ED957', '#2FA84F']}
+              icon="🌱"
+              variant="secondary"
               fullWidth
-              size="lg"
+              size="md"
               style={styles.ctaButton}
               onPress={() => navigation.navigate('PlantTree')}
             />
@@ -401,6 +466,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: SPACING.lg,
   },
+
+  lessonCard: { padding: SPACING.md },
+  lessonTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  lessonKicker: { ...TEXT.label, color: COLORS.forest },
+  lessonTag: { backgroundColor: COLORS.forest, borderRadius: RADIUS.full, paddingHorizontal: 10, paddingVertical: 3 },
+  lessonTagText: { ...TEXT.label, color: COLORS.white, fontSize: 10 },
+  lessonBody: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, marginTop: SPACING.sm },
+  lessonEmoji: { fontSize: 40, lineHeight: 50 },
+  lessonThumb: { width: 84, height: 84, borderRadius: RADIUS.md, backgroundColor: COLORS.mint },
+  lessonTitle: { ...TEXT.heading, color: COLORS.textPrimary },
+  lessonSummary: { ...TEXT.bodySmall, color: COLORS.textSecondary, marginTop: 2 },
+  lessonFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.sm },
+  lessonMeta: { ...TEXT.caption, color: COLORS.textSecondary, flex: 1, paddingRight: SPACING.sm },
+  lessonCta: { ...TEXT.button, color: COLORS.forest },
 
   ctaCard: {
     borderRadius: RADIUS.xl,

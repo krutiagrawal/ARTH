@@ -28,11 +28,13 @@ export function routeForGame(key: GameKey): { name: string; params?: object } {
     case 'seed_memory': return { name: 'SeedMemory' };
     case 'spot_difference': return { name: 'SpotDifference' };
     case 'plant_grid': return { name: 'PlantGrid' };
+    case 'daily_lesson': return { name: 'DailyLesson' };
     default: return { name: 'RoundsGame', params: { gameKey: key } };
   }
 }
 
 const SECTIONS: { category: GameCategory; title: string }[] = [
+  { category: 'learn', title: 'LEARN' },
   { category: 'word', title: 'WORD GAMES' },
   { category: 'quick', title: 'QUICK BRAIN' },
   { category: 'puzzle', title: 'PUZZLES' },
@@ -112,7 +114,7 @@ export function GamesScreen({ navigation }: any) {
 
         <Animated.View style={listStyle}>
           <Text style={styles.sectionLabel}>
-            TODAY · {data?.completedCount ?? 0}/{data?.games.length ?? 14} PLAYED
+            TODAY · {data?.completedCount ?? 0}/{data?.games.length ?? 15} PLAYED
           </Text>
           {SECTIONS.map((section) => {
             const games = (data?.games ?? []).filter((game) => game.category === section.category);

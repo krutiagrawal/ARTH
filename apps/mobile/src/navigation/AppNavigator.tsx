@@ -95,6 +95,7 @@ import { EcoConnectionsScreen } from '../screens/EcoConnectionsScreen';
 import { SeedMemoryScreen } from '../screens/SeedMemoryScreen';
 import { SpotDifferenceScreen } from '../screens/SpotDifferenceScreen';
 import { PlantGridScreen } from '../screens/PlantGridScreen';
+import { DailyLessonScreen } from '../screens/DailyLessonScreen';
 import { GrowOrderScreen } from '../screens/GrowOrderScreen';
 import { CampaignsListScreen } from '../screens/CampaignsListScreen';
 import { CampaignDetailScreen } from '../screens/CampaignDetailScreen';
@@ -423,6 +424,7 @@ export type RootStackParamList = {
   SeedMemory: undefined;
   SpotDifference: undefined;
   PlantGrid: undefined;
+  DailyLesson: undefined;
   GrowOrder: undefined;
   EditProfile: undefined;
   EmojiPicker: { selected?: string; onSelect: (emoji: string) => void } | undefined;
@@ -977,6 +979,7 @@ export function AppNavigator() {
         <Stack.Screen name="SeedMemory" component={SeedMemoryScreen} />
         <Stack.Screen name="SpotDifference" component={SpotDifferenceScreen} />
         <Stack.Screen name="PlantGrid" component={PlantGridScreen} />
+        <Stack.Screen name="DailyLesson" component={DailyLessonScreen} />
         <Stack.Screen name="GrowOrder" component={GrowOrderScreen} />
         <Stack.Screen name="Campaigns" component={CampaignsListScreen} />
         <Stack.Screen name="NgoMain" component={NgoMainApp} />

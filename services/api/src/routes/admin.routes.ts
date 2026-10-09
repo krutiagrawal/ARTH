@@ -215,7 +215,7 @@ const blockAccountSchema = z.object({ reason: z.string().max(500).optional() });
 
 const reviewTreeSchema = z.object({ decision: z.enum(['approve', 'reject']) });
 
-const CATALOG_MODELS = ['species', 'achievements', 'challenges', 'missions', 'themes', 'decorations'] as const;
+const CATALOG_MODELS = ['species', 'achievements', 'challenges', 'missions', 'themes', 'decorations', 'lessons'] as const;
 const catalogModelParamSchema = z.enum(CATALOG_MODELS);
 
 function serializeGroup(group: any) {

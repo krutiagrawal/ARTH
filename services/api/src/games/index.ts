@@ -10,10 +10,12 @@ import { spotDifference } from './spotDifference';
 import { seedMemory } from './seedMemory';
 import { ecoConnections } from './ecoConnections';
 import { plantGrid } from './plantGrid';
+import { dailyLesson } from './dailyLesson';
 
 // The registry. To retire a game, delete its module and remove it here (and from the GameKey enum
 // in a later migration if you want the row type gone). Order here is the order on the hub.
 export const GAMES: Record<GameKey, GameDefinition> = {
+  daily_lesson: dailyLesson,
   guess_tree: guessTree,
   grove_word: groveWord,
   species_scramble: speciesScramble,
