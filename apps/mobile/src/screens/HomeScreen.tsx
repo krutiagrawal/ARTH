@@ -28,11 +28,12 @@ import { TreeCard } from '../components/common/TreeCard';
 import { Sheet } from '../components/common/Sheet';
 import { useHaptics } from '../hooks/useHaptics';
 import { useAuth } from '../context/AuthContext';
-import { useTrees, useTodayMissions, useEcoFacts, useCompleteMission, useSettings } from '../hooks/useApiQueries';
+import { useTrees, useTodayMissions, useEcoFacts, useCompleteMission, useSettings, useGamesStatus } from '../hooks/useApiQueries';
 import { useDeviceWeather } from '../hooks/useDeviceWeather';
 import type { ApiUser } from '../api/auth';
 import type { ApiTree } from '../api/trees';
 import type { ApiDailyMission } from '../api/missions';
+import type { ApiGameSummary } from '../api/games';
 import type { ApiWeather } from '../api/weather';
 import { getForestLevelLabel, getXpProgress } from '../constants/forestLevels';
 import { hexToRgba } from '../utils/color';
@@ -341,6 +342,74 @@ function MissionCard({ missions, navigation, blurTarget, previewPeriod }: { miss
   );
 }
 
+/** Entry point to the daily games. Any one finished game keeps the streak alive, so the copy
+ * leads with that; the four chips show which of today's games are already done. */
+function GamesCard({ games, navigation, blurTarget, previewPeriod }: { games: ApiGameSummary[]; navigation: any; blurTarget: RefObject<View | null>; previewPeriod?: TimePeriod | null }) {
+  const slideStyle = useSlideUp(150, 24);
+  const { data: homeSettings } = useSettings();
+  const theme = useTimeTheme((previewPeriod !== undefined ? previewPeriod : (homeSettings?.pinnedTimeTheme ?? null)) as TimePeriod | null);
+  const doneCount = games.filter((g) => g.status === 'won' || g.status === 'lost' || g.status === 'completed').length;
+  const total = games.length || 14;
+  const rowBg = theme.cardTint === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)';
+
+  return (
+    <Animated.View style={slideStyle}>
+      <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('Games')} accessibilityRole="button" accessibilityLabel="Open daily games">
+        <BlurView
+          intensity={35}
+          tint={theme.cardTint === 'dark' ? 'dark' : 'light'}
+          blurTarget={blurTarget}
+          style={[styles.missionCard, { borderColor: theme.cardBorder, borderWidth: 1, borderTopColor: 'rgba(255,255,255,0.4)' }]}
+        >
+          <LinearGradient
+            colors={[hexToRgba(theme.cardBackground, theme.cardOverlayAlpha), hexToRgba(theme.cardBackgroundAlt, theme.cardOverlayAlpha)]}
+            style={StyleSheet.absoluteFill}
+          />
+          <LinearGradient
+            colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0.6, y: 0.8 }}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          <View style={styles.missionHeader}>
+            <View style={{ flex: 1, paddingRight: 12 }}>
+              <Text style={[styles.missionTag, { color: homeTextColor(theme, theme.accentColor) }]}>DAILY GAMES</Text>
+              <Text style={[styles.missionTitle, { color: homeTextColor(theme, theme.textPrimaryOnCard) }]}>Play to keep your streak</Text>
+              <Text style={[styles.missionItemDesc, { color: homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true }), marginTop: 2 }]}>
+                One game a day is enough. Each earns its own XP.
+              </Text>
+            </View>
+            <ProgressRing
+              size={52}
+              strokeWidth={5}
+              progress={doneCount / total}
+              color={theme.accentColor}
+              trackColor={theme.accentColorSoft}
+              label={`${doneCount}/${total}`}
+              delay={450}
+            />
+          </View>
+          <View style={styles.gamesChipRow}>
+            {games.slice(0, 4).map((game) => {
+              const done = game.status === 'won' || game.status === 'lost' || game.status === 'completed';
+              return (
+                <View key={game.key} style={[styles.gamesChip, { backgroundColor: rowBg }, done && { backgroundColor: theme.accentColor }]}>
+                  <Text style={styles.gamesChipIcon}>{done ? '✓' : game.icon}</Text>
+                </View>
+              );
+            })}
+            {games.length > 4 ? (
+              <Text style={[styles.missionItemDesc, { color: homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true }) }]}>+{games.length - 4} more</Text>
+            ) : null}
+            <Text style={[styles.seeAll, { color: homeTextColor(theme, theme.accentColor), marginLeft: 'auto' }]}>Play →</Text>
+          </View>
+        </BlurView>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
 function RecentTrees({ trees, navigation, blurTarget, previewPeriod }: { trees: ApiTree[]; navigation: any; blurTarget: RefObject<View | null>; previewPeriod?: TimePeriod | null }) {
   const slideStyle = useSlideUp(200, 24);
   const { data: homeSettings } = useSettings();
@@ -530,7 +599,8 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
   const { data: trees = [], refetch: refetchTrees } = useTrees(4);
   const { data: missions = [], refetch: refetchMissions } = useTodayMissions();
   const { data: ecoFacts = [], refetch: refetchEcoFacts } = useEcoFacts();
-  const { refreshing, onRefresh } = usePullToRefresh([refetchTrees, refetchMissions, refetchEcoFacts]);
+  const { data: gamesStatus, refetch: refetchGames } = useGamesStatus();
+  const { refreshing, onRefresh } = usePullToRefresh([refetchTrees, refetchMissions, refetchEcoFacts, refetchGames]);
 
   const todayFact = ecoFacts.length > 0 ? ecoFacts[new Date().getDate() % ecoFacts.length] : '';
   const forestLevelLabel = getForestLevelLabel(user?.level ?? 1);
@@ -611,6 +681,11 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
         </View>
 
         <MissionCard missions={missions} navigation={navigation} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />
+        {gamesStatus ? (
+          <View style={styles.gamesCardSection}>
+            <GamesCard games={gamesStatus.games} navigation={navigation} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />
+          </View>
+        ) : null}
         <RecentTrees trees={trees} navigation={navigation} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />
         {todayFact ? (
           <View style={styles.ecoInsightSection}>
@@ -989,6 +1064,9 @@ const styles = StyleSheet.create({
   ecoInsightSection: {
     marginTop: 16,
   },
+  gamesCardSection: {
+    marginTop: 8,
+  },
   sectionTitle: {
     ...TEXT.heading,
     color: COLORS.white,
@@ -1033,6 +1111,21 @@ const styles = StyleSheet.create({
   },
   missionList: {
     gap: 8,
+  },
+  gamesChipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  gamesChip: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gamesChipIcon: {
+    fontSize: 18,
   },
   missionItem: {
     flexDirection: 'row',

@@ -1,6 +1,6 @@
 import { PrismaClient } from '@arth/db';
 import { notify } from '../services/notification.service';
-import { startOfUtcDay, addDays } from '../services/streak.service';
+import { startOfUtcDay, addDays, activeDayWhere } from '../services/streak.service';
 import { hasRecentNotification } from './dedupe';
 
 // No per-user timezone is stored anywhere in this schema, so the "evening nudge" feel is
@@ -37,7 +37,7 @@ export async function runStreakAtRiskJob(prisma: PrismaClient): Promise<void> {
     const ids = candidates.map((c) => c.id);
 
     const history = await prisma.streakHistory.findMany({
-      where: { userId: { in: ids }, activityDate: { in: [today, yesterday] }, planted: true },
+      where: { userId: { in: ids }, activityDate: { in: [today, yesterday] }, ...activeDayWhere },
       select: { userId: true, activityDate: true },
     });
     const plantedToday = new Set(
@@ -57,7 +57,7 @@ export async function runStreakAtRiskJob(prisma: PrismaClient): Promise<void> {
         data: { streakCurrent: user.streakCurrent },
         push: {
           title: `🔥 ${user.streakCurrent}-day streak alert!`,
-          body: 'Plant something today or watch it wilt.',
+          body: 'Play a quick game or plant a tree today to keep it going.',
         },
       });
     }
@@ -85,7 +85,7 @@ export async function runStreakBrokenJob(prisma: PrismaClient): Promise<void> {
 
     for (const user of candidates) {
       const lastPlanted = await prisma.streakHistory.findFirst({
-        where: { userId: user.id, planted: true },
+        where: { userId: user.id, ...activeDayWhere },
         orderBy: { activityDate: 'desc' },
         select: { activityDate: true },
       });

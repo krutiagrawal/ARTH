@@ -8,6 +8,7 @@ import { fetchNgoPublicFollowers, fetchNurseryPublicFollowers } from '../api/pub
 import { fetchApprovedLocations, checkPlantingEligibility } from '../api/plantingLocations';
 import { fetchSpecies, createSpecies, fetchNearbyStock } from '../api/species';
 import { fetchTodayMissions, completeMission } from '../api/missions';
+import { fetchGamesStatus, fetchTodayGame, submitGameGuess, submitGame, type ApiGameState, type GamePlayResponse, type GuessInput, type SubmitPayload } from '../api/games';
 import { fetchEcoFacts } from '../api/ecoFacts';
 import { fetchCities } from '../api/cities';
 import { fetchAchievements, fetchUserAchievements } from '../api/achievements';
@@ -430,6 +431,58 @@ export function useCompleteMission() {
         refreshUser(),
       ]);
     },
+  });
+}
+
+export function useGamesStatus() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['games', 'status'],
+    queryFn: fetchGamesStatus,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useTodayGame<S extends ApiGameState>(key: S['key']) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['games', 'today', key],
+    queryFn: () => fetchTodayGame<S>(key),
+    enabled: isAuthenticated,
+  });
+}
+
+/** Shared success path for every game action: cache the returned state, then refresh whatever a
+ * finished game can change (hub status, streak calendar, XP/level/streak on the user object). */
+function useGameMutationSuccess<S extends ApiGameState>(key: S['key']) {
+  const queryClient = useQueryClient();
+  const { refreshUser } = useAuth();
+  return async (result: GamePlayResponse<S>) => {
+    queryClient.setQueryData(['games', 'today', key], result.game);
+    queryClient.invalidateQueries({ queryKey: ['games', 'status'] });
+    if (!result.reward) return;
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['streaks', 'calendar'] }),
+      queryClient.invalidateQueries({ queryKey: ['achievements'] }),
+      queryClient.invalidateQueries({ queryKey: ['leaderboard'] }),
+      refreshUser(),
+    ]);
+  };
+}
+
+export function useSubmitGameGuess<S extends ApiGameState>(key: S['key']) {
+  const onSuccess = useGameMutationSuccess<S>(key);
+  return useMutation({
+    mutationFn: (guess: GuessInput) => submitGameGuess<S>(key, guess),
+    onSuccess,
+  });
+}
+
+export function useSubmitGame<S extends ApiGameState>(key: S['key']) {
+  const onSuccess = useGameMutationSuccess<S>(key);
+  return useMutation({
+    mutationFn: (payload: SubmitPayload) => submitGame<S>(key, payload),
+    onSuccess,
   });
 }
 

@@ -58,6 +58,31 @@ enum XpReason {
   achievement_unlocked
   challenge_completed
   streak_saved_xp_spend
+  game_completed
+}
+
+enum GameKey {
+  guess_tree
+  grove_word
+  eco_quiz
+  grow_order
+  species_scramble
+  eco_connections
+  missing_letters
+  seed_memory
+  waste_sort
+  true_or_myth
+  shadow_tree
+  spot_difference
+  co2_duel
+  plant_grid
+}
+
+enum GamePlayStatus {
+  in_progress
+  won
+  lost
+  completed
 }
 
 enum ActivityType {
@@ -505,6 +530,7 @@ model User {
   userDailyMissions      UserDailyMission[]
   userForestThemes       UserForestTheme[]
   streakHistory          StreakHistory[]
+  gamePlays              GamePlay[]
   xpTransactions         XpTransaction[]
   activityFeed           ActivityFeed[]
   activityReactions      ActivityReaction[]
@@ -1625,6 +1651,8 @@ model StreakHistory {
   userId       String             @map("user_id")
   activityDate DateTime           @map("activity_date") @db.Date
   planted      Boolean            @default(false)
+  // Set when a daily game was completed that day — any active day (planted or game) extends the streak.
+  gamePlayed   Boolean            @default(false) @map("game_played")
   protectedBy  StreakProtectedBy? @map("protected_by")
   createdAt    DateTime           @default(now()) @map("created_at")
 
@@ -1633,6 +1661,27 @@ model StreakHistory {
   @@unique([userId, activityDate])
   @@index([userId, activityDate(sort: Desc)])
   @@map("streak_history")
+}
+
+// One row per user per game per UTC day. The unique key is the once-a-day guarantee; the
+// puzzle answer itself is derived server-side from the date and never stored per play.
+model GamePlay {
+  id          String         @id @default(uuid())
+  userId      String         @map("user_id")
+  gameKey     GameKey        @map("game_key")
+  playDate    DateTime       @map("play_date") @db.Date
+  status      GamePlayStatus @default(in_progress)
+  attempts    Int            @default(0)
+  guesses     Json           @default("[]")
+  xpAwarded   Int            @default(0) @map("xp_awarded")
+  completedAt DateTime?      @map("completed_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gameKey, playDate])
+  @@index([userId, playDate])
+  @@map("game_plays")
 }
 
 model XpTransaction {

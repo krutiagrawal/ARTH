@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { protectStreakSchema } from '../schemas/streaks.schema';
-import { startOfUtcDay, addDays, recordPlantedToday } from '../services/streak.service';
+import { startOfUtcDay, addDays, isActiveDay, recordPlantedToday } from '../services/streak.service';
 import { addXp } from '../services/xp.service';
 import { BadRequestError } from '../utils/errors';
 
@@ -17,7 +17,7 @@ export default async function streaksRoutes(fastify: FastifyInstance) {
     });
 
     const plantedDates = new Set(
-      rows.filter((r) => r.planted).map((r) => r.activityDate.toISOString().slice(0, 10))
+      rows.filter(isActiveDay).map((r) => r.activityDate.toISOString().slice(0, 10))
     );
 
     const weeks = [];

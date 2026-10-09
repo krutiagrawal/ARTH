@@ -26,6 +26,7 @@ import friendsRoutes from './routes/friends.routes';
 import leaderboardRoutes from './routes/leaderboard.routes';
 import challengesRoutes from './routes/challenges.routes';
 import missionsRoutes from './routes/missions.routes';
+import gamesRoutes from './routes/games.routes';
 import themesRoutes from './routes/themes.routes';
 import decorationsRoutes from './routes/decorations.routes';
 import streaksRoutes from './routes/streaks.routes';
@@ -127,6 +128,7 @@ export async function buildApp() {
     await instance.register(leaderboardRoutes, { prefix: '/api/leaderboard' });
     await instance.register(challengesRoutes, { prefix: '/api/challenges' });
     await instance.register(missionsRoutes, { prefix: '/api/missions' });
+    await instance.register(gamesRoutes, { prefix: '/api/games' });
     await instance.register(themesRoutes, { prefix: '/api/themes' });
     await instance.register(decorationsRoutes, { prefix: '/api/decorations' });
     await instance.register(streaksRoutes, { prefix: '/api/streaks' });
