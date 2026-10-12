@@ -212,7 +212,7 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
         {offersPickup && (
           <>
             <Text style={styles.sectionTitle}>Pickup instructions</Text>
-            <FormField
+            <FormField maxLength={1000}
               label="Notes for planters (optional)"
               value={pickupInstructions}
               onChangeText={setPickupInstructions}
@@ -231,7 +231,7 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
               <BorderCard key={i} style={styles.rowCard} noPadding>
                 <View style={styles.rowContent}>
                   <View style={{ flex: 1 }}>
-                    <FormField label="Label" value={row.label} onChangeText={(v) => updateWindowRow(i, { label: v })} placeholder="eg - Morning" />
+                    <FormField maxLength={60} label="Label" value={row.label} onChangeText={(v) => updateWindowRow(i, { label: v })} placeholder="eg - Morning" />
                   </View>
                   <View style={{ width: 90 }}>
                     <FormField label="Start" value={row.startTime} onChangeText={(v) => updateWindowRow(i, { startTime: v })} placeholder="eg - 09:00" />

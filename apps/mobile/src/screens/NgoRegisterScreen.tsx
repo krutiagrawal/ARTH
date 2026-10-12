@@ -390,7 +390,7 @@ export function NgoRegisterScreen({ navigation }: any) {
 
           {step === 'orgIdentity' && (
             <>
-              <TextInput style={styles.input} placeholder="Organisation name" placeholderTextColor={ON_DARK_SURFACE.muted} value={orgName} onChangeText={setOrgName} />
+              <TextInput maxLength={120} style={styles.input} placeholder="Organisation name" placeholderTextColor={ON_DARK_SURFACE.muted} value={orgName} onChangeText={setOrgName} />
               <SelectField dark label="Organisation type" options={ORG_TYPE_OPTIONS} value={orgType} onChange={(v) => setOrgType(v as NgoOrgType)} />
               <TextInput
                 style={styles.input}
@@ -428,7 +428,7 @@ export function NgoRegisterScreen({ navigation }: any) {
                 value={officialEmail}
                 onChangeText={setOfficialEmail}
               />
-              <TextInput
+              <TextInput maxLength={300}
                 style={styles.input}
                 placeholder="Website (optional)"
                 placeholderTextColor={ON_DARK_SURFACE.muted}
@@ -455,7 +455,7 @@ export function NgoRegisterScreen({ navigation }: any) {
 
           {step === 'legalRegistrations' && (
             <>
-              <TextInput
+              <TextInput maxLength={20}
                 style={styles.input}
                 placeholder="PAN of organisation (optional)"
                 placeholderTextColor={ON_DARK_SURFACE.muted}
@@ -467,21 +467,21 @@ export function NgoRegisterScreen({ navigation }: any) {
               <RegistrationToggleRow label="We have a registration certificate" value={hasRegistration} onValueChange={setHasRegistration} />
               {hasRegistration && (
                 <>
-                  <TextInput style={styles.input} placeholder="Registration number" placeholderTextColor={ON_DARK_SURFACE.muted} value={registrationNumber} onChangeText={setRegistrationNumber} />
-                  <TextInput style={styles.input} placeholder="Registration authority" placeholderTextColor={ON_DARK_SURFACE.muted} value={registrationAuthority} onChangeText={setRegistrationAuthority} />
+                  <TextInput maxLength={80} style={styles.input} placeholder="Registration number" placeholderTextColor={ON_DARK_SURFACE.muted} value={registrationNumber} onChangeText={setRegistrationNumber} />
+                  <TextInput maxLength={120} style={styles.input} placeholder="Registration authority" placeholderTextColor={ON_DARK_SURFACE.muted} value={registrationAuthority} onChangeText={setRegistrationAuthority} />
                   <DocumentPickerField label="Registration certificate" doc={registrationCertificate} onChange={setRegistrationCertificate} dark hint="PDF or photo" />
                 </>
               )}
 
               <RegistrationToggleRow label="We're registered on NGO Darpan" value={hasDarpan} onValueChange={setHasDarpan} />
               {hasDarpan && (
-                <TextInput style={styles.input} placeholder="NGO Darpan ID" placeholderTextColor={ON_DARK_SURFACE.muted} autoCapitalize="characters" value={ngoDarpanId} onChangeText={setNgoDarpanId} />
+                <TextInput maxLength={40} style={styles.input} placeholder="NGO Darpan ID" placeholderTextColor={ON_DARK_SURFACE.muted} autoCapitalize="characters" value={ngoDarpanId} onChangeText={setNgoDarpanId} />
               )}
 
               <RegistrationToggleRow label="We have 12A / 12AB registration" value={has12A} onValueChange={setHas12A} />
               {has12A && (
                 <>
-                  <TextInput style={styles.input} placeholder="12A/12AB registration number" placeholderTextColor={ON_DARK_SURFACE.muted} value={twelveARegistrationNumber} onChangeText={setTwelveARegistrationNumber} />
+                  <TextInput maxLength={60} style={styles.input} placeholder="12A/12AB registration number" placeholderTextColor={ON_DARK_SURFACE.muted} value={twelveARegistrationNumber} onChangeText={setTwelveARegistrationNumber} />
                   <DocumentPickerField label="12A/12AB certificate" doc={twelveACertificate} onChange={setTwelveACertificate} dark hint="PDF or photo" />
                 </>
               )}
@@ -489,7 +489,7 @@ export function NgoRegisterScreen({ navigation }: any) {
               <RegistrationToggleRow label="We have 80G registration" value={has80G} onValueChange={setHas80G} />
               {has80G && (
                 <>
-                  <TextInput style={styles.input} placeholder="80G registration number" placeholderTextColor={ON_DARK_SURFACE.muted} value={eightyGRegistrationNumber} onChangeText={setEightyGRegistrationNumber} />
+                  <TextInput maxLength={60} style={styles.input} placeholder="80G registration number" placeholderTextColor={ON_DARK_SURFACE.muted} value={eightyGRegistrationNumber} onChangeText={setEightyGRegistrationNumber} />
                   <DocumentPickerField label="80G certificate" doc={eightyGCertificate} onChange={setEightyGCertificate} dark hint="PDF or photo" />
                 </>
               )}
@@ -497,7 +497,7 @@ export function NgoRegisterScreen({ navigation }: any) {
               <RegistrationToggleRow label="We have FCRA registration" value={hasFcra} onValueChange={setHasFcra} />
               {hasFcra && (
                 <>
-                  <TextInput style={styles.input} placeholder="FCRA registration number" placeholderTextColor={ON_DARK_SURFACE.muted} value={fcraRegistrationNumber} onChangeText={setFcraRegistrationNumber} />
+                  <TextInput maxLength={60} style={styles.input} placeholder="FCRA registration number" placeholderTextColor={ON_DARK_SURFACE.muted} value={fcraRegistrationNumber} onChangeText={setFcraRegistrationNumber} />
                   <DocumentPickerField label="FCRA certificate" doc={fcraCertificate} onChange={setFcraCertificate} dark hint="PDF or photo" />
                 </>
               )}
@@ -516,8 +516,8 @@ export function NgoRegisterScreen({ navigation }: any) {
 
           {step === 'people' && (
             <>
-              <TextInput style={styles.input} placeholder="Primary contact's full name" placeholderTextColor={ON_DARK_SURFACE.muted} value={primaryContactName} onChangeText={setPrimaryContactName} />
-              <TextInput style={styles.input} placeholder="Designation" placeholderTextColor={ON_DARK_SURFACE.muted} value={primaryContactDesignation} onChangeText={setPrimaryContactDesignation} />
+              <TextInput maxLength={120} style={styles.input} placeholder="Primary contact's full name" placeholderTextColor={ON_DARK_SURFACE.muted} value={primaryContactName} onChangeText={setPrimaryContactName} />
+              <TextInput maxLength={80} style={styles.input} placeholder="Designation" placeholderTextColor={ON_DARK_SURFACE.muted} value={primaryContactDesignation} onChangeText={setPrimaryContactDesignation} />
               <PhoneField dark label="Primary contact's phone" value={primaryContactPhone} onChangeText={setPrimaryContactPhone} />
               <TextInput
                 style={styles.input}
@@ -541,7 +541,7 @@ export function NgoRegisterScreen({ navigation }: any) {
 
           {step === 'whatYouDo' && (
             <>
-              <TextInput
+              <TextInput maxLength={2000}
                 style={[styles.input, styles.multiline]}
                 placeholder="Brief description of your organisation"
                 placeholderTextColor={ON_DARK_SURFACE.muted}
@@ -574,7 +574,7 @@ export function NgoRegisterScreen({ navigation }: any) {
                 onChangeText={setVolunteerCountEstimate}
                 keyboardType="number-pad"
               />
-              <TextInput
+              <TextInput maxLength={2000}
                 style={[styles.input, styles.multiline]}
                 placeholder="Major projects / campaigns (optional)"
                 placeholderTextColor={ON_DARK_SURFACE.muted}
@@ -603,9 +603,9 @@ export function NgoRegisterScreen({ navigation }: any) {
               {conductsPlantationDrives && (
                 <>
                   <SelectField dark label="Typical saplings per drive" options={SAPLINGS_PER_DRIVE_OPTIONS} value={typicalSaplingsPerDrive} onChange={setTypicalSaplingsPerDrive} />
-                  <TextInput style={styles.input} placeholder="Typical drive locations" placeholderTextColor={ON_DARK_SURFACE.muted} value={typicalDriveLocations} onChangeText={setTypicalDriveLocations} />
-                  <TextInput style={styles.input} placeholder="Species commonly planted" placeholderTextColor={ON_DARK_SURFACE.muted} value={speciesCommonlyPlanted} onChangeText={setSpeciesCommonlyPlanted} />
-                  <TextInput
+                  <TextInput maxLength={300} style={styles.input} placeholder="Typical drive locations" placeholderTextColor={ON_DARK_SURFACE.muted} value={typicalDriveLocations} onChangeText={setTypicalDriveLocations} />
+                  <TextInput maxLength={300} style={styles.input} placeholder="Species commonly planted" placeholderTextColor={ON_DARK_SURFACE.muted} value={speciesCommonlyPlanted} onChangeText={setSpeciesCommonlyPlanted} />
+                  <TextInput maxLength={500}
                     style={[styles.input, styles.multiline]}
                     placeholder="Where do you source saplings from?"
                     placeholderTextColor={ON_DARK_SURFACE.muted}
@@ -621,7 +621,7 @@ export function NgoRegisterScreen({ navigation }: any) {
                     <Text style={styles.toggleLabel}>We do post-plantation maintenance</Text>
                     <Toggle value={doesPostPlantationMaintenance} onValueChange={setDoesPostPlantationMaintenance} offColor="rgba(255,255,255,0.25)" onColor={COLORS.mint} />
                   </View>
-                  <TextInput
+                  <TextInput maxLength={500}
                     style={[styles.input, styles.multiline]}
                     placeholder="How do you verify trees were actually planted?"
                     placeholderTextColor={ON_DARK_SURFACE.muted}

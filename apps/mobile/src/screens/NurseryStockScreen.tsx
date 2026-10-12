@@ -300,7 +300,7 @@ export function NurseryStockScreen({ navigation }: any) {
 
             {showAddSpecies && !selectedSpeciesId && (
               <View style={styles.inlineSpeciesBlock}>
-                <FormField label="Common name" value={newCommonName} onChangeText={setNewCommonName} placeholder="eg - Karanj" />
+                <FormField maxLength={120} label="Common name" value={newCommonName} onChangeText={setNewCommonName} placeholder="eg - Karanj" />
                 <Text style={[styles.formLabel, { marginTop: 10 }]}>Emoji</Text>
                 <View style={styles.emojiGrid}>
                   {SPECIES_EMOJI_OPTIONS.slice(0, 16).map((emoji) => (
@@ -333,15 +333,15 @@ export function NurseryStockScreen({ navigation }: any) {
               <View style={styles.moreDetailsBlock}>
                 <View style={styles.inlineRow}>
                   <View style={styles.inlineField}>
-                    <FormField label="Age" value={ageLabel} onChangeText={setAgeLabel} placeholder="eg - 6 months" />
+                    <FormField maxLength={60} label="Age" value={ageLabel} onChangeText={setAgeLabel} placeholder="eg - 6 months" />
                   </View>
                   <View style={styles.inlineField}>
-                    <FormField label="Height" value={heightLabel} onChangeText={setHeightLabel} placeholder="eg - 2 ft" />
+                    <FormField maxLength={60} label="Height" value={heightLabel} onChangeText={setHeightLabel} placeholder="eg - 2 ft" />
                   </View>
                 </View>
                 <View style={styles.inlineRow}>
                   <View style={styles.inlineField}>
-                    <FormField label="Pot size" value={potSize} onChangeText={setPotSize} placeholder="eg - 10 inch" />
+                    <FormField maxLength={60} label="Pot size" value={potSize} onChangeText={setPotSize} placeholder="eg - 10 inch" />
                   </View>
                   <View style={styles.inlineField}>
                     <FormField label="Low stock alert below" value={lowStockThreshold} onChangeText={setLowStockThreshold} placeholder="eg - 5" keyboardType="number-pad" />
@@ -355,17 +355,17 @@ export function NurseryStockScreen({ navigation }: any) {
                   ))}
                 </View>
 
-                <FormField label="Notes (visible to you only)" value={nurseryNotes} onChangeText={setNurseryNotes} placeholder="eg - Internal notes" multiline />
+                <FormField maxLength={1000} label="Notes (visible to you only)" value={nurseryNotes} onChangeText={setNurseryNotes} placeholder="eg - Internal notes" multiline />
 
                 {showAddSpecies && !selectedSpeciesId && (
                   <>
                     <Text style={styles.botanicalHeading}>New species botanical details</Text>
                     <View style={styles.inlineRow}>
                       <View style={styles.inlineField}>
-                        <FormField label="Scientific name" value={newScientificName} onChangeText={setNewScientificName} placeholder="eg - Optional" />
+                        <FormField maxLength={160} label="Scientific name" value={newScientificName} onChangeText={setNewScientificName} placeholder="eg - Optional" />
                       </View>
                       <View style={styles.inlineField}>
-                        <FormField label="Local name" value={newLocalName} onChangeText={setNewLocalName} placeholder="eg - Optional" />
+                        <FormField maxLength={120} label="Local name" value={newLocalName} onChangeText={setNewLocalName} placeholder="eg - Optional" />
                       </View>
                     </View>
                     <View style={styles.toggleRow}>
@@ -384,8 +384,8 @@ export function NurseryStockScreen({ navigation }: any) {
                         <Chip key={v} label={v} selected={newWater === v} onPress={() => setNewWater(newWater === v ? null : v)} />
                       ))}
                     </View>
-                    <FormField label="Soil needs" value={newSoilNeeds} onChangeText={setNewSoilNeeds} placeholder="eg - Optional" />
-                    <FormField label="Mature height" value={newMatureHeight} onChangeText={setNewMatureHeight} placeholder="eg - 15-20 ft" />
+                    <FormField maxLength={300} label="Soil needs" value={newSoilNeeds} onChangeText={setNewSoilNeeds} placeholder="eg - Optional" />
+                    <FormField maxLength={60} label="Mature height" value={newMatureHeight} onChangeText={setNewMatureHeight} placeholder="eg - 15-20 ft" />
                     <Text style={styles.formLabel}>Planting seasons</Text>
                     <View style={styles.chipRow}>
                       {SEASON_OPTIONS.map((s) => (

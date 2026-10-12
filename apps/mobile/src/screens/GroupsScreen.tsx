@@ -68,7 +68,7 @@ export function GroupsScreen({ navigation }: any) {
       >
         <View style={styles.joinRow}>
           <View style={{ flex: 1 }}>
-            <FormField label="Invite code" value={inviteCode} onChangeText={setInviteCode} placeholder="eg - AB3XQ9KP" autoCapitalize="characters" />
+            <FormField maxLength={20} label="Invite code" value={inviteCode} onChangeText={setInviteCode} placeholder="eg - AB3XQ9KP" autoCapitalize="characters" />
           </View>
         </View>
         {error && <Text style={styles.error}>{error}</Text>}

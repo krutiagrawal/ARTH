@@ -218,8 +218,8 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
 
       <Sheet visible={showCreate} onClose={() => setShowCreate(false)} title="Add a delivery partner" scrollable maxHeight={620}>
         <View style={{ gap: 4 }}>
-          <FormField label="Name" value={name} onChangeText={setName} placeholder="eg - Rider's full name" />
-          <FormField label="Handle" value={handle} onChangeText={setHandle} placeholder="eg - ravi_delivers" autoCapitalize="none" />
+          <FormField maxLength={80} label="Name" value={name} onChangeText={setName} placeholder="eg - Rider's full name" />
+          <FormField maxLength={30} label="Handle" value={handle} onChangeText={setHandle} placeholder="eg - ravi_delivers" autoCapitalize="none" />
           <FormField
             label="Email"
             value={email.value}
@@ -260,7 +260,7 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
 
       <Sheet visible={!!editingPartner} onClose={() => setEditingPartner(null)} title="Edit delivery partner" scrollable>
         <View style={{ gap: 4 }}>
-          <FormField label="Name" value={editName} onChangeText={setEditName} placeholder="eg - Rider's full name" />
+          <FormField maxLength={80} label="Name" value={editName} onChangeText={setEditName} placeholder="eg - Rider's full name" />
           <PhoneField label="Phone" value={editPhone} onChangeText={setEditPhone} />
           {editError && <Text style={styles.errorText}>{editError}</Text>}
           <AnimatedButton

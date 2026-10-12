@@ -1,4 +1,5 @@
 'use client'
+import { LimitMessage } from '@/components/ui/input'
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Sprout } from 'lucide-react'
@@ -105,11 +106,11 @@ function NurseryRegisterForm() {
         <form onSubmit={submit} className="mt-10 space-y-3">
           <label className="block">
             <span className="eyebrow">Nursery name</span>
-            <input required value={form.nurseryName} onChange={set('nurseryName')} className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+            <input maxLength={120} required value={form.nurseryName} onChange={set('nurseryName')} className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.nurseryName} maxLength={120} />
           </label>
           <label className="block">
             <span className="eyebrow">About your nursery</span>
-            <textarea required rows={4} value={form.description} onChange={set('description')} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 outline-none focus:ring-2 focus:ring-primary/40" />
+            <textarea maxLength={2000} required rows={4} value={form.description} onChange={set('description')} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.description} maxLength={2000} />
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
@@ -133,11 +134,11 @@ function NurseryRegisterForm() {
           </div>
           <label className="block">
             <span className="eyebrow">Your name</span>
-            <input required value={form.name} onChange={set('name')} className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+            <input maxLength={60} required value={form.name} onChange={set('name')} className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.name} maxLength={60} />
           </label>
           <label className="block">
             <span className="eyebrow">Handle</span>
-            <input required value={form.handle} onChange={set('handle')} placeholder="lowercase_letters_numbers" className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+            <input maxLength={30} required value={form.handle} onChange={set('handle')} placeholder="lowercase_letters_numbers" className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.handle} maxLength={30} />
           </label>
           <label className="block">
             <span className="eyebrow">Email</span>

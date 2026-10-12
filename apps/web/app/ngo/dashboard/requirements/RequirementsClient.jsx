@@ -184,7 +184,7 @@ function CreateSheet({ open, onOpenChange, submitting, onSubmit }) {
                   </p>
                   <label className="block">
                     <span className="text-[11px] font-medium text-muted-foreground">Emoji</span>
-                    <Input value={newSpeciesEmoji} onChange={(e) => setNewSpeciesEmoji(e.target.value)} placeholder="🌹" className="mt-1 h-9 w-20 rounded-full text-center" />
+                    <Input maxLength={8} value={newSpeciesEmoji} onChange={(e) => setNewSpeciesEmoji(e.target.value)} placeholder="🌹" className="mt-1 h-9 w-20 rounded-full text-center" />
                   </label>
                   {addSpeciesError && <p className="text-xs text-destructive">{addSpeciesError}</p>}
                   <Button
@@ -207,7 +207,7 @@ function CreateSheet({ open, onOpenChange, submitting, onSubmit }) {
         </div>
         <label className="block">
           <span className="text-[11px] font-medium text-muted-foreground">Additional description (optional)</span>
-          <Input value={speciesNote} onChange={(e) => setSpeciesNote(e.target.value)} placeholder="eg – Native shade trees" className="mt-1 h-9 rounded-full" />
+          <Input maxLength={200} value={speciesNote} onChange={(e) => setSpeciesNote(e.target.value)} placeholder="eg – Native shade trees" className="mt-1 h-9 rounded-full" />
         </label>
         <label className="block">
           <span className="text-[11px] font-medium text-muted-foreground">Quantity needed *</span>
@@ -219,11 +219,11 @@ function CreateSheet({ open, onOpenChange, submitting, onSubmit }) {
         </label>
         <label className="block">
           <span className="text-[11px] font-medium text-muted-foreground">City (optional)</span>
-          <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="eg – Pune" className="mt-1 h-9 rounded-full" />
+          <Input maxLength={100} value={city} onChange={(e) => setCity(e.target.value)} placeholder="eg – Pune" className="mt-1 h-9 rounded-full" />
         </label>
         <label className="block">
           <span className="text-[11px] font-medium text-muted-foreground">Notes (optional)</span>
-          <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1 rounded-xl" />
+          <Textarea maxLength={1000} rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1 rounded-xl" />
         </label>
       </form>
     </DrawerFormShell>
@@ -492,7 +492,7 @@ export default function RequirementsClient() {
         loading={confirmSubmitting}
         onConfirm={handleConfirmReceived}
       >
-        <Input
+        <Input maxLength={20}
           value={confirmCode}
           onChange={(e) => setConfirmCode(e.target.value)}
           placeholder="Handoff code"

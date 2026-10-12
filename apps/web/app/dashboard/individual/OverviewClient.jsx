@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { toast } from 'sonner'
 import {
   MapPin,
   TreePine,
@@ -28,26 +27,12 @@ import { proxy } from '@/lib/memberProxy'
 
 function MissionsCard() {
   const [missions, setMissions] = useState(null)
-  const [completing, setCompleting] = useState(null)
 
   useEffect(() => {
     proxy('/missions/today')
       .then(setMissions)
       .catch(() => setMissions([]))
   }, [])
-
-  const complete = async (id) => {
-    setCompleting(id)
-    try {
-      await proxy(`/missions/${id}/complete`, { method: 'POST' })
-      setMissions((prev) => prev.map((m) => (m.id === id ? { ...m, completed: true } : m)))
-      toast.success('Mission complete – XP added.')
-    } catch (err) {
-      toast.error(err.message || 'Could not complete mission.')
-    } finally {
-      setCompleting(null)
-    }
-  }
 
   return (
     <div className="rounded-3xl border border-border/70 bg-card p-6 soft-shadow">
@@ -71,11 +56,9 @@ function MissionsCard() {
           <p className="text-sm text-muted-foreground">No missions today – check back tomorrow.</p>
         ) : (
           missions.map((m) => (
-            <button
+            <div
               key={m.id}
-              onClick={() => !m.completed && complete(m.id)}
-              disabled={m.completed || completing === m.id}
-              className="flex w-full items-center gap-3 rounded-2xl border border-border/60 px-4 py-3 text-left transition hover:border-primary/40 disabled:cursor-default disabled:hover:border-border/60"
+              className="flex w-full items-center gap-3 rounded-2xl border border-border/60 px-4 py-3"
             >
               {m.completed ? (
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
@@ -91,7 +74,7 @@ function MissionsCard() {
                 )}
               </span>
               <span className="shrink-0 text-xs text-primary">+{m.xpReward} XP</span>
-            </button>
+            </div>
           ))
         )}
       </div>

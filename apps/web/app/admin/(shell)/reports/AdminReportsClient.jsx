@@ -118,7 +118,7 @@ function ReportRow({ report, onAction }) {
       >
         <label className="block">
           <span className="eyebrow">Reason (optional)</span>
-          <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} className="mt-2" />
+          <Textarea maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} rows={3} className="mt-2" />
         </label>
       </ConfirmDialog>
     </div>

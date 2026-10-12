@@ -287,7 +287,7 @@ export function AdminReportsScreen() {
                   : 'The content disappears from every feed. Only its author still sees it.'}
         </Text>
 
-        <TextInput
+        <TextInput maxLength={500}
           style={styles.reasonInput}
           placeholder="eg - Reason (optional – saved to the audit log)"
           placeholderTextColor={COLORS.textLight}

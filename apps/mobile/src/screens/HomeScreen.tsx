@@ -28,7 +28,7 @@ import { TreeCard } from '../components/common/TreeCard';
 import { Sheet } from '../components/common/Sheet';
 import { useHaptics } from '../hooks/useHaptics';
 import { useAuth } from '../context/AuthContext';
-import { useTrees, useTodayMissions, useEcoFacts, useCompleteMission, useSettings, useGamesStatus } from '../hooks/useApiQueries';
+import { useTrees, useTodayMissions, useEcoFacts, useSettings, useGamesStatus } from '../hooks/useApiQueries';
 import { useDeviceWeather } from '../hooks/useDeviceWeather';
 import type { ApiUser } from '../api/auth';
 import type { ApiTree } from '../api/trees';
@@ -249,21 +249,31 @@ function HeroSection({
   );
 }
 
-function MissionCard({ missions, navigation, blurTarget, previewPeriod }: { missions: ApiDailyMission[]; navigation: any; blurTarget: RefObject<View | null>; previewPeriod?: TimePeriod | null }) {
+function MissionCard({ missions, navigation, onNavigateTab, blurTarget, previewPeriod }: { missions: ApiDailyMission[]; navigation: any; onNavigateTab: (tab: string) => void; blurTarget: RefObject<View | null>; previewPeriod?: TimePeriod | null }) {
   const slideStyle = useSlideUp(100, 24);
   const { data: homeSettings } = useSettings();
   const theme = useTimeTheme((previewPeriod !== undefined ? previewPeriod : (homeSettings?.pinnedTimeTheme ?? null)) as TimePeriod | null);
   const completedCount = missions.filter(m => m.completed).length;
   const progress = missions.length > 0 ? completedCount / missions.length : 0;
-  const completeMissionMutation = useCompleteMission();
 
   const handleMissionPress = (mission: ApiDailyMission) => {
     if (mission.completed) return;
-    if (mission.type === 'plant') {
-      navigation.navigate('PlantTree');
-      return;
+    // A quest is never completed by tapping it: each one finishes when the user actually does the
+    // thing (the server marks it), so tapping just takes them to where that happens.
+    switch (mission.type) {
+      case 'plant':
+        navigation.navigate('PlantTree');
+        break;
+      case 'learn':
+        navigation.navigate('DailyLesson');
+        break;
+      case 'share':
+        onNavigateTab('Forest');
+        break;
+      case 'community':
+        onNavigateTab('Community');
+        break;
     }
-    completeMissionMutation.mutate(mission.id);
   };
 
   const rowBg = theme.cardTint === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.08)';
@@ -672,7 +682,7 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
           </BlurView>
         </View>
 
-        <MissionCard missions={missions} navigation={navigation} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />
+        <MissionCard missions={missions} navigation={navigation} onNavigateTab={onNavigateTab} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />
         {gamesStatus ? (
           <View style={styles.gamesCardSection}>
             <GamesCard games={gamesStatus.games} navigation={navigation} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />

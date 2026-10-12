@@ -43,7 +43,7 @@ function ReviewRow({ review, guard }: { review: ApiNurseryReview; guard: <A exte
 
       {responding ? (
         <View style={styles.responseForm}>
-          <TextInput style={styles.input} value={text} onChangeText={setText} placeholder="eg - Write a response…" placeholderTextColor={COLORS.textLight} multiline />
+          <TextInput maxLength={1000} style={styles.input} value={text} onChangeText={setText} placeholder="eg - Write a response…" placeholderTextColor={COLORS.textLight} multiline />
           <View style={styles.responseFormActions}>
             <TouchableOpacity style={styles.cancelButton} onPress={() => setResponding(false)}>
               <Text style={styles.cancelText}>Cancel</Text>

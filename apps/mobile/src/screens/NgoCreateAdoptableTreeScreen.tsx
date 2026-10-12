@@ -80,21 +80,21 @@ export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
             hint="Show the tree at its best"
           />
 
-          <FormField
+          <FormField maxLength={60}
             label="Tree nickname"
             value={nickname}
             onChangeText={setNickname}
             placeholder="eg - Grandmother Banyan"
           />
 
-          <FormField
+          <FormField maxLength={100}
             label="Species"
             value={speciesName}
             onChangeText={setSpeciesName}
             placeholder="eg - Banyan"
           />
 
-          <FormField
+          <FormField maxLength={2000}
             label="Description"
             value={description}
             onChangeText={setDescription}
@@ -102,7 +102,7 @@ export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
             multiline
           />
 
-          <FormField
+          <FormField maxLength={2000}
             label="Instructions for adopters"
             value={instructions}
             onChangeText={setInstructions}

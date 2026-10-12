@@ -300,6 +300,8 @@ export function useToggleLike() {
         likeCount: result.likeCount,
       }));
       queryClient.invalidateQueries({ queryKey: socialKeys.likers(id) });
+      // Liking someone's post completes the "Cheer a Friend" quest server-side.
+      queryClient.invalidateQueries({ queryKey: ['missions', 'today'] });
       // Membership in the Liked Posts list itself (not just the flag) only changes on the server —
       // refetch so an unlike actually drops the post from that list.
       queryClient.invalidateQueries({ queryKey: socialKeys.liked });

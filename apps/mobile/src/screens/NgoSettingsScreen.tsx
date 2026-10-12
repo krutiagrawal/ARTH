@@ -210,9 +210,9 @@ export function NgoSettingsScreen({ navigation }: any) {
               />
             </BorderCard>
 
-            <FormField label="Organization Name" value={orgName} onChangeText={setOrgName} placeholder="eg - Your organization" />
-            <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - We plant. We protect. We inspire." />
-            <FormField
+            <FormField maxLength={120} label="Organization Name" value={orgName} onChangeText={setOrgName} placeholder="eg - Your organization" />
+            <FormField maxLength={2000} label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - We plant. We protect. We inspire." />
+            <FormField maxLength={300}
               label="Website"
               value={website}
               onChangeText={setWebsite}
@@ -257,7 +257,7 @@ export function NgoSettingsScreen({ navigation }: any) {
                       <Text style={styles.removeText}>Remove</Text>
                     </TouchableOpacity>
                   </View>
-                  <FormField label="Title" value={award.title} onChangeText={(v: string) => updateAward(i, { title: v })} placeholder="eg - Award title" />
+                  <FormField maxLength={200} label="Title" value={award.title} onChangeText={(v: string) => updateAward(i, { title: v })} placeholder="eg - Award title" />
                   <FormField
                     label="Year"
                     value={award.year ? String(award.year) : ''}
@@ -265,7 +265,7 @@ export function NgoSettingsScreen({ navigation }: any) {
                     keyboardType="number-pad"
                     placeholder="eg - Year"
                   />
-                  <FormField label="Issued by" value={award.issuer ?? ''} onChangeText={(v: string) => updateAward(i, { issuer: v })} placeholder="eg - Issuing body" />
+                  <FormField maxLength={200} label="Issued by" value={award.issuer ?? ''} onChangeText={(v: string) => updateAward(i, { issuer: v })} placeholder="eg - Issuing body" />
                 </View>
               ))}
               <TouchableOpacity style={styles.addButton} onPress={addAward}>

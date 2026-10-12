@@ -116,7 +116,7 @@ export function NgoLogPlantedTreesScreen({ navigation, route }: any) {
             </>
           )}
 
-          <FormField
+          <FormField maxLength={100}
             label="Species"
             value={speciesName}
             onChangeText={setSpeciesName}

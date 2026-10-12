@@ -1,5 +1,6 @@
 'use client'
 
+import { LimitMessage } from '@/components/ui/input'
 import { useEffect, useMemo, useState } from 'react'
 import { ChevronDown, ChevronUp, Search, Sprout, X } from 'lucide-react'
 import DrawerFormShell, { FormSection, FieldLabel, fieldInputClassName, fieldTextareaClassName, fieldButtonClassName } from '@/components/dashboard/DrawerFormShell'
@@ -241,22 +242,22 @@ export default function InventoryFormSheet({ open, onOpenChange, item, submittin
               </div>
               <label className="block">
                 <FieldLabel required>Common name</FieldLabel>
-                <input value={form.newSpecies?.commonName ?? ''} onChange={setNewSpecies('commonName')} className={fieldInputClassName} />
+                <input maxLength={120} value={form.newSpecies?.commonName ?? ''} onChange={setNewSpecies('commonName')} className={fieldInputClassName} /><LimitMessage value={form.newSpecies?.commonName ?? ''} maxLength={120} />
               </label>
               <div className="grid grid-cols-2 gap-2.5">
                 <label className="block">
                   <FieldLabel>Scientific name</FieldLabel>
-                  <input value={form.newSpecies?.scientificName ?? ''} onChange={setNewSpecies('scientificName')} className={fieldInputClassName} />
+                  <input maxLength={160} value={form.newSpecies?.scientificName ?? ''} onChange={setNewSpecies('scientificName')} className={fieldInputClassName} /><LimitMessage value={form.newSpecies?.scientificName ?? ''} maxLength={160} />
                 </label>
                 <label className="block">
                   <FieldLabel>Local name</FieldLabel>
-                  <input value={form.newSpecies?.localName ?? ''} onChange={setNewSpecies('localName')} className={fieldInputClassName} />
+                  <input maxLength={120} value={form.newSpecies?.localName ?? ''} onChange={setNewSpecies('localName')} className={fieldInputClassName} /><LimitMessage value={form.newSpecies?.localName ?? ''} maxLength={120} />
                 </label>
               </div>
               <div className="grid grid-cols-2 gap-2.5">
                 <label className="block">
                   <FieldLabel>Emoji</FieldLabel>
-                  <input value={form.newSpecies?.emoji ?? ''} onChange={setNewSpecies('emoji')} placeholder="🌳" className={fieldInputClassName} />
+                  <input maxLength={8} value={form.newSpecies?.emoji ?? ''} onChange={setNewSpecies('emoji')} placeholder="🌳" className={fieldInputClassName} /><LimitMessage value={form.newSpecies?.emoji ?? ''} maxLength={8} />
                 </label>
                 <label className="flex items-center gap-2 pt-5">
                   <input type="checkbox" checked={Boolean(form.newSpecies?.isNative)} onChange={setNewSpecies('isNative')} className="h-4 w-4 rounded border-border/70" />
@@ -281,7 +282,7 @@ export default function InventoryFormSheet({ open, onOpenChange, item, submittin
               </div>
               <label className="block">
                 <FieldLabel>Mature height</FieldLabel>
-                <input value={form.newSpecies?.matureHeightLabel ?? ''} onChange={setNewSpecies('matureHeightLabel')} placeholder="e.g. 10-15 m" className={fieldInputClassName} />
+                <input maxLength={60} value={form.newSpecies?.matureHeightLabel ?? ''} onChange={setNewSpecies('matureHeightLabel')} placeholder="e.g. 10-15 m" className={fieldInputClassName} /><LimitMessage value={form.newSpecies?.matureHeightLabel ?? ''} maxLength={60} />
               </label>
               <label className="block">
                 <FieldLabel>Planting seasons (comma separated)</FieldLabel>
@@ -289,7 +290,7 @@ export default function InventoryFormSheet({ open, onOpenChange, item, submittin
               </label>
               <label className="block">
                 <FieldLabel>Description</FieldLabel>
-                <textarea value={form.newSpecies?.description ?? ''} onChange={setNewSpecies('description')} rows={2} className={fieldTextareaClassName} />
+                <textarea maxLength={1000} value={form.newSpecies?.description ?? ''} onChange={setNewSpecies('description')} rows={2} className={fieldTextareaClassName} /><LimitMessage value={form.newSpecies?.description ?? ''} maxLength={1000} />
               </label>
             </div>
           )}
@@ -326,15 +327,15 @@ export default function InventoryFormSheet({ open, onOpenChange, item, submittin
               <div className="grid grid-cols-3 gap-2.5">
                 <label className="block">
                   <FieldLabel>Age</FieldLabel>
-                  <input value={form.ageLabel} onChange={set('ageLabel')} placeholder="6 months" className={fieldInputClassName} />
+                  <input maxLength={60} value={form.ageLabel} onChange={set('ageLabel')} placeholder="6 months" className={fieldInputClassName} /><LimitMessage value={form.ageLabel} maxLength={60} />
                 </label>
                 <label className="block">
                   <FieldLabel>Height</FieldLabel>
-                  <input value={form.heightLabel} onChange={set('heightLabel')} placeholder="2 ft" className={fieldInputClassName} />
+                  <input maxLength={60} value={form.heightLabel} onChange={set('heightLabel')} placeholder="2 ft" className={fieldInputClassName} /><LimitMessage value={form.heightLabel} maxLength={60} />
                 </label>
                 <label className="block">
                   <FieldLabel>Pot size</FieldLabel>
-                  <input value={form.potSize} onChange={set('potSize')} placeholder="12 in" className={fieldInputClassName} />
+                  <input maxLength={60} value={form.potSize} onChange={set('potSize')} placeholder="12 in" className={fieldInputClassName} /><LimitMessage value={form.potSize} maxLength={60} />
                 </label>
               </div>
               <label className="block">
@@ -343,7 +344,7 @@ export default function InventoryFormSheet({ open, onOpenChange, item, submittin
               </label>
               <label className="block">
                 <FieldLabel>Notes</FieldLabel>
-                <textarea value={form.nurseryNotes} onChange={set('nurseryNotes')} rows={2} className={fieldTextareaClassName} />
+                <textarea maxLength={1000} value={form.nurseryNotes} onChange={set('nurseryNotes')} rows={2} className={fieldTextareaClassName} /><LimitMessage value={form.nurseryNotes} maxLength={1000} />
               </label>
               <label className="block">
                 <FieldLabel>Low-stock alert threshold</FieldLabel>

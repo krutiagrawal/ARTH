@@ -163,8 +163,8 @@ export function NgoStaffScreen({ navigation }: any) {
               label="Add Photo"
               hint="A friendly headshot works best"
             />
-            <FormField label="Name" value={name} onChangeText={setName} placeholder="eg - Full name" />
-            <FormField label="Role" value={role} onChangeText={setRole} placeholder="eg - Field Coordinator" />
+            <FormField maxLength={120} label="Name" value={name} onChangeText={setName} placeholder="eg - Full name" />
+            <FormField maxLength={120} label="Role" value={role} onChangeText={setRole} placeholder="eg - Field Coordinator" />
             <FormField
               label="Email"
               value={contactEmail}

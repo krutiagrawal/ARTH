@@ -101,7 +101,7 @@ export function GroupRegisterScreen({ navigation }: any) {
           <Text style={styles.subtitle}>No review wait – you're live right away with a shareable invite code.</Text>
 
           <Text style={styles.sectionLabel}>Group</Text>
-          <TextInput
+          <TextInput maxLength={120}
             style={styles.input}
             placeholder="Group name"
             placeholderTextColor={ON_DARK_SURFACE.muted}
@@ -119,7 +119,7 @@ export function GroupRegisterScreen({ navigation }: any) {
               </TouchableOpacity>
             ))}
           </View>
-          <TextInput
+          <TextInput maxLength={2000}
             style={[styles.input, styles.multiline]}
             placeholder="What's your group about?"
             placeholderTextColor={ON_DARK_SURFACE.muted}
@@ -129,7 +129,7 @@ export function GroupRegisterScreen({ navigation }: any) {
           />
 
           <Text style={styles.sectionLabel}>Your account</Text>
-          <TextInput
+          <TextInput maxLength={60}
             style={styles.input}
             placeholder="Your name"
             placeholderTextColor={ON_DARK_SURFACE.muted}

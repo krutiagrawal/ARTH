@@ -187,7 +187,7 @@ export function AdminAccountSearchScreen() {
       <Sheet visible={reasonSheet} onClose={() => setReasonSheet(false)} title="Block this account?">
         <Text style={styles.sheetLabel}>They lose access on web and mobile immediately.</Text>
         <Text style={[styles.sheetLabel, { marginTop: 12 }]}>Reason (optional)</Text>
-        <TextInput
+        <TextInput maxLength={500}
           style={styles.sheetInput}
           value={reason}
           onChangeText={setReason}

@@ -209,9 +209,9 @@ export function EditNurseryProfileScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            <FormField label="Owner Name" value={ownerName} onChangeText={setOwnerName} placeholder="Your name" />
-            <FormField label="Nursery Name" value={nurseryName} onChangeText={setNurseryName} placeholder="eg - Your nursery" />
-            <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What does your nursery grow?" />
+            <FormField maxLength={60} label="Owner Name" value={ownerName} onChangeText={setOwnerName} placeholder="Your name" />
+            <FormField maxLength={120} label="Nursery Name" value={nurseryName} onChangeText={setNurseryName} placeholder="eg - Your nursery" />
+            <FormField maxLength={2000} label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What does your nursery grow?" />
             <AddressSearchField
               label="Address"
               value={line1}

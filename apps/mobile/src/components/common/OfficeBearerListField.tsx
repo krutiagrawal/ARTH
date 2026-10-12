@@ -62,14 +62,14 @@ export function OfficeBearerListField({ bearers, onChange, max = 3 }: OfficeBear
               <Text style={styles.removeText}>Remove</Text>
             </TouchableOpacity>
           </View>
-          <TextInput
+          <TextInput maxLength={120}
             style={styles.input}
             placeholder="Full name"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={bearer.name}
             onChangeText={(v) => updateBearer(index, { name: v })}
           />
-          <TextInput
+          <TextInput maxLength={80}
             style={styles.input}
             placeholder="Designation (e.g. Trustee, Secretary)"
             placeholderTextColor={ON_DARK_SURFACE.muted}

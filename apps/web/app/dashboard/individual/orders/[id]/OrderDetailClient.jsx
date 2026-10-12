@@ -51,7 +51,7 @@ function ReviewForm({ orderId, onSubmitted }) {
           </button>
         ))}
       </div>
-      <Textarea
+      <Textarea maxLength={1000}
         className="mt-3 rounded-2xl"
         placeholder="How was the delivery? (optional)"
         value={comment}

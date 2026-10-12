@@ -1,5 +1,6 @@
 import { Prisma, GameKey, GamePlay } from '@arth/db';
 import { addXp } from './xp.service';
+import { completeMissionByType } from './missions.service';
 import { evaluateAchievements } from './achievement.service';
 import { startOfUtcDay, recordActivityToday, isActiveDay } from './streak.service';
 import { BadRequestError, ConflictError } from '../utils/errors';
@@ -205,6 +206,7 @@ export async function submitAnswers(tx: Prisma.TransactionClient, userId: string
     attempts: 1,
     guesses: [result.stored],
   });
+  if (key === 'daily_lesson') await completeMissionByType(tx, userId, 'learn');
   const finished = await tx.gamePlay.findUniqueOrThrow({ where: { id: play.id } });
   return { game: buildState(def, finished, today, ctx), reward };
 }

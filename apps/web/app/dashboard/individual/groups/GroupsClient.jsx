@@ -99,7 +99,7 @@ export default function GroupsClient() {
         </div>
         <form onSubmit={join} className="flex items-center gap-2 rounded-full border border-border bg-card pl-5 pr-1.5 py-1.5 soft-shadow shrink-0">
           <Ticket className="h-4 w-4 text-muted-foreground shrink-0" />
-          <Input
+          <Input maxLength={20}
             value={inviteCode}
             onChange={(e) => setInviteCode(e.target.value)}
             placeholder="Invite code"

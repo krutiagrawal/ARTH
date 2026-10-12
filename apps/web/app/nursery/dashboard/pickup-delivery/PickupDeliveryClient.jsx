@@ -194,14 +194,14 @@ export default function PickupDeliveryClient() {
             <p className="eyebrow">Pickup settings</p>
             <label className="block">
               <span className="text-xs text-muted-foreground">Instructions for buyers</span>
-              <Textarea rows={2} value={form.pickupInstructions} onChange={(e) => setForm((s) => ({ ...s, pickupInstructions: e.target.value }))} className="mt-1 rounded-xl" />
+              <Textarea maxLength={1000} rows={2} value={form.pickupInstructions} onChange={(e) => setForm((s) => ({ ...s, pickupInstructions: e.target.value }))} className="mt-1 rounded-xl" />
             </label>
             <div>
               <span className="text-xs text-muted-foreground">Pickup windows</span>
               <div className="mt-2 space-y-2">
                 {form.pickupWindows.map((w, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <Input placeholder="Label (e.g. Morning)" value={w.label} onChange={(e) => updatePickupWindow(i, { label: e.target.value })} className="h-9 rounded-full flex-1" />
+                    <Input maxLength={60} placeholder="Label (e.g. Morning)" value={w.label} onChange={(e) => updatePickupWindow(i, { label: e.target.value })} className="h-9 rounded-full flex-1" />
                     <Input type="time" value={w.startTime} onChange={(e) => updatePickupWindow(i, { startTime: e.target.value })} className="h-9 rounded-full w-28" />
                     <Input type="time" value={w.endTime} onChange={(e) => updatePickupWindow(i, { endTime: e.target.value })} className="h-9 rounded-full w-28" />
                     <button type="button" onClick={() => removePickupWindow(i)} className="rounded p-1.5 text-destructive hover:bg-destructive/10">

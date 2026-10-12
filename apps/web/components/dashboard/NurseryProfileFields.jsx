@@ -94,7 +94,7 @@ export default function NurseryProfileFields({ form, setForm, responsiblePhoneEr
         </div>
         <label className="block">
           <span className="text-xs text-muted-foreground">Website (optional)</span>
-          <Input
+          <Input maxLength={300}
             type="text"
             placeholder="https://yournursery.example"
             value={form.websiteUrl}
@@ -109,7 +109,7 @@ export default function NurseryProfileFields({ form, setForm, responsiblePhoneEr
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="block">
             <span className="text-xs text-muted-foreground">Full name</span>
-            <Input value={form.responsiblePersonName} onChange={set('responsiblePersonName')} className="mt-1 h-11 rounded-full" />
+            <Input maxLength={120} value={form.responsiblePersonName} onChange={set('responsiblePersonName')} className="mt-1 h-11 rounded-full" />
           </label>
           <label className="block">
             <span className="text-xs text-muted-foreground">Phone</span>
@@ -130,7 +130,7 @@ export default function NurseryProfileFields({ form, setForm, responsiblePhoneEr
               </Pill>
             ))}
           </div>
-          <Input
+          <Input maxLength={60}
             placeholder="Or type a custom role, e.g. Site supervisor"
             value={form.responsiblePersonRole}
             onChange={set('responsiblePersonRole')}
@@ -180,7 +180,7 @@ export default function NurseryProfileFields({ form, setForm, responsiblePhoneEr
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="block">
             <span className="text-xs text-muted-foreground">GSTIN</span>
-            <Input
+            <Input maxLength={30}
               value={form.gstin}
               onChange={set('gstin')}
               autoCapitalize="characters"
@@ -190,19 +190,19 @@ export default function NurseryProfileFields({ form, setForm, responsiblePhoneEr
           </label>
           <label className="block">
             <span className="text-xs text-muted-foreground">Business registration number</span>
-            <Input value={form.businessRegistrationNumber} onChange={set('businessRegistrationNumber')} className="mt-1 h-11 rounded-full" />
+            <Input maxLength={60} value={form.businessRegistrationNumber} onChange={set('businessRegistrationNumber')} className="mt-1 h-11 rounded-full" />
           </label>
           <label className="block">
             <span className="text-xs text-muted-foreground">Trade license number</span>
-            <Input value={form.tradeLicenseNumber} onChange={set('tradeLicenseNumber')} className="mt-1 h-11 rounded-full" />
+            <Input maxLength={60} value={form.tradeLicenseNumber} onChange={set('tradeLicenseNumber')} className="mt-1 h-11 rounded-full" />
           </label>
           <label className="block">
             <span className="text-xs text-muted-foreground">NGO registration number</span>
-            <Input value={form.ngoRegistrationNumber} onChange={set('ngoRegistrationNumber')} className="mt-1 h-11 rounded-full" />
+            <Input maxLength={60} value={form.ngoRegistrationNumber} onChange={set('ngoRegistrationNumber')} className="mt-1 h-11 rounded-full" />
           </label>
           <label className="block">
             <span className="text-xs text-muted-foreground">Government nursery ID</span>
-            <Input value={form.governmentNurseryId} onChange={set('governmentNurseryId')} className="mt-1 h-11 rounded-full" />
+            <Input maxLength={60} value={form.governmentNurseryId} onChange={set('governmentNurseryId')} className="mt-1 h-11 rounded-full" />
           </label>
         </div>
       </details>

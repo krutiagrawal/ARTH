@@ -71,14 +71,14 @@ export function NgoCreateCampaignScreen({ navigation }: any) {
             hint="Showcase your campaign"
           />
 
-          <FormField
+          <FormField maxLength={120}
             label="Title"
             value={title}
             onChangeText={setTitle}
             placeholder="eg - Plant 1,000 trees this monsoon"
           />
 
-          <FormField
+          <FormField maxLength={2000}
             label="Description"
             value={description}
             onChangeText={setDescription}

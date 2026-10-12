@@ -6,6 +6,7 @@ import { evaluateNgoAchievements } from './ngoAchievement.service';
 import { recordNurseryContribution, recomputeReputation } from './nurseryReputation.service';
 import { recordNgoContribution, recomputeReputation as recomputeNgoReputation } from './ngoReputation.service';
 import { evaluateNurseryAchievements } from './nurseryAchievement.service';
+import { completeMissionByType } from './missions.service';
 import { notify, notifyFollowersOfNewPost, notifyFollowersOfNewNurseryPost } from './notification.service';
 import { BlockedIds, getBlockedIds } from './block.service';
 
@@ -292,6 +293,10 @@ export async function likePost(prisma: PrismaClient, viewerId: string, postId: s
   });
 
   if (created) {
+    // "Cheer a friend": liking someone else's post counts, liking your own doesn't.
+    if (post.userId && post.userId !== viewerId) {
+      await prisma.$transaction((tx) => completeMissionByType(tx, viewerId, 'community'));
+    }
     const recipientId = post.userId ?? post.ngo?.userId;
     if (recipientId) {
       const liker = await prisma.user.findUnique({ where: { id: viewerId }, select: { name: true } });

@@ -158,7 +158,7 @@ export function AdminOpsScreen() {
           {tab === 'drives' ? 'RSVPs stay on record but the drive is marked cancelled.' : 'This issues a real Stripe refund and cannot be undone.'}
         </Text>
         <Text style={[styles.sheetLabel, { marginTop: 12 }]}>Reason (optional)</Text>
-        <TextInput
+        <TextInput maxLength={500}
           style={styles.sheetInput}
           value={reason}
           onChangeText={setReason}

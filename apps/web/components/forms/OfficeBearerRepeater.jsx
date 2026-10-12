@@ -1,5 +1,6 @@
 'use client'
 
+import { LimitMessage } from '@/components/ui/input'
 import PhoneInput from '@/components/dashboard/PhoneInput'
 
 const EMPTY_BEARER = { name: '', designation: '', phone: '', email: '' }
@@ -29,18 +30,18 @@ export default function OfficeBearerRepeater({ bearers, onChange, max = 3 }) {
               </button>
             </div>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <input
+              <input maxLength={120}
                 value={bearer.name}
                 onChange={(e) => update(index, { name: e.target.value })}
                 placeholder="Full name"
                 className="h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40"
-              />
-              <input
+              /><LimitMessage value={bearer.name} maxLength={120} />
+              <input maxLength={80}
                 value={bearer.designation}
                 onChange={(e) => update(index, { designation: e.target.value })}
                 placeholder="Designation (e.g. Trustee)"
                 className="h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40"
-              />
+              /><LimitMessage value={bearer.designation} maxLength={80} />
               <PhoneInput value={bearer.phone} onChange={(digits) => update(index, { phone: digits })} className="mt-0" />
               <input
                 type="email"

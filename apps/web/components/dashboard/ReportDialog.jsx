@@ -73,7 +73,7 @@ export default function ReportDialog({ open, onOpenChange, targetType, targetId,
 
           <label className="block">
             <span className="eyebrow">Details (optional)</span>
-            <Textarea value={details} onChange={(e) => setDetails(e.target.value)} rows={3} className="mt-2" placeholder="Anything that helps us review this faster." />
+            <Textarea maxLength={1000} value={details} onChange={(e) => setDetails(e.target.value)} rows={3} className="mt-2" placeholder="Anything that helps us review this faster." />
           </label>
         </div>
 

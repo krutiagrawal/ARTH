@@ -19,9 +19,9 @@ function loadShareModule(): typeof import('react-native-share') | null {
  * Strava's "share to Instagram"). Falls back to the generic OS share sheet when Instagram isn't
  * installed or the direct call fails/is cancelled, so the action always does something useful.
  */
-export async function shareImageToInstagramStory(imageUri: string, caption?: string) {
+export async function shareImageToInstagramStory(imageUri: string, caption?: string): Promise<boolean> {
   const mod = loadShareModule();
-  if (!mod) return; // Sharing isn't available in this runtime (e.g. Expo Go) — silently no-op.
+  if (!mod) return false; // Sharing isn't available in this runtime (e.g. Expo Go) — silently no-op.
   const { default: Share, Social } = mod as any;
 
   try {
@@ -33,17 +33,24 @@ export async function shareImageToInstagramStory(imageUri: string, caption?: str
       appId: process.env.EXPO_PUBLIC_FACEBOOK_APP_ID ?? '',
     });
     if (result?.success === false) throw new Error(result.message);
+    return true;
   } catch {
-    await shareImageGeneric(imageUri, caption);
+    return shareImageGeneric(imageUri, caption);
   }
 }
 
 /** Generic OS share sheet — lets the user pick any app (WhatsApp, Instagram feed post, etc). */
-export async function shareImageGeneric(imageUri: string, caption?: string) {
+/** Resolves true only if the user actually completed a share (not dismissed the sheet). */
+export async function shareImageGeneric(imageUri: string, caption?: string): Promise<boolean> {
   const mod = loadShareModule();
-  if (!mod) return;
+  if (!mod) return false;
   const { default: Share } = mod as any;
-  await Share.open({ url: imageUri, message: caption }).catch(() => {});
+  try {
+    const result = await Share.open({ url: imageUri, message: caption });
+    return result?.success !== false;
+  } catch {
+    return false;
+  }
 }
 
 export type ShareTarget = 'whatsapp' | 'instagram' | 'instagramStory' | 'twitter' | 'other';
@@ -59,9 +66,9 @@ const SOCIAL_KEY: Record<'whatsapp' | 'instagram' | 'twitter', string> = {
  * generic OS share sheet when the app isn't installed or the direct call fails, so the button
  * always does something useful.
  */
-async function shareImageToApp(target: 'whatsapp' | 'instagram' | 'twitter', imageUri: string, caption?: string) {
+async function shareImageToApp(target: 'whatsapp' | 'instagram' | 'twitter', imageUri: string, caption?: string): Promise<boolean> {
   const mod = loadShareModule();
-  if (!mod) return;
+  if (!mod) return false;
   const { default: Share, Social } = mod as any;
 
   try {
@@ -72,12 +79,13 @@ async function shareImageToApp(target: 'whatsapp' | 'instagram' | 'twitter', ima
       type: 'image/jpeg',
     });
     if (result?.success === false) throw new Error(result.message);
+    return true;
   } catch {
-    await shareImageGeneric(imageUri, caption);
+    return shareImageGeneric(imageUri, caption);
   }
 }
 
-export function shareImage(target: ShareTarget, imageUri: string, caption?: string) {
+export function shareImage(target: ShareTarget, imageUri: string, caption?: string): Promise<boolean> {
   switch (target) {
     case 'instagramStory':
       return shareImageToInstagramStory(imageUri, caption);

@@ -1,4 +1,5 @@
 'use client'
+import { LimitMessage } from '@/components/ui/input'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -136,11 +137,11 @@ function App() {
             <form onSubmit={submit} className="mt-8 space-y-3">
               <label className="block">
                 <span className="eyebrow">Name</span>
-                <input required value={name} onChange={e => setName(e.target.value)} placeholder="Your name" className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+                <input maxLength={60} required value={name} onChange={e => setName(e.target.value)} placeholder="Your name" className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={name} maxLength={60} />
               </label>
               <label className="block">
                 <span className="eyebrow">Handle</span>
-                <input required pattern="[a-z0-9_]+" minLength={3} maxLength={30} value={handle} onChange={e => setHandle(e.target.value)} placeholder="lowercase, numbers, underscores" className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+                <input required pattern="[a-z0-9_]+" minLength={3} maxLength={30} value={handle} onChange={e => setHandle(e.target.value)} placeholder="lowercase, numbers, underscores" className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={handle} maxLength={30} />
               </label>
               <label className="block">
                 <span className="eyebrow">Email</span>
@@ -162,7 +163,7 @@ function App() {
               </label>
               <label className="block">
                 <span className="eyebrow">City</span>
-                <input required value={city} onChange={e => setCity(e.target.value)} placeholder="Your city" className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+                <input maxLength={100} required value={city} onChange={e => setCity(e.target.value)} placeholder="Your city" className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={city} maxLength={100} />
               </label>
               <label className="block">
                 <span className="eyebrow">Password</span>

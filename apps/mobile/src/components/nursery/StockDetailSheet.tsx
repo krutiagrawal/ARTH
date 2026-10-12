@@ -172,15 +172,15 @@ export function StockDetailSheet({ item, visible, onClose }: StockDetailSheetPro
       </View>
       <View style={styles.inlineRow}>
         <View style={styles.inlineField}>
-          <FormField label="Age" value={ageLabel} onChangeText={setAgeLabel} placeholder="e.g. 6 months" />
+          <FormField maxLength={60} label="Age" value={ageLabel} onChangeText={setAgeLabel} placeholder="e.g. 6 months" />
         </View>
         <View style={styles.inlineField}>
-          <FormField label="Height" value={heightLabel} onChangeText={setHeightLabel} placeholder="e.g. 2 ft" />
+          <FormField maxLength={60} label="Height" value={heightLabel} onChangeText={setHeightLabel} placeholder="e.g. 2 ft" />
         </View>
       </View>
       <View style={styles.inlineRow}>
         <View style={styles.inlineField}>
-          <FormField label="Pot size" value={potSize} onChangeText={setPotSize} placeholder="e.g. 10 inch" />
+          <FormField maxLength={60} label="Pot size" value={potSize} onChangeText={setPotSize} placeholder="e.g. 10 inch" />
         </View>
         <View style={styles.inlineField}>
           <FormField label="Low stock alert below" value={lowStockThreshold} onChangeText={setLowStockThreshold} placeholder="5" keyboardType="number-pad" />
@@ -194,7 +194,7 @@ export function StockDetailSheet({ item, visible, onClose }: StockDetailSheetPro
         ))}
       </View>
 
-      <FormField label="Notes (visible to you only)" value={nurseryNotes} onChangeText={setNurseryNotes} placeholder="Internal notes" multiline />
+      <FormField maxLength={1000} label="Notes (visible to you only)" value={nurseryNotes} onChangeText={setNurseryNotes} placeholder="Internal notes" multiline />
 
       {error && <Text style={styles.error}>{error}</Text>}
       <AnimatedButton

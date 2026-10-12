@@ -37,22 +37,3 @@ export async function completeMissionByType(tx: Prisma.TransactionClient, userId
 
   if (awardXp) await addXp(tx, userId, match.mission.xpReward, 'mission_completed', 'mission', match.mission.id);
 }
-
-export async function completeMissionById(tx: Prisma.TransactionClient, userId: string, missionId: string) {
-  const today = startOfUtcDay(new Date());
-  const row = await tx.userDailyMission.findUnique({
-    where: { userId_missionId_missionDate: { userId, missionId, missionDate: today } },
-    include: { mission: true },
-  });
-
-  if (!row || row.completed) return row;
-
-  const updated = await tx.userDailyMission.update({
-    where: { id: row.id },
-    data: { completed: true, completedAt: new Date() },
-    include: { mission: true },
-  });
-
-  await addXp(tx, userId, row.mission.xpReward, 'mission_completed', 'mission', row.mission.id);
-  return updated;
-}

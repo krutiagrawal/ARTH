@@ -99,14 +99,14 @@ export function CorporateRegisterScreen({ navigation }: any) {
           </Text>
 
           <Text style={styles.sectionLabel}>Company</Text>
-          <TextInput
+          <TextInput maxLength={120}
             style={styles.input}
             placeholder="Company name"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             value={companyName}
             onChangeText={setCompanyName}
           />
-          <TextInput
+          <TextInput maxLength={2000}
             style={[styles.input, styles.multiline]}
             placeholder="What does your company do?"
             placeholderTextColor={ON_DARK_SURFACE.muted}
@@ -114,7 +114,7 @@ export function CorporateRegisterScreen({ navigation }: any) {
             onChangeText={setDescription}
             multiline
           />
-          <TextInput
+          <TextInput maxLength={120}
             style={styles.input}
             placeholder="Industry (optional)"
             placeholderTextColor={ON_DARK_SURFACE.muted}
@@ -124,7 +124,7 @@ export function CorporateRegisterScreen({ navigation }: any) {
           <CityPickerField value={city} onChange={setCity} variant="dark" />
 
           <Text style={styles.sectionLabel}>Your account</Text>
-          <TextInput
+          <TextInput maxLength={60}
             style={styles.input}
             placeholder="Your name"
             placeholderTextColor={ON_DARK_SURFACE.muted}

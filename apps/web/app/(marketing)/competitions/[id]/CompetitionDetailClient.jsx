@@ -1,4 +1,5 @@
 'use client'
+import { LimitMessage } from '@/components/ui/input'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Calendar, Trophy, Heart, Plus, X } from 'lucide-react'
@@ -142,11 +143,11 @@ export default function CompetitionDetailClient({ comp, initialEntries, pageSize
               <form onSubmit={submit} className="max-w-lg rounded-3xl border border-border/70 bg-card p-6 soft-shadow space-y-3">
                 <label className="block">
                   <span className="eyebrow">Title *</span>
-                  <input required value={title} onChange={(e) => setTitle(e.target.value)} className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+                  <input maxLength={120} required value={title} onChange={(e) => setTitle(e.target.value)} className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={title} maxLength={120} />
                 </label>
                 <label className="block">
                   <span className="eyebrow">Description *</span>
-                  <textarea required rows={3} value={description} onChange={(e) => setDescription(e.target.value)} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 outline-none focus:ring-2 focus:ring-primary/40" />
+                  <textarea maxLength={2000} required rows={3} value={description} onChange={(e) => setDescription(e.target.value)} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={description} maxLength={2000} />
                 </label>
                 <label className="block">
                   <span className="eyebrow">Image URL (optional)</span>

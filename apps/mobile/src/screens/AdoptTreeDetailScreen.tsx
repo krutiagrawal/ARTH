@@ -114,7 +114,7 @@ export function AdoptTreeDetailScreen({ navigation, route }: any) {
           ) : (
             <>
               <Text style={styles.fieldLabel}>Message (optional)</Text>
-              <TextInput
+              <TextInput maxLength={500}
                 value={message}
                 onChangeText={setMessage}
                 placeholder="eg - Why does this tree matter to you?"

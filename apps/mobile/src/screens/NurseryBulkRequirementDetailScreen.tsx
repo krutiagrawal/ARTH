@@ -243,7 +243,7 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
                   <Toggle value={canPickup} onValueChange={setCanPickup} />
                 </View>
               </BorderCard>
-              <FormField label="Message (optional)" value={message} onChangeText={setMessage} placeholder="eg - Anything the NGO should know" multiline />
+              <FormField maxLength={500} label="Message (optional)" value={message} onChangeText={setMessage} placeholder="eg - Anything the NGO should know" multiline />
 
               {error && <Text style={styles.errorText}>{error}</Text>}
 

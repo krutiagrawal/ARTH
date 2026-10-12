@@ -8,6 +8,7 @@ import { RADIUS, SPACING } from '../../constants/theme';
 import { TYPOGRAPHY } from '../../constants/typography';
 import { useConfirm } from '../../context/ConfirmDialogContext';
 import { shareImage, type ShareTarget } from '../../utils/shareToInstagram';
+import { useReportShareMission } from '../../hooks/useApiQueries';
 
 interface ShareCardModalProps {
   visible: boolean;
@@ -47,6 +48,7 @@ export function ShareCardModal({ visible, onClose, title = 'Share your moment', 
   const cardRef = useRef<View>(null);
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
   const confirm = useConfirm();
+  const reportShare = useReportShareMission();
   const [timedOut, setTimedOut] = useState(false);
 
   // The Sheet is capped at 85% of the screen height and isn't scrollable, so a full-width 9:16
@@ -98,7 +100,11 @@ export function ShareCardModal({ visible, onClose, title = 'Share your moment', 
               style={[styles.target, !capturedUri && styles.targetDisabled]}
               activeOpacity={0.7}
               disabled={!capturedUri}
-              onPress={() => capturedUri && shareImage(target, capturedUri, caption)}
+              onPress={async () => {
+                if (!capturedUri) return;
+                // Only a share the user actually completed counts toward the daily share quest.
+                if (await shareImage(target, capturedUri, caption)) reportShare.mutate();
+              }}
             >
               <View style={styles.targetIcon}>
                 <Text style={styles.targetIconText}>{icon}</Text>

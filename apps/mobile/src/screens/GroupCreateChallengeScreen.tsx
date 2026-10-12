@@ -126,8 +126,8 @@ export function GroupCreateChallengeScreen({ navigation }: any) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         <Animated.View style={cardAnim}>
-          <FormField label="Title" value={title} onChangeText={setTitle} placeholder="eg - Monsoon Sprint" />
-          <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What are you working toward?" />
+          <FormField maxLength={120} label="Title" value={title} onChangeText={setTitle} placeholder="eg - Monsoon Sprint" />
+          <FormField maxLength={2000} label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What are you working toward?" />
 
           <Text style={styles.sectionLabel}>Goal type</Text>
           <View style={styles.chipRow}>

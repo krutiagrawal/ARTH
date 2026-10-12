@@ -103,7 +103,7 @@ export function SaplingReservationScreen({ navigation, route }: any) {
               </View>
 
               <Text style={styles.fieldLabel}>Message (optional)</Text>
-              <TextInput
+              <TextInput maxLength={500}
                 value={message}
                 onChangeText={setMessage}
                 placeholder="eg - What are these saplings for?"

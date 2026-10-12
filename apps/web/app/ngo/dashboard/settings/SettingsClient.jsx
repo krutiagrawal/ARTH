@@ -134,16 +134,16 @@ export default function SettingsClient() {
 
         <label className="block">
           <span className="eyebrow">Organization name</span>
-          <Input required value={form.orgName} onChange={set('orgName')} className="mt-2 h-11 rounded-full" />
+          <Input maxLength={120} required value={form.orgName} onChange={set('orgName')} className="mt-2 h-11 rounded-full" />
         </label>
         <label className="block">
           <span className="eyebrow">About your organization</span>
-          <Textarea required rows={4} value={form.description} onChange={set('description')} className="mt-2 rounded-2xl" />
+          <Textarea maxLength={2000} required rows={4} value={form.description} onChange={set('description')} className="mt-2 rounded-2xl" />
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="block">
             <span className="eyebrow">Website (optional)</span>
-            <Input
+            <Input maxLength={300}
               value={form.website}
               onChange={set('website')}
               onBlur={() => setWebsiteTouched(true)}
@@ -189,7 +189,7 @@ export default function SettingsClient() {
                   </button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-2">
-                  <Input
+                  <Input maxLength={200}
                     placeholder="Award title"
                     value={award.title}
                     onChange={(e) => updateAward(i, { title: e.target.value })}
@@ -203,7 +203,7 @@ export default function SettingsClient() {
                     className="h-10 rounded-full"
                   />
                 </div>
-                <Input
+                <Input maxLength={200}
                   placeholder="Issuer (optional)"
                   value={award.issuer}
                   onChange={(e) => updateAward(i, { issuer: e.target.value })}

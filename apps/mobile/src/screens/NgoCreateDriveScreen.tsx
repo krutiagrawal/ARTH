@@ -172,9 +172,9 @@ export function NgoCreateDriveScreen({ navigation }: any) {
             aspect={[16, 9]}
           />
 
-          <FormField label="Drive Title" value={title} onChangeText={setTitle} placeholder="eg - Riverbank Plantation Drive" />
-          <FormField label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What will volunteers do?" />
-          <FormField label="Instructions for Volunteers" value={instructions} onChangeText={setInstructions} multiline placeholder="eg - What to carry, weather, meeting point" />
+          <FormField maxLength={120} label="Drive Title" value={title} onChangeText={setTitle} placeholder="eg - Riverbank Plantation Drive" />
+          <FormField maxLength={2000} label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What will volunteers do?" />
+          <FormField maxLength={2000} label="Instructions for Volunteers" value={instructions} onChangeText={setInstructions} multiline placeholder="eg - What to carry, weather, meeting point" />
           <AddressSearchField label="Address" value={address} onChangeText={setAddress} multiline placeholder="eg - Street / Landmark" />
           <CityPickerField value={city} onChange={setCity} />
 
@@ -233,7 +233,7 @@ export function NgoCreateDriveScreen({ navigation }: any) {
                     <Text style={styles.removeText}>Remove</Text>
                   </TouchableOpacity>
                 </View>
-                <FormField
+                <FormField maxLength={100}
                   label="Species name"
                   value={p.speciesName}
                   onChangeText={(v: string) => updatePlant(i, { speciesName: v })}

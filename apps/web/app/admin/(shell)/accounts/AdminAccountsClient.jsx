@@ -85,7 +85,7 @@ function RowActions({ account, onAction, onViewProfile }) {
         {confirm === 'block' && (
           <label className="block">
             <span className="eyebrow">Reason (kept on file, not shown to the account)</span>
-            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} className="mt-2" />
+            <Textarea maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} rows={3} className="mt-2" />
           </label>
         )}
       </ConfirmDialog>

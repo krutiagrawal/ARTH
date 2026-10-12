@@ -96,11 +96,11 @@ function ProfileSection() {
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor="name" className="eyebrow">Name</Label>
-          <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="mt-2 rounded-full" required />
+          <Input maxLength={60} id="name" value={name} onChange={(e) => setName(e.target.value)} className="mt-2 rounded-full" required />
         </div>
         <div>
           <Label htmlFor="handle" className="eyebrow">Handle</Label>
-          <Input
+          <Input maxLength={30}
             id="handle"
             value={handle}
             onChange={(e) => setHandle(e.target.value.toLowerCase())}

@@ -1,5 +1,6 @@
 'use client'
 
+import { LimitMessage } from '@/components/ui/input'
 import { useEffect, useMemo, useState } from 'react'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -165,22 +166,22 @@ export default function DriveFormSheet({ open, onOpenChange, item, submitting, o
         <FormSection label="Details">
           <label className="block">
             <FieldLabel required>Title</FieldLabel>
-            <input {...form.register('title')} className={fieldInputClassName} />
+            <input maxLength={120} {...form.register('title')} className={fieldInputClassName} /><LimitMessage value={form.watch('title')} maxLength={120} />
             {form.formState.errors.title && <p className="mt-1 text-xs text-destructive">{form.formState.errors.title.message}</p>}
           </label>
           <label className="block">
             <FieldLabel required>Description</FieldLabel>
-            <textarea {...form.register('description')} rows={3} className={fieldTextareaClassName} />
+            <textarea maxLength={2000} {...form.register('description')} rows={3} className={fieldTextareaClassName} /><LimitMessage value={form.watch('description')} maxLength={2000} />
             {form.formState.errors.description && <p className="mt-1 text-xs text-destructive">{form.formState.errors.description.message}</p>}
           </label>
           <label className="block">
             <FieldLabel>Instructions for volunteers</FieldLabel>
-            <textarea
+            <textarea maxLength={2000}
               {...form.register('instructions')}
               rows={3}
               placeholder="What to carry, expected weather, meeting notes…"
               className={fieldTextareaClassName}
-            />
+            /><LimitMessage value={form.watch('instructions')} maxLength={2000} />
           </label>
         </FormSection>
 

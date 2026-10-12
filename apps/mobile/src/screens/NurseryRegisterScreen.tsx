@@ -340,9 +340,9 @@ export function NurseryRegisterScreen({ navigation }: any) {
 
           {step === 'identity' && (
             <>
-              <TextInput style={styles.input} placeholder="Nursery / business name" placeholderTextColor={ON_DARK_SURFACE.muted} value={nurseryName} onChangeText={setNurseryName} />
-              <TextInput style={styles.input} placeholder="Owner / proprietor name" placeholderTextColor={ON_DARK_SURFACE.muted} value={ownerName} onChangeText={setOwnerName} />
-              <TextInput
+              <TextInput maxLength={120} style={styles.input} placeholder="Nursery / business name" placeholderTextColor={ON_DARK_SURFACE.muted} value={nurseryName} onChangeText={setNurseryName} />
+              <TextInput maxLength={60} style={styles.input} placeholder="Owner / proprietor name" placeholderTextColor={ON_DARK_SURFACE.muted} value={ownerName} onChangeText={setOwnerName} />
+              <TextInput maxLength={2000}
                 style={[styles.input, styles.multiline]}
                 placeholder="What does your nursery grow?"
                 placeholderTextColor={ON_DARK_SURFACE.muted}
@@ -360,7 +360,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
                 maxLength={4}
               />
               <SelectField dark label="Nursery type" options={NURSERY_TYPE_OPTIONS} value={nurseryType} onChange={(v) => setNurseryType(v as NurseryType)} />
-              <TextInput
+              <TextInput maxLength={300}
                 style={styles.input}
                 placeholder="Website / social media (optional)"
                 placeholderTextColor={ON_DARK_SURFACE.muted}
@@ -425,7 +425,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
               </View>
               {!sameAsOwner && (
                 <>
-                  <TextInput style={styles.input} placeholder="Full name" placeholderTextColor={ON_DARK_SURFACE.muted} value={personName} onChangeText={setPersonName} />
+                  <TextInput maxLength={120} style={styles.input} placeholder="Full name" placeholderTextColor={ON_DARK_SURFACE.muted} value={personName} onChangeText={setPersonName} />
                   <SelectField dark label="Role" options={RESPONSIBLE_ROLE_OPTIONS} value={personRole} onChange={setPersonRole} />
                   <PhoneField
                     dark
@@ -459,21 +459,21 @@ export function NurseryRegisterScreen({ navigation }: any) {
             <>
               {visibleVerificationFields.includes('gstin') && (
                 <>
-                  <TextInput style={styles.input} placeholder="GSTIN (if applicable)" placeholderTextColor={ON_DARK_SURFACE.muted} autoCapitalize="characters" value={gstin} onChangeText={setGstin} />
+                  <TextInput maxLength={30} style={styles.input} placeholder="GSTIN (if applicable)" placeholderTextColor={ON_DARK_SURFACE.muted} autoCapitalize="characters" value={gstin} onChangeText={setGstin} />
                   {gstin.trim() && !isValidGstin(gstin) && <Text style={styles.fieldError}>Doesn't look like a valid GSTIN</Text>}
                 </>
               )}
               {visibleVerificationFields.includes('businessReg') && (
-                <TextInput style={styles.input} placeholder="Business registration / license (if applicable)" placeholderTextColor={ON_DARK_SURFACE.muted} value={businessReg} onChangeText={setBusinessReg} />
+                <TextInput maxLength={60} style={styles.input} placeholder="Business registration / license (if applicable)" placeholderTextColor={ON_DARK_SURFACE.muted} value={businessReg} onChangeText={setBusinessReg} />
               )}
               {visibleVerificationFields.includes('tradeLicense') && (
-                <TextInput style={styles.input} placeholder="Nursery / trade license (if applicable)" placeholderTextColor={ON_DARK_SURFACE.muted} value={tradeLicense} onChangeText={setTradeLicense} />
+                <TextInput maxLength={60} style={styles.input} placeholder="Nursery / trade license (if applicable)" placeholderTextColor={ON_DARK_SURFACE.muted} value={tradeLicense} onChangeText={setTradeLicense} />
               )}
               {visibleVerificationFields.includes('ngoReg') && (
-                <TextInput style={styles.input} placeholder="NGO registration number (if applicable)" placeholderTextColor={ON_DARK_SURFACE.muted} value={ngoReg} onChangeText={setNgoReg} />
+                <TextInput maxLength={60} style={styles.input} placeholder="NGO registration number (if applicable)" placeholderTextColor={ON_DARK_SURFACE.muted} value={ngoReg} onChangeText={setNgoReg} />
               )}
               {visibleVerificationFields.includes('govId') && (
-                <TextInput style={styles.input} placeholder="Government nursery ID (if applicable)" placeholderTextColor={ON_DARK_SURFACE.muted} value={govId} onChangeText={setGovId} />
+                <TextInput maxLength={60} style={styles.input} placeholder="Government nursery ID (if applicable)" placeholderTextColor={ON_DARK_SURFACE.muted} value={govId} onChangeText={setGovId} />
               )}
               <Text style={styles.helperNote}>None of these are mandatory — add whichever you have to help us approve you faster.</Text>
             </>

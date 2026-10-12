@@ -124,7 +124,7 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
           keyboardShouldPersistTaps="handled"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
-          <FormField
+          <FormField maxLength={160}
             label="What was it?"
             placeholder="eg - Yamuna bank restoration"
             value={title}
@@ -162,7 +162,7 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
             </TouchableOpacity>
           )}
 
-          <FormField
+          <FormField maxLength={4000}
             label="Story"
             placeholder="eg - What did you set out to do, and what changed?"
             value={description}
@@ -198,7 +198,7 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
             onChangeText={setVolunteers}
             keyboardType="number-pad"
           />
-          <FormField
+          <FormField maxLength={500}
             label="Partners"
             placeholder="eg - Delhi Jal Board, local schools"
             value={partnerOrgs}

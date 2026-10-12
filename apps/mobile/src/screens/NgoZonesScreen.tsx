@@ -108,7 +108,7 @@ export function NgoZonesScreen({ navigation, route }: any) {
       >
         {addingZone ? (
           <View style={styles.newZoneRow}>
-            <TextInput
+            <TextInput maxLength={100}
               value={zoneName}
               onChangeText={setZoneName}
               placeholder="e.g. Zone A, Roadside"

@@ -225,7 +225,7 @@ export function AdminNurseryApprovalDetailScreen({ navigation, route }: any) {
 
       <Sheet visible={reasonSheet !== null} onClose={() => setReasonSheet(null)} title={reasonSheet === 'rejected' ? 'Reject nursery' : 'Suspend nursery'}>
         <Text style={styles.sheetLabel}>Reason (optional)</Text>
-        <TextInput
+        <TextInput maxLength={500}
           style={styles.sheetInput}
           value={reason}
           onChangeText={setReason}

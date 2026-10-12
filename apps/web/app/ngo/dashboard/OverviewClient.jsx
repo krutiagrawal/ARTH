@@ -129,16 +129,16 @@ function RejectedPanel({ profile, onResubmitted }) {
       <form onSubmit={resubmit} className="mt-6 space-y-3 max-w-lg">
         <label className="block">
           <span className="eyebrow">Organization name</span>
-          <Input required value={form.orgName} onChange={set('orgName')} className="mt-2 h-11 rounded-full" />
+          <Input maxLength={120} required value={form.orgName} onChange={set('orgName')} className="mt-2 h-11 rounded-full" />
         </label>
         <label className="block">
           <span className="eyebrow">About your organization</span>
-          <Textarea required rows={4} value={form.description} onChange={set('description')} className="mt-2 rounded-2xl" />
+          <Textarea maxLength={2000} required rows={4} value={form.description} onChange={set('description')} className="mt-2 rounded-2xl" />
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="eyebrow">Website (optional)</span>
-            <Input
+            <Input maxLength={300}
               value={form.website}
               onChange={set('website')}
               onBlur={() => setWebsiteTouched(true)}

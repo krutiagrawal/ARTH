@@ -7,7 +7,7 @@ import { logCommunityObservation, reviewTreeUpdate, type LogCommunityObservation
 import { fetchNgoPublicFollowers, fetchNurseryPublicFollowers } from '../api/publicFollowers';
 import { fetchApprovedLocations, checkPlantingEligibility } from '../api/plantingLocations';
 import { fetchSpecies, createSpecies, deleteSpecies, fetchNearbyStock } from '../api/species';
-import { fetchTodayMissions, completeMission } from '../api/missions';
+import { fetchTodayMissions, reportShareMission } from '../api/missions';
 import { fetchGamesStatus, fetchTodayGame, submitGameGuess, submitGame, type ApiGameState, type GamePlayResponse, type GuessInput, type SubmitPayload } from '../api/games';
 import { fetchEcoFacts } from '../api/ecoFacts';
 import { fetchCities } from '../api/cities';
@@ -437,11 +437,11 @@ export function useTodayMissions() {
   });
 }
 
-export function useCompleteMission() {
+export function useReportShareMission() {
   const queryClient = useQueryClient();
   const { refreshUser } = useAuth();
   return useMutation({
-    mutationFn: (id: string) => completeMission(id),
+    mutationFn: () => reportShareMission(),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['missions', 'today'] }),
@@ -482,6 +482,8 @@ function useGameMutationSuccess<S extends ApiGameState>(key: S['key']) {
       queryClient.invalidateQueries({ queryKey: ['streaks', 'calendar'] }),
       queryClient.invalidateQueries({ queryKey: ['achievements'] }),
       queryClient.invalidateQueries({ queryKey: ['leaderboard'] }),
+      // Finishing the daily lesson completes the "Learn Today" quest server-side.
+      queryClient.invalidateQueries({ queryKey: ['missions', 'today'] }),
       refreshUser(),
     ]);
   };

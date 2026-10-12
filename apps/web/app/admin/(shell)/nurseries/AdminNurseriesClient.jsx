@@ -265,7 +265,7 @@ function NurseryDetailSheet({ nursery, onOpenChange, onAction }) {
         {(confirm === 'reject' || confirm === 'suspend') && (
           <label className="block">
             <span className="eyebrow">Reason (shown to the nursery)</span>
-            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} className="mt-2" />
+            <Textarea maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} rows={3} className="mt-2" />
           </label>
         )}
       </ConfirmDialog>
@@ -345,7 +345,7 @@ function RowActions({ nursery, onAction, onViewDetails }) {
         {(confirm === 'reject' || confirm === 'suspend') && (
           <label className="block">
             <span className="eyebrow">Reason (shown to the nursery)</span>
-            <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} className="mt-2" />
+            <Textarea maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} rows={3} className="mt-2" />
           </label>
         )}
       </ConfirmDialog>

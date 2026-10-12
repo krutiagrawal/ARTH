@@ -59,7 +59,7 @@ function ReviewRow({ review, onRespond }) {
         </div>
       ) : responding ? (
         <div className="mt-3 space-y-2">
-          <Textarea rows={2} value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a response…" className="rounded-xl" />
+          <Textarea maxLength={1000} rows={2} value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a response…" className="rounded-xl" />
           <div className="flex gap-2">
             <Button size="sm" className="rounded-full" disabled={submitting} onClick={submit}>{submitting ? 'Posting…' : 'Post response'}</Button>
             <Button size="sm" variant="ghost" className="rounded-full" onClick={() => setResponding(false)}>Cancel</Button>

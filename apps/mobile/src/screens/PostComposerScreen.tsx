@@ -195,7 +195,7 @@ export function PostComposerScreen({ navigation, route }: any) {
             }
           />
 
-          <FormField
+          <FormField maxLength={2000}
             label={mode === 'story' ? 'Caption (optional)' : "What's happening?"}
             value={caption}
             onChangeText={setCaption}

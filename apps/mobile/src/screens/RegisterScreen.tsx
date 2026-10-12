@@ -120,7 +120,7 @@ export function RegisterScreen({ navigation }: any) {
         <BorderCard style={styles.card}>
           <Text style={styles.title}>Create your forest</Text>
 
-          <TextInput
+          <TextInput maxLength={60}
             style={styles.input}
             placeholder="Name"
             placeholderTextColor={ON_DARK_SURFACE.muted}

@@ -131,7 +131,7 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
                     <Text style={styles.offerMessage}>
                       Ask the nursery for their handoff code, then enter it below to confirm you received the saplings.
                     </Text>
-                    <FormField
+                    <FormField maxLength={20}
                       label="Handoff code"
                       value={codeDrafts[r.id] ?? ''}
                       onChangeText={(v) => setCodeDrafts((prev) => ({ ...prev, [r.id]: v }))}
@@ -456,7 +456,7 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
           <Text style={styles.fieldHint}>
             Matching a catalog species lets nurseries' existing stock be checked when they respond — leave blank for open-ended asks like "any native species".
           </Text>
-          <FormField label="Additional description (optional)" value={speciesNote} onChangeText={setSpeciesNote} placeholder="eg - Native shade trees" />
+          <FormField maxLength={200} label="Additional description (optional)" value={speciesNote} onChangeText={setSpeciesNote} placeholder="eg - Native shade trees" />
           <FormField label="Quantity needed" value={quantityNeeded} onChangeText={setQuantityNeeded} placeholder="eg - 0" keyboardType="number-pad" />
           <FormFieldShell label="Needed by (optional)">
             <TouchableOpacity onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
@@ -513,7 +513,7 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
             </Text>
           )}
           <CityPickerField label="City (optional)" value={city} onChange={setCity} />
-          <FormField label="Notes (optional)" value={notes} onChangeText={setNotes} placeholder="eg - Anything nurseries should know" multiline />
+          <FormField maxLength={1000} label="Notes (optional)" value={notes} onChangeText={setNotes} placeholder="eg - Anything nurseries should know" multiline />
           {error && <Text style={styles.errorText}>{error}</Text>}
           <AnimatedButton
             label={createMutation.isPending ? 'Posting…' : 'Post requirement'}

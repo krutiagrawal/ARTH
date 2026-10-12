@@ -133,7 +133,7 @@ function ReviewForm({ orderId, showDeliveryRating }: { orderId: string; showDeli
           </View>
         </>
       )}
-      <TextInput
+      <TextInput maxLength={1000}
         style={styles.input}
         placeholder="eg - How was the delivery? (optional)"
         placeholderTextColor={COLORS.textLight}

@@ -2,8 +2,21 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-const Input = React.forwardRef(({ className, type, ...props }, ref) => {
+/** Shown under a field once its `maxLength` is reached — the browser silently stops accepting input there. */
+export function LimitMessage({ value, maxLength }) {
+  if (!maxLength || String(value ?? "").length < maxLength) return null
   return (
+    <p role="status" className="mt-1 text-xs text-destructive">
+      Maximum {maxLength} characters allowed
+    </p>
+  )
+}
+
+const Input = React.forwardRef(({ className, type, ...props }, ref) => {
+  // Phone / pincode / OTP-style fields are exact-length: a full field is a correct entry.
+  const exactLength = type === "tel" || type === "number" || props.inputMode === "numeric"
+  return (
+    <>
     <input
       type={type}
       className={cn(
@@ -12,6 +25,8 @@ const Input = React.forwardRef(({ className, type, ...props }, ref) => {
       )}
       ref={ref}
       {...props} />
+    {!exactLength && <LimitMessage value={props.value} maxLength={props.maxLength} />}
+    </>
   );
 })
 Input.displayName = "Input"

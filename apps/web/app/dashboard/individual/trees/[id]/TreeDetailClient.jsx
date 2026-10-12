@@ -1,5 +1,6 @@
 'use client'
 
+import { LimitMessage } from '@/components/ui/input'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -92,12 +93,12 @@ export default function TreeDetailClient({ id }) {
           <div className="flex items-start justify-between gap-3">
             {editing ? (
               <div className="flex-1 flex items-center gap-2">
-                <input
+                <input maxLength={60}
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
                   className="flex-1 h-10 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40 font-serif text-xl"
                   autoFocus
-                />
+                /><LimitMessage value={nickname} maxLength={60} />
                 <Button size="icon" variant="ghost" onClick={saveNickname} disabled={saving} aria-label="Save">
                   <Check className="h-4 w-4" />
                 </Button>

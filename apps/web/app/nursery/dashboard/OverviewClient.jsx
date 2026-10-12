@@ -132,11 +132,11 @@ function RejectedPanel({ profile, onResubmitted }) {
       <form onSubmit={resubmit} className="mt-6 space-y-3 max-w-2xl">
         <label className="block">
           <span className="eyebrow">Nursery name</span>
-          <Input required value={form.nurseryName} onChange={set('nurseryName')} className="mt-2 h-11 rounded-full" />
+          <Input maxLength={120} required value={form.nurseryName} onChange={set('nurseryName')} className="mt-2 h-11 rounded-full" />
         </label>
         <label className="block">
           <span className="eyebrow">About your nursery</span>
-          <Textarea required rows={4} value={form.description} onChange={set('description')} className="mt-2 rounded-2xl" />
+          <Textarea maxLength={2000} required rows={4} value={form.description} onChange={set('description')} className="mt-2 rounded-2xl" />
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="block">

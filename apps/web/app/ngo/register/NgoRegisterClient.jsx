@@ -1,4 +1,5 @@
 'use client'
+import { LimitMessage } from '@/components/ui/input'
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Sprout } from 'lucide-react'
@@ -410,7 +411,7 @@ function NgoRegisterForm() {
           <>
             <label className="block">
               <span className="eyebrow">Organisation name</span>
-              <input value={form.orgName} onChange={set('orgName')} className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+              <input maxLength={120} value={form.orgName} onChange={set('orgName')} className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.orgName} maxLength={120} />
             </label>
             <ChipSelect label="Organisation type" options={ORG_TYPE_OPTIONS} value={form.orgType} onChange={setField('orgType')} />
             <label className="block">
@@ -442,13 +443,13 @@ function NgoRegisterForm() {
             </label>
             <label className="block">
               <span className="eyebrow">Website (optional)</span>
-              <input
+              <input maxLength={300}
                 value={form.website}
                 onChange={set('website')}
                 onBlur={() => setWebsiteTouched(true)}
                 placeholder="https://"
                 className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40"
-              />
+              /><LimitMessage value={form.website} maxLength={300} />
               {websiteTouched && form.website.trim() && !isValidWebsite(form.website) && <p className="mt-1 text-xs text-destructive">Enter a valid website URL</p>}
             </label>
             <ChipListInput
@@ -466,27 +467,27 @@ function NgoRegisterForm() {
           <>
             <label className="block">
               <span className="eyebrow">PAN of organisation (optional)</span>
-              <input value={form.panNumber} onChange={set('panNumber')} className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+              <input maxLength={20} value={form.panNumber} onChange={set('panNumber')} className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.panNumber} maxLength={20} />
             </label>
 
             <RegistrationToggle label="We have a registration certificate" checked={form.hasRegistration} onChange={setField('hasRegistration')} />
             {form.hasRegistration && (
               <div className="space-y-3 pl-1">
-                <input value={form.registrationNumber} onChange={set('registrationNumber')} placeholder="Registration number" className="w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
-                <input value={form.registrationAuthority} onChange={set('registrationAuthority')} placeholder="Registration authority" className="w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+                <input maxLength={80} value={form.registrationNumber} onChange={set('registrationNumber')} placeholder="Registration number" className="w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.registrationNumber} maxLength={80} />
+                <input maxLength={120} value={form.registrationAuthority} onChange={set('registrationAuthority')} placeholder="Registration authority" className="w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.registrationAuthority} maxLength={120} />
                 <FileUploadInput label="Registration certificate" hint="PDF or photo" file={form.registrationCertificate} onChange={setField('registrationCertificate')} />
               </div>
             )}
 
             <RegistrationToggle label="We're registered on NGO Darpan" checked={form.hasDarpan} onChange={setField('hasDarpan')} />
             {form.hasDarpan && (
-              <input value={form.ngoDarpanId} onChange={set('ngoDarpanId')} placeholder="NGO Darpan ID" className="w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+              <><input maxLength={40} value={form.ngoDarpanId} onChange={set('ngoDarpanId')} placeholder="NGO Darpan ID" className="w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.ngoDarpanId} maxLength={40} /></>
             )}
 
             <RegistrationToggle label="We have 12A / 12AB registration" checked={form.has12A} onChange={setField('has12A')} />
             {form.has12A && (
               <div className="space-y-3 pl-1">
-                <input value={form.twelveARegistrationNumber} onChange={set('twelveARegistrationNumber')} placeholder="12A/12AB registration number" className="w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+                <input maxLength={60} value={form.twelveARegistrationNumber} onChange={set('twelveARegistrationNumber')} placeholder="12A/12AB registration number" className="w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.twelveARegistrationNumber} maxLength={60} />
                 <FileUploadInput label="12A/12AB certificate" hint="PDF or photo" file={form.twelveACertificate} onChange={setField('twelveACertificate')} />
               </div>
             )}
@@ -494,7 +495,7 @@ function NgoRegisterForm() {
             <RegistrationToggle label="We have 80G registration" checked={form.has80G} onChange={setField('has80G')} />
             {form.has80G && (
               <div className="space-y-3 pl-1">
-                <input value={form.eightyGRegistrationNumber} onChange={set('eightyGRegistrationNumber')} placeholder="80G registration number" className="w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+                <input maxLength={60} value={form.eightyGRegistrationNumber} onChange={set('eightyGRegistrationNumber')} placeholder="80G registration number" className="w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.eightyGRegistrationNumber} maxLength={60} />
                 <FileUploadInput label="80G certificate" hint="PDF or photo" file={form.eightyGCertificate} onChange={setField('eightyGCertificate')} />
               </div>
             )}
@@ -502,7 +503,7 @@ function NgoRegisterForm() {
             <RegistrationToggle label="We have FCRA registration" checked={form.hasFcra} onChange={setField('hasFcra')} />
             {form.hasFcra && (
               <div className="space-y-3 pl-1">
-                <input value={form.fcraRegistrationNumber} onChange={set('fcraRegistrationNumber')} placeholder="FCRA registration number" className="w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+                <input maxLength={60} value={form.fcraRegistrationNumber} onChange={set('fcraRegistrationNumber')} placeholder="FCRA registration number" className="w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.fcraRegistrationNumber} maxLength={60} />
                 <FileUploadInput label="FCRA certificate" hint="PDF or photo" file={form.fcraCertificate} onChange={setField('fcraCertificate')} />
               </div>
             )}
@@ -523,11 +524,11 @@ function NgoRegisterForm() {
           <>
             <label className="block">
               <span className="eyebrow">Primary contact&rsquo;s full name</span>
-              <input value={form.primaryContactName} onChange={set('primaryContactName')} className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+              <input maxLength={120} value={form.primaryContactName} onChange={set('primaryContactName')} className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.primaryContactName} maxLength={120} />
             </label>
             <label className="block">
               <span className="eyebrow">Designation</span>
-              <input value={form.primaryContactDesignation} onChange={set('primaryContactDesignation')} className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
+              <input maxLength={80} value={form.primaryContactDesignation} onChange={set('primaryContactDesignation')} className="mt-2 w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.primaryContactDesignation} maxLength={80} />
             </label>
             <label className="block">
               <span className="eyebrow">Primary contact&rsquo;s phone</span>
@@ -551,7 +552,7 @@ function NgoRegisterForm() {
           <>
             <label className="block">
               <span className="eyebrow">Brief description of your organisation</span>
-              <textarea rows={4} value={form.description} onChange={set('description')} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 outline-none focus:ring-2 focus:ring-primary/40" />
+              <textarea maxLength={2000} rows={4} value={form.description} onChange={set('description')} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.description} maxLength={2000} />
             </label>
             <ChipSelect multi label="Primary areas of work" options={WORK_AREA_OPTIONS} value={form.primaryWorkAreas} onChange={setField('primaryWorkAreas')} />
             <div className="grid gap-3 sm:grid-cols-2">
@@ -570,7 +571,7 @@ function NgoRegisterForm() {
             </label>
             <label className="block">
               <span className="eyebrow">Major projects / campaigns (optional)</span>
-              <textarea rows={3} value={form.majorProjectsDescription} onChange={set('majorProjectsDescription')} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 outline-none focus:ring-2 focus:ring-primary/40" />
+              <textarea maxLength={2000} rows={3} value={form.majorProjectsDescription} onChange={set('majorProjectsDescription')} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.majorProjectsDescription} maxLength={2000} />
             </label>
             <label className="block">
               <span className="eyebrow">Conducting environmental work since (year, optional)</span>
@@ -585,12 +586,12 @@ function NgoRegisterForm() {
             {form.conductsPlantationDrives && (
               <div className="space-y-4 pl-1">
                 <ChipSelect label="Typical saplings per drive" options={SAPLINGS_PER_DRIVE_OPTIONS} value={form.typicalSaplingsPerDrive} onChange={setField('typicalSaplingsPerDrive')} />
-                <input value={form.typicalDriveLocations} onChange={set('typicalDriveLocations')} placeholder="Typical drive locations" className="w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
-                <input value={form.speciesCommonlyPlanted} onChange={set('speciesCommonlyPlanted')} placeholder="Species commonly planted" className="w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" />
-                <textarea rows={2} value={form.saplingSourceDescription} onChange={set('saplingSourceDescription')} placeholder="Where do you source saplings from?" className="w-full rounded-2xl border border-border bg-background px-4 py-3 outline-none focus:ring-2 focus:ring-primary/40" />
+                <input maxLength={300} value={form.typicalDriveLocations} onChange={set('typicalDriveLocations')} placeholder="Typical drive locations" className="w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.typicalDriveLocations} maxLength={300} />
+                <input maxLength={300} value={form.speciesCommonlyPlanted} onChange={set('speciesCommonlyPlanted')} placeholder="Species commonly planted" className="w-full h-11 rounded-full border border-border bg-background px-4 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.speciesCommonlyPlanted} maxLength={300} />
+                <textarea maxLength={500} rows={2} value={form.saplingSourceDescription} onChange={set('saplingSourceDescription')} placeholder="Where do you source saplings from?" className="w-full rounded-2xl border border-border bg-background px-4 py-3 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.saplingSourceDescription} maxLength={500} />
                 <RegistrationToggle label="We monitor survival post-planting" checked={form.monitorsSurvivalPostPlanting} onChange={setField('monitorsSurvivalPostPlanting')} />
                 <RegistrationToggle label="We do post-plantation maintenance" checked={form.doesPostPlantationMaintenance} onChange={setField('doesPostPlantationMaintenance')} />
-                <textarea rows={2} value={form.plantationVerificationMethod} onChange={set('plantationVerificationMethod')} placeholder="How do you verify trees were actually planted?" className="w-full rounded-2xl border border-border bg-background px-4 py-3 outline-none focus:ring-2 focus:ring-primary/40" />
+                <textarea maxLength={500} rows={2} value={form.plantationVerificationMethod} onChange={set('plantationVerificationMethod')} placeholder="How do you verify trees were actually planted?" className="w-full rounded-2xl border border-border bg-background px-4 py-3 outline-none focus:ring-2 focus:ring-primary/40" /><LimitMessage value={form.plantationVerificationMethod} maxLength={500} />
                 <ChipListInput
                   label="Links to previous projects (optional)"
                   placeholder="Paste a link"

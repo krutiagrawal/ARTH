@@ -69,15 +69,41 @@ export const Text = React.forwardRef<any, TextProps>(
 );
 Text.displayName = 'AppText';
 
+/**
+ * Shown directly under any input once its `maxLength` is reached. React Native already refuses
+ * further typing (and clips pasted text) at `maxLength`, so without this the user just sees
+ * keystrokes silently ignored.
+ */
+export function LimitMessage({ value, maxLength, style }: { value?: string; maxLength?: number; style?: any }) {
+  if (!maxLength || (value?.length ?? 0) < maxLength) return null;
+  return (
+    <Text style={[limitStyles.message, style]} accessibilityLiveRegion="polite">
+      Maximum {maxLength} characters allowed
+    </Text>
+  );
+}
+
+const limitStyles = StyleSheet.create({
+  message: { fontSize: 12, color: '#C0392B', marginTop: 4 },
+});
+
+// Phone, pincode and OTP-style fields are exact-length: a full field is a *correct* entry, not an overflow.
+const NUMERIC_KEYBOARDS = new Set(['number-pad', 'phone-pad', 'numeric', 'decimal-pad']);
+
 export const TextInput = React.forwardRef<any, TextInputProps>(
   ({ style, ...rest }, ref) => {
     const { style: resolved, face } = resolve(style);
     return (
-      <RNTextInput
-        ref={ref}
-        style={face ? [resolved, { fontFamily: face, fontWeight: undefined }] : resolved}
-        {...rest}
-      />
+      <>
+        <RNTextInput
+          ref={ref}
+          style={face ? [resolved, { fontFamily: face, fontWeight: undefined }] : resolved}
+          {...rest}
+        />
+        {!NUMERIC_KEYBOARDS.has(String(rest.keyboardType)) && (
+          <LimitMessage value={typeof rest.value === 'string' ? rest.value : undefined} maxLength={rest.maxLength} />
+        )}
+      </>
     );
   }
 );

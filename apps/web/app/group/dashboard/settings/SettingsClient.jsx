@@ -100,7 +100,7 @@ export default function SettingsClient() {
 
         <label className="block">
           <span className="eyebrow">Group name</span>
-          <Input required value={form.groupName} onChange={set('groupName')} className="mt-2 h-11 rounded-full" />
+          <Input maxLength={120} required value={form.groupName} onChange={set('groupName')} className="mt-2 h-11 rounded-full" />
         </label>
         <label className="block">
           <span className="eyebrow">Group type</span>
@@ -112,7 +112,7 @@ export default function SettingsClient() {
         </label>
         <label className="block">
           <span className="eyebrow">About your group</span>
-          <Textarea required rows={4} value={form.description} onChange={set('description')} className="mt-2 rounded-2xl" />
+          <Textarea maxLength={2000} required rows={4} value={form.description} onChange={set('description')} className="mt-2 rounded-2xl" />
         </label>
         <label className="block">
           <span className="eyebrow">City</span>

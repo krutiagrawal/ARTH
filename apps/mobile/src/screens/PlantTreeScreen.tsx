@@ -276,6 +276,7 @@ function ScanAnimation({ onComplete }: { onComplete: () => void }) {
 }
 
 interface SuccessProps {
+  onBack: () => void;
   treeName: string;
   xpEarned: number;
   publicId?: string;
@@ -290,7 +291,7 @@ interface SuccessProps {
 }
 
 // Full-page celebration: deep-green scene with hills and trees, and a glossy sage "3D" card.
-function SuccessAnimation({ treeName, xpEarned, publicId, speciesName, speciesEmoji, locationLabel, plantedAt, topInset, bottomPad, onDone, onShare }: SuccessProps) {
+function SuccessAnimation({ treeName, xpEarned, publicId, speciesName, speciesEmoji, locationLabel, plantedAt, topInset, bottomPad, onDone, onShare, onBack }: SuccessProps) {
   const cardOpacity = useSharedValue(0);
   const cardScale = useSharedValue(0.82);
   const cardTiltX = useSharedValue(55);
@@ -411,6 +412,16 @@ function SuccessAnimation({ treeName, xpEarned, publicId, speciesName, speciesEm
         </Animated.View>
 
       </ScrollView>
+
+      <TouchableOpacity
+        onPress={onBack}
+        style={[styles.successBackButton, { top: topInset + 12 }]}
+        accessibilityRole="button"
+        accessibilityLabel="Go back"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Text style={styles.successBackIcon}>←</Text>
+      </TouchableOpacity>
 
       <View style={[styles.successDoneButton, { paddingBottom: Math.max(bottomPad - 14, 8) }]}>
         <AnimatedButton label="View My Forest" onPress={onDone} variant="primary" size="md" fullWidth textStyle={{ fontSize: 15 }} />
@@ -739,6 +750,19 @@ export function PlantTreeScreen({ navigation, route }: any) {
     }
   }, [navigation]);
 
+  // Clears the finished flow so the Plant tab starts fresh next time.
+  const resetFlow = useCallback(() => {
+    setStage('upload');
+    setImageUri(null);
+    setSelectedSpeciesId(null);
+    setNickname('');
+    setCaption('');
+    setPlantedTree(null);
+    setPickedLocation(null);
+    setSearchText('');
+    setSearchOpen(false);
+  }, []);
+
   // "View My Forest" opens My Trees, the full list of everything the user has planted (the Forest
   // tab only shows a partial view).
   const handleViewForest = useCallback(() => {
@@ -749,16 +773,18 @@ export function PlantTreeScreen({ navigation, route }: any) {
     }
     // Opened as the Plant tab: push My Trees, and reset the flow so coming back starts fresh.
     navigation.navigate('MyTrees', { view: 'map' });
-    setStage('upload');
-    setImageUri(null);
-    setSelectedSpeciesId(null);
-    setNickname('');
-    setCaption('');
-    setPlantedTree(null);
-    setPickedLocation(null);
-    setSearchText('');
-    setSearchOpen(false);
-  }, [navigation]);
+    resetFlow();
+  }, [navigation, resetFlow]);
+
+  // Back on the celebration card leaves the flow: to wherever the user came from, or — when opened
+  // as the Plant tab, which has nothing behind it — back to a fresh Plant screen.
+  const handleLeaveSuccess = useCallback(() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    resetFlow();
+  }, [navigation, resetFlow]);
 
   return (
     <View style={styles.container}>
@@ -975,7 +1001,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
           )}
 
           <Text style={styles.detailsLabel}>Give it a nickname</Text>
-          <TextInput
+          <TextInput maxLength={60}
             style={styles.nicknameInput}
             value={nickname}
             onChangeText={setNickname}
@@ -1100,6 +1126,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
           topInset={insets.top}
           bottomPad={bottomNavClearance}
           onDone={handleViewForest}
+          onBack={handleLeaveSuccess}
           onShare={() => {
             setShareCardReady(false);
             setShareVisible(true);
@@ -1544,6 +1571,17 @@ const styles = StyleSheet.create({
     zIndex: 50,
     elevation: 50,
   },
+  successBackButton: {
+    position: 'absolute',
+    left: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  successBackIcon: { fontSize: 22, color: '#FFFFFF', fontWeight: '600' },
   successSun: {
     position: 'absolute',
     top: -60,

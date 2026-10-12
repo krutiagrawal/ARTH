@@ -247,7 +247,7 @@ export default function TreesClient() {
       >
         <label className="block">
           <span className="eyebrow flex items-center gap-1"><Heart className="h-3 w-3" /> Reason (optional, for your records)</span>
-          <Textarea value={releaseReason} onChange={(e) => setReleaseReason(e.target.value)} rows={2} className="mt-2" />
+          <Textarea maxLength={500} value={releaseReason} onChange={(e) => setReleaseReason(e.target.value)} rows={2} className="mt-2" />
         </label>
       </ConfirmDialog>
 

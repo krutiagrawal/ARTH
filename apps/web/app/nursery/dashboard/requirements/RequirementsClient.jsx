@@ -118,7 +118,7 @@ function RespondSheet({ open, onOpenChange, requirement, submitting, onSubmit, o
         </div>
         <label className="block">
           <span className="text-[11px] font-medium text-muted-foreground">Message (optional)</span>
-          <Textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)} className="mt-1 rounded-xl" />
+          <Textarea maxLength={500} rows={3} value={message} onChange={(e) => setMessage(e.target.value)} className="mt-1 rounded-xl" />
         </label>
       </form>
     </DrawerFormShell>

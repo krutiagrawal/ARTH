@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { getOrCreateTodayMissions, completeMissionById } from '../services/missions.service';
+import { getOrCreateTodayMissions, completeMissionByType } from '../services/missions.service';
 
 export default async function missionsRoutes(fastify: FastifyInstance) {
   fastify.get('/today', async (request, reply) => {
@@ -18,11 +18,11 @@ export default async function missionsRoutes(fastify: FastifyInstance) {
     );
   });
 
-  fastify.post<{ Params: { id: string } }>('/:id/complete', async (request, reply) => {
-    const updated = await fastify.prisma.$transaction((tx) =>
-      completeMissionById(tx, request.user!.id, request.params.id)
-    );
-
-    reply.send(updated);
+  // Missions complete only from the action they describe (planting, finishing the daily lesson,
+  // liking someone's post). Sharing happens on-device, so the client reports it here — there is
+  // deliberately no generic "complete mission by id" endpoint.
+  fastify.post('/share', async (request, reply) => {
+    await fastify.prisma.$transaction((tx) => completeMissionByType(tx, request.user!.id, 'share'));
+    reply.send({ ok: true });
   });
 }
