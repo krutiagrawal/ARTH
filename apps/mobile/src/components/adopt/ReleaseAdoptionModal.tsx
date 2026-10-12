@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, ScrollView, LayoutChangeEvent } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Modal, ScrollView, LayoutChangeEvent } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { Text, TextInput } from '../common/AppText';
 import { COLORS } from '../../constants/colors';
+import { useKeyboardHeight } from '../../hooks/useKeyboardHeight';
 
 const REASONS = [
   { label: 'Moved away', emoji: '🧳', hint: "I'm no longer near the tree" },
@@ -95,6 +96,7 @@ export function ReleaseAdoptionModal({ visible, nickname, adoptedAt, busy, onCan
   const [reason, setReason] = useState<Reason | null>(null);
   const [note, setNote] = useState('');
   const [typed, setTyped] = useState('');
+  const keyboardHeight = useKeyboardHeight();
 
   useEffect(() => {
     if (visible) {
@@ -115,7 +117,7 @@ export function ReleaseAdoptionModal({ visible, nickname, adoptedAt, busy, onCan
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={[styles.backdrop, { paddingBottom: 20 + keyboardHeight }]}>
         <View style={styles.sheet}>
           <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <Text style={styles.title}>Release {nickname}?</Text>
@@ -176,7 +178,7 @@ export function ReleaseAdoptionModal({ visible, nickname, adoptedAt, busy, onCan
             </TouchableOpacity>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }

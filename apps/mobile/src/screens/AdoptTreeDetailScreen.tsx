@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,6 +16,7 @@ import { AdopterCheckIn } from '../components/adopt/AdopterCheckIn';
 import { PendingCommunityUpdates } from '../components/adopt/PendingCommunityUpdates';
 import { TreeUpdatesTimeline } from '../components/adopt/TreeUpdatesTimeline';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
 
@@ -34,6 +35,8 @@ export function AdoptTreeDetailScreen({ navigation, route }: any) {
   const isAdopter = !!adoptionStatus?.isAdopter;
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
   const [message, setMessage] = useState('');
+  const keyboardHeight = useKeyboardHeight();
+  const scrollRef = useRef<ScrollView>(null);
   const [actionError, setActionError] = useState('');
   const [adopted, setAdopted] = useState(false);
 
@@ -72,7 +75,9 @@ export function AdoptTreeDetailScreen({ navigation, route }: any) {
         <ActivityIndicator color={COLORS.sage} style={styles.loader} />
       ) : (
         <ScrollView
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+          ref={scrollRef}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 + keyboardHeight }]}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
@@ -167,6 +172,7 @@ export function AdoptTreeDetailScreen({ navigation, route }: any) {
               <TextInput maxLength={500}
                 value={message}
                 onChangeText={setMessage}
+                onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 250)}
                 placeholder="eg - Why does this tree matter to you?"
                 placeholderTextColor={COLORS.textLight}
                 multiline
