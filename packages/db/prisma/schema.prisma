@@ -459,6 +459,7 @@ enum NotificationType {
   ngo_health_check_due
   ngo_impact_milestone
   adoptable_tree_removed
+  ngo_tree_released
   tree_observation_logged
   tree_health_check_reminder
   community_observation_nearby
@@ -2143,9 +2144,10 @@ model AdoptableTree {
   // as the source of truth — this FK is read for resolution, never required.
   plantedTreeId String?             @map("planted_tree_id")
 
-  ngo         NgoProfile   @relation(fields: [ngoId], references: [id], onDelete: Cascade)
-  adoption    Adoption?
-  plantedTree PlantedTree? @relation(fields: [plantedTreeId], references: [id], onDelete: SetNull)
+  ngo          NgoProfile        @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  adoption     Adoption?
+  observations TreeObservation[]
+  plantedTree  PlantedTree?      @relation(fields: [plantedTreeId], references: [id], onDelete: SetNull)
 
   @@index([ngoId])
   @@index([lat, lng])
@@ -2577,32 +2579,39 @@ model TreeHealthCheck {
 // Tree's timeline is TreeObservation only. Only `owner`/`ngo` observerRole rows move the
 // canonical healthStatus — `community` rows are informational/corroborating only.
 model TreeObservation {
-  id              String           @id @default(uuid())
-  treeId          String?          @map("tree_id")
-  plantedTreeId   String?          @map("planted_tree_id")
-  observerUserId  String           @map("observer_user_id")
-  observerRole    TreeObserverRole @map("observer_role")
+  id              String                  @id @default(uuid())
+  treeId          String?                 @map("tree_id")
+  plantedTreeId   String?                 @map("planted_tree_id")
+  // Set for updates on an adoptable-tree listing (also set alongside plantedTreeId when the listing
+  // is linked to a real PlantedTree). Lets standalone listings carry status without a PlantedTree.
+  adoptableTreeId String?                 @map("adoptable_tree_id")
+  observerUserId  String                  @map("observer_user_id")
+  observerRole    TreeObserverRole        @map("observer_role")
   status          TreeHealthStatus
   note            String?
-  photoUrl        String?          @map("photo_url")
-  gpsLat          Decimal?         @map("gps_lat") @db.Decimal(9, 6)
-  gpsLng          Decimal?         @map("gps_lng") @db.Decimal(9, 6)
-  gpsAccuracyM    Decimal?         @map("gps_accuracy_m") @db.Decimal(6, 2)
+  photoUrl        String?                 @map("photo_url")
+  gpsLat          Decimal?                @map("gps_lat") @db.Decimal(9, 6)
+  gpsLng          Decimal?                @map("gps_lng") @db.Decimal(9, 6)
+  gpsAccuracyM    Decimal?                @map("gps_accuracy_m") @db.Decimal(6, 2)
   // Distance from the observer's submitted GPS to the target tree's TRUE stored coordinates at
   // submission time — stored for audit/abuse-review, computed server-side (see
   // plantingLocation.service.ts's assertCloseEnoughToObserve), never trusted from the client.
-  distanceToTreeM Decimal?         @map("distance_to_tree_m") @db.Decimal(6, 2)
-  confidence      Decimal?         @db.Decimal(4, 3)
+  distanceToTreeM Decimal?                @map("distance_to_tree_m") @db.Decimal(6, 2)
+  confidence      Decimal?                @db.Decimal(4, 3)
   reviewStatus    ObservationReviewStatus @default(accepted) @map("review_status")
-  reviewedAt      DateTime?        @map("reviewed_at")
-  createdAt       DateTime         @default(now()) @map("created_at")
+  reviewedAt      DateTime?               @map("reviewed_at")
+  // Set when the adopter who made/approved this entry releases the tree; hidden from everyone but the NGO.
+  archivedAt      DateTime?               @map("archived_at")
+  createdAt       DateTime                @default(now()) @map("created_at")
 
-  tree         Tree?        @relation(fields: [treeId], references: [id], onDelete: Cascade)
-  plantedTree  PlantedTree? @relation(fields: [plantedTreeId], references: [id], onDelete: Cascade)
-  observerUser User         @relation(fields: [observerUserId], references: [id], onDelete: Cascade)
+  tree          Tree?          @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  plantedTree   PlantedTree?   @relation(fields: [plantedTreeId], references: [id], onDelete: Cascade)
+  adoptableTree AdoptableTree? @relation(fields: [adoptableTreeId], references: [id], onDelete: Cascade)
+  observerUser  User           @relation(fields: [observerUserId], references: [id], onDelete: Cascade)
 
   @@index([treeId, createdAt(sort: Desc)])
   @@index([plantedTreeId, createdAt(sort: Desc)])
+  @@index([adoptableTreeId, createdAt(sort: Desc)])
   @@index([observerUserId])
   @@map("tree_observations")
 }

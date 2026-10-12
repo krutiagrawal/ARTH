@@ -116,6 +116,7 @@ export type NotificationType =
   | 'ngo_donation_received'
   | 'ngo_drive_rsvp'
   | 'ngo_tree_adopted'
+  | 'ngo_tree_released'
   | 'tree_observation_logged'
   | 'tree_update_received'
   | 'tree_update_decided'

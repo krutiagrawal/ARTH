@@ -385,7 +385,8 @@ export type RootStackParamList = {
   NurseryReservations: undefined;
   NurseryStockAnalytics: undefined;
   NurseryMap: { nurseryId?: string } | undefined;
-  NgoMap: { ngoId: string; ngoName?: string };
+  // ngoId omitted = the general tree map; `focus` flies the camera to a specific tree (e.g. from the Adopt list).
+  NgoMap: { ngoId?: string; ngoName?: string; focus?: { lat: number; lng: number }; fromAdopt?: boolean };
   NurseryDirectory: undefined;
   NurseryPublicProfile: { nurseryId: string };
   SaplingReservation: { nurseryId: string; stockId: string };
@@ -445,7 +446,7 @@ export type RootStackParamList = {
   NearbyTrees: undefined;
   TreeNavigation: { kind: 'tree' | 'planted-tree'; id: string; lat: number; lng: number; species?: string; speciesEmoji?: string | null; publicId?: string; latestPhotoUrl?: string | null };
   LogCommunityObservation: {
-    kind: 'tree' | 'planted-tree';
+    kind: 'tree' | 'planted-tree' | 'adoptable-tree';
     id: string;
     species?: string;
     speciesEmoji?: string | null;

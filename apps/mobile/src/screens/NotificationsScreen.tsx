@@ -113,6 +113,10 @@ function describe(n: ApiNotification): string {
       return "RSVP'd to your drive";
     case 'ngo_tree_adopted':
       return 'adopted a tree from you';
+    case 'ngo_tree_released': {
+      const d = n.data as any;
+      return `released ${d?.treeNickname ?? 'a tree'}${d?.reason ? ` (${d.reason})` : ''}. It is available for adoption again.`;
+    }
     case 'ngo_streak_at_risk':
       return 'Your Updates Streak needs you this week 🔥';
     case 'ngo_streak_broken':
@@ -198,6 +202,7 @@ function iconFor(n: ApiNotification): string {
     case 'ngo_drive_rsvp':
       return '🤝';
     case 'ngo_tree_adopted':
+    case 'ngo_tree_released':
       return '🌳';
     case 'tree_observation_logged':
     case 'tree_update_received':

@@ -91,7 +91,10 @@ import {
   releaseAdoption,
   fetchMyAdoptions,
   releaseMyAdoption,
+  logAdopterCheckIn,
+  fetchAdoptionStatus,
   CreateAdoptableTreeInput,
+  AdopterCheckInInput,
 } from '../api/adoptions';
 import {
   fetchCampaigns,
@@ -357,6 +360,7 @@ export function useLogCommunityObservation() {
     onSuccess: (_data, input) => {
       queryClient.invalidateQueries({ queryKey: ['trees'] });
       queryClient.invalidateQueries({ queryKey: ['trees', 'passport', input.targetKind, input.targetId] });
+      if (input.targetKind === 'adoptable-tree') queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] });
     },
   });
 }
@@ -366,7 +370,11 @@ export function useReviewTreeUpdate() {
   return useMutation({
     mutationFn: ({ observationId, decision }: { observationId: string; decision: 'accept' | 'reject' }) =>
       reviewTreeUpdate(observationId, decision),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['trees'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trees'] });
+      // The adopter's list shows how many updates still await a decision.
+      queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] });
+    },
   });
 }
 
@@ -1103,10 +1111,33 @@ export function useMyAdoptions() {
   });
 }
 
+/** Status timeline for one listing, plus (for its adopter) updates awaiting a decision. */
+export function useAdoptionStatus(adoptableTreeId: string | undefined) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['adoptable-trees', 'status', adoptableTreeId],
+    queryFn: () => fetchAdoptionStatus(adoptableTreeId as string),
+    enabled: isAuthenticated && !!adoptableTreeId,
+  });
+}
+
+export function useLogAdopterCheckIn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ adoptableTreeId, ...input }: { adoptableTreeId: string } & AdopterCheckInInput) =>
+      logAdopterCheckIn(adoptableTreeId, input),
+    onSuccess: () => {
+      // Status shows on the adoption lists and on the tree's passport timeline.
+      queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] });
+      queryClient.invalidateQueries({ queryKey: ['trees'] });
+    },
+  });
+}
+
 export function useReleaseMyAdoption() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => releaseMyAdoption(id),
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) => releaseMyAdoption(id, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] });
     },

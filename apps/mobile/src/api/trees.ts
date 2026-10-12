@@ -103,6 +103,8 @@ export interface PassportTimelineEntry {
   at: string;
   observerRole?: 'owner' | 'ngo' | 'community';
   observer?: { id: string; name: string; handle: string } | null;
+  /** From an earlier adopter, hidden from everyone but the NGO. */
+  archived?: boolean;
 }
 
 export interface PendingUpdate {
@@ -161,6 +163,8 @@ export interface NgoTreePassport {
   zone: { id: string; name: string } | null;
   sourceUnit: PassportSourceUnit | null;
   adopter: PassportPerson | null;
+  /** The adopted listing the adopter's check-ins are posted against. */
+  adoptedListingId: string | null;
   healthStatus: TreeHealthStatus;
   timeline: PassportTimelineEntry[];
 }

@@ -11,8 +11,15 @@ import type { LatLng } from '../utils/geo';
 // has no one to notify, which is expected, not an error.
 async function findTreeOwnerUserId(
   prisma: PrismaClient,
-  target: { treeId?: string; plantedTreeId?: string },
+  target: { treeId?: string; plantedTreeId?: string; adoptableTreeId?: string },
 ): Promise<string | null> {
+  if (target.adoptableTreeId) {
+    const adoption = await prisma.adoption.findUnique({
+      where: { adoptableTreeId: target.adoptableTreeId },
+      select: { userId: true },
+    });
+    return adoption?.userId ?? null;
+  }
   if (target.treeId) {
     const tree = await prisma.tree.findUnique({ where: { id: target.treeId }, select: { userId: true } });
     return tree?.userId ?? null;
@@ -43,7 +50,7 @@ async function notifyOwnerOfObservation(
 
 async function notifyOwnerOfPendingUpdate(
   prisma: PrismaClient,
-  target: { treeId?: string; plantedTreeId?: string },
+  target: { treeId?: string; plantedTreeId?: string; adoptableTreeId?: string },
   actorUserId: string,
   observationId: string,
   ownerUserId: string,
@@ -52,7 +59,7 @@ async function notifyOwnerOfPendingUpdate(
     userId: ownerUserId,
     type: 'tree_update_received',
     actorUserId,
-    data: { observationId, treeId: target.treeId, plantedTreeId: target.plantedTreeId },
+    data: { observationId, treeId: target.treeId, plantedTreeId: target.plantedTreeId, adoptableTreeId: target.adoptableTreeId },
     push: { title: 'Someone sent an update on your tree 🌳', body: 'Review it and decide if it joins the tree’s story.' },
   });
 }
@@ -136,9 +143,50 @@ export async function logNgoIndividualObservation(
   return observation;
 }
 
+// The adopter of a listed tree acts as its owner (see findTreeOwnerUserId): their live-photo
+// check-in is born accepted and counts toward the tree's status. It works for every listing,
+// linked to a PlantedTree or not. When linked, the PlantedTree id is stored too so the entry also
+// shows on the Passport timeline. Writes only TreeObservation, so the NGO's survival numbers
+// (TreeHealthCheck) never move.
+export async function logAdopterObservation(
+  prisma: PrismaClient,
+  adopterUserId: string,
+  adoptableTreeId: string,
+  input: SelfReportedObservationInput,
+) {
+  const listing = await prisma.adoptableTree.findFirst({
+    where: { id: adoptableTreeId, adoption: { userId: adopterUserId } },
+    select: { id: true, nickname: true, plantedTreeId: true, ngo: { select: { userId: true } } },
+  });
+  if (!listing) throw new ForbiddenError('Only the adopter of this tree can check in on it');
+
+  const observation = await prisma.treeObservation.create({
+    data: {
+      adoptableTreeId: listing.id,
+      plantedTreeId: listing.plantedTreeId,
+      observerUserId: adopterUserId,
+      observerRole: 'owner',
+      status: input.status,
+      note: input.note,
+      photoUrl: input.photoUrl,
+    },
+  });
+
+  await notify(prisma, {
+    userId: listing.ngo.userId,
+    type: 'tree_observation_logged',
+    actorUserId: adopterUserId,
+    data: { adoptableTreeId: listing.id, plantedTreeId: listing.plantedTreeId, status: input.status },
+    push: { title: 'An adopter checked in', body: `${listing.nickname} has a new status update from its adopter.` },
+  });
+
+  return observation;
+}
+
 export interface CommunityObservationTarget {
   treeId?: string;
   plantedTreeId?: string;
+  adoptableTreeId?: string;
 }
 
 interface CommunityObservationInput {
@@ -162,19 +210,26 @@ export async function logCommunityObservation(
   target: CommunityObservationTarget,
   input: CommunityObservationInput,
 ) {
-  if (!target.treeId === !target.plantedTreeId) {
-    throw new BadRequestError('Exactly one of treeId/plantedTreeId must be set');
+  if ([target.treeId, target.plantedTreeId, target.adoptableTreeId].filter(Boolean).length !== 1) {
+    throw new BadRequestError('Exactly one of treeId/plantedTreeId/adoptableTreeId must be set');
   }
 
-  const trueCoords = target.treeId
-    ? await prisma.tree.findFirst({
-        where: { id: target.treeId, isDeleted: false },
-        select: { lat: true, lng: true },
-      })
-    : await prisma.plantedTree.findFirst({
-        where: { id: target.plantedTreeId },
-        select: { lat: true, lng: true },
-      });
+  // For a listing, a linked PlantedTree's coordinates are the real ones; a standalone listing
+  // falls back to the position the NGO gave it.
+  let listingPlantedTreeId: string | null = null;
+  let trueCoords: { lat: unknown; lng: unknown } | null;
+  if (target.treeId) {
+    trueCoords = await prisma.tree.findFirst({ where: { id: target.treeId, isDeleted: false }, select: { lat: true, lng: true } });
+  } else if (target.plantedTreeId) {
+    trueCoords = await prisma.plantedTree.findFirst({ where: { id: target.plantedTreeId }, select: { lat: true, lng: true } });
+  } else {
+    const listing = await prisma.adoptableTree.findFirst({
+      where: { id: target.adoptableTreeId, status: { not: 'removed' } },
+      select: { lat: true, lng: true, plantedTreeId: true, plantedTree: { select: { lat: true, lng: true } } },
+    });
+    listingPlantedTreeId = listing?.plantedTreeId ?? null;
+    trueCoords = listing ? (listing.plantedTree?.lat != null ? listing.plantedTree : listing) : null;
+  }
   if (!trueCoords || trueCoords.lat === null || trueCoords.lng === null) {
     throw new NotFoundError('Tree not found');
   }
@@ -193,7 +248,8 @@ export async function logCommunityObservation(
   const observation = await prisma.treeObservation.create({
     data: {
       treeId: target.treeId,
-      plantedTreeId: target.plantedTreeId,
+      plantedTreeId: target.plantedTreeId ?? listingPlantedTreeId,
+      adoptableTreeId: target.adoptableTreeId,
       observerUserId,
       observerRole: 'community',
       reviewStatus: ownerUserId ? 'pending' : 'accepted',
@@ -226,7 +282,11 @@ export async function reviewCommunityObservation(
   const observation = await prisma.treeObservation.findUnique({ where: { id: observationId } });
   if (!observation || observation.observerRole !== 'community') throw new NotFoundError('Update not found');
 
-  const target = observation.treeId ? { treeId: observation.treeId } : { plantedTreeId: observation.plantedTreeId ?? undefined };
+  const target = observation.treeId
+    ? { treeId: observation.treeId }
+    : observation.adoptableTreeId
+      ? { adoptableTreeId: observation.adoptableTreeId }
+      : { plantedTreeId: observation.plantedTreeId ?? undefined };
   if ((await findTreeOwnerUserId(prisma, target)) !== ownerUserId) {
     throw new ForbiddenError('Only the tree’s owner can review this update');
   }
@@ -241,7 +301,7 @@ export async function reviewCommunityObservation(
     userId: observation.observerUserId,
     type: 'tree_update_decided',
     actorUserId: ownerUserId,
-    data: { observationId, treeId: observation.treeId, plantedTreeId: observation.plantedTreeId, decision },
+    data: { observationId, treeId: observation.treeId, plantedTreeId: observation.plantedTreeId, adoptableTreeId: observation.adoptableTreeId, decision },
     push: {
       title: decision === 'accepted' ? 'Your tree update was accepted 🌱' : 'Your tree update was reviewed',
       body: decision === 'accepted' ? 'The owner added it to the tree’s timeline.' : 'The owner chose not to add it to the timeline.',

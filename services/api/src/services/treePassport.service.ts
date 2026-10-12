@@ -138,7 +138,7 @@ async function buildNgoPassport(prisma: PrismaClient, plantedTreeId: string, req
       },
       healthChecks: { orderBy: { checkedAt: 'desc' } },
       observations: {
-        where: { reviewStatus: { not: 'rejected' } },
+        where: { reviewStatus: { not: 'rejected' }, archivedAt: null },
         orderBy: { createdAt: 'desc' },
         include: { observerUser: { select: { id: true, name: true, handle: true } } },
       },
@@ -180,7 +180,8 @@ async function buildNgoPassport(prisma: PrismaClient, plantedTreeId: string, req
   // An AdoptableTree listing created FROM this PlantedTree (Phase 5 writes this link) whose
   // Adoption has actually been claimed — a listing with no claimed Adoption yet contributes
   // nothing here.
-  const adopter = tree.adoptableListings.find((l) => l.adoption)?.adoption?.user ?? null;
+  const adoptedListing = tree.adoptableListings.find((l) => l.adoption);
+  const adopter = adoptedListing?.adoption?.user ?? null;
 
   return {
     kind: 'ngo' as const,
@@ -200,6 +201,8 @@ async function buildNgoPassport(prisma: PrismaClient, plantedTreeId: string, req
     zone: tree.zone,
     sourceUnit: tree.sourceUnit,
     adopter,
+    // The listing the adopter's check-ins are posted against.
+    adoptedListingId: adoptedListing?.id ?? null,
     healthStatus: latestStatus,
     timeline,
   };

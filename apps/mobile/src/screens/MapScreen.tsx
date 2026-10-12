@@ -37,6 +37,7 @@ import { StatusModal } from '../components/common/StatusModal';
 import type { ApiTree } from '../api/trees';
 import { resolveMediaUrl } from '../api/client';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
+import { SlidingSegment } from '../components/common/SlidingSegment';
 import { STATUS_META } from '../constants/treeHealth';
 import type { ApiAdoptableTree } from '../api/adoptions';
 import type { ApiDrive } from '../api/drives';
@@ -544,6 +545,14 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
   const [selectedPlanting, setSelectedPlanting] = useState<ApiPlantingMapEntry | null>(null);
   // Map layer filter: 'all' shows everything; picking a layer shows only that one. Collapsed by default.
   const [filterOpen, setFilterOpen] = useState(false);
+  // Opened from the Adopt-a-Tree list's Map toggle: show the List | Map toggle so the user can switch back.
+  const fromAdopt: boolean = !!route?.params?.fromAdopt;
+  const [adoptView, setAdoptView] = useState<'list' | 'map'>('map');
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const switchToList = (next: 'list' | 'map') => {
+    setAdoptView(next);
+    if (next === 'list') setTimeout(() => navigation.goBack(), 240);
+  };
   const [mapFilter, setMapFilter] = useState<MapFilter>('all');
   const cameraRef = useRef<any>(null);
   const fadeStyle = useFadeIn(0, 400);
@@ -558,6 +567,8 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
   // adoptable trees are filtered to just this NGO, and its zone-level planting pins appear.
   const scopeNgoId: string | undefined = route?.params?.ngoId;
   const scopeNgoName: string | undefined = route?.params?.ngoName;
+  // Pushed as its own stack screen (has a route) rather than rendered as the Map tab — needs a back button.
+  const isPushedScreen = !!route?.key;
   // Both public and NGO-owned feeds are always fetched (stable per-mount `mode` prop, never
   // toggles) so this never has to call hooks conditionally — whichever pair isn't relevant for
   // this mode is simply not used below. NGO mode has no personal "planted trees" concept at all.
@@ -686,6 +697,19 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
       fitToOverview();
     }
   }, [trees, ngoPoints, location, locationPending, fitToOverview, flyToMe]);
+
+  // Opened with a specific spot to show (e.g. "Map" on an Adopt-a-Tree card): fly there instead of
+  // the usual overview / own-location framing, and keep those from overriding it later.
+  const focus: { lat: number; lng: number } | undefined = route?.params?.focus;
+  useEffect(() => {
+    if (!focus) return;
+    hasAutoFitRef.current = true;
+    hasZoomedToUserRef.current = true;
+    const timer = setTimeout(() => {
+      cameraRef.current?.flyTo({ center: [focus.lng, focus.lat], zoom: 15, duration: 600 });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [focus?.lat, focus?.lng]);
 
   const flyToTree = useCallback((tree: ApiTree) => {
     // Close-up zoom with the pin nudged above the (tall) details sheet; short flight so the card
@@ -899,14 +923,15 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
       </Animated.View>
 
       {/* Header */}
-      <Animated.View style={[styles.header, { paddingTop: insets.top + 8 }, headerSlide]}>
+      <Animated.View style={[styles.header, { paddingTop: insets.top + 8 }, headerSlide]} onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
         <BlurView intensity={isNight ? 65 : 50} tint={isNight ? 'dark' : 'light'} style={styles.headerBlur}>
           <View style={styles.headerContent}>
             <View style={styles.headerTitleRow}>
-              {!isNgo && scopeNgoId && (
+              {!isNgo && (scopeNgoId || scopeNurseryId || isPushedScreen) && (
                 <TouchableOpacity
                   onPress={() => navigation.goBack()}
                   style={styles.mapBackBtn}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                   accessibilityRole="button"
                   accessibilityLabel="Go back"
                 >
@@ -933,6 +958,18 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
           </View>
         </BlurView>
       </Animated.View>
+
+      {fromAdopt && (
+        <View style={[styles.adoptToggleWrap, { top: headerHeight + 8 }]}>
+          <BlurView intensity={80} tint={isNight ? 'dark' : 'light'} style={[styles.adoptToggleBlur, styles.mapGlass, isNight && styles.mapGlassNight]}>
+            <SlidingSegment
+              value={adoptView}
+              onChange={switchToList}
+              options={[{ key: 'list', label: '☰ List' }, { key: 'map', label: '🗺️ Map' }]}
+            />
+          </BlurView>
+        </View>
+      )}
 
       {/* Layer filter bubble — collapsed by default; tapping a layer shows only that layer. */}
       {!selectedTree && !selectedPlanting && (
@@ -1253,6 +1290,8 @@ const styles = StyleSheet.create({
   // One shared glass look for the floating map buttons (GPS, Plant where you are, Show on map).
   mapGlass: { backgroundColor: 'rgba(255,255,255,0.78)' },
   mapGlassNight: { backgroundColor: 'rgba(18,28,18,0.78)' },
+  adoptToggleWrap: { position: 'absolute', left: 16, zIndex: 5 },
+  adoptToggleBlur: { borderRadius: 16, overflow: 'hidden', padding: 3 },
   legendWrap: { position: 'absolute', right: 16, alignItems: 'flex-end' },
   legendBlur: { borderRadius: 16, overflow: 'hidden', paddingHorizontal: 12, paddingVertical: 8 },
   legendTitle: { fontSize: 12, fontWeight: '700', color: COLORS.textPrimary },

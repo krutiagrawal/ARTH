@@ -1,5 +1,7 @@
 import { apiFetch, toFormFile } from './client';
 import { pagedPath, type Page } from '../hooks/useInfiniteList';
+import type { TreeHealthStatus } from './plantedTrees';
+import type { PassportTimelineEntry, PendingUpdate } from './trees';
 
 export interface ApiAdoptableTree {
   id: string;
@@ -17,6 +19,13 @@ export interface ApiAdoptableTree {
   status: 'available' | 'adopted' | 'removed';
   isAdopted: boolean;
   distanceKm?: number;
+  /** Set when the NGO created the listing from a real planted tree (has a Tree Passport). */
+  plantedTreeId?: string | null;
+  healthStatus?: TreeHealthStatus;
+  lastCheckedAt?: string | null;
+  /** Every listing has a status; 'not_checked' until the first update. Only the adopter's own list has the count below. */
+  /** Community updates still awaiting the adopter's decision. */
+  pendingUpdatesCount?: number;
   adopter?: { name: string; handle: string; message: string | null; adoptedAt: string };
 }
 
@@ -44,8 +53,11 @@ export async function fetchMyAdoptions(cursor?: string): Promise<Page<ApiAdoptab
   return apiFetch<Page<ApiAdoptableTree>>(pagedPath('/api/adoptable-trees/my-adoptions', cursor));
 }
 
-export async function releaseMyAdoption(id: string): Promise<ApiAdoptableTree> {
-  return apiFetch<ApiAdoptableTree>(`/api/adoptable-trees/${id}/adopt`, { method: 'DELETE' });
+export async function releaseMyAdoption(id: string, reason?: string): Promise<ApiAdoptableTree> {
+  return apiFetch<ApiAdoptableTree>(`/api/adoptable-trees/${id}/adopt/release`, {
+    method: 'POST',
+    body: reason ? { reason } : {},
+  });
 }
 
 // ---------- NGO-facing ----------
@@ -88,4 +100,34 @@ export async function removeAdoptableTree(id: string): Promise<ApiAdoptableTree>
 /** NGO-initiated release — puts an adopted tree back in the public pool without delisting it. */
 export async function releaseAdoption(id: string): Promise<ApiAdoptableTree> {
   return apiFetch<ApiAdoptableTree>(`/api/adoptable-trees/${id}/release`, { method: 'POST', body: {} });
+}
+
+export interface AdopterCheckInInput {
+  status: Exclude<TreeHealthStatus, 'not_checked'>;
+  note?: string;
+  photo: { uri: string; name: string; type: string };
+}
+
+/** The adopter's live-photo check-in on the tree they adopted. */
+export async function logAdopterCheckIn(adoptableTreeId: string, input: AdopterCheckInInput): Promise<unknown> {
+  const form = new FormData();
+  form.append('status', input.status);
+  if (input.note?.trim()) form.append('note', input.note.trim());
+  form.append('photo', toFormFile(input.photo.uri), input.photo.name);
+  return apiFetch(`/api/adoptable-trees/${adoptableTreeId}/check-in`, { method: 'POST', body: form, isForm: true });
+}
+
+export interface AdoptionStatus {
+  adoptableTreeId: string;
+  plantedTreeId: string | null;
+  publicId: string | null;
+  /** True when the signed-in user is this tree's adopter. */
+  isAdopter: boolean;
+  timeline: PassportTimelineEntry[];
+  /** Community updates awaiting a decision; only returned to the adopter. */
+  pendingUpdates: PendingUpdate[];
+}
+
+export async function fetchAdoptionStatus(adoptableTreeId: string): Promise<AdoptionStatus> {
+  return apiFetch<AdoptionStatus>(`/api/adoptable-trees/${adoptableTreeId}/status`);
 }

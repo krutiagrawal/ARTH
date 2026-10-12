@@ -18,6 +18,7 @@ import { resolveMediaUrl } from '../api/client';
 import { STATUS_META, ACTIONABLE_STATUSES } from '../constants/treeHealth';
 import type { TreePassport, PassportTimelineEntry } from '../api/trees';
 import { formatKg, formatTreeAge } from '../utils/impact';
+import { AdopterCheckIn } from '../components/adopt/AdopterCheckIn';
 
 import { TEXT } from '../constants/typography';
 // Caps the per-row stagger so a long timeline still finishes revealing quickly rather than
@@ -388,7 +389,7 @@ function PassportBody({ passport, navigation }: { passport: TreePassport; naviga
         </View>
       ) : (
         <HealthBanner key={passport.healthStatus} status={passport.healthStatus}>
-          {isOwner ? <CheckInControl treeId={passport.id} /> : null}
+          {isOwner ? <CheckInControl treeId={passport.id} /> : isTreeOwner && passport.kind === 'ngo' && passport.adoptedListingId ? <AdopterCheckIn adoptableTreeId={passport.adoptedListingId} /> : null}
         </HealthBanner>
       )}
 

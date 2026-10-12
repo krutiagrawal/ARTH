@@ -26,7 +26,11 @@ export default async function treeObservationsRoutes(fastify: FastifyInstance) {
     const observation = await logCommunityObservation(
       fastify.prisma,
       request.user!.id,
-      targetKind === 'tree' ? { treeId: targetId } : { plantedTreeId: targetId },
+      targetKind === 'tree'
+        ? { treeId: targetId }
+        : targetKind === 'adoptable-tree'
+          ? { adoptableTreeId: targetId }
+          : { plantedTreeId: targetId },
       { status, note, photoUrl, point: { lat, lng }, accuracyMeters: accuracy, mocked },
     );
     reply.status(201).send(observation);

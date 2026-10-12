@@ -4,7 +4,7 @@ import { z } from 'zod';
 // trees.schema.ts's plantTreeSchema (same anti-cheat fields, same reasons — both required so a
 // raw API call can't skip the mock/accuracy checks by omitting them).
 export const logCommunityObservationSchema = z.object({
-  targetKind: z.enum(['tree', 'planted-tree']),
+  targetKind: z.enum(['tree', 'planted-tree', 'adoptable-tree']),
   targetId: z.string().uuid(),
   status: z.enum(['healthy', 'struggling', 'dead', 'removed']),
   note: z.string().max(1000).optional(),

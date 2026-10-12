@@ -10,7 +10,11 @@ import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { LocationActions } from '../components/common/LocationActions';
 import { useHaptics } from '../hooks/useHaptics';
-import { useAdoptableTree, useAdoptTree, useNgoProfile } from '../hooks/useApiQueries';
+import { useAdoptableTree, useAdoptTree, useNgoProfile, useAdoptionStatus } from '../hooks/useApiQueries';
+import { AdoptionStatusPill } from '../components/adopt/AdoptionStatusPill';
+import { AdopterCheckIn } from '../components/adopt/AdopterCheckIn';
+import { PendingCommunityUpdates } from '../components/adopt/PendingCommunityUpdates';
+import { TreeUpdatesTimeline } from '../components/adopt/TreeUpdatesTimeline';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
@@ -25,6 +29,9 @@ export function AdoptTreeDetailScreen({ navigation, route }: any) {
   const ngoProfile = useNgoProfile(user?.role === 'ngo');
   const isOwnTree = user?.role === 'ngo' && !!tree && ngoProfile.data?.id === tree.ngoId;
   const adoptMutation = useAdoptTree();
+  const statusQuery = useAdoptionStatus(tree ? tree.id : undefined);
+  const adoptionStatus = statusQuery.data;
+  const isAdopter = !!adoptionStatus?.isAdopter;
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
   const [message, setMessage] = useState('');
   const [actionError, setActionError] = useState('');
@@ -73,6 +80,8 @@ export function AdoptTreeDetailScreen({ navigation, route }: any) {
             <Text style={styles.title}>{tree.nickname}</Text>
             <Text style={styles.ngoName}>{tree.speciesName} · listed by {tree.ngoName}</Text>
 
+            <AdoptionStatusPill status={tree.healthStatus} lastCheckedAt={tree.lastCheckedAt} />
+
             <View style={styles.divider} />
 
             <Text style={styles.description}>{tree.description}</Text>
@@ -85,6 +94,47 @@ export function AdoptTreeDetailScreen({ navigation, route }: any) {
               <Text style={styles.instructionsLabel}>What adopting this tree involves</Text>
               <Text style={styles.instructionsText}>{tree.instructions}</Text>
             </View>
+          )}
+
+          {!isRemoved && (
+            <BorderCard style={styles.card}>
+              <Text style={styles.sectionTitle}>Status updates</Text>
+              {adoptionStatus ? <TreeUpdatesTimeline timeline={adoptionStatus.timeline} /> : <ActivityIndicator color={COLORS.sage} />}
+              {isAdopter ? (
+                <View style={styles.updateActions}>
+                  <AdopterCheckIn adoptableTreeId={tree.id} />
+                  <PendingCommunityUpdates adoptableTreeId={tree.id} />
+                </View>
+              ) : !isOwnTree ? (
+                <View style={styles.updateActions}>
+                  <TouchableOpacity
+                    style={styles.outlineBtn}
+                    accessibilityRole="button"
+                    onPress={() =>
+                      navigation.navigate('LogCommunityObservation', {
+                        kind: 'adoptable-tree',
+                        id: tree.id,
+                        species: tree.speciesName,
+                        photoUrl: tree.photoUri,
+                        publicId: adoptionStatus?.publicId ?? undefined,
+                      })
+                    }
+                  >
+                    <Text style={styles.outlineBtnText}>📸  Send an update on this tree</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.updateHint}>You need to be standing next to the tree. The adopter decides whether it joins the timeline.</Text>
+                </View>
+              ) : null}
+              {tree.plantedTreeId ? (
+                <TouchableOpacity
+                  style={styles.passportLink}
+                  accessibilityRole="button"
+                  onPress={() => navigation.navigate('TreePassport', { kind: 'planted-tree', id: tree.plantedTreeId })}
+                >
+                  <Text style={styles.passportLinkText}>🪪 View full Tree Passport ›</Text>
+                </TouchableOpacity>
+              ) : null}
+            </BorderCard>
           )}
 
           {isOwnTree ? (
@@ -160,6 +210,13 @@ const styles = StyleSheet.create({
   instructionsCard: { backgroundColor: 'rgba(212,168,83,0.12)', borderRadius: RADIUS.lg, padding: 14, marginBottom: 16 },
   instructionsLabel: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 },
   instructionsText: { fontSize: 13, lineHeight: 19, color: COLORS.textPrimary },
+  sectionTitle: { fontSize: 11, fontWeight: '800', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 12 },
+  updateActions: { marginTop: 4 },
+  outlineBtn: { height: 40, borderRadius: 12, borderWidth: 2, borderColor: COLORS.warmBrown, alignItems: 'center', justifyContent: 'center' },
+  outlineBtnText: { fontSize: 13, fontWeight: '800', color: COLORS.textPrimary },
+  updateHint: { fontSize: 11, color: COLORS.textSecondary, marginTop: 6 },
+  passportLink: { marginTop: 14, alignSelf: 'flex-start' },
+  passportLinkText: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 8 },
   input: {
     backgroundColor: 'transparent',

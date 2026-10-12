@@ -2,7 +2,7 @@ import { apiFetch, toFormFile } from './client';
 import type { TreeHealthStatus } from './plantedTrees';
 
 export interface LogCommunityObservationInput {
-  targetKind: 'tree' | 'planted-tree';
+  targetKind: 'tree' | 'planted-tree' | 'adoptable-tree';
   targetId: string;
   status: Exclude<TreeHealthStatus, 'not_checked'>;
   note?: string;

@@ -22,7 +22,7 @@ type Stage = 'confirm' | 'status' | 'submitting' | 'success' | 'error';
 
 export function LogCommunityObservationScreen({ navigation, route }: any) {
   const { kind, id, species, speciesEmoji, photoUrl, publicId } = route.params as {
-    kind: 'tree' | 'planted-tree';
+    kind: 'tree' | 'planted-tree' | 'adoptable-tree';
     id: string;
     species?: string;
     speciesEmoji?: string | null;
@@ -171,9 +171,9 @@ export function LogCommunityObservationScreen({ navigation, route }: any) {
             <Text style={styles.successSub}>The owner was notified. If they accept it, it joins the tree’s timeline as an external update.</Text>
             <TouchableOpacity
               style={styles.primaryButton}
-              onPress={() => navigation.replace('TreePassport', { kind, id })}
+              onPress={() => (kind === 'adoptable-tree' ? navigation.replace('AdoptTreeDetail', { treeId: id }) : navigation.replace('TreePassport', { kind, id }))}
             >
-              <Text style={styles.primaryButtonText}>View Tree Passport</Text>
+              <Text style={styles.primaryButtonText}>{kind === 'adoptable-tree' ? 'Back to the tree' : 'View Tree Passport'}</Text>
             </TouchableOpacity>
           </BorderCard>
         ) : null}
