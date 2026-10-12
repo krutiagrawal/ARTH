@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableOpacity, ScrollView, ActivityIndicator, AppState, Image } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LeafletPinMap, type LeafletPin, type LeafletCircle } from '../components/map/LeafletPinMap';
 import * as Location from 'expo-location';
@@ -35,6 +35,9 @@ import { EmptyState } from '../components/common/EmptyState';
 import { StatDisplay } from '../components/common/StatDisplay';
 import { StatusModal } from '../components/common/StatusModal';
 import type { ApiTree } from '../api/trees';
+import { resolveMediaUrl } from '../api/client';
+import { useBottomNavClearance } from '../components/navigation/BottomNav';
+import { STATUS_META } from '../constants/treeHealth';
 import type { ApiAdoptableTree } from '../api/adoptions';
 import type { ApiDrive } from '../api/drives';
 import type { ApiApprovedLocation } from '../api/plantingLocations';
@@ -81,6 +84,11 @@ const OSM_STYLE = {
   layers: [{ id: 'osm-tiles', type: 'raster' as const, source: 'osm' }],
 };
 
+// ARTH-approved planting zones are tinted green on the map: the tint covers exactly the area the
+// server accepts plantings in (the approved circles), so it never overstates where you can plant.
+const ZONE_COLOR = '#2E9E4F';
+const NURSERY_EMOJI = '🏡';
+
 const GROWTH_EMOJI = ['🌱', '🌿', '🌳', '🌲', '🎋'];
 const GROWTH_COLOR = ['#5BA847', '#3E8A2E', '#2D6B20', '#1E5214', '#0E3A0A'];
 
@@ -106,8 +114,8 @@ const MARKER_STYLES = {
 const STATUS_MODAL_CONTENT = {
   locationUnavailable: {
     icon: '📍',
-    title: 'Location unavailable',
-    message: 'We could not find your current location. Check your location permission and try again.',
+    title: 'Turn on location',
+    message: 'Please turn on your device location and give ARTH location permission access to plant where you are.',
   },
   notApproved: {
     icon: '🚫',
@@ -194,12 +202,12 @@ function TreeMarker({ tree, onPress, selected }: {
           <View style={[
             styles.markerBubble,
             selected && styles.markerBubbleSelected,
-            { backgroundColor: selected ? GROWTH_COLOR[tree.growthStage - 1] : COLORS.white },
+            { backgroundColor: selected ? GROWTH_COLOR[tree.growthStage - 1] : COLORS.white, borderColor: GROWTH_COLOR[tree.growthStage - 1], borderWidth: 3 },
           ]}>
             <Text style={styles.markerEmoji}>{GROWTH_EMOJI[tree.growthStage - 1]}</Text>
           </View>
           <View style={[styles.markerPin, {
-            borderTopColor: selected ? GROWTH_COLOR[tree.growthStage - 1] : COLORS.white,
+            borderTopColor: GROWTH_COLOR[tree.growthStage - 1],
           }]} />
         </Animated.View>
       </TouchableOpacity>
@@ -261,7 +269,7 @@ function NurseryMarker({ nursery, onPress }: { nursery: { id: string; nurseryNam
       <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
         <View style={styles.markerContainer}>
           <View style={[styles.markerBubble, styles.nurseryBubble]}>
-            <Text style={styles.markerEmoji}>🌿</Text>
+            <Text style={styles.markerEmoji}>{NURSERY_EMOJI}</Text>
           </View>
           <View style={[styles.markerPin, { borderTopColor: COLORS.earth }]} />
         </View>
@@ -278,19 +286,45 @@ function ApprovedLocationMarker({ location, onPress }: { location: ApiApprovedLo
           <View style={[styles.markerBubble, styles.approvedBubble]}>
             <Text style={styles.markerEmoji}>🏞️</Text>
           </View>
-          <View style={[styles.markerPin, { borderTopColor: COLORS.forest }]} />
+          <View style={[styles.markerPin, { borderTopColor: ZONE_COLOR }]} />
         </View>
       </TouchableOpacity>
     </Marker>
   );
 }
 
-function TreeInfoCard({ tree, onClose, isNight }: {
+const FILTER_OPTIONS: { key: Exclude<MapFilter, 'all'>; label: string; emoji: string; color: string; bg: string }[] = [
+  { key: 'plants', label: 'Plants', emoji: '🌳', color: GROWTH_COLOR[2], bg: COLORS.white },
+  { key: 'ngo', label: 'NGO', emoji: '🤝', color: COLORS.golden, bg: COLORS.golden },
+  { key: 'nurseries', label: 'Nurseries', emoji: NURSERY_EMOJI, color: COLORS.earth, bg: COLORS.earth },
+  { key: 'zones', label: 'Approved area', emoji: '🏞️', color: ZONE_COLOR, bg: ZONE_COLOR },
+];
+
+type MapFilter = 'all' | 'plants' | 'ngo' | 'nurseries' | 'zones';
+
+const GROWTH_LABEL = ['Seedling', 'Sprouting', 'Growing', 'Maturing', 'Flourishing'];
+
+function formatAge(days?: number): string | null {
+  if (days == null) return null;
+  if (days < 30) return `${days} day${days === 1 ? '' : 's'}`;
+  if (days < 365) return `${Math.floor(days / 30)} mo`;
+  const years = Math.floor(days / 365);
+  const months = Math.floor((days % 365) / 30);
+  return months ? `${years}y ${months}mo` : `${years}y`;
+}
+
+function TreeInfoCard({ tree, onClose, isNight, ownerName, ownerHandle, ownerEmoji, isOwn, onOpenPlanter }: {
   tree: ApiTree | null;
   onClose: () => void;
   isNight: boolean;
+  ownerName: string;
+  ownerHandle?: string;
+  ownerEmoji: string;
+  isOwn: boolean;
+  onOpenPlanter: () => void;
 }) {
-  const translateY = useSharedValue(300);
+  const navClearance = useBottomNavClearance(8);
+  const translateY = useSharedValue(500);
   const opacity = useSharedValue(0);
 
   useEffect(() => {
@@ -298,7 +332,7 @@ function TreeInfoCard({ tree, onClose, isNight }: {
       translateY.value = withSpring(0, { damping: 18, stiffness: 200 });
       opacity.value = withTiming(1, { duration: 200 });
     } else {
-      translateY.value = withSpring(300, { damping: 18, stiffness: 200 });
+      translateY.value = withSpring(500, { damping: 18, stiffness: 200 });
       opacity.value = withTiming(0, { duration: 150 });
     }
   }, [tree]);
@@ -310,11 +344,28 @@ function TreeInfoCard({ tree, onClose, isNight }: {
 
   if (!tree) return null;
 
-  const plantDate = new Date(tree.plantedAt).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
+  const stageColor = GROWTH_COLOR[tree.growthStage - 1];
+  const plantDate = new Date(tree.plantedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const photo = resolveMediaUrl(tree.photoUri);
+  const health = STATUS_META[tree.healthStatus];
+  const textColor = isNight ? styles.lightText : null;
+  const subColor = isNight ? styles.lightSubText : null;
+  const age = formatAge(tree.ageDays);
+
+  // Impact / size figures are estimates and only present when the species data allows one.
+  const stats: { val: string; label: string }[] = [
+    { val: `${tree.co2Absorbed}kg`, label: 'CO₂ absorbed' },
+    ...(tree.oxygenKg != null ? [{ val: `${tree.oxygenKg}kg`, label: 'Oxygen' }] : []),
+    ...(tree.co2NextYearKg != null ? [{ val: `${tree.co2NextYearKg}kg`, label: 'CO₂ next year' }] : []),
+    ...(tree.estimatedHeightM != null ? [{ val: `${tree.estimatedHeightM}m`, label: 'Est. height' }] : []),
+    ...(tree.estimatedDbhCm != null ? [{ val: `${tree.estimatedDbhCm}cm`, label: 'Est. trunk' }] : []),
+    ...(age ? [{ val: age, label: 'Age' }] : []),
+    { val: `+${tree.xpEarned}`, label: 'XP earned' },
+  ];
 
   return (
-    <Animated.View style={[styles.infoCardWrap, cardStyle]}>
-      <BlurView intensity={isNight ? 70 : 55} tint={isNight ? 'dark' : 'light'} style={styles.infoCard}>
+    <Animated.View style={[styles.infoCardWrap, { bottom: navClearance }, cardStyle]}>
+      <BlurView intensity={95} tint={isNight ? 'dark' : 'light'} style={[styles.infoCard, styles.treeInfoCard, isNight && styles.infoCardNight]}>
         <View style={[styles.infoCardHandle, isNight && styles.infoCardHandleDark]} />
         <TouchableOpacity
           style={[styles.infoCardClose, isNight && styles.infoCardCloseDark]}
@@ -326,54 +377,90 @@ function TreeInfoCard({ tree, onClose, isNight }: {
           <Text style={[styles.infoCardCloseText, isNight && styles.lightText]}>✕</Text>
         </TouchableOpacity>
 
-        <View style={styles.infoCardHeader}>
-          <View style={[styles.infoCardIcon, { backgroundColor: GROWTH_COLOR[tree.growthStage - 1] + '22' }]}>
-            <Text style={styles.infoCardEmoji}>{GROWTH_EMOJI[tree.growthStage - 1]}</Text>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
+          <View style={[styles.infoCardHeader, { paddingRight: 40 }]}>
+            <View style={[styles.infoCardIcon, { backgroundColor: stageColor + '22' }]}>
+              <Text style={styles.infoCardEmoji}>{GROWTH_EMOJI[tree.growthStage - 1]}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.infoCardNickname, textColor]} numberOfLines={2}>{tree.nickname}</Text>
+              <Text style={[styles.infoCardSpecies, subColor]}>{tree.speciesEmoji ? `${tree.speciesEmoji} ` : ''}{tree.species}</Text>
+            </View>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.infoCardNickname, isNight && styles.lightText]}>{tree.nickname}</Text>
-            <Text style={[styles.infoCardSpecies, isNight && styles.lightSubText]}>{tree.species}</Text>
-          </View>
-          <View style={[styles.infoCardStageBadge, { backgroundColor: GROWTH_COLOR[tree.growthStage - 1] + '22' }]}>
-            <Text style={[styles.infoCardStageText, { color: GROWTH_COLOR[tree.growthStage - 1] }]}>
-              Stage {tree.growthStage}/5
-            </Text>
-          </View>
-        </View>
 
-        <View style={[styles.infoCardStats, isNight && styles.infoCardStatsDark]}>
-          <View style={styles.infoCardStat}>
-            <Text style={[styles.infoCardStatVal, isNight && styles.lightText]}>{tree.co2Absorbed}kg</Text>
-            <Text style={[styles.infoCardStatLabel, isNight && styles.lightSubText]}>CO₂</Text>
+          <View style={styles.treeBadgeRow}>
+            <View style={[styles.infoCardStageBadge, { backgroundColor: stageColor + '22' }]}>
+              <Text style={[styles.infoCardStageText, { color: stageColor }]}>
+                Stage {tree.growthStage}/5 · {GROWTH_LABEL[tree.growthStage - 1]}
+              </Text>
+            </View>
+            {health ? (
+              <View style={[styles.infoCardStageBadge, { backgroundColor: health.color + '22' }]}>
+                <Text style={[styles.infoCardStageText, { color: health.color }]}>{health.emoji} {health.label}</Text>
+              </View>
+            ) : null}
           </View>
-          <View style={[styles.infoCardDivider, isNight && styles.infoCardDividerDark]} />
-          <View style={styles.infoCardStat}>
-            <Text style={[styles.infoCardStatVal, isNight && styles.lightText]}>+{tree.xpEarned}</Text>
-            <Text style={[styles.infoCardStatLabel, isNight && styles.lightSubText]}>XP</Text>
-          </View>
-          <View style={[styles.infoCardDivider, isNight && styles.infoCardDividerDark]} />
-          <View style={styles.infoCardStat}>
-            <Text style={[styles.infoCardStatVal, isNight && styles.lightText]}>{plantDate}</Text>
-            <Text style={[styles.infoCardStatLabel, isNight && styles.lightSubText]}>Planted</Text>
-          </View>
-        </View>
 
-        <View style={[styles.infoCardLocation, isNight && styles.infoCardLocationDark]}>
-          <Text style={styles.infoCardLocationIcon}>📍</Text>
-          <Text style={[styles.infoCardLocationText, isNight && styles.lightText]}>
-            {tree.location ?? 'Unknown location'}
-          </Text>
-        </View>
+          {photo ? <Image source={{ uri: photo }} style={styles.treeInfoPhoto} resizeMode="cover" /> : null}
 
-        <View style={styles.growthBarRow}>
-          <Text style={[styles.growthBarLabel, isNight && styles.lightSubText]}>Growth</Text>
-          <View style={[styles.growthBarBg, isNight && styles.growthBarBgDark]}>
-            <View style={[styles.growthBarFill, {
-              width: `${(tree.growthStage / 5) * 100}%` as any,
-              backgroundColor: GROWTH_COLOR[tree.growthStage - 1],
-            }]} />
+          <TouchableOpacity
+            style={[styles.planterRow, isNight && styles.planterRowDark]}
+            onPress={onOpenPlanter}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`View profile of ${ownerName}`}
+          >
+            <View style={styles.planterAvatar}><Text style={{ fontSize: 22 }}>{ownerEmoji}</Text></View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.planterLabel, subColor]}>Planted by</Text>
+              <Text style={[styles.planterName, textColor]} numberOfLines={1}>
+                {isOwn ? 'You' : ownerName}{ownerHandle ? `  @${ownerHandle}` : ''}
+              </Text>
+            </View>
+            <Text style={[styles.planterLink, textColor]}>View profile ›</Text>
+          </TouchableOpacity>
+
+          <View style={styles.treeStatGrid}>
+            {stats.map((st) => (
+              <View key={st.label} style={[styles.treeStatCell, isNight && styles.infoCardStatsDark]}>
+                <Text style={[styles.infoCardStatVal, textColor]}>{st.val}</Text>
+                <Text style={[styles.infoCardStatLabel, subColor]}>{st.label}</Text>
+              </View>
+            ))}
           </View>
-        </View>
+
+          <View style={[styles.infoCardLocation, isNight && styles.infoCardLocationDark]}>
+            <Text style={styles.infoCardLocationIcon}>📍</Text>
+            <Text style={[styles.infoCardLocationText, textColor]}>{tree.location ?? 'Unknown location'}</Text>
+          </View>
+
+          <View style={styles.treeMetaList}>
+            <View style={styles.treeMetaRow}>
+              <Text style={[styles.treeMetaKey, subColor]}>Planted on</Text>
+              <Text style={[styles.treeMetaVal, textColor]}>{plantDate}</Text>
+            </View>
+            <View style={styles.treeMetaRow}>
+              <Text style={[styles.treeMetaKey, subColor]}>Tree ID</Text>
+              <Text style={[styles.treeMetaVal, textColor]}>{tree.publicId}</Text>
+            </View>
+            {tree.aiVerificationStatus ? (
+              <View style={styles.treeMetaRow}>
+                <Text style={[styles.treeMetaKey, subColor]}>AI verification</Text>
+                <Text style={[styles.treeMetaVal, textColor]}>{tree.aiVerificationStatus.replace(/_/g, ' ')}</Text>
+              </View>
+            ) : null}
+          </View>
+
+          <View style={styles.growthBarRow}>
+            <Text style={[styles.growthBarLabel, subColor]}>Growth</Text>
+            <View style={[styles.growthBarBg, isNight && styles.growthBarBgDark]}>
+              <View style={[styles.growthBarFill, {
+                width: `${(tree.growthStage / 5) * 100}%` as any,
+                backgroundColor: stageColor,
+              }]} />
+            </View>
+          </View>
+        </ScrollView>
       </BlurView>
     </Animated.View>
   );
@@ -387,6 +474,7 @@ function PlantingInfoCard({ entry, onClose, isNight }: {
   onClose: () => void;
   isNight: boolean;
 }) {
+  const navClearance = useBottomNavClearance(8);
   const translateY = useSharedValue(300);
   const opacity = useSharedValue(0);
 
@@ -408,8 +496,8 @@ function PlantingInfoCard({ entry, onClose, isNight }: {
   if (!entry) return null;
 
   return (
-    <Animated.View style={[styles.infoCardWrap, cardStyle]}>
-      <BlurView intensity={isNight ? 70 : 55} tint={isNight ? 'dark' : 'light'} style={styles.infoCard}>
+    <Animated.View style={[styles.infoCardWrap, { bottom: navClearance }, cardStyle]}>
+      <BlurView intensity={95} tint={isNight ? 'dark' : 'light'} style={[styles.infoCard, isNight && styles.infoCardNight]}>
         <View style={[styles.infoCardHandle, isNight && styles.infoCardHandleDark]} />
         <TouchableOpacity
           style={[styles.infoCardClose, isNight && styles.infoCardCloseDark]}
@@ -454,6 +542,9 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
   const [locationPending, setLocationPending] = useState(true);
   const [selectedTree, setSelectedTree] = useState<ApiTree | null>(null);
   const [selectedPlanting, setSelectedPlanting] = useState<ApiPlantingMapEntry | null>(null);
+  // Map layer filter: 'all' shows everything; picking a layer shows only that one. Collapsed by default.
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [mapFilter, setMapFilter] = useState<MapFilter>('all');
   const cameraRef = useRef<any>(null);
   const fadeStyle = useFadeIn(0, 400);
   const headerSlide = useSlideUp(0, 20, 350);
@@ -495,28 +586,55 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
     trees.map(t => t.location?.split(',').pop()?.trim()).filter(Boolean)
   ).size;
 
+  // Detects the user's position. Also re-runs when the app returns to the foreground and, while
+  // there is still no fix, every few seconds — so switching GPS / location permission on while
+  // this screen is open is picked up automatically (the ⚠️ turns into 📍 and the map zooms in).
+  const locationRef = useRef<Location.LocationObject | null>(null);
+  const detectingRef = useRef(false);
+  // `prompt` is true only for the open / foreground checks; the background poll just reads the
+  // current permission state so it can never re-trigger the system permission dialog.
+  const detectLocation = useCallback(async (prompt = false) => {
+    if (detectingRef.current || locationRef.current) return;
+    detectingRef.current = true;
+    try {
+      const { status } = prompt
+        ? await Location.requestForegroundPermissionsAsync()
+        : await Location.getForegroundPermissionsAsync();
+      if (status !== 'granted' || !(await Location.hasServicesEnabledAsync())) return;
+      const loc = await getCurrentPositionWithTimeout({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      locationRef.current = loc;
+      setLocation(loc);
+    } catch {}
+    finally {
+      detectingRef.current = false;
+      setLocationPending(false);
+    }
+  }, []);
+
   useEffect(() => {
     // Centering the map on the user's own position is ambient/automatic — it respects the
     // Location Tracking preference, unlike explicit actions like planting a tree.
     if (!locationTrackingEnabled) { setLocationPending(false); return; }
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') { setLocationPending(false); return; }
-      try {
-        const loc = await getCurrentPositionWithTimeout({
-          accuracy: Location.Accuracy.Balanced,
-        });
-        setLocation(loc);
-      } catch {}
-      setLocationPending(false);
-    })();
-  }, [locationTrackingEnabled]);
+    detectLocation(true);
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') detectLocation(true);
+    });
+    const timer = setInterval(() => detectLocation(false), 4000);
+    return () => { sub.remove(); clearInterval(timer); };
+  }, [locationTrackingEnabled, detectLocation]);
 
   const ngoPoints = isNgo || scopeNgoId
     ? ([...drives, ...adoptableTrees, ...plantingPins] as Array<{ lat: number | null; lng: number | null }>)
         .filter((p) => p.lat != null && p.lng != null)
         .map((p) => ({ lat: p.lat as number, lng: p.lng as number }))
     : [];
+
+  const showPlants = mapFilter === 'all' || mapFilter === 'plants';
+  const showNgo = mapFilter === 'all' || mapFilter === 'ngo';
+  const showNurseries = mapFilter === 'all' || mapFilter === 'nurseries';
+  const showZones = mapFilter === 'all' || mapFilter === 'zones';
 
   const fitToOverview = useCallback(() => {
     if (trees.length > 0) {
@@ -542,24 +660,6 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
     setSelectedPlanting(null);
   }, [trees, ngoPoints, location]);
 
-  const hasAutoFitRef = useRef(false);
-  useEffect(() => {
-    if (hasAutoFitRef.current) return;
-    if (trees.length > 0 || ngoPoints.length > 0 || (location && !locationPending)) {
-      hasAutoFitRef.current = true;
-      fitToOverview();
-    }
-  }, [trees, ngoPoints, location, locationPending, fitToOverview]);
-
-  const flyToTree = useCallback((tree: ApiTree) => {
-    cameraRef.current?.flyTo({
-      center: [tree.lng, tree.lat - 0.4],
-      zoom: 7,
-      duration: 600,
-    });
-    setSelectedTree(tree);
-  }, []);
-
   const flyToMe = useCallback(() => {
     if (!location) return;
     cameraRef.current?.flyTo({
@@ -568,6 +668,35 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
       duration: 600,
     });
   }, [location]);
+
+  const hasZoomedToUserRef = useRef(false);
+  const hasAutoFitRef = useRef(false);
+  useEffect(() => {
+    if (hasAutoFitRef.current) {
+      // A fix that arrives after the initial overview (GPS switched on while on the map): zoom to it.
+      if (location && !hasZoomedToUserRef.current) {
+        hasZoomedToUserRef.current = true;
+        flyToMe();
+      }
+      return;
+    }
+    if (location) hasZoomedToUserRef.current = true;
+    if (trees.length > 0 || ngoPoints.length > 0 || (location && !locationPending)) {
+      hasAutoFitRef.current = true;
+      fitToOverview();
+    }
+  }, [trees, ngoPoints, location, locationPending, fitToOverview, flyToMe]);
+
+  const flyToTree = useCallback((tree: ApiTree) => {
+    // Close-up zoom with the pin nudged above the (tall) details sheet; short flight so the card
+    // doesn't wait on a long camera animation.
+    cameraRef.current?.flyTo({
+      center: [tree.lng, tree.lat - 0.0012],
+      zoom: 16,
+      duration: 350,
+    });
+    setSelectedTree(tree);
+  }, []);
 
   const handlePlantWhereYouAre = useCallback(async () => {
     if (!location) {
@@ -596,11 +725,11 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
     <View style={[styles.plantHereBtn, { bottom: (selectedTree ? 260 : 160) + insets.bottom + 62 }]}>
       <TouchableOpacity
         onPress={handlePlantWhereYouAre}
-        disabled={!location || checkingEligibility}
+        disabled={checkingEligibility}
         accessibilityRole="button"
         accessibilityLabel="Plant where you are"
       >
-        <BlurView intensity={55} tint={isNight ? 'dark' : 'light'} style={styles.plantHereBtnBlur}>
+        <BlurView intensity={80} tint={isNight ? 'dark' : 'light'} style={[styles.plantHereBtnBlur, styles.mapGlass, isNight && styles.mapGlassNight]}>
           {checkingEligibility ? (
             <ActivityIndicator size="small" color={COLORS.forest} />
           ) : (
@@ -618,27 +747,27 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
   const fallbackPins: LeafletPin[] = [];
   const fallbackCircles: LeafletCircle[] = [];
   if (!HAS_NATIVE_MAP) {
-    for (const tree of trees) {
+    for (const tree of showPlants ? trees : []) {
       const selected = selectedTree?.id === tree.id;
       const color = GROWTH_COLOR[tree.growthStage - 1];
       fallbackPins.push({ id: `tree:${tree.id}`, lat: tree.lat, lng: tree.lng, emoji: GROWTH_EMOJI[tree.growthStage - 1], bg: selected ? color : '#fff', border: color, selected });
     }
-    for (const t of adoptableTrees) {
+    for (const t of showNgo ? adoptableTrees : []) {
       if (t.lat != null && t.lng != null) fallbackPins.push({ id: `adopt:${t.id}`, lat: t.lat, lng: t.lng, emoji: '🌳', border: COLORS.sage });
     }
-    for (const d of drives) {
+    for (const d of showNgo ? drives : []) {
       if (d.lat != null && d.lng != null) fallbackPins.push({ id: `drive:${d.id}`, lat: d.lat, lng: d.lng, emoji: '🤝', border: COLORS.golden });
     }
-    if (!isNgo && scopeNgoId) {
+    if (showNgo && !isNgo && scopeNgoId) {
       for (const e of plantingPins) fallbackPins.push({ id: `planting:${e.driveId}`, lat: e.lat, lng: e.lng, emoji: '🌲', border: COLORS.forest });
     }
-    for (const n of nurseries) {
-      if (n.lat != null && n.lng != null) fallbackPins.push({ id: `nursery:${n.id}`, lat: Number(n.lat), lng: Number(n.lng), emoji: '🌿', border: COLORS.earth });
+    for (const n of showNurseries ? nurseries : []) {
+      if (n.lat != null && n.lng != null) fallbackPins.push({ id: `nursery:${n.id}`, lat: Number(n.lat), lng: Number(n.lng), emoji: NURSERY_EMOJI, border: COLORS.earth });
     }
-    if (!isNgo) {
+    if (!isNgo && showZones) {
       for (const loc of approvedLocations) {
-        fallbackPins.push({ id: `approved:${loc.id}`, lat: loc.lat, lng: loc.lng, emoji: '🏞️', border: COLORS.forest });
-        fallbackCircles.push({ id: `approved_c_${loc.id}`, lat: loc.lat, lng: loc.lng, radiusMeters: loc.radiusMeters, fill: 'rgba(45,90,39,0.10)', stroke: 'rgba(45,90,39,0.45)' });
+        fallbackPins.push({ id: `approved:${loc.id}`, lat: loc.lat, lng: loc.lng, emoji: '🏞️', border: ZONE_COLOR });
+        fallbackCircles.push({ id: `approved_c_${loc.id}`, lat: loc.lat, lng: loc.lng, radiusMeters: loc.radiusMeters, fill: 'rgba(46,158,79,0.30)', stroke: 'rgba(46,158,79,0.85)' });
       }
     }
   }
@@ -675,15 +804,15 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
         <Map style={StyleSheet.absoluteFill} mapStyle={OSM_STYLE} compass={false} scaleBar={false}>
           <Camera ref={cameraRef} initialViewState={{ center: INDIA_CENTER, zoom: INDIA_ZOOM }} />
 
-          {!isNgo && approvedLocations.map((loc) => (
+          {!isNgo && showZones && approvedLocations.map((loc) => (
             <CircleOverlay
               key={`approved_c_${loc.id}`}
               id={`approved_c_${loc.id}`}
               lat={loc.lat}
               lng={loc.lng}
               radiusMeters={loc.radiusMeters}
-              fillColor="rgba(45,90,39,0.10)"
-              strokeColor="rgba(45,90,39,0.45)"
+              fillColor="rgba(46,158,79,0.30)"
+              strokeColor="rgba(46,158,79,0.85)"
             />
           ))}
 
@@ -699,7 +828,7 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
             />
           )}
 
-          {trees.map(tree => (
+          {showPlants && trees.map(tree => (
             <TreeMarker
               key={tree.id}
               tree={tree}
@@ -708,7 +837,7 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
             />
           ))}
 
-          {adoptableTrees
+          {showNgo && adoptableTrees
             .filter((tree): tree is ApiAdoptableTree & { lat: number; lng: number } => tree.lat != null && tree.lng != null)
             .map(tree => (
               <AdoptableTreeMarker
@@ -718,7 +847,7 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
               />
             ))}
 
-          {drives
+          {showNgo && drives
             .filter((drive): drive is ApiDrive & { lat: number; lng: number } => drive.lat != null && drive.lng != null)
             .map(drive => (
               <NgoDriveMarker
@@ -728,7 +857,7 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
               />
             ))}
 
-          {!isNgo && scopeNgoId && plantingPins.map(entry => (
+          {showNgo && !isNgo && scopeNgoId && plantingPins.map(entry => (
             <PlantingMarker
               key={`planting_${entry.driveId}`}
               entry={entry}
@@ -736,7 +865,7 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
             />
           ))}
 
-          {nurseries
+          {showNurseries && nurseries
             .filter((n) => n.lat != null && n.lng != null)
             .map((n) => (
               <NurseryMarker
@@ -746,7 +875,7 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
               />
             ))}
 
-          {!isNgo && approvedLocations.map((loc) => (
+          {!isNgo && showZones && approvedLocations.map((loc) => (
             <ApprovedLocationMarker
               key={`approved_${loc.id}`}
               location={loc}
@@ -805,6 +934,37 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
         </BlurView>
       </Animated.View>
 
+      {/* Layer filter bubble — collapsed by default; tapping a layer shows only that layer. */}
+      {!selectedTree && !selectedPlanting && (
+        <View style={[styles.legendWrap, { bottom: 160 + insets.bottom + (!isNgo && trees.length > 0 ? 124 : 62) }]}>
+          <BlurView intensity={80} tint={isNight ? 'dark' : 'light'} style={[styles.legendBlur, styles.mapGlass, isNight && styles.mapGlassNight]}>
+            <TouchableOpacity onPress={() => setFilterOpen((v) => !v)} accessibilityRole="button" accessibilityLabel="Toggle map layer filter">
+              <Text style={[styles.legendTitle, isNight && styles.lightText]}>
+                {filterOpen ? 'Show on map ▾' : mapFilter === 'all' ? 'Show on map ▸' : `Showing: ${FILTER_OPTIONS.find((o) => o.key === mapFilter)?.label} ▸`}
+              </Text>
+            </TouchableOpacity>
+            {filterOpen && FILTER_OPTIONS.filter((o) => !(isNgo && (o.key === 'plants' || o.key === 'zones'))).map((o) => {
+              const active = mapFilter === o.key;
+              return (
+                <TouchableOpacity
+                  key={o.key}
+                  style={[styles.legendRow, styles.filterOption, active && { backgroundColor: o.color + '33', borderColor: o.color }]}
+                  onPress={() => setMapFilter(active ? 'all' : o.key)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={`Show only ${o.label}`}
+                >
+                  <View style={[styles.legendSwatch, { borderColor: o.color, backgroundColor: o.bg }]}>
+                    <Text style={{ fontSize: 11 }}>{o.emoji}</Text>
+                  </View>
+                  <Text style={[styles.legendText, isNight && styles.lightText, active && { fontWeight: '700' }]}>{o.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </BlurView>
+        </View>
+      )}
+
       {/* GPS button */}
       <View style={[styles.gpsBtn, { bottom: (selectedTree ? 260 : 160) + insets.bottom }]}>
         <TouchableOpacity
@@ -813,7 +973,7 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
           accessibilityRole="button"
           accessibilityLabel="Center map on my location"
         >
-          <BlurView intensity={55} tint={isNight ? 'dark' : 'light'} style={styles.gpsBtnBlur}>
+          <BlurView intensity={80} tint={isNight ? 'dark' : 'light'} style={[styles.gpsBtnBlur, styles.mapGlass, isNight && styles.mapGlassNight]}>
             {locationPending ? (
               <ActivityIndicator size="small" color={COLORS.sage} />
             ) : (
@@ -897,7 +1057,19 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
       {!isNgo && trees.length === 0 && plantHereButton}
 
       {/* Tree info card */}
-      <TreeInfoCard tree={selectedTree} onClose={() => setSelectedTree(null)} isNight={isNight} />
+      <TreeInfoCard
+        tree={selectedTree}
+        onClose={() => setSelectedTree(null)}
+        isNight={isNight}
+        isOwn={!selectedTree?.planter || selectedTree.planter.id === user?.id}
+        ownerName={selectedTree?.planter?.name ?? user?.name ?? 'You'}
+        ownerHandle={selectedTree?.planter?.handle ?? user?.handle}
+        ownerEmoji={selectedTree?.planter?.avatarEmoji ?? user?.avatarEmoji ?? '🧑'}
+        onOpenPlanter={() => {
+          const planterId = selectedTree?.planter?.id ?? user?.id;
+          if (planterId) navigation.navigate('UserPublicProfile', { userId: planterId });
+        }}
+      />
 
       {/* Plantation planting-map info card */}
       <PlantingInfoCard entry={selectedPlanting} onClose={() => setSelectedPlanting(null)} isNight={isNight} />
@@ -948,7 +1120,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     ...SHADOWS.md, borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.85)',
   },
-  markerBubbleSelected: { borderWidth: 3, borderColor: 'white' },
+  markerBubbleSelected: { borderColor: 'white' },
   markerEmoji: { fontSize: 20 },
   outlineBubble: {
     backgroundColor: 'rgba(255,255,255,0.5)',
@@ -964,7 +1136,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.85)',
   },
   approvedBubble: {
-    backgroundColor: COLORS.forest,
+    backgroundColor: ZONE_COLOR,
     borderColor: 'rgba(255,255,255,0.85)',
   },
   plantingBubble: {
@@ -1020,8 +1192,10 @@ const styles = StyleSheet.create({
   treeChipName: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary },
   treeChipLoc: { fontSize: 11, color: COLORS.textPrimary, marginTop: 1 },
 
-  infoCardWrap: { position: 'absolute', bottom: 0, left: 0, right: 0 },
-  infoCard: { borderTopLeftRadius: 26, borderTopRightRadius: 26, overflow: 'hidden', padding: 20, paddingBottom: 36 },
+  infoCardWrap: { position: 'absolute', bottom: 0, left: 12, right: 12 },
+  // Mostly opaque so the details stay readable over any map imagery behind the sheet.
+  infoCard: { borderRadius: 26, overflow: 'hidden', padding: 20, paddingBottom: 20, backgroundColor: 'rgba(255,255,255,0.94)' },
+  infoCardNight: { backgroundColor: 'rgba(18,28,18,0.95)' },
   infoCardHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(0,0,0,0.14)', alignSelf: 'center', marginBottom: 18 },
   infoCardClose: {
     position: 'absolute', top: 20, right: 20,
@@ -1055,6 +1229,37 @@ const styles = StyleSheet.create({
   infoCardLocationDark: { backgroundColor: 'rgba(135,168,120,0.18)' },
   infoCardLocationIcon: { fontSize: 14 },
   infoCardLocationText: { fontSize: 13, color: COLORS.forestDeep, fontWeight: '500', flex: 1 },
+  treeInfoCard: { maxHeight: Dimensions.get('window').height * 0.68 },
+  treeBadgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  treeInfoPhoto: { width: '100%', height: 150, borderRadius: 16, marginBottom: 12 },
+  planterRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: 'rgba(255,255,255,0.55)', borderRadius: 16, padding: 10, marginBottom: 12,
+  },
+  planterRowDark: { backgroundColor: 'rgba(255,255,255,0.1)' },
+  planterAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(80,140,70,0.15)', alignItems: 'center', justifyContent: 'center' },
+  planterLabel: { fontSize: 11, color: COLORS.textPrimary },
+  planterName: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
+  planterLink: { fontSize: 12, fontWeight: '700', color: COLORS.forest },
+  treeStatGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  treeStatCell: {
+    width: '31.5%', alignItems: 'center', paddingVertical: 10,
+    backgroundColor: 'rgba(255,255,255,0.55)', borderRadius: 14,
+  },
+  treeMetaList: { marginBottom: 12 },
+  treeMetaRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5 },
+  treeMetaKey: { fontSize: 12, color: COLORS.textPrimary },
+  treeMetaVal: { fontSize: 12, fontWeight: '600', color: COLORS.textPrimary },
+  // One shared glass look for the floating map buttons (GPS, Plant where you are, Show on map).
+  mapGlass: { backgroundColor: 'rgba(255,255,255,0.78)' },
+  mapGlassNight: { backgroundColor: 'rgba(18,28,18,0.78)' },
+  legendWrap: { position: 'absolute', right: 16, alignItems: 'flex-end' },
+  legendBlur: { borderRadius: 16, overflow: 'hidden', paddingHorizontal: 12, paddingVertical: 8 },
+  legendTitle: { fontSize: 12, fontWeight: '700', color: COLORS.textPrimary },
+  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 6 },
+  filterOption: { marginTop: 6, paddingTop: 5, paddingBottom: 5, paddingHorizontal: 6, borderRadius: 12, borderWidth: 1, borderColor: 'transparent' },
+  legendSwatch: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 2 },
+  legendText: { fontSize: 12, color: COLORS.textPrimary },
   growthBarRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   growthBarLabel: { fontSize: 12, color: COLORS.textPrimary, width: 46 },
   growthBarBg: { flex: 1, height: 6, backgroundColor: 'rgba(0,0,0,0.08)', borderRadius: 3, overflow: 'hidden' },

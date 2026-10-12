@@ -71,11 +71,14 @@ export default async function treesRoutes(fastify: FastifyInstance) {
         isDeleted: false,
         ...(request.query.nurseryId ? { nurseryId: request.query.nurseryId } : {}),
       },
-      include: { species: true },
+      include: { species: true, user: { select: { id: true, name: true, handle: true, avatarEmoji: true } } },
       take: 500,
     });
 
-    reply.send(trees.map(serializeTree));
+    reply.send(trees.map((t) => ({
+      ...serializeTree(t),
+      planter: { id: t.user.id, name: t.user.name, handle: t.user.handle, avatarEmoji: t.user.avatarEmoji },
+    })));
   });
 
   // Broad-radius ("Trees Near Me") discovery — deliberately a much looser gate than observation

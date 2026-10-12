@@ -98,6 +98,7 @@ export function ProfileHeader({
             status={storyRing}
             size={92}
             borderRadius={24}
+            showRing={!xpProgress}
           >
             {avatarBox}
           </StoryAvatar>

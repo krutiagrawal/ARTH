@@ -21,6 +21,9 @@ interface StoryAvatarProps {
    * no story to open. */
   onPress?: () => void;
   disabled?: boolean;
+  /** False keeps tap-to-open-story but skips drawing the ring — for avatars that already wear
+   * another ring (e.g. the XP ring on your own profile) and can't take the extra width. */
+  showRing?: boolean;
 }
 
 /**
@@ -41,6 +44,7 @@ export function StoryAvatar({
   children,
   onPress,
   disabled,
+  showRing = true,
 }: StoryAvatarProps) {
   const [open, setOpen] = useState(false);
   const canOpenStory = (authorKind === 'user' || authorKind === 'ngo') && !!status?.hasStory;
@@ -68,9 +72,13 @@ export function StoryAvatar({
         onPress={handlePress}
         disabled={disabled || (!canOpenStory && !onPress)}
       >
-        <StoryRing status={status} size={size} borderRadius={borderRadius}>
-          {children}
-        </StoryRing>
+        {showRing ? (
+          <StoryRing status={status} size={size} borderRadius={borderRadius}>
+            {children}
+          </StoryRing>
+        ) : (
+          children
+        )}
       </TouchableOpacity>
 
       {open && (

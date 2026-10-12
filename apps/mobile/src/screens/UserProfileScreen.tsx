@@ -75,9 +75,10 @@ export function UserProfileScreen({ route, navigation }: any) {
   const { data: themes = [] } = useThemes();
   const selectThemeMutation = useSelectTheme();
 
-  // Story ring is skipped on your own profile: it'd double up with the XP progress ring already
-  // wrapping your own avatar there, which is sized/positioned assuming no story ring inflates it.
-  const ringStatus = useRingStatus({ userIds: !isOwn && userId ? [userId] : [] });
+  // On your own profile the story ring itself isn't drawn (it'd double up with the XP progress ring
+  // already wrapping your avatar), but the status is still needed so tapping the avatar opens your story.
+  const ringUserId = isOwn ? user?.id : userId;
+  const ringStatus = useRingStatus({ userIds: ringUserId ? [ringUserId] : [] });
   const publicProfile = usePublicProfile(isOwn ? null : userId ?? null);
   const publicAchievements = useUserAchievements(isOwn ? undefined : userId);
   const publicDrives = useUserJoinedDrives(isOwn ? undefined : userId);
@@ -250,7 +251,7 @@ export function UserProfileScreen({ route, navigation }: any) {
                 topInset={insets.top}
                 avatarEmoji={avatarEmoji ?? '🧑‍🌾'}
                 xpProgress={isOwn ? { progress: getXpProgress(xp, level).progress, level } : null}
-                storyRing={!isOwn && userId ? ringStatus.data?.users[userId] : null}
+                storyRing={ringUserId ? ringStatus.data?.users[ringUserId] : null}
                 storyAuthor={profileUserId ? { kind: 'user', id: profileUserId, name, avatarEmoji: avatarEmoji ?? undefined } : null}
                 name={name}
                 handle={handle}

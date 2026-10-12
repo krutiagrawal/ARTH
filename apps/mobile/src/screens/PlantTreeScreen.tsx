@@ -750,6 +750,18 @@ export function PlantTreeScreen({ navigation, route }: any) {
     }
   }, [navigation]);
 
+  // Header back: from scanning/details step back to the camera stage (the Plant tab has nothing
+  // behind it, so goBack alone would do nothing); from the camera stage leave the screen.
+  const handleBack = useCallback(() => {
+    if (stage === 'scanning' || stage === 'details') {
+      verifyPromiseRef.current = null;
+      setImageUri(null);
+      setStage('upload');
+      return;
+    }
+    handleDone();
+  }, [stage, handleDone]);
+
   // Clears the finished flow so the Plant tab starts fresh next time.
   const resetFlow = useCallback(() => {
     setStage('upload');
@@ -797,7 +809,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         {stage !== 'success' && (
-          <TouchableOpacity onPress={handleDone} style={styles.backButton}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <View style={styles.backButtonBlur}>
               <Text style={styles.backIcon}>←</Text>
             </View>
@@ -869,16 +881,16 @@ export function PlantTreeScreen({ navigation, route }: any) {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           <BorderCard style={styles.detailsImageCard}>
-            <View style={styles.detailsImage}>
+            <TouchableOpacity style={styles.detailsImage} onPress={handleCameraCapture} activeOpacity={0.85}>
               {imageUri ? (
                 <Image source={{ uri: imageUri }} style={styles.detailsImagePhoto} resizeMode="cover" />
               ) : (
                 <Text style={{ fontSize: 64 }}>🌳</Text>
               )}
               <View style={styles.verifiedBadge}>
-                <Text style={styles.verifiedText}>📸 Photo Added</Text>
+                <Text style={styles.verifiedText}>📸 Tap to retake</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           </BorderCard>
 
           <View style={styles.aiResult}>

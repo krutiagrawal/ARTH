@@ -250,11 +250,16 @@ const MapScreen = React.lazy(() =>
 
 class MapErrorBoundary extends React.Component<
   { children: React.ReactNode },
-  { hasError: boolean }
+  { hasError: boolean; message: string }
 > {
-  state = { hasError: false };
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  state = { hasError: false, message: '' };
+  static getDerivedStateFromError(error: unknown) {
+    return { hasError: true, message: error instanceof Error ? error.message : String(error) };
+  }
+  componentDidCatch(error: unknown) {
+    // Any render/load error in the Map lands here, not just Expo Go's missing native module —
+    // log it so a real bug isn't hidden behind the generic message below.
+    console.error('[MapErrorBoundary]', error);
   }
   render() {
     if (this.state.hasError) {
@@ -263,6 +268,9 @@ class MapErrorBoundary extends React.Component<
           <Text style={styles.mapFallbackText}>
             Map isn't available in Expo Go on Android. Build a dev client to use this tab.
           </Text>
+          {__DEV__ && this.state.message ? (
+            <Text style={[styles.mapFallbackText, { marginTop: 12, fontSize: 12 }]}>{this.state.message}</Text>
+          ) : null}
         </View>
       );
     }

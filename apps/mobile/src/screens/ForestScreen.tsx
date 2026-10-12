@@ -499,7 +499,11 @@ export function ForestScreen({ navigation }: any) {
 
         {/* Everything below is plain RN/SVG (no Skia inside) — captured as one layer by
             `captureRef` in handleSnapshot, then composited on top of the Skia background. */}
-        <View ref={overlayRef} collapsable={false} style={StyleSheet.absoluteFill} pointerEvents="box-none">
+        {/* Fixed SW×FOREST_HEIGHT (same box as the Skia canvas and DecorationOverlay's coordinate space),
+            NOT absoluteFill: the container can be taller than the window on Android (nav bar area), and
+            a taller overlay got squashed onto the canvas-sized background when composited, shifting
+            every decoration vertically in the snapshot. */}
+        <View ref={overlayRef} collapsable={false} style={styles.snapshotOverlay} pointerEvents="box-none">
           {/* Atmospheric overlay */}
           <LinearGradient
             colors={isNight
@@ -745,6 +749,7 @@ const styles = StyleSheet.create({
     ...{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 } as const,
     overflow: 'hidden',
   },
+  snapshotOverlay: { position: 'absolute', left: 0, top: 0, width: SW, height: FOREST_HEIGHT },
   toggleRow: {
     position: 'absolute',
     right: 16,
@@ -1006,13 +1011,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 4,
   },
+  // Solid fill + white text: the old translucent-sage pill with sage text washed out against the
+  // glass panel in both day and night themes.
   decorateToggle: {
-    backgroundColor: 'rgba(135,168,120,0.2)',
+    backgroundColor: COLORS.forest,
     borderRadius: RADIUS.full,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: 'rgba(135,168,120,0.35)',
+    borderColor: COLORS.forest,
   },
   decorateToggleActive: {
     backgroundColor: COLORS.sage,
@@ -1021,7 +1028,7 @@ const styles = StyleSheet.create({
   decorateToggleText: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLORS.sage,
+    color: COLORS.white,
   },
   decorateToggleTextActive: {
     color: COLORS.white,

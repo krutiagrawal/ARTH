@@ -24,6 +24,9 @@ export interface ApiTree {
   ageDays?: number;
   impactConfidence?: 'medium' | 'low';
   xpEarned: number;
+  aiVerificationStatus?: string;
+  /** Only returned by the map feed (/trees/map); absent on the owner's own list. */
+  planter?: { id: string; name: string; handle: string; avatarEmoji: string };
 }
 
 export async function fetchTrees(params: { limit?: number; page?: number } = {}): Promise<ApiTree[]> {
