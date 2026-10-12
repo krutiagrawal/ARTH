@@ -980,11 +980,11 @@ export function useToggleStoryLike() {
   });
 }
 
-export function useDrives(lat?: number, lng?: number, enabled: boolean = true, ngoId?: string) {
+export function useDrives(lat?: number, lng?: number, enabled: boolean = true, ngoId?: string, includePast: boolean = false) {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: ['drives', lat, lng, ngoId],
-    queryFn: () => fetchDrives({ lat, lng, ngoId }),
+    queryKey: ['drives', lat, lng, ngoId, includePast],
+    queryFn: () => fetchDrives({ lat, lng, ngoId, includePast }),
     enabled: isAuthenticated && enabled,
   });
 }

@@ -66,6 +66,8 @@ export const nearbyQuerySchema = z.object({
   radiusKm: z.coerce.number().min(0.1).max(20000).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
   ngoId: z.string().uuid().optional(),
+  // Past drives stay viewable (details only, no RSVP) but are opt-in so the map/home don't show them.
+  includePast: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
 });
 
 export const ownedListQuerySchema = z.object({

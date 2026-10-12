@@ -35,16 +35,19 @@ export interface ApiDrive {
   capacity: number | null;
   confirmedCount: number;
   status: 'upcoming' | 'cancelled' | 'completed';
+  /** Server-computed: marked completed, or its scheduled end has passed. Locked for RSVP/sponsoring. */
+  hasEnded?: boolean;
   isRsvped?: boolean;
   featured: boolean;
   distanceKm?: number;
 }
 
-export async function fetchDrives(params: { lat?: number; lng?: number; ngoId?: string } = {}): Promise<ApiDrive[]> {
+export async function fetchDrives(params: { lat?: number; lng?: number; ngoId?: string; includePast?: boolean } = {}): Promise<ApiDrive[]> {
   const query = new URLSearchParams();
   if (params.lat !== undefined) query.set('lat', String(params.lat));
   if (params.lng !== undefined) query.set('lng', String(params.lng));
   if (params.ngoId) query.set('ngoId', params.ngoId);
+  if (params.includePast) query.set('includePast', 'true');
   const qs = query.toString();
   return apiFetch<ApiDrive[]>(`/api/drives${qs ? `?${qs}` : ''}`);
 }

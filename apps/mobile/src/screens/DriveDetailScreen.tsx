@@ -74,6 +74,8 @@ export function DriveDetailScreen({ navigation, route }: any) {
   const isFull = !!drive && drive.capacity != null && drive.confirmedCount >= drive.capacity && !drive.isRsvped;
   const isCancelled = drive?.status === 'cancelled';
   const isCompleted = drive?.status === 'completed';
+  // Past drives stay viewable but locked: no RSVP, no sponsoring.
+  const isEnded = isCompleted || !!drive?.hasEnded;
 
   const handleCancelDrive = () => {
     if (!drive) return;
@@ -268,7 +270,7 @@ export function DriveDetailScreen({ navigation, route }: any) {
 
           {drive.plants.length > 0 && !isOwnDrive && (
             <>
-              <Text style={styles.sectionLabel}>Sponsor a plant</Text>
+              <Text style={styles.sectionLabel}>{isEnded || isCancelled ? 'Plants' : 'Sponsor a plant'}</Text>
               {drive.plants.map((plant) => (
                 <View key={plant.id} style={styles.plantRow}>
                   <View style={{ flex: 1 }}>
@@ -278,13 +280,15 @@ export function DriveDetailScreen({ navigation, route }: any) {
                       {plant.sponsoredCount > 0 ? ` · sponsored ${plant.sponsoredCount}×` : ''}
                     </Text>
                   </View>
-                  <TouchableOpacity
-                    style={styles.sponsorButton}
-                    onPress={() => handleSponsor(plant)}
-                    disabled={sponsoringId === plant.id}
-                  >
-                    <Text style={styles.sponsorButtonText}>{sponsoringId === plant.id ? 'Please wait…' : 'Sponsor'}</Text>
-                  </TouchableOpacity>
+                  {!isEnded && !isCancelled && (
+                    <TouchableOpacity
+                      style={styles.sponsorButton}
+                      onPress={() => handleSponsor(plant)}
+                      disabled={sponsoringId === plant.id}
+                    >
+                      <Text style={styles.sponsorButtonText}>{sponsoringId === plant.id ? 'Please wait…' : 'Sponsor'}</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               ))}
             </>
@@ -373,7 +377,7 @@ export function DriveDetailScreen({ navigation, route }: any) {
             <View style={styles.cancelledBanner}>
               <Text style={styles.cancelledText}>This drive has been cancelled by the organizer.</Text>
             </View>
-          ) : isCompleted ? (
+          ) : isEnded ? (
             <View style={styles.cancelledBanner}>
               <Text style={styles.cancelledText}>This drive has already happened.</Text>
             </View>

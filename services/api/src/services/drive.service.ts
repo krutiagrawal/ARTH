@@ -56,6 +56,20 @@ interface NearbyFilter {
   radiusKm?: number;
   limit?: number;
   ngoId?: string;
+  includePast?: boolean;
+}
+
+/** Assumed length of a drive that didn't set a duration. */
+const DEFAULT_DRIVE_MINUTES = 180;
+
+/**
+ * A drive is locked (details only — no RSVP, cancel or sponsoring) once the NGO marked it
+ * completed, or its scheduled end has passed even if the NGO never got around to marking it.
+ */
+export function hasDriveEnded(drive: { status: string; startsAt: Date; durationMinutes?: number | null }): boolean {
+  if (drive.status === 'completed') return true;
+  const endsAt = drive.startsAt.getTime() + (drive.durationMinutes ?? DEFAULT_DRIVE_MINUTES) * 60_000;
+  return endsAt < Date.now();
 }
 
 interface OwnedListFilter {
@@ -255,9 +269,13 @@ export async function completeDrive(prisma: PrismaClient, ngoUserId: string, dri
 
 export async function listDrives(prisma: PrismaClient, filter: NearbyFilter, userId?: string) {
   const drives = await prisma.drive.findMany({
-    where: { status: 'upcoming', ngo: { status: 'approved' }, ...(filter.ngoId ? { ngoId: filter.ngoId } : {}) },
+    where: {
+      status: filter.includePast ? { in: ['upcoming', 'completed'] as DriveStatus[] } : 'upcoming',
+      ngo: { status: 'approved' },
+      ...(filter.ngoId ? { ngoId: filter.ngoId } : {}),
+    },
     include: driveInclude,
-    orderBy: { startsAt: 'asc' },
+    orderBy: { startsAt: filter.includePast ? 'desc' : 'asc' },
     take: 500,
   });
 
@@ -414,6 +432,7 @@ export async function rsvp(prisma: PrismaClient, userId: string, driveId: string
 
     const drive = await tx.drive.findUnique({ where: { id: driveId }, include: { ngo: { select: { userId: true, orgName: true } } } });
     if (!drive || drive.status !== 'upcoming') throw new NotFoundError('Drive not found');
+    if (hasDriveEnded(drive)) throw new ConflictError('This drive has already happened and is no longer taking RSVPs');
     if (drive.ngo.userId === userId) throw new ForbiddenError('You cannot RSVP to your own drive');
 
     const existing = await tx.driveRsvp.findUnique({ where: { driveId_userId: { driveId, userId } } });
@@ -444,13 +463,13 @@ export async function rsvp(prisma: PrismaClient, userId: string, driveId: string
 }
 
 export async function cancelRsvp(prisma: PrismaClient, userId: string, driveId: string) {
-  const rsvp = await prisma.driveRsvp.findUnique({ where: { driveId_userId: { driveId, userId } }, include: { drive: { select: { status: true } } } });
+  const rsvp = await prisma.driveRsvp.findUnique({ where: { driveId_userId: { driveId, userId } }, include: { drive: { select: { status: true, startsAt: true, durationMinutes: true } } } });
   if (!rsvp || rsvp.status !== 'confirmed') throw new NotFoundError('RSVP not found');
   // Once the drive has happened, cancelling would silently erase a verified attendee from the
   // NGO's attendance records/reports (both filter on status: 'confirmed' with no trace of the
   // cancellation) — the UI already hides the "Cancel my RSVP" button once a drive is completed,
   // this is the matching server-side gate.
-  if (rsvp.drive.status === 'completed' || rsvp.attended) {
+  if (hasDriveEnded(rsvp.drive) || rsvp.attended) {
     throw new ConflictError('This drive has already happened — your RSVP can no longer be cancelled');
   }
 
@@ -545,7 +564,7 @@ export async function sponsorPlant(prisma: PrismaClient, userId: string, driveId
     include: { drive: { include: { ngo: { select: { userId: true } } } } },
   });
   if (!plant) throw new NotFoundError('Plant not found');
-  if (plant.drive.status !== 'upcoming') throw new ConflictError('This drive is no longer accepting sponsorships');
+  if (plant.drive.status !== 'upcoming' || hasDriveEnded(plant.drive)) throw new ConflictError('This drive is no longer accepting sponsorships');
   if (plant.drive.ngo.userId === userId) throw new ForbiddenError('You cannot sponsor a plant on your own drive');
 
   // getStripeClient() throws ServiceUnavailableError when STRIPE_SECRET_KEY isn't configured —

@@ -41,6 +41,7 @@ export function serializeDrive(entry: any) {
     capacity: d.capacity,
     confirmedCount: d._count?.rsvps ?? 0,
     status: d.status,
+    hasEnded: d.startsAt ? driveService.hasDriveEnded(d) : false,
     isRsvped: d.isRsvped,
     featured: d.featured,
     distanceKm: entry.distanceKm,
