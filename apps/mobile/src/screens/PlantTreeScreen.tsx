@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Image, RefreshControl, AppState, Keyboard, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Image, RefreshControl, AppState, Keyboard, Alert, Animated as RNAnimated, PanResponder } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import Animated, {
   useSharedValue,
@@ -49,6 +49,102 @@ const { width: SW, height: SH } = Dimensions.get('window');
 // Species pills: fixed 3-per-row grid, matched to detailsContent's own horizontal padding/gap so
 // each column comes out equal-width instead of shrink-wrapping to its label.
 const SPECIES_CELL_PAD = 4;
+// Bottom strip of the screen that acts as the bin while a self-added species is being dragged.
+const DELETE_ZONE_HEIGHT = 170;
+
+interface SpeciesChipProps {
+  species: { id: string; emoji: string; commonName: string };
+  selected: boolean;
+  /** True for species the user added themselves — long-press then drag to the bin to remove. */
+  removable: boolean;
+  onPress: () => void;
+  onDragChange: (dragging: boolean, overDelete: boolean) => void;
+  onDropDelete: () => void;
+  onLift: () => void;
+}
+
+function SpeciesChip({ species, selected, removable, onPress, onDragChange, onDropDelete, onLift }: SpeciesChipProps) {
+  const pan = useRef(new RNAnimated.ValueXY()).current;
+  const armedRef = useRef(false);
+  const draggingRef = useRef(false);
+  const overRef = useRef(false);
+  const [lifted, setLifted] = useState(false);
+  // The PanResponder below is created once, so it reads the latest callbacks through a ref.
+  const cb = useRef({ onDragChange, onDropDelete });
+  cb.current = { onDragChange, onDropDelete };
+
+  const finish = (drop: boolean) => {
+    const shouldDelete = drop && overRef.current;
+    armedRef.current = false;
+    draggingRef.current = false;
+    overRef.current = false;
+    setLifted(false);
+    cb.current.onDragChange(false, false);
+    if (shouldDelete) {
+      pan.setValue({ x: 0, y: 0 });
+      cb.current.onDropDelete();
+    } else {
+      RNAnimated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
+    }
+  };
+
+  const responder = useRef(
+    PanResponder.create({
+      // Only takes over from the chip's touchable once the long-press has armed the drag.
+      onMoveShouldSetPanResponderCapture: () => armedRef.current,
+      onPanResponderGrant: () => {
+        draggingRef.current = true;
+      },
+      onPanResponderMove: (_, g) => {
+        pan.setValue({ x: g.dx, y: g.dy });
+        const over = g.moveY > SH - DELETE_ZONE_HEIGHT;
+        if (over !== overRef.current) {
+          overRef.current = over;
+          cb.current.onDragChange(true, over);
+        }
+      },
+      onPanResponderRelease: () => finish(true),
+      onPanResponderTerminate: () => finish(false),
+      onPanResponderTerminationRequest: () => false,
+    }),
+  ).current;
+
+  return (
+    <RNAnimated.View
+      style={[
+        styles.speciesChipWrap,
+        lifted && styles.speciesChipLifted,
+        { transform: [...pan.getTranslateTransform(), { scale: lifted ? 1.08 : 1 }] },
+      ]}
+      {...(removable ? responder.panHandlers : {})}
+    >
+      <TouchableOpacity
+        style={[styles.speciesChip, styles.speciesChipFill, selected && styles.speciesChipSelected]}
+        onPress={onPress}
+        delayLongPress={350}
+        onLongPress={
+          removable
+            ? () => {
+                armedRef.current = true;
+                setLifted(true);
+                onLift();
+                cb.current.onDragChange(true, false);
+              }
+            : undefined
+        }
+        // Released after the long-press without moving: nothing to drop, so cancel the lift.
+        onPressOut={() => {
+          if (armedRef.current && !draggingRef.current) finish(false);
+        }}
+      >
+        <Text style={styles.speciesEmoji}>{species.emoji}</Text>
+        <Text style={[styles.speciesName, selected && styles.speciesNameSelected]} numberOfLines={1}>
+          {species.commonName}
+        </Text>
+      </TouchableOpacity>
+    </RNAnimated.View>
+  );
+}
 const INITIAL_SPECIES_COUNT = 9;
 
 // The real enforcement lives server-side (tree.service.ts's assertEligiblePlantingLocation call,
@@ -603,20 +699,20 @@ export function PlantTreeScreen({ navigation, route }: any) {
     }
   };
 
+  const [speciesDragActive, setSpeciesDragActive] = useState(false);
+  const [overDeleteZone, setOverDeleteZone] = useState(false);
+  const handleSpeciesDragChange = useCallback((dragging: boolean, over: boolean) => {
+    setSpeciesDragActive(dragging);
+    setOverDeleteZone(over);
+  }, []);
+
+  // Dropping a self-added species on the bin is the confirmation, so it deletes straight away.
   const handleRemoveSpecies = useCallback(
     (species: { id: string; commonName: string }) => {
-      Alert.alert('Remove species?', `"${species.commonName}" will be removed from your list. Trees you already planted keep it.`, [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () =>
-            deleteSpeciesMutation.mutate(species.id, {
-              onSuccess: () => setSelectedSpeciesId((cur) => (cur === species.id ? null : cur)),
-              onError: (e) => Alert.alert("Couldn't remove", e instanceof Error ? e.message : 'Please try again.'),
-            }),
-        },
-      ]);
+      deleteSpeciesMutation.mutate(species.id, {
+        onSuccess: () => setSelectedSpeciesId((cur) => (cur === species.id ? null : cur)),
+        onError: (e) => Alert.alert("Couldn't remove", e instanceof Error ? e.message : 'Please try again.'),
+      });
     },
     [deleteSpeciesMutation],
   );
@@ -740,6 +836,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
       {stage === 'details' && (
         <ScrollView
           ref={detailsScrollRef}
+          scrollEnabled={!speciesDragActive}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[styles.detailsContent, { paddingBottom: 120 + keyboardHeight }]}
           showsVerticalScrollIndicator={false}
@@ -775,37 +872,19 @@ export function PlantTreeScreen({ navigation, route }: any) {
 
           <View style={styles.speciesGrid}>
             {visibleSpecies.map(species => (
-              <View key={species.id} style={styles.speciesChipWrap}>
-                <TouchableOpacity
-                  style={[
-                    styles.speciesChip,
-                    styles.speciesChipFill,
-                    selectedSpeciesId === species.id && styles.speciesChipSelected,
-                  ]}
-                  onPress={() => {
-                    setSelectedSpeciesId(species.id);
-                    medium();
-                  }}
-                >
-                  <Text style={styles.speciesEmoji}>{species.emoji}</Text>
-                  <Text
-                    style={[styles.speciesName, selectedSpeciesId === species.id && styles.speciesNameSelected]}
-                    numberOfLines={1}
-                  >
-                    {species.commonName}
-                  </Text>
-                </TouchableOpacity>
-                {species.createdByUserId ? (
-                  <TouchableOpacity
-                    style={styles.speciesRemoveBadge}
-                    onPress={() => handleRemoveSpecies(species)}
-                    hitSlop={8}
-                    accessibilityLabel={`Remove ${species.commonName}`}
-                  >
-                    <Text style={styles.speciesRemoveText}>✕</Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
+              <SpeciesChip
+                key={species.id}
+                species={species}
+                selected={selectedSpeciesId === species.id}
+                removable={!!species.createdByUserId}
+                onPress={() => {
+                  setSelectedSpeciesId(species.id);
+                  medium();
+                }}
+                onDragChange={handleSpeciesDragChange}
+                onDropDelete={() => handleRemoveSpecies(species)}
+                onLift={medium}
+              />
             ))}
             {hasMoreSpecies && (
               <View style={styles.speciesChipWrap}>
@@ -998,6 +1077,15 @@ export function PlantTreeScreen({ navigation, route }: any) {
             disabled={!selectedSpecies || isSubmitting || plantTreeMutation.isPending || eligible === false || pickedMismatch}
           />
         </ScrollView>
+      )}
+
+      {stage === 'details' && speciesDragActive && (
+        <View pointerEvents="none" style={styles.deleteZone}>
+          <View style={[styles.deleteButton, overDeleteZone && styles.deleteButtonActive]}>
+            <Text style={styles.deleteButtonIcon}>🗑️</Text>
+            <Text style={[styles.deleteButtonText, overDeleteZone && styles.deleteButtonTextActive]}>{overDeleteZone ? 'Release to delete' : 'Drag here to delete'}</Text>
+          </View>
+        </View>
       )}
 
       {stage === 'success' && (
@@ -1298,6 +1386,7 @@ const styles = StyleSheet.create({
   speciesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    zIndex: 1, // keeps a dragged chip above the content below the grid
     // Cells are a third of the row each with 4px padding, and the grid pulls out by the same 4px,
     // so columns line up exactly whatever the container width (no fractional-pixel drift).
     marginHorizontal: -SPECIES_CELL_PAD,
@@ -1324,22 +1413,48 @@ const styles = StyleSheet.create({
   speciesChipFill: {
     width: '100%',
   },
-  speciesRemoveBadge: {
-    position: 'absolute',
-    top: -6,
-    right: -4,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.warmBrown,
+  speciesChipLifted: {
+    zIndex: 20,
+    elevation: 8,
+    opacity: 0.9,
   },
-  speciesRemoveText: {
-    fontSize: 10,
-    color: COLORS.textPrimary,
+  deleteZone: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: DELETE_ZONE_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 40,
+    zIndex: 50,
+  },
+  // Just a button, no backing card; it fills red while the dragged species is over it.
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.white,
+    borderWidth: 1.5,
+    borderColor: '#D32F2F',
+  },
+  deleteButtonActive: {
+    backgroundColor: '#D32F2F',
+    transform: [{ scale: 1.08 }],
+  },
+  deleteButtonIcon: {
+    fontSize: 20,
+  },
+  deleteButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#D32F2F',
+  },
+  deleteButtonTextActive: {
+    color: COLORS.white,
   },
   speciesChipSelected: {
     backgroundColor: COLORS.forest,
