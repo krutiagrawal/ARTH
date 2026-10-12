@@ -21,7 +21,10 @@ interface EcoWidgetProps {
   gradientColors?: [string, string];
   delay?: number;
   onPress?: () => void;
-  variant?: 'card' | 'glass' | 'outline' | 'minimal';
+  variant?: 'card' | 'glass' | 'outline' | 'minimal' | 'bare' | 'clear';
+  /** Only for `variant="bare"`: color of the halo drawn behind the icon/text so they stay legible
+   * on any backdrop. Should contrast with `color`/`textColor` (dark halo for light text, and vice versa). */
+  haloColor?: string;
   /** Renders on a dark/frosted-glass basis (dark background, light text) instead of the default
    * light styling — for use over dark or variable-brightness backdrops (e.g. Home's time-of-day sky). */
   dark?: boolean;
@@ -80,6 +83,7 @@ export function EcoWidget({
   fill = false,
   fillMinHeight,
   compact = false,
+  haloColor = 'rgba(0,0,0,0.55)',
 }: EcoWidgetProps) {
   const slideStyle = useSlideUp(delay, 20);
   const breathStyle = useBreathing(0.96, 1.04, 3500);
@@ -91,6 +95,51 @@ export function EcoWidget({
   // A notch tighter than the default card, independent of `fill` — for a card that should just
   // read a bit smaller without being squeezed into a fixed-height grid tile.
   const compactCardStyle = compact ? styles.compactCard : null;
+
+  // No card, border or blur — icon and text sit straight on the backdrop, kept readable by a halo.
+  if (variant === 'bare' || variant === 'clear') {
+    const isClear = variant === 'clear';
+    const halo = {
+      textShadowColor: haloColor,
+      textShadowOffset: { width: 0, height: 0 },
+      textShadowRadius: 5,
+    } as const;
+    return (
+      <Animated.View style={[slideStyle, style]}>
+        <TouchableOpacity activeOpacity={0.85} onPress={onPress} disabled={!onPress} style={[fillStyle, isClear ? styles.clearWidget : styles.bareWidget]}>
+          {isClear && (
+            <>
+              {/* Liquid-glass look: fully see-through (no blur, no tint) — just a specular
+                  highlight sweeping from the top-left and a thin bright rim. */}
+              <LinearGradient
+                colors={['rgba(255,255,255,0.38)', 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0)']}
+                locations={[0, 0.45, 1]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0.7, y: 1 }}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+              />
+              <LinearGradient
+                colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.16)']}
+                start={{ x: 0.3, y: 0.6 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+              />
+            </>
+          )}
+          <Animated.Text style={[styles.glassIcon, halo, breathStyle]}>{icon}</Animated.Text>
+          <Text style={[styles.glassValue, halo, { color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
+            {value}
+          </Text>
+          <Text style={[styles.glassLabel, halo, textColor && { color: textColor }]}>{label}</Text>
+          {sublabel && (
+            <Text style={[styles.glassSublabel, halo, subTextColor && { color: subTextColor }]}>{sublabel}</Text>
+          )}
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  }
 
   if (variant === 'glass') {
     const glassContent = (
@@ -252,6 +301,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minWidth: 90,
     ...SHADOWS.sage,
+  },
+  clearWidget: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 76,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.55)',
+    borderTopColor: 'rgba(255,255,255,0.85)',
+    borderLeftColor: 'rgba(255,255,255,0.7)',
+    borderBottomColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  bareWidget: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 64,
+    paddingVertical: 14,
+    paddingHorizontal: 4,
   },
   glassWidget: {
     alignItems: 'center',

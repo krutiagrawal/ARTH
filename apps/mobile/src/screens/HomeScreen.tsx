@@ -104,6 +104,13 @@ function HeroSection({
 }) {
   const insets = useSafeAreaInsets();
   const isLightText = theme.textOnSky === '#FFFFFF';
+  // Stat widgets sit bare on the sky (no card). goldenHour/sunset use white header text, but their
+  // skies are pale peach/pink, so the stats use a deep tone there instead; only the genuinely dark
+  // night skies get white. The halo flips opposite the text so it stays legible on any patch of sky.
+  const statColor =
+    theme.period === 'goldenHour' ? '#5A2A0E' : theme.period === 'sunset' ? '#4A1D44' : theme.textOnSky;
+  const statLight = statColor === '#FFFFFF';
+  const haloColor = statLight ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.85)';
 
   return (
     <View style={[styles.heroSection, { height: HERO_HEIGHT }]}>
@@ -173,53 +180,38 @@ function HeroSection({
           icon={(user?.streakCurrent ?? 0) > 0 ? '🔥' : '💤'}
           value={user?.streakCurrent ?? 0}
           label={`day${(user?.streakCurrent ?? 0) !== 1 ? 's' : ''}`}
-          variant="glass"
-          dark
-          color={homeTextColor(theme, theme.accentColor)}
-          cardBackground={theme.cardBackground}
-          cardBackgroundAlt={theme.cardBackgroundAlt}
-          cardOverlayAlpha={theme.cardOverlayAlpha}
-          textColor={homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true })}
-          subTextColor={homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true })}
-          borderColor={theme.cardBorder}
+          variant="clear"
+          color={statColor}
+          textColor={statColor}
+          subTextColor={statColor}
+          haloColor={haloColor}
           delay={0}
-          blurTarget={blurTarget}
         />
         <View style={styles.statsRight}>
           <EcoWidget
             icon="🌿"
             value={user?.treesPlantedCount ?? 0}
             label="Trees"
-            variant="glass"
-            dark
-            color={homeTextColor(theme, theme.accentColor)}
-            cardBackground={theme.cardBackground}
-            cardBackgroundAlt={theme.cardBackgroundAlt}
-            cardOverlayAlpha={theme.cardOverlayAlpha}
-            textColor={homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true })}
-            subTextColor={homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true })}
-            borderColor={theme.cardBorder}
+            variant="clear"
+            color={statColor}
+            textColor={statColor}
+            subTextColor={statColor}
+            haloColor={haloColor}
             delay={100}
             onPress={() => onNavigateTab('Map')}
-            blurTarget={blurTarget}
           />
           <EcoWidget
             icon="💨"
             value={`${(user?.totalCo2Absorbed ?? 0).toFixed(1)}kg`}
             label="CO₂ stored"
             sublabel={user?.co2NextYearKg ? `+${user.co2NextYearKg.toFixed(1)}kg next yr` : undefined}
-            variant="glass"
-            dark
-            color={homeTextColor(theme, theme.accentColor)}
-            cardBackground={theme.cardBackground}
-            cardBackgroundAlt={theme.cardBackgroundAlt}
-            cardOverlayAlpha={theme.cardOverlayAlpha}
-            textColor={homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true })}
-            subTextColor={homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true })}
-            borderColor={theme.cardBorder}
+            variant="clear"
+            color={statColor}
+            textColor={statColor}
+            subTextColor={statColor}
+            haloColor={haloColor}
             delay={200}
             onPress={() => navigation.navigate('Profile')}
-            blurTarget={blurTarget}
           />
         </View>
       </View>
@@ -884,7 +876,7 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
     alignItems: 'flex-start',
     paddingHorizontal: 20,
     marginTop: 4,
@@ -892,7 +884,7 @@ const styles = StyleSheet.create({
   statsRight: {
     flex: 1,
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   forestStats: {
     position: 'absolute',
