@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Image, RefreshControl, AppState, Keyboard } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Image, RefreshControl, AppState, Keyboard, Alert } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import Animated, {
   useSharedValue,
@@ -25,7 +25,7 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { StatusModal } from '../components/common/StatusModal';
 import { FloatingParticles } from '../components/common/FloatingParticles';
 import { useHaptics } from '../hooks/useHaptics';
-import { useSpecies, useCreateSpecies } from '../hooks/useApiQueries';
+import { useSpecies, useCreateSpecies, useDeleteSpecies } from '../hooks/useApiQueries';
 import { usePlantTree } from '../hooks/useApiQueries';
 import { useCheckPlantingEligibility } from '../hooks/useApiQueries';
 import { useVerifyPlantingPhoto } from '../hooks/useApiQueries';
@@ -42,16 +42,13 @@ import { haversineMeters, formatMeters } from '../utils/geo';
 import { reverseGeocode, type ApiAddressSuggestion } from '../api/geocode';
 import { AddressSearchField } from '../components/common/AddressSearchField';
 import { getSpeciesCareTip } from '../constants/speciesCareTips';
-import { EFFECTIVE_WIDTH } from '../utils/responsive';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
 // Species pills: fixed 3-per-row grid, matched to detailsContent's own horizontal padding/gap so
 // each column comes out equal-width instead of shrink-wrapping to its label.
-const SPECIES_GRID_PADDING = 20;
-const SPECIES_GRID_GAP = 8;
-const SPECIES_CHIP_WIDTH = (EFFECTIVE_WIDTH - SPECIES_GRID_PADDING * 2 - SPECIES_GRID_GAP * 2) / 3;
+const SPECIES_CELL_PAD = 4;
 const INITIAL_SPECIES_COUNT = 9;
 
 // The real enforcement lives server-side (tree.service.ts's assertEligiblePlantingLocation call,
@@ -387,6 +384,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
 
   const { data: speciesList = [], refetch: refetchSpecies } = useSpecies();
   const createSpeciesMutation = useCreateSpecies();
+  const deleteSpeciesMutation = useDeleteSpecies();
   const plantTreeMutation = usePlantTree();
   const checkEligibility = useCheckPlantingEligibility();
   const verifyPhoto = useVerifyPlantingPhoto();
@@ -605,6 +603,24 @@ export function PlantTreeScreen({ navigation, route }: any) {
     }
   };
 
+  const handleRemoveSpecies = useCallback(
+    (species: { id: string; commonName: string }) => {
+      Alert.alert('Remove species?', `"${species.commonName}" will be removed from your list. Trees you already planted keep it.`, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () =>
+            deleteSpeciesMutation.mutate(species.id, {
+              onSuccess: () => setSelectedSpeciesId((cur) => (cur === species.id ? null : cur)),
+              onError: (e) => Alert.alert("Couldn't remove", e instanceof Error ? e.message : 'Please try again.'),
+            }),
+        },
+      ]);
+    },
+    [deleteSpeciesMutation],
+  );
+
   const handleAddSpecies = useCallback(async () => {
     const commonName = newSpeciesName.trim();
     if (!commonName || !newSpeciesEmoji) return;
@@ -759,49 +775,65 @@ export function PlantTreeScreen({ navigation, route }: any) {
 
           <View style={styles.speciesGrid}>
             {visibleSpecies.map(species => (
-              <TouchableOpacity
-                key={species.id}
-                style={[
-                  styles.speciesChip,
-                  selectedSpeciesId === species.id && styles.speciesChipSelected,
-                ]}
-                onPress={() => {
-                  setSelectedSpeciesId(species.id);
-                  medium();
-                }}
-              >
-                <Text style={styles.speciesEmoji}>{species.emoji}</Text>
-                <Text
-                  style={[styles.speciesName, selectedSpeciesId === species.id && styles.speciesNameSelected]}
-                  numberOfLines={1}
+              <View key={species.id} style={styles.speciesChipWrap}>
+                <TouchableOpacity
+                  style={[
+                    styles.speciesChip,
+                    styles.speciesChipFill,
+                    selectedSpeciesId === species.id && styles.speciesChipSelected,
+                  ]}
+                  onPress={() => {
+                    setSelectedSpeciesId(species.id);
+                    medium();
+                  }}
                 >
-                  {species.commonName}
-                </Text>
-              </TouchableOpacity>
+                  <Text style={styles.speciesEmoji}>{species.emoji}</Text>
+                  <Text
+                    style={[styles.speciesName, selectedSpeciesId === species.id && styles.speciesNameSelected]}
+                    numberOfLines={1}
+                  >
+                    {species.commonName}
+                  </Text>
+                </TouchableOpacity>
+                {species.createdByUserId ? (
+                  <TouchableOpacity
+                    style={styles.speciesRemoveBadge}
+                    onPress={() => handleRemoveSpecies(species)}
+                    hitSlop={8}
+                    accessibilityLabel={`Remove ${species.commonName}`}
+                  >
+                    <Text style={styles.speciesRemoveText}>✕</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             ))}
             {hasMoreSpecies && (
+              <View style={styles.speciesChipWrap}>
+                <TouchableOpacity
+                  style={[styles.speciesChip, styles.speciesChipFill, styles.speciesChipAdd]}
+                  onPress={() => setShowAllSpecies((prev) => !prev)}
+                >
+                  <Text style={styles.speciesEmoji}>{showAllSpecies ? '▲' : '▼'}</Text>
+                  <Text style={styles.speciesName} numberOfLines={1}>
+                    {showAllSpecies ? 'Show less' : `See more (${speciesList.length - INITIAL_SPECIES_COUNT})`}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            <View style={styles.speciesChipWrap}>
               <TouchableOpacity
-                style={[styles.speciesChip, styles.speciesChipAdd]}
-                onPress={() => setShowAllSpecies((prev) => !prev)}
+                style={[styles.speciesChip, styles.speciesChipFill, styles.speciesChipAdd]}
+                onPress={() => {
+                  setShowAddSpecies((prev) => !prev);
+                  setAddSpeciesError(null);
+                }}
               >
-                <Text style={styles.speciesEmoji}>{showAllSpecies ? '▲' : '▼'}</Text>
+                <Text style={styles.speciesEmoji}>{showAddSpecies ? '✕' : '➕'}</Text>
                 <Text style={styles.speciesName} numberOfLines={1}>
-                  {showAllSpecies ? 'Show less' : `See more (${speciesList.length - INITIAL_SPECIES_COUNT})`}
+                  {showAddSpecies ? 'Cancel' : "Can't find it?"}
                 </Text>
               </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={[styles.speciesChip, styles.speciesChipAdd]}
-              onPress={() => {
-                setShowAddSpecies((prev) => !prev);
-                setAddSpeciesError(null);
-              }}
-            >
-              <Text style={styles.speciesEmoji}>{showAddSpecies ? '✕' : '➕'}</Text>
-              <Text style={styles.speciesName} numberOfLines={1}>
-                {showAddSpecies ? 'Cancel' : "Can't find it?"}
-              </Text>
-            </TouchableOpacity>
+            </View>
           </View>
 
           {nearbyStock.length > 0 && (
@@ -1266,20 +1298,48 @@ const styles = StyleSheet.create({
   speciesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    // Cells are a third of the row each with 4px padding, and the grid pulls out by the same 4px,
+    // so columns line up exactly whatever the container width (no fractional-pixel drift).
+    marginHorizontal: -SPECIES_CELL_PAD,
   },
   speciesChip: {
-    width: SPECIES_CHIP_WIDTH,
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    // Left-aligned (not centered) so every emoji starts at the same x and the columns line up
+    // whatever the label length.
+    justifyContent: 'flex-start',
     gap: 6,
     paddingVertical: 8,
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
     borderRadius: RADIUS.full,
     backgroundColor: 'transparent',
     borderWidth: 1.5,
     borderColor: COLORS.warmBrown,
+  },
+  speciesChipWrap: {
+    width: '33.3333%',
+    padding: SPECIES_CELL_PAD,
+  },
+  speciesChipFill: {
+    width: '100%',
+  },
+  speciesRemoveBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.warmBrown,
+  },
+  speciesRemoveText: {
+    fontSize: 10,
+    color: COLORS.textPrimary,
   },
   speciesChipSelected: {
     backgroundColor: COLORS.forest,

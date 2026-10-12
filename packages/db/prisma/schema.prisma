@@ -653,12 +653,16 @@ model TreeSpecies {
   // nursery storefront display should treat only curated rows as authoritative for these facts.
   isCuratedBotanical Boolean        @default(false) @map("is_curated_botanical")
   addedByRole        UserRole?      @map("added_by_role")
+  // Set for a species a planter typed in themselves: visible only to that user. Null = shared
+  // catalog (seeded or nursery-curated) visible to everyone.
+  createdByUserId    String?        @map("created_by_user_id")
 
   trees            Tree[]
   stock            SaplingStock[]
   saplingUnits     ArthSaplingUnit[]
   bulkRequirements BulkRequirement[]
 
+  @@index([createdByUserId])
   @@map("tree_species")
 }
 

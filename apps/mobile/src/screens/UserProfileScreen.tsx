@@ -202,19 +202,14 @@ export function UserProfileScreen({ route, navigation }: any) {
       <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
 
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        {!isOwn ? (
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
-            <View style={styles.iconBlur}>
-              <Text style={styles.iconText}>←</Text>
-            </View>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity onPress={() => navigation?.navigate('Groups')} style={styles.iconButton}>
-            <View style={styles.iconBlur}>
-              <Text style={styles.iconText}>👥</Text>
-            </View>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Main'))}
+          style={styles.iconButton}
+        >
+          <View style={styles.iconBlur}>
+            <Text style={styles.iconText}>←</Text>
+          </View>
+        </TouchableOpacity>
         {isOwn ? null : (
           <TouchableOpacity onPress={() => setMenuOpen(true)} style={styles.iconButton} hitSlop={8}>
             <View style={styles.iconBlur}>

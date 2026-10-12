@@ -140,8 +140,9 @@ async function resolveSpeciesLink(
   if (!input.species) return {};
   const commonName = input.species.commonName.trim();
 
+  // Shared catalog only — a planter's private species must not be upgraded into a public one.
   const existing = await prisma.treeSpecies.findFirst({
-    where: { commonName: { equals: commonName, mode: 'insensitive' } },
+    where: { commonName: { equals: commonName, mode: 'insensitive' }, createdByUserId: null },
   });
 
   const botanicalData = {

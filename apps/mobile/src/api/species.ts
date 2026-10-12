@@ -7,10 +7,17 @@ export interface ApiSpecies {
   emoji: string;
   co2KgPerYear: string | null;
   description: string | null;
+  /** Set when the signed-in user added this species themselves (removable); null for system species. */
+  createdByUserId?: string | null;
 }
 
+// Sent with the access token when there is one, so the user's own species come back too.
 export async function fetchSpecies(): Promise<ApiSpecies[]> {
-  return apiFetch<ApiSpecies[]>('/api/species', { auth: false });
+  return apiFetch<ApiSpecies[]>('/api/species');
+}
+
+export async function deleteSpecies(id: string): Promise<void> {
+  await apiFetch<void>(`/api/species/${id}`, { method: 'DELETE' });
 }
 
 // Tree/flower/environment glyphs only — mirrors the server's allow-list in species.schema.ts,

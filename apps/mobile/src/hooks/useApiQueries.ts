@@ -6,7 +6,7 @@ import { fetchTrees, plantTree, verifyPlantingPhoto, fetchTreesMap, fetchTreePas
 import { logCommunityObservation, reviewTreeUpdate, type LogCommunityObservationInput } from '../api/treeObservations';
 import { fetchNgoPublicFollowers, fetchNurseryPublicFollowers } from '../api/publicFollowers';
 import { fetchApprovedLocations, checkPlantingEligibility } from '../api/plantingLocations';
-import { fetchSpecies, createSpecies, fetchNearbyStock } from '../api/species';
+import { fetchSpecies, createSpecies, deleteSpecies, fetchNearbyStock } from '../api/species';
 import { fetchTodayMissions, completeMission } from '../api/missions';
 import { fetchGamesStatus, fetchTodayGame, submitGameGuess, submitGame, type ApiGameState, type GamePlayResponse, type GuessInput, type SubmitPayload } from '../api/games';
 import { fetchEcoFacts } from '../api/ecoFacts';
@@ -370,8 +370,11 @@ export function useReviewTreeUpdate() {
   });
 }
 
+// Keyed by user: the list includes that user's own private species, so it must not leak across
+// accounts on the same device.
 export function useSpecies() {
-  return useQuery({ queryKey: ['species'], queryFn: fetchSpecies });
+  const { user } = useAuth();
+  return useQuery({ queryKey: ['species', 'list', user?.id ?? null], queryFn: fetchSpecies });
 }
 
 /** Nursery-scoped tree pins for NurseryImpactScreen's "View on map" — separate from `useTrees`
@@ -397,15 +400,29 @@ export function useNearbyStock(speciesId: string | null, lat: number | null, lng
   });
 }
 
-/** Adds a species missing from the list — shared immediately, so it's there for everyone
- * (including the planter who added it) next time they pick a species. */
+/** Adds a species missing from the list — private to the planter who added it. */
 export function useCreateSpecies() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: createSpecies,
     onSuccess: (species) => {
-      queryClient.setQueryData<typeof species[]>(['species'], (prev) =>
+      queryClient.setQueryData<typeof species[]>(['species', 'list', user?.id ?? null], (prev) =>
         prev?.some((s) => s.id === species.id) ? prev : [...(prev ?? []), species],
+      );
+    },
+  });
+}
+
+/** Removes a species the user added themselves (the server rejects system species). */
+export function useDeleteSpecies() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: deleteSpecies,
+    onSuccess: (_void, id) => {
+      queryClient.setQueryData<{ id: string }[]>(['species', 'list', user?.id ?? null], (prev) =>
+        prev?.filter((s) => s.id !== id),
       );
     },
   });
