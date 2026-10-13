@@ -32,6 +32,8 @@ import type { ApiDrivePlant } from '../api/drives';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { DriveRsvpSheet } from '../components/drives/DriveRsvpSheet';
+import { AttendeeCard } from '../components/drives/AttendeeCard';
+import { CancelDriveSheet } from '../components/drives/CancelDriveSheet';
 import { CancelRsvpSheet } from '../components/drives/CancelRsvpSheet';
 import type { DriveRsvpInput, RsvpCancelReason } from '../api/drives';
 
@@ -72,6 +74,8 @@ export function DriveDetailScreen({ navigation, route }: any) {
   const [actionError, setActionError] = useState('');
   const [rsvpSheetOpen, setRsvpSheetOpen] = useState(false);
   const [rsvpError, setRsvpError] = useState('');
+  const [cancelDriveOpen, setCancelDriveOpen] = useState(false);
+  const [cancelDriveError, setCancelDriveError] = useState('');
   const [cancelSheetOpen, setCancelSheetOpen] = useState(false);
   const [cancelError, setCancelError] = useState('');
   const [sponsoringId, setSponsoringId] = useState<string | null>(null);
@@ -86,14 +90,19 @@ export function DriveDetailScreen({ navigation, route }: any) {
 
   const handleCancelDrive = () => {
     if (!drive) return;
-    confirm('Cancel this drive?', "Volunteers who RSVP'd will see it as cancelled. This can't be undone.", [
-      { text: 'Back', style: 'cancel' },
-      {
-        text: 'Cancel drive',
-        style: 'destructive',
-        onPress: () => cancelDriveMutation.mutate(drive.id, { onError: (e) => setActionError(e instanceof ApiError ? e.message : 'Something went wrong.') }),
-      },
-    ]);
+    setCancelDriveError('');
+    setCancelDriveOpen(true);
+  };
+
+  const handleCancelDriveSubmit = async (reason: string) => {
+    if (!drive) return;
+    setCancelDriveError('');
+    try {
+      await cancelDriveMutation.mutateAsync({ id: drive.id, reason });
+      setCancelDriveOpen(false);
+    } catch (e) {
+      setCancelDriveError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
+    }
   };
 
   const handleCompleteDrive = () => {
@@ -379,42 +388,21 @@ export function DriveDetailScreen({ navigation, route }: any) {
                 <Text style={styles.infoText}>No RSVPs yet.</Text>
               ) : (
                 attendeesQuery.data!.attendees.map((a) => (
-                  <View key={a.id} style={styles.attendeeRow}>
-                    <View style={styles.attendeeLeft}>
-                      {drive.status === 'completed' && (
-                        <TouchableOpacity
-                          style={[styles.attendeeCheckbox, a.attended && styles.attendeeCheckboxChecked]}
-                          onPress={() => attendanceMutation.mutate({ rsvpId: a.id, attended: !a.attended })}
-                          disabled={attendanceMutation.isPending}
-                          accessibilityRole="checkbox"
-                          accessibilityState={{ checked: !!a.attended }}
-                        >
-                          {a.attended && <Text style={styles.attendeeCheckmark}>✓</Text>}
-                        </TouchableOpacity>
-                      )}
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.attendeeName}>{a.name}</Text>
-                        <Text style={styles.attendeeHandle}>@{a.handle}</Text>
-                        {drive.transportMode === 'ngo_provided' && (
-                          <Text style={styles.attendeeDetail}>
-                            🚌 {a.pickupPoint ? `Boards at ${a.pickupPoint.address}` : a.phone ? 'Coming by themselves' : 'Pickup not provided'}
-                          </Text>
-                        )}
-                        <Text style={styles.attendeeDetail}>📞 {a.phone ? `+91 ${a.phone}` : 'Phone not provided'}</Text>
-                        {a.emergencyContactName && a.emergencyContactPhone ? (
-                          <Text style={styles.attendeeDetail}>🆘 {a.emergencyContactName} · +91 {a.emergencyContactPhone}</Text>
-                        ) : null}
-                        {a.note ? <Text style={styles.attendeeDetail}>📝 {a.note}</Text> : null}
-                      </View>
-                    </View>
-                    <Text style={styles.attendeeDate}>{new Date(a.rsvpedAt).toLocaleDateString()}</Text>
-                  </View>
+                  <AttendeeCard
+                    key={a.id}
+                    attendee={a}
+                    showBoarding={drive.transportMode === 'ngo_provided'}
+                    checkable={drive.status === 'completed'}
+                    disabled={attendanceMutation.isPending}
+                    onToggleAttended={() => attendanceMutation.mutate({ rsvpId: a.id, attended: !a.attended })}
+                  />
                 ))
               )}
             </>
           ) : isCancelled ? (
             <View style={styles.cancelledBanner}>
               <Text style={styles.cancelledText}>This drive has been cancelled by the organizer.</Text>
+              {drive.cancelReason ? <Text style={styles.cancelledText}>Reason: {drive.cancelReason}</Text> : null}
             </View>
           ) : isEnded ? (
             <View style={styles.cancelledBanner}>
@@ -451,6 +439,18 @@ export function DriveDetailScreen({ navigation, route }: any) {
           error={rsvpError}
           onClose={() => setRsvpSheetOpen(false)}
           onSubmit={handleRsvpSubmit}
+        />
+      )}
+
+      {drive && (
+        <CancelDriveSheet
+          visible={cancelDriveOpen}
+          driveTitle={drive.title}
+          confirmedCount={drive.confirmedCount}
+          submitting={cancelDriveMutation.isPending}
+          error={cancelDriveError}
+          onClose={() => setCancelDriveOpen(false)}
+          onSubmit={handleCancelDriveSubmit}
         />
       )}
 
@@ -523,31 +523,7 @@ const styles = StyleSheet.create({
   ownerActionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 14 },
   ownerActionText: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
   ownerActionTextDanger: { color: COLORS.dangerDark },
-  attendeeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(94,133,80,0.12)',
-  },
-  attendeeLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  attendeeCheckbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: COLORS.sage,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  attendeeCheckboxChecked: { backgroundColor: COLORS.forest, borderColor: COLORS.forest },
-  attendeeCheckmark: { fontSize: 13, fontWeight: '700', color: COLORS.white },
-  attendeeName: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary },
-  attendeeHandle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
-  attendeeDate: { fontSize: 12, color: COLORS.textSecondary },
   rsvpButton: { marginTop: 4 },
-  attendeeDetail: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   cancelledBanner: {
     backgroundColor: COLORS.dangerLight,
     borderRadius: RADIUS.lg,

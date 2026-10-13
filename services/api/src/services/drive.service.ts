@@ -1,7 +1,7 @@
 import { DriveStatus, DriveTransportMode, PrismaClient, TreeHealthStatus } from '@arth/db';
 import { getStripeClient } from '../lib/stripe';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, ServiceUnavailableError } from '../utils/errors';
-import type { CancelRsvpInput, RsvpInput } from '../schemas/drives.schema';
+import type { CancelDriveInput, CancelRsvpInput, RsvpInput } from '../schemas/drives.schema';
 import { geocodeAddress } from '../utils/geocode';
 import { haversineDistanceKm } from '../utils/geo';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
@@ -185,7 +185,47 @@ export async function updateDrive(prisma: PrismaClient, ngoUserId: string, drive
  * `succeeded` sponsorship via Stripe (reusing donation.service.ts's pattern) and notify everyone
  * who'd committed to this drive, since none of that used to happen at all.
  */
-export async function cancelDrive(prisma: PrismaClient, ngoUserId: string, driveId: string) {
+/**
+ * Tells every confirmed RSVP (and any sponsor) right away that a drive was cancelled — the
+ * organiser's own reason wrapped in an apology and a promise of an update or a new drive. Shared
+ * by the NGO and admin cancel paths.
+ */
+export async function notifyDriveCancelled(
+  prisma: PrismaClient,
+  input: { driveId: string; title: string; ngoName: string; reason: string; refundedSponsorIds?: Set<string> },
+) {
+  const { driveId, title, ngoName, reason } = input;
+  const sponsorIds = input.refundedSponsorIds ?? new Set<string>();
+  const rsvps = await prisma.driveRsvp.findMany({ where: { driveId, status: 'confirmed' }, select: { userId: true } });
+  const notifyUserIds = new Set([...rsvps.map((r) => r.userId), ...sponsorIds]);
+
+  // In parallel: the in-app row and the push carry the reason so nobody is left guessing.
+  await Promise.all(
+    [...notifyUserIds].map((userId) => {
+      const refundLine = sponsorIds.has(userId) ? ' Your sponsorship will be refunded in full 💸.' : '';
+      return notify(prisma, {
+        userId,
+        type: 'drive_reminder',
+        data: {
+          driveId,
+          driveTitle: title,
+          kind: 'cancelled',
+          reason,
+          message:
+            `We're so sorry 💔 “${title}” has been cancelled. ${ngoName} shared: “${reason}” 🌧️` +
+            `${refundLine} Thank you for being ready to plant with us — you're wonderful 🌱💚 ` +
+            `Please wait for an update or a new drive, we'll be back soon! ✨🌳`,
+        },
+        push: {
+          title: 'Drive cancelled 💔🌱',
+          body: `We're so sorry — “${title}” was cancelled: ${reason}. Please wait for an update or a new drive 💚`,
+        },
+      });
+    }),
+  );
+}
+
+export async function cancelDrive(prisma: PrismaClient, ngoUserId: string, driveId: string, details: CancelDriveInput) {
   const drive = await findOwnedDriveOrThrow(prisma, ngoUserId, driveId);
 
   const sponsorships = await prisma.drivePlantSponsorship.findMany({
@@ -212,24 +252,17 @@ export async function cancelDrive(prisma: PrismaClient, ngoUserId: string, drive
 
   const updated = await prisma.drive.update({
     where: { id: drive.id },
-    data: { status: 'cancelled' as DriveStatus },
+    data: { status: 'cancelled' as DriveStatus, cancelReason: details.reason },
     include: driveInclude,
   });
 
-  const [rsvpUserIds, sponsorUserIds] = await Promise.all([
-    prisma.driveRsvp.findMany({ where: { driveId: drive.id, status: 'confirmed' }, select: { userId: true } }),
-    Promise.resolve(sponsorships.map((s) => ({ userId: s.userId }))),
-  ]);
-  const notifyUserIds = new Set([...rsvpUserIds.map((r) => r.userId), ...sponsorUserIds.map((s) => s.userId)]);
-
-  for (const userId of notifyUserIds) {
-    await notify(prisma, {
-      userId,
-      type: 'drive_reminder',
-      data: { driveId: drive.id, driveTitle: drive.title, kind: 'cancelled' },
-      push: { title: 'Drive cancelled', body: `"${drive.title}" has been cancelled by the organizer.` },
-    });
-  }
+  await notifyDriveCancelled(prisma, {
+    driveId: drive.id,
+    title: drive.title,
+    ngoName: updated.ngo?.orgName ?? 'The organiser',
+    reason: details.reason,
+    refundedSponsorIds: new Set(sponsorships.map((s) => s.userId)),
+  });
 
   return updated;
 }
@@ -271,7 +304,7 @@ export async function completeDrive(prisma: PrismaClient, ngoUserId: string, dri
 export async function listDrives(prisma: PrismaClient, filter: NearbyFilter, userId?: string) {
   const drives = await prisma.drive.findMany({
     where: {
-      status: filter.includePast ? { in: ['upcoming', 'completed'] as DriveStatus[] } : 'upcoming',
+      status: filter.includePast ? { in: ['upcoming', 'completed', 'cancelled'] as DriveStatus[] } : 'upcoming',
       ngo: { status: 'approved' },
       ...(filter.ngoId ? { ngoId: filter.ngoId } : {}),
     },

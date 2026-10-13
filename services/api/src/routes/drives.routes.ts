@@ -9,6 +9,7 @@ import {
   attendanceSchema,
   rsvpSchema,
   cancelRsvpSchema,
+  cancelDriveSchema,
 } from '../schemas/drives.schema';
 import { saveDrivePhoto } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
@@ -43,6 +44,7 @@ export function serializeDrive(entry: any) {
     capacity: d.capacity,
     confirmedCount: d._count?.rsvps ?? 0,
     status: d.status,
+    cancelReason: d.cancelReason ?? null,
     hasEnded: d.startsAt ? driveService.hasDriveEnded(d) : false,
     isRsvped: d.isRsvped,
     featured: d.featured,
@@ -203,7 +205,9 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
     '/:id',
     { preHandler: [fastify.requireRole(...ORG_ROLES)] },
     async (request, reply) => {
-      const drive = await driveService.cancelDrive(fastify.prisma, request.user!.id, request.params.id);
+      const parsed = cancelDriveSchema.safeParse(request.body ?? {});
+      if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+      const drive = await driveService.cancelDrive(fastify.prisma, request.user!.id, request.params.id, parsed.data);
       reply.send(serializeDrive(drive));
     },
   );

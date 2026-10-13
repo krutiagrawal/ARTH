@@ -101,3 +101,4 @@ Prisma migrations live in `prisma/migrations/` (one folder per migration, applie
 | 72 | `20261012210000_adoption_release_cleanup` |
 | 73 | `20261013100000_drive_rsvp_details` |
 | 74 | `20261013110000_drive_rsvp_cancel_reason` |
+| 75 | `20261013120000_drive_cancel_reason` |

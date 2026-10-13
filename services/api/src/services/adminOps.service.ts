@@ -1,3 +1,4 @@
+import { notifyDriveCancelled } from './drive.service';
 import { PrismaClient } from '@arth/db';
 import { getStripeClient } from '../lib/stripe';
 import { NotFoundError, ForbiddenError } from '../utils/errors';
@@ -29,12 +30,13 @@ export async function listDrives(prisma: PrismaClient, filter: PaginationFilter 
 }
 
 export async function adminCancelDrive(prisma: PrismaClient, driveId: string, input: { reason?: string; adminUserId: string }) {
-  const drive = await prisma.drive.findUnique({ where: { id: driveId } });
+  const drive = await prisma.drive.findUnique({ where: { id: driveId }, include: { ngo: { select: { orgName: true } } } });
   if (!drive) throw new NotFoundError('Drive not found');
   if (drive.status === 'cancelled') throw new ForbiddenError('This drive is already cancelled');
 
-  return prisma.$transaction(async (tx) => {
-    const updated = await tx.drive.update({ where: { id: driveId }, data: { status: 'cancelled' } });
+  const reason = input.reason?.trim() || 'the ARTH team had to step in and cancel it';
+  const result = await prisma.$transaction(async (tx) => {
+    const updated = await tx.drive.update({ where: { id: driveId }, data: { status: 'cancelled', cancelReason: reason } });
     await tx.adminActionLog.create({
       data: {
         actorUserId: input.adminUserId,
@@ -46,6 +48,9 @@ export async function adminCancelDrive(prisma: PrismaClient, driveId: string, in
     });
     return updated;
   });
+
+  await notifyDriveCancelled(prisma, { driveId, title: drive.title, ngoName: drive.ngo.orgName, reason });
+  return result;
 }
 
 // ---------- Donations ----------

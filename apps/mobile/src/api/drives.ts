@@ -35,6 +35,8 @@ export interface ApiDrive {
   capacity: number | null;
   confirmedCount: number;
   status: 'upcoming' | 'cancelled' | 'completed';
+  /** Why the NGO cancelled the drive (only set when status is 'cancelled'). */
+  cancelReason?: string | null;
   /** Server-computed: marked completed, or its scheduled end has passed. Locked for RSVP/sponsoring. */
   hasEnded?: boolean;
   isRsvped?: boolean;
@@ -146,8 +148,8 @@ export async function fetchMyDrives(page?: number, take?: number): Promise<ApiDr
 
 /** Cancels a drive the NGO organizes (e.g. rained out) — RSVPs stay recorded, the drive just
  * stops accepting new ones and shows as cancelled everywhere it's listed. */
-export async function cancelDrive(id: string): Promise<ApiDrive> {
-  return apiFetch<ApiDrive>(`/api/drives/${id}`, { method: 'DELETE' });
+export async function cancelDrive(id: string, reason: string): Promise<ApiDrive> {
+  return apiFetch<ApiDrive>(`/api/drives/${id}`, { method: 'DELETE', body: { reason } });
 }
 
 /** Marks a drive completed, unlocking the attendance-checkoff UI on its detail screen. */

@@ -1970,6 +1970,8 @@ model Drive {
   durationMinutes Int?               @map("duration_minutes")
   capacity        Int?
   status          DriveStatus        @default(upcoming)
+  // Why the NGO cancelled — required when cancelling, shown to RSVP'd volunteers.
+  cancelReason    String?            @map("cancel_reason")
   // NGO-curated flag for highlighting a completed drive on its public profile "past drives" showcase.
   featured        Boolean            @default(false)
   createdAt       DateTime           @default(now()) @map("created_at")

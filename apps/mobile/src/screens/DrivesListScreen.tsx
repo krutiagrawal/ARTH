@@ -17,19 +17,22 @@ import type { ApiDrive } from '../api/drives';
 
 import { TEXT } from '../constants/typography';
 
-type FilterKey = 'all' | 'upcoming' | 'past' | 'near' | 'mine';
+type FilterKey = 'all' | 'upcoming' | 'past' | 'cancelled' | 'near' | 'mine';
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'upcoming', label: 'Upcoming' },
   { key: 'past', label: 'Past' },
+  { key: 'cancelled', label: 'Cancelled' },
   { key: 'near', label: 'Near me' },
   { key: 'mine', label: 'My bookings' },
 ];
 
 // Ended drives stay listed for their details, but are locked (no RSVP) and sink below live ones.
 const isEnded = (d: ApiDrive) => d.status === 'completed' || !!d.hasEnded;
-const isLive = (d: ApiDrive) => d.status !== 'cancelled' && !isEnded(d);
+const isCancelled = (d: ApiDrive) => d.status === 'cancelled';
+const isLive = (d: ApiDrive) => !isCancelled(d) && !isEnded(d);
+const isPast = (d: ApiDrive) => !isCancelled(d) && isEnded(d);
 
 export function DrivesListScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
@@ -40,18 +43,20 @@ export function DrivesListScreen({ navigation }: any) {
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
   const [filter, setFilter] = useState<FilterKey>('all');
 
-  // Live drives first (soonest first), then past ones (most recent first).
+  // Live drives first (soonest first), then past ones, then cancelled ones (most recent first).
   const sorted = useMemo(() => {
-    const live = drives.filter((d) => !isEnded(d)).sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt));
-    const past = drives.filter(isEnded).sort((a, b) => +new Date(b.startsAt) - +new Date(a.startsAt));
-    return [...live, ...past];
+    const live = drives.filter(isLive).sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt));
+    const past = drives.filter(isPast).sort((a, b) => +new Date(b.startsAt) - +new Date(a.startsAt));
+    const cancelled = drives.filter(isCancelled).sort((a, b) => +new Date(b.startsAt) - +new Date(a.startsAt));
+    return [...live, ...past, ...cancelled];
   }, [drives]);
 
   const counts = useMemo(() => {
     return {
       all: drives.length,
       upcoming: drives.filter(isLive).length,
-      past: drives.filter(isEnded).length,
+      past: drives.filter(isPast).length,
+      cancelled: drives.filter(isCancelled).length,
       near: drives.filter((d) => d.distanceKm != null && isLive(d)).length,
       mine: drives.filter((d) => d.isRsvped).length,
     };
@@ -68,7 +73,8 @@ export function DrivesListScreen({ navigation }: any) {
 
   const visible = useMemo(() => {
     if (filter === 'upcoming') return sorted.filter(isLive);
-    if (filter === 'past') return sorted.filter(isEnded);
+    if (filter === 'past') return sorted.filter(isPast);
+    if (filter === 'cancelled') return sorted.filter(isCancelled);
     if (filter === 'mine') return sorted.filter((d) => d.isRsvped);
     if (filter === 'near') {
       return sorted.filter((d) => d.distanceKm != null && isLive(d)).sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));
@@ -81,6 +87,8 @@ export function DrivesListScreen({ navigation }: any) {
       ? "You haven't reserved a place on any drive yet."
       : filter === 'past'
         ? 'No past drives to show yet.'
+      : filter === 'cancelled'
+        ? 'No cancelled drives.'
       : filter === 'near'
         ? coords
           ? 'No drives with a known location near you right now.'

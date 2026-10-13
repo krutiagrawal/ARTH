@@ -49,7 +49,10 @@ function describe(n: ApiNotification): string {
     case 'new_post_from_followed':
       return 'shared a new update';
     case 'drive_reminder':
-      return 'has a drive coming up';
+      // A cancelled drive carries a full, ready-written message (apology + the NGO's reason).
+      return (n.data as any)?.kind === 'cancelled' && (n.data as any)?.message
+        ? (n.data as any).message
+        : 'has a drive coming up';
     case 'report_resolved':
       return 'Your report has been reviewed';
     case 'moderation_action':
@@ -146,7 +149,7 @@ function iconFor(n: ApiNotification): string {
     case 'new_post_from_followed':
       return '📸';
     case 'drive_reminder':
-      return '📅';
+      return (n.data as any)?.kind === 'cancelled' ? '💔' : '📅';
     case 'reservation_requested':
       return '🤝';
     case 'reservation_fulfilled':
@@ -420,7 +423,7 @@ export function NotificationsScreen({ navigation }: any) {
         navigation.navigate('NgoDonations');
         return;
       }
-      if (n.type === 'ngo_drive_rsvp') {
+      if (n.type === 'ngo_drive_rsvp' || n.type === 'drive_reminder') {
         const driveId = (n.data as any)?.driveId;
         if (driveId) navigation.navigate('DriveDetail', { driveId });
         return;

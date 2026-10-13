@@ -114,3 +114,8 @@ export const cancelRsvpSchema = z.object({
   note: z.string().trim().max(300).nullish(),
 });
 export type CancelRsvpInput = z.infer<typeof cancelRsvpSchema>;
+
+export const cancelDriveSchema = z.object({
+  reason: z.string().trim().min(5, 'Please tell volunteers why (at least a few words)').max(300),
+});
+export type CancelDriveInput = z.infer<typeof cancelDriveSchema>;

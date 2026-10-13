@@ -1246,8 +1246,8 @@ function invalidateDrive(queryClient: ReturnType<typeof useQueryClient>, id: str
 export function useCancelDrive() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => cancelDrive(id),
-    onSuccess: (_data, id) => invalidateDrive(queryClient, id),
+    mutationFn: (input: { id: string; reason: string }) => cancelDrive(input.id, input.reason),
+    onSuccess: (_data, input) => invalidateDrive(queryClient, input.id),
   });
 }
 
