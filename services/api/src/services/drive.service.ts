@@ -1,6 +1,7 @@
 import { DriveStatus, DriveTransportMode, PrismaClient, TreeHealthStatus } from '@arth/db';
 import { getStripeClient } from '../lib/stripe';
-import { ConflictError, ForbiddenError, NotFoundError, ServiceUnavailableError } from '../utils/errors';
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, ServiceUnavailableError } from '../utils/errors';
+import type { CancelRsvpInput, RsvpInput } from '../schemas/drives.schema';
 import { geocodeAddress } from '../utils/geocode';
 import { haversineDistanceKm } from '../utils/geo';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
@@ -375,6 +376,11 @@ export async function listDriveAttendees(prisma: PrismaClient, ngoUserId: string
         attended: true,
         hoursLogged: true,
         role: true,
+        phone: true,
+        emergencyContactName: true,
+        emergencyContactPhone: true,
+        note: true,
+        pickupPoint: { select: { id: true, address: true } },
         user: { select: { name: true, handle: true } },
       },
     }),
@@ -423,7 +429,7 @@ export async function setRsvpAttendance(
   });
 }
 
-export async function rsvp(prisma: PrismaClient, userId: string, driveId: string) {
+export async function rsvp(prisma: PrismaClient, userId: string, driveId: string, details: RsvpInput) {
   const result = await prisma.$transaction(async (tx) => {
     // Locks this drive's row for the rest of the transaction, so two concurrent RSVPs for the
     // last open spot serialize instead of both reading the same pre-insert confirmedCount and
@@ -443,9 +449,28 @@ export async function rsvp(prisma: PrismaClient, userId: string, driveId: string
       if (confirmedCount >= drive.capacity) throw new ConflictError('This drive is full');
     }
 
+    // A pickup point only means something when the NGO is providing transport, and it must belong
+    // to this drive — otherwise store null ("coming by myself").
+    let pickupPointId: string | null = null;
+    if (details.pickupPointId && drive.transportMode === 'ngo_provided') {
+      const point = await tx.drivePickupPoint.findFirst({ where: { id: details.pickupPointId, driveId } });
+      if (!point) throw new BadRequestError('Selected pickup point is not part of this drive');
+      pickupPointId = point.id;
+    }
+
+    const data = {
+      status: 'confirmed' as const,
+      phone: details.phone,
+      emergencyContactName: details.emergencyContactName,
+      emergencyContactPhone: details.emergencyContactPhone,
+      note: details.note || null,
+      pickupPointId,
+      cancelReason: null,
+      cancelNote: null,
+    };
     const rsvpRow = existing
-      ? await tx.driveRsvp.update({ where: { id: existing.id }, data: { status: 'confirmed' } })
-      : await tx.driveRsvp.create({ data: { driveId, userId, status: 'confirmed' } });
+      ? await tx.driveRsvp.update({ where: { id: existing.id }, data })
+      : await tx.driveRsvp.create({ data: { driveId, userId, ...data } });
 
     return { rsvpRow, drive };
   });
@@ -462,8 +487,8 @@ export async function rsvp(prisma: PrismaClient, userId: string, driveId: string
   return result.rsvpRow;
 }
 
-export async function cancelRsvp(prisma: PrismaClient, userId: string, driveId: string) {
-  const rsvp = await prisma.driveRsvp.findUnique({ where: { driveId_userId: { driveId, userId } }, include: { drive: { select: { status: true, startsAt: true, durationMinutes: true } } } });
+export async function cancelRsvp(prisma: PrismaClient, userId: string, driveId: string, details: CancelRsvpInput) {
+  const rsvp = await prisma.driveRsvp.findUnique({ where: { driveId_userId: { driveId, userId } }, include: { drive: { select: { title: true, status: true, startsAt: true, durationMinutes: true, ngo: { select: { userId: true, orgName: true } } } } } });
   if (!rsvp || rsvp.status !== 'confirmed') throw new NotFoundError('RSVP not found');
   // Once the drive has happened, cancelling would silently erase a verified attendee from the
   // NGO's attendance records/reports (both filter on status: 'confirmed' with no trace of the
@@ -473,7 +498,22 @@ export async function cancelRsvp(prisma: PrismaClient, userId: string, driveId: 
     throw new ConflictError('This drive has already happened — your RSVP can no longer be cancelled');
   }
 
-  await prisma.driveRsvp.update({ where: { id: rsvp.id }, data: { status: 'cancelled' } });
+  await prisma.driveRsvp.update({
+    where: { id: rsvp.id },
+    data: { status: 'cancelled', cancelReason: details.reason, cancelNote: details.note || null },
+  });
+
+  const volunteer = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+  await notify(prisma, {
+    userId: rsvp.drive.ngo.userId,
+    type: 'ngo_drive_rsvp',
+    actorUserId: userId,
+    data: { driveId, driveTitle: rsvp.drive.title, cancelled: true, reason: details.reason, note: details.note || null },
+    push: {
+      title: rsvp.drive.ngo.orgName,
+      body: `${volunteer?.name ?? 'Someone'} cancelled their RSVP to "${rsvp.drive.title}"`,
+    },
+  });
 }
 
 /** Owner-only view of who sponsored what on this drive — the NGO can't sponsor its own drive

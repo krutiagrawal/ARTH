@@ -110,7 +110,7 @@ function describe(n: ApiNotification): string {
     case 'ngo_donation_received':
       return `donated ₹${(((n.data as any)?.amountCents ?? 0) / 100).toLocaleString('en-IN')} to your campaign`;
     case 'ngo_drive_rsvp':
-      return "RSVP'd to your drive";
+      return (n.data as any)?.cancelled ? 'cancelled their RSVP to your drive' : "RSVP'd to your drive";
     case 'ngo_tree_adopted':
       return 'adopted a tree from you';
     case 'ngo_tree_released': {
@@ -302,6 +302,7 @@ function NotificationRow({
           {new Date(notification.createdAt).toLocaleTimeString(undefined, {
             hour: 'numeric',
             minute: '2-digit',
+            hour12: true,
           })}
         </Text>
       </View>

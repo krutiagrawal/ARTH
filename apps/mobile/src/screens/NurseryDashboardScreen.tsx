@@ -243,7 +243,7 @@ function ActivityRow({
       <Text style={styles.activityIcon}>{copy.icon}</Text>
       <View style={{ flex: 1 }}>
         <Text style={[styles.activityText, { color: seamText.primary }]}>{copy.text}</Text>
-        <Text style={[styles.activityTime, { color: seamText.secondary }]}>{new Date(item.createdAt).toLocaleString()}</Text>
+        <Text style={[styles.activityTime, { color: seamText.secondary }]}>{new Date(item.createdAt).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</Text>
       </View>
     </ThemedCard>
   );
@@ -271,6 +271,12 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
 
   const pageBackground = getHeroSeamColor(theme);
   const seamText = getHeroSeamTextColors(theme);
+
+  // Hero stat cards use Home's see-through "liquid glass" (variant="clear") over the scenery;
+  // text colour adapts to the sky and a halo keeps it legible on any patch.
+  const statColor =
+    theme.period === 'goldenHour' ? '#5A2A0E' : theme.period === 'sunset' ? '#4A1D44' : theme.textOnSky;
+  const haloColor = statColor === '#FFFFFF' ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.85)';
 
   /** Shared props for the "Your Impact" tiles: real glass cards tinted from the time-of-day
    * theme (same recipe as the NGO dashboard's cards / Home's EcoFactCard). */
@@ -379,56 +385,38 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
               icon="🌱"
               value={stats?.speciesCount ?? 0}
               label="Species"
-              variant="glass"
-              compact
-              dark={theme.cardTint === 'dark'}
-              color={theme.accentColor}
-              cardBackground={theme.cardBackground}
-              cardBackgroundAlt={theme.cardBackgroundAlt}
-              cardOverlayAlpha={theme.cardOverlayAlpha}
-              textColor={theme.textSecondaryOnCard}
-              subTextColor={theme.textSecondaryOnCard}
-              borderColor={theme.cardBorder}
+              variant="clear"
+              color={statColor}
+              textColor={statColor}
+              subTextColor={statColor}
+              haloColor={haloColor}
               delay={100}
               onPress={() => navigation.navigate('NurseryStock')}
-              blurTarget={blurTargetRef}
             />
             <View style={styles.statsRight}>
               <EcoWidget
                 icon="📦"
                 value={stats?.totalQuantity ?? 0}
                 label="In stock"
-                variant="glass"
-                compact
-                dark={theme.cardTint === 'dark'}
-                color={theme.accentColor}
-                cardBackground={theme.cardBackground}
-                cardBackgroundAlt={theme.cardBackgroundAlt}
-                cardOverlayAlpha={theme.cardOverlayAlpha}
-                textColor={theme.textSecondaryOnCard}
-                subTextColor={theme.textSecondaryOnCard}
-                borderColor={theme.cardBorder}
+                variant="clear"
+                color={statColor}
+                textColor={statColor}
+                subTextColor={statColor}
+                haloColor={haloColor}
                 delay={200}
                 onPress={() => navigation.navigate('NurseryStock')}
-                blurTarget={blurTargetRef}
               />
               <EcoWidget
                 icon={GROWTH_LEVEL_META[today?.growthLevel ?? 'seedling'].emoji}
                 value={GROWTH_LEVEL_META[today?.growthLevel ?? 'seedling'].label}
                 label="Growth Level"
-                variant="glass"
-                compact
-                dark={theme.cardTint === 'dark'}
-                color={theme.accentColor}
-                cardBackground={theme.cardBackground}
-                cardBackgroundAlt={theme.cardBackgroundAlt}
-                cardOverlayAlpha={theme.cardOverlayAlpha}
-                textColor={theme.textSecondaryOnCard}
-                subTextColor={theme.textSecondaryOnCard}
-                borderColor={theme.cardBorder}
+                variant="clear"
+                color={statColor}
+                textColor={statColor}
+                subTextColor={statColor}
+                haloColor={haloColor}
                 delay={300}
                 onPress={() => navigation.navigate('NurseryStreakBadges')}
-                blurTarget={blurTargetRef}
               />
             </View>
           </View>

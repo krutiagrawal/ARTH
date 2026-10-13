@@ -22,8 +22,9 @@ function FadeInRow({ delay, children, style }: { delay: number; children: React.
   return <Animated.View style={[animStyle, style]}>{children}</Animated.View>;
 }
 
-const DRIVE_STATUS_COLORS: Record<'upcoming' | 'cancelled' | 'completed', string> = {
+const DRIVE_STATUS_COLORS: Record<'upcoming' | 'cancelled' | 'completed' | 'ended', string> = {
   upcoming: COLORS.golden,
+  ended: COLORS.sage,
   completed: COLORS.forest,
   cancelled: COLORS.coral,
 };
@@ -69,6 +70,9 @@ export function NgoDrivesScreen({ navigation }: any) {
         {drives.map((drive, i) => {
           const startsAt = new Date(drive.startsAt);
           const photoUrl = resolveMediaUrl(drive.photoUri);
+          // The server leaves status as 'upcoming' until someone marks the drive complete, so a
+          // drive past its date would still wear the Upcoming pill — show it as Ended instead.
+          const displayStatus = drive.status === 'upcoming' && drive.hasEnded ? 'ended' : drive.status;
           return (
             <FadeInRow key={drive.id} delay={i * 60}>
               <TouchableOpacity
@@ -92,8 +96,8 @@ export function NgoDrivesScreen({ navigation }: any) {
                       <View style={styles.titleRow}>
                         <Text style={styles.cardTitle} numberOfLines={2}>{drive.title}</Text>
                         <StatusPill
-                          label={drive.status.charAt(0).toUpperCase() + drive.status.slice(1)}
-                          color={DRIVE_STATUS_COLORS[drive.status]}
+                          label={displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1)}
+                          color={DRIVE_STATUS_COLORS[displayStatus]}
                         />
                       </View>
 

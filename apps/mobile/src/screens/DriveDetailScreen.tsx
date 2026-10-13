@@ -31,6 +31,9 @@ import { ApiError } from '../api/client';
 import type { ApiDrivePlant } from '../api/drives';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { DriveRsvpSheet } from '../components/drives/DriveRsvpSheet';
+import { CancelRsvpSheet } from '../components/drives/CancelRsvpSheet';
+import type { DriveRsvpInput, RsvpCancelReason } from '../api/drives';
 
 import { TEXT } from '../constants/typography';
 // Loaded only once a sponsorship payment is actually in flight — see PaymentSheetRunner's own
@@ -67,6 +70,10 @@ export function DriveDetailScreen({ navigation, route }: any) {
   const queryClient = useQueryClient();
   const { refreshing, onRefresh } = usePullToRefresh(isOwnDrive ? [refetch, attendeesQuery.refetch, sponsorsQuery.refetch] : refetch);
   const [actionError, setActionError] = useState('');
+  const [rsvpSheetOpen, setRsvpSheetOpen] = useState(false);
+  const [rsvpError, setRsvpError] = useState('');
+  const [cancelSheetOpen, setCancelSheetOpen] = useState(false);
+  const [cancelError, setCancelError] = useState('');
   const [sponsoringId, setSponsoringId] = useState<string | null>(null);
   // Non-null only while a real payment sheet is in flight — mounts LazyPaymentSheetRunner below.
   const [activeClientSecret, setActiveClientSecret] = useState<string | null>(null);
@@ -108,19 +115,41 @@ export function DriveDetailScreen({ navigation, route }: any) {
     );
   };
 
+  // Joining and cancelling both go through a short form (see DriveRsvpSheet / CancelRsvpSheet).
   const handleRsvp = async () => {
     if (!drive) return;
     setActionError('');
+    if (!drive.isRsvped) {
+      setRsvpSheetOpen(true);
+      return;
+    }
+    setCancelError('');
+    setCancelSheetOpen(true);
+  };
+
+  const handleCancelSubmit = async (input: { reason: RsvpCancelReason; note?: string }) => {
+    if (!drive) return;
+    setCancelError('');
     try {
-      if (drive.isRsvped) {
-        await leaveMutation.mutateAsync(drive.id);
-      } else {
-        await joinMutation.mutateAsync(drive.id);
-      }
+      await leaveMutation.mutateAsync({ id: drive.id, ...input });
+      setCancelSheetOpen(false);
       success();
     } catch (e) {
       errorHaptic();
-      setActionError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
+      setCancelError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
+    }
+  };
+
+  const handleRsvpSubmit = async (input: DriveRsvpInput) => {
+    if (!drive) return;
+    setRsvpError('');
+    try {
+      await joinMutation.mutateAsync({ id: drive.id, ...input });
+      setRsvpSheetOpen(false);
+      success();
+    } catch (e) {
+      errorHaptic();
+      setRsvpError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
     }
   };
 
@@ -209,7 +238,7 @@ export function DriveDetailScreen({ navigation, route }: any) {
             <View style={styles.infoRow}>
               <Text style={styles.infoIcon}>📅</Text>
               <Text style={styles.infoText}>
-                {new Date(drive.startsAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+                {new Date(drive.startsAt).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
                 {drive.durationMinutes ? ` · ${drive.durationMinutes} min` : ''}
               </Text>
             </View>
@@ -254,7 +283,7 @@ export function DriveDetailScreen({ navigation, route }: any) {
               {drive.pickupPoints.map((p, i) => (
                 <LocationActions
                   key={p.id}
-                  label={`Stop ${i + 1} · Reach by ${new Date(p.arrivalBy).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                  label={`Stop ${i + 1} · Reach by ${new Date(p.arrivalBy).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}`}
                   address={p.address}
                 />
               ))}
@@ -363,9 +392,19 @@ export function DriveDetailScreen({ navigation, route }: any) {
                           {a.attended && <Text style={styles.attendeeCheckmark}>✓</Text>}
                         </TouchableOpacity>
                       )}
-                      <View>
+                      <View style={{ flex: 1 }}>
                         <Text style={styles.attendeeName}>{a.name}</Text>
                         <Text style={styles.attendeeHandle}>@{a.handle}</Text>
+                        {drive.transportMode === 'ngo_provided' && (
+                          <Text style={styles.attendeeDetail}>
+                            🚌 {a.pickupPoint ? `Boards at ${a.pickupPoint.address}` : a.phone ? 'Coming by themselves' : 'Pickup not provided'}
+                          </Text>
+                        )}
+                        <Text style={styles.attendeeDetail}>📞 {a.phone ? `+91 ${a.phone}` : 'Phone not provided'}</Text>
+                        {a.emergencyContactName && a.emergencyContactPhone ? (
+                          <Text style={styles.attendeeDetail}>🆘 {a.emergencyContactName} · +91 {a.emergencyContactPhone}</Text>
+                        ) : null}
+                        {a.note ? <Text style={styles.attendeeDetail}>📝 {a.note}</Text> : null}
                       </View>
                     </View>
                     <Text style={styles.attendeeDate}>{new Date(a.rsvpedAt).toLocaleDateString()}</Text>
@@ -401,6 +440,29 @@ export function DriveDetailScreen({ navigation, route }: any) {
             />
           )}
         </ScrollView>
+      )}
+
+      {drive && (
+        <DriveRsvpSheet
+          visible={rsvpSheetOpen}
+          drive={drive}
+          defaultPhone={user?.phone}
+          submitting={joinMutation.isPending}
+          error={rsvpError}
+          onClose={() => setRsvpSheetOpen(false)}
+          onSubmit={handleRsvpSubmit}
+        />
+      )}
+
+      {drive && (
+        <CancelRsvpSheet
+          visible={cancelSheetOpen}
+          driveTitle={drive.title}
+          submitting={leaveMutation.isPending}
+          error={cancelError}
+          onClose={() => setCancelSheetOpen(false)}
+          onSubmit={handleCancelSubmit}
+        />
       )}
 
       {activeClientSecret && (
@@ -469,7 +531,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(94,133,80,0.12)',
   },
-  attendeeLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  attendeeLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   attendeeCheckbox: {
     width: 22,
     height: 22,
@@ -485,6 +547,7 @@ const styles = StyleSheet.create({
   attendeeHandle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   attendeeDate: { fontSize: 12, color: COLORS.textSecondary },
   rsvpButton: { marginTop: 4 },
+  attendeeDetail: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   cancelledBanner: {
     backgroundColor: COLORS.dangerLight,
     borderRadius: RADIUS.lg,

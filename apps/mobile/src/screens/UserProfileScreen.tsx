@@ -264,7 +264,7 @@ export function UserProfileScreen({ route, navigation }: any) {
                 ]}
                 primaryAction={
                   isOwn
-                    ? { label: 'Edit profile', icon: '✎', onPress: () => navigation?.navigate('EditProfile'), variant: 'outline' }
+                    ? { label: 'Edit profile', icon: '✎', onPress: () => navigation?.navigate('Settings'), variant: 'outline' }
                     : {
                         label: friendLabel(friendStatus),
                         icon: friendIcon(friendStatus),

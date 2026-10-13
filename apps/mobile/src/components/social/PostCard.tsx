@@ -302,7 +302,7 @@ export function PostCard({
           {post.treeLocation ? <PlantLine icon="📍" text={post.treeLocation} /> : null}
           <PlantLine
             icon="🕒"
-            text={new Date(post.treePlantedAt || post.createdAt).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+            text={new Date(post.treePlantedAt || post.createdAt).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
           />
           {post.treePublicId ? <PlantLine icon="🪪" text={`#${post.treePublicId}`} /> : null}
         </View>

@@ -10,6 +10,7 @@ export interface ApiUser {
   name: string;
   handle: string;
   bio: string | null;
+  phone?: string | null;
   avatarEmoji: string;
   xp: number;
   level: number;

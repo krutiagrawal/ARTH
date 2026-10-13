@@ -80,6 +80,8 @@ import {
   cancelDrive,
   completeDrive,
   setDriveFeatured,
+  type DriveRsvpInput,
+  type RsvpCancelReason,
 } from '../api/drives';
 import {
   fetchAdoptableTrees,
@@ -1033,7 +1035,10 @@ export function useSetDriveRsvpAttendance(driveId: string) {
 export function useJoinDrive() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => joinDrive(id),
+    mutationFn: (input: { id: string } & DriveRsvpInput) => {
+      const { id, ...details } = input;
+      return joinDrive(id, details);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['drives'] });
       // The Drives tab on an NGO's public profile embeds its own drive snapshots inside this
@@ -1061,7 +1066,10 @@ export function useCheckPlantingEligibility() {
 export function useLeaveDrive() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => leaveDrive(id),
+    mutationFn: (input: { id: string; reason: RsvpCancelReason; note?: string }) => {
+      const { id, ...details } = input;
+      return leaveDrive(id, details);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['drives'] });
       queryClient.invalidateQueries({ queryKey: ['ngos', 'public'] });

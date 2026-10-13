@@ -61,7 +61,7 @@ export function AdminAuditLogScreen({ navigation }: any) {
             <BorderCard style={styles.card}>
               <View style={styles.cardHeaderRow}>
                 <Text style={styles.action}>{actionLabel(log.action)}</Text>
-                <Text style={styles.timestamp}>{new Date(log.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</Text>
+                <Text style={styles.timestamp}>{new Date(log.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</Text>
               </View>
               <Text style={styles.target}>{log.targetType} · {log.targetId}</Text>
               <Text style={styles.actor}>by {log.actor.name} (@{log.actor.handle})</Text>

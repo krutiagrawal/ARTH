@@ -1999,6 +1999,7 @@ model DrivePickupPoint {
   order     Int
 
   drive Drive @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  rsvps DriveRsvp[]
 
   @@index([driveId])
   @@map("drive_pickup_points")
@@ -2046,10 +2047,21 @@ model DriveRsvp {
   attended    Boolean?
   hoursLogged Float?     @map("hours_logged")
   role        String?
+  // Volunteer-supplied details collected on the RSVP confirm form. Null on RSVPs made before the
+  // form existed. `pickupPointId` null on an ngo_provided drive means "I'll come by myself".
+  phone                 String?
+  emergencyContactName  String? @map("emergency_contact_name")
+  emergencyContactPhone String? @map("emergency_contact_phone")
+  note                  String?
+  pickupPointId         String? @map("pickup_point_id")
+  // Why the volunteer cancelled — set when status flips to cancelled, cleared on re-RSVP.
+  cancelReason          String? @map("cancel_reason")
+  cancelNote            String? @map("cancel_note")
   createdAt   DateTime   @default(now()) @map("created_at")
 
-  drive Drive @relation(fields: [driveId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  drive       Drive             @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pickupPoint DrivePickupPoint? @relation(fields: [pickupPointId], references: [id], onDelete: SetNull)
 
   @@unique([driveId, userId])
   @@index([driveId])

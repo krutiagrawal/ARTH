@@ -7,6 +7,8 @@ import {
   ownedListQuerySchema,
   paginationQuerySchema,
   attendanceSchema,
+  rsvpSchema,
+  cancelRsvpSchema,
 } from '../schemas/drives.schema';
 import { saveDrivePhoto } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
@@ -113,6 +115,11 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
           attended: a.attended,
           hoursLogged: a.hoursLogged,
           role: a.role,
+          phone: a.phone,
+          emergencyContactName: a.emergencyContactName,
+          emergencyContactPhone: a.emergencyContactPhone,
+          note: a.note,
+          pickupPoint: a.pickupPoint ? { id: a.pickupPoint.id, address: a.pickupPoint.address } : null,
         })),
       });
     },
@@ -226,13 +233,17 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
   );
 
   fastify.post<{ Params: { id: string } }>('/:id/rsvp', async (request, reply) => {
-    await driveService.rsvp(fastify.prisma, request.user!.id, request.params.id);
+    const parsed = rsvpSchema.safeParse(request.body ?? {});
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+    await driveService.rsvp(fastify.prisma, request.user!.id, request.params.id, parsed.data);
     const drive = await driveService.getDrive(fastify.prisma, request.params.id, request.user!.id);
     reply.status(201).send(serializeDrive(drive));
   });
 
   fastify.delete<{ Params: { id: string } }>('/:id/rsvp', async (request, reply) => {
-    await driveService.cancelRsvp(fastify.prisma, request.user!.id, request.params.id);
+    const parsed = cancelRsvpSchema.safeParse(request.body ?? {});
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+    await driveService.cancelRsvp(fastify.prisma, request.user!.id, request.params.id, parsed.data);
     reply.status(204).send();
   });
 

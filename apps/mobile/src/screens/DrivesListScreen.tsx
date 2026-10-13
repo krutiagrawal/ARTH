@@ -236,7 +236,7 @@ export function DrivesListScreen({ navigation }: any) {
                 </View>
                 <View style={styles.metaRow}>
                   <Text style={styles.metaText}>
-                    🕒 {starts.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                    🕒 {starts.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true })}
                   </Text>
                   <Text style={styles.metaText}>
                     👥 {drive.confirmedCount}

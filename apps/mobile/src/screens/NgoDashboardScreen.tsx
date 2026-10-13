@@ -231,11 +231,18 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
   // inside a tinted glass card, not the page itself).
   const seamText = getHeroSeamTextColors(theme);
 
+  // Hero stat cards use Home's see-through "liquid glass" (variant="clear") over the scenery;
+  // text colour adapts to the sky and a halo keeps it legible on any patch.
+  const statColor =
+    theme.period === 'goldenHour' ? '#5A2A0E' : theme.period === 'sunset' ? '#4A1D44' : theme.textOnSky;
+  const haloColor = statColor === '#FFFFFF' ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.85)';
+
   /** Shared props for the six "Your Impact" tiles: real glass cards tinted from the time-of-day
    * theme (same recipe as StreakCard/QuickAction), stretched to equal size. */
   const tileProps = {
     variant: 'glass' as const,
     fill: true,
+    compact: true,
     style: styles.gridTile,
     color: theme.accentColor,
     dark: theme.cardTint === 'dark',
@@ -314,52 +321,37 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
               icon="🤝"
               value={stats?.upcomingDrives ?? 0}
               label="Drives"
-              variant="glass"
-              dark
-              color={theme.accentColor}
-              cardBackground={theme.cardBackground}
-              cardBackgroundAlt={theme.cardBackgroundAlt}
-              cardOverlayAlpha={theme.cardOverlayAlpha}
-              textColor={theme.textSecondaryOnCard}
-              subTextColor={theme.textSecondaryOnCard}
-              borderColor={theme.cardBorder}
+              variant="clear"
+              color={statColor}
+              textColor={statColor}
+              subTextColor={statColor}
+              haloColor={haloColor}
               delay={0}
               onPress={() => onNavigateTab('Manage')}
-              blurTarget={blurTargetRef}
             />
             <View style={styles.statsRight}>
               <EcoWidget
                 icon="🔥"
                 value={streakCurrent}
                 label="Streak"
-                variant="glass"
-                dark
-                color={theme.accentColor}
-                cardBackground={theme.cardBackground}
-                cardBackgroundAlt={theme.cardBackgroundAlt}
-                cardOverlayAlpha={theme.cardOverlayAlpha}
-                textColor={theme.textSecondaryOnCard}
-                subTextColor={theme.textSecondaryOnCard}
-                borderColor={theme.cardBorder}
+                variant="clear"
+                color={statColor}
+                textColor={statColor}
+                subTextColor={statColor}
+                haloColor={haloColor}
                 delay={100}
                 onPress={() => navigation.navigate('NgoStreakBadges')}
-                blurTarget={blurTargetRef}
               />
               <EcoWidget
                 icon="🌍"
                 value={`${formatKg(stats?.co2AbsorptionKg)}kg`}
                 label="CO₂ (est.)"
-                variant="glass"
-                dark
-                color={theme.accentColor}
-                cardBackground={theme.cardBackground}
-                cardBackgroundAlt={theme.cardBackgroundAlt}
-                cardOverlayAlpha={theme.cardOverlayAlpha}
-                textColor={theme.textSecondaryOnCard}
-                subTextColor={theme.textSecondaryOnCard}
-                borderColor={theme.cardBorder}
+                variant="clear"
+                color={statColor}
+                textColor={statColor}
+                subTextColor={statColor}
+                haloColor={haloColor}
                 delay={200}
-                blurTarget={blurTargetRef}
               />
             </View>
           </View>
@@ -402,8 +394,6 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
                   delay={60}
                   onPress={() => onNavigateTab('Manage', 'trees')}
                 />
-              </View>
-              <View style={styles.gridRow}>
                 <EcoWidget
                   {...tileProps}
                   icon="💰"
@@ -474,7 +464,7 @@ const styles = StyleSheet.create({
 
   // `alignItems: 'stretch'` is what equalises tile heights — without it the shortest label sets
   // its own card's height and the row looks ragged.
-  gridRow: { flexDirection: 'row', alignItems: 'stretch', gap: 10, marginBottom: 10 },
+  gridRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8, marginBottom: 10 },
   gridTile: { flex: 1 },
 
   streakCard: { marginBottom: 4 },

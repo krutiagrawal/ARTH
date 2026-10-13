@@ -62,7 +62,7 @@ function DateField({ label, value, onChange }: { label: string; value: Date; onC
     <>
       <TouchableOpacity activeOpacity={0.8} onPress={() => setStep('date')}>
         <FormFieldShell label={label}>
-          <Text style={styles.inputText}>{value.toLocaleString()}</Text>
+          <Text style={styles.inputText}>{value.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</Text>
         </FormFieldShell>
       </TouchableOpacity>
       {step && (

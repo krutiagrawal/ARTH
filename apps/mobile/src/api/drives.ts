@@ -56,12 +56,24 @@ export async function fetchDrive(id: string): Promise<ApiDrive> {
   return apiFetch<ApiDrive>(`/api/drives/${id}`);
 }
 
-export async function joinDrive(id: string): Promise<ApiDrive> {
-  return apiFetch<ApiDrive>(`/api/drives/${id}/rsvp`, { method: 'POST' });
+export interface DriveRsvpInput {
+  phone: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+  /** null = the volunteer is making their own way (ngo_provided drives only). */
+  pickupPointId: string | null;
+  note?: string;
+  confirmed: true;
 }
 
-export async function leaveDrive(id: string): Promise<void> {
-  await apiFetch<void>(`/api/drives/${id}/rsvp`, { method: 'DELETE' });
+export async function joinDrive(id: string, input: DriveRsvpInput): Promise<ApiDrive> {
+  return apiFetch<ApiDrive>(`/api/drives/${id}/rsvp`, { method: 'POST', body: input });
+}
+
+export type RsvpCancelReason = 'schedule_clash' | 'unwell' | 'transport' | 'changed_mind' | 'other';
+
+export async function leaveDrive(id: string, input: { reason: RsvpCancelReason; note?: string }): Promise<void> {
+  await apiFetch<void>(`/api/drives/${id}/rsvp`, { method: 'DELETE', body: input });
 }
 
 // clientSecret is null when the backend has no Stripe key configured (local/dev only — see
@@ -180,6 +192,13 @@ export interface ApiDriveAttendee {
   attended: boolean | null;
   hoursLogged: number | null;
   role: string | null;
+  /** Null for RSVPs made before the confirm form existed. */
+  phone?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  note?: string | null;
+  /** Null on an ngo_provided drive = coming by themselves. */
+  pickupPoint?: { id: string; address: string } | null;
 }
 
 export async function fetchDriveAttendees(driveId: string): Promise<{ total: number; attendees: ApiDriveAttendee[] }> {

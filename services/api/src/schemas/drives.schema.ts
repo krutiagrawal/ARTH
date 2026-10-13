@@ -86,3 +86,31 @@ export const attendanceSchema = z.object({
   hoursLogged: z.union([z.number().min(0).max(1000), z.null()]).optional(),
   role: z.union([z.string().max(100), z.null()]).optional(),
 });
+
+const indianMobile = z.string().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit mobile number');
+
+export const rsvpSchema = z.object({
+  phone: indianMobile,
+  emergencyContactName: z
+    .string()
+    .trim()
+    .min(2, 'Emergency contact name is required')
+    .max(100)
+    .regex(/^\p{L}[\p{L} .'-]*$/u, 'Emergency contact name can only contain letters'),
+  emergencyContactPhone: indianMobile,
+  // Omitted/null = the volunteer is making their own way (only meaningful for ngo_provided drives).
+  pickupPointId: z.string().uuid().nullish(),
+  note: z.string().trim().max(300).nullish(),
+  confirmed: z.literal(true, { errorMap: () => ({ message: 'Please confirm you will attend' }) }),
+}).refine((v) => v.emergencyContactPhone !== v.phone, {
+  message: 'Emergency contact must be a different number from your own',
+  path: ['emergencyContactPhone'],
+});
+export type RsvpInput = z.infer<typeof rsvpSchema>;
+
+export const RSVP_CANCEL_REASONS = ['schedule_clash', 'unwell', 'transport', 'changed_mind', 'other'] as const;
+export const cancelRsvpSchema = z.object({
+  reason: z.enum(RSVP_CANCEL_REASONS, { errorMap: () => ({ message: 'Please choose a reason' }) }),
+  note: z.string().trim().max(300).nullish(),
+});
+export type CancelRsvpInput = z.infer<typeof cancelRsvpSchema>;

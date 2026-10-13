@@ -173,7 +173,7 @@ export function NurseryProfileScreen({ route, navigation }: any) {
         }
         primaryAction={
           isOwn
-            ? { label: 'Edit profile', onPress: () => navigation.navigate('EditNurseryProfile'), variant: 'outline' }
+            ? { label: 'Edit profile', onPress: () => navigation.navigate('NurserySettings'), variant: 'outline' }
             : {
                 label: followLabel(followStatus, followersCount ?? 0),
                 onPress: toggleFollow,
