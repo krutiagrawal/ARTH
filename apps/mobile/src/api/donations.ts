@@ -76,8 +76,31 @@ export interface ApiMyDonation {
   ngoName: string;
 }
 
-export async function fetchMyDonations(params: { page?: number; take?: number } = {}): Promise<{ total: number; donations: ApiMyDonation[] }> {
+export type DonationStatus = ApiMyDonation['status'];
+export type DonationPeriod = '30d' | '6m' | '1y';
+
+export interface MyDonationsSummary {
+  /** Lifetime, settled donations only; unaffected by the search/filters. */
+  totalCents: number;
+  count: number;
+  ngos: number;
+  /** Donations of any status — distinguishes "no donations yet" from "no matches". */
+  allCount: number;
+}
+
+export interface MyDonationsFilters {
+  q?: string;
+  status?: DonationStatus;
+  period?: DonationPeriod;
+}
+
+export async function fetchMyDonations(
+  params: MyDonationsFilters & { page?: number; take?: number } = {},
+): Promise<{ total: number; summary: MyDonationsSummary; donations: ApiMyDonation[] }> {
   const qs = new URLSearchParams();
+  if (params.q) qs.set('q', params.q);
+  if (params.status) qs.set('status', params.status);
+  if (params.period) qs.set('period', params.period);
   if (params.page) qs.set('page', String(params.page));
   if (params.take) qs.set('take', String(params.take));
   return apiFetch(`/api/campaigns/mine-donations${qs.toString() ? `?${qs}` : ''}`);

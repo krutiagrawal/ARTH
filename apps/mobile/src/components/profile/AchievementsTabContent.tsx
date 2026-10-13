@@ -5,6 +5,7 @@ import { BorderCard } from '../common/BorderCard';
 import { ProgressRing } from '../common/ProgressRing';
 import { AchievementGrid, AchievementDetailModal } from '../common/AchievementGrid';
 import { StreakCalendar } from '../common/StreakCalendar';
+import { StreakInfoSheet } from '../streak/StreakInfoSheet';
 import { ForestGallery } from '../stories/ForestGallery';
 import { COLORS } from '../../constants/colors';
 import { getForestLevelLabel, getXpProgress } from '../../constants/forestLevels';
@@ -34,6 +35,7 @@ export function AchievementsTabContent({
   showForestGallery?: boolean;
 }) {
   const [selected, setSelected] = useState<ApiAchievement | null>(null);
+  const [streakInfoOpen, setStreakInfoOpen] = useState(false);
   const xpProgress = xp ? getXpProgress(xp.xp, xp.level) : null;
 
   return (
@@ -60,7 +62,15 @@ export function AchievementsTabContent({
       ) : null}
 
       {customStreak}
-      {!customStreak && streak ? <StreakCalendar streakCurrent={streak.streakCurrent} weeks={streak.weeks} /> : null}
+      {!customStreak && streak ? (
+        <StreakCalendar
+          streakCurrent={streak.streakCurrent}
+          weeks={streak.weeks}
+          // Freezes/XP only exist for individuals; groups reuse this component without an `xp` prop.
+          onInfoPress={xp ? () => setStreakInfoOpen(true) : undefined}
+        />
+      ) : null}
+      {xp ? <StreakInfoSheet visible={streakInfoOpen} onClose={() => setStreakInfoOpen(false)} /> : null}
 
       <AchievementGrid achievements={achievements} onSelect={setSelected} />
 

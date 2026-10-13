@@ -28,7 +28,7 @@ import { TreeCard } from '../components/common/TreeCard';
 import { Sheet } from '../components/common/Sheet';
 import { useHaptics } from '../hooks/useHaptics';
 import { useAuth } from '../context/AuthContext';
-import { useTrees, useTodayMissions, useEcoFacts, useSettings, useGamesStatus } from '../hooks/useApiQueries';
+import { useTrees, useTodayMissions, useEcoFacts, useSettings, useGamesStatus, useStreakStatus } from '../hooks/useApiQueries';
 import { useDeviceWeather } from '../hooks/useDeviceWeather';
 import type { ApiUser } from '../api/auth';
 import type { ApiTree } from '../api/trees';
@@ -103,6 +103,10 @@ function HeroSection({
   blurTarget: RefObject<View | null>;
 }) {
   const insets = useSafeAreaInsets();
+  const streakStatus = useStreakStatus().data;
+  // Broken-but-revivable and about-to-break streaks make the tile a shortcut to the save/revive screen.
+  const streakNeedsAction = streakStatus ? streakStatus.revivable || streakStatus.state === 'at_risk' : false;
+  const streakSublabel = streakStatus?.revivable ? 'Tap to revive' : streakStatus?.state === 'at_risk' ? 'At risk – tap to save' : undefined;
   const isLightText = theme.textOnSky === '#FFFFFF';
   // Stat widgets sit bare on the sky (no card). goldenHour/sunset use white header text, but their
   // skies are pale peach/pink, so the stats use a deep tone there instead; only the genuinely dark
@@ -180,6 +184,8 @@ function HeroSection({
           icon={(user?.streakCurrent ?? 0) > 0 ? '🔥' : '💤'}
           value={user?.streakCurrent ?? 0}
           label={`day${(user?.streakCurrent ?? 0) !== 1 ? 's' : ''}`}
+          sublabel={streakSublabel}
+          onPress={streakNeedsAction ? () => navigation.navigate('StreakProtection') : undefined}
           variant="clear"
           color={statColor}
           textColor={statColor}

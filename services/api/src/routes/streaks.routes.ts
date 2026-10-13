@@ -1,16 +1,26 @@
 import { FastifyInstance } from 'fastify';
-import { protectStreakSchema } from '../schemas/streaks.schema';
-import { startOfUtcDay, addDays, isActiveDay, recordPlantedToday } from '../services/streak.service';
+import { protectStreakSchema, reviveStreakSchema } from '../schemas/streaks.schema';
+import {
+  startOfUtcDay,
+  addDays,
+  calendarStartDate,
+  isActiveDay,
+  recordPlantedToday,
+  getStreakStatus,
+  syncStreak,
+  reviveStreak,
+  XP_STREAK_SAVE_COST,
+  FREEZE_EARN_EVERY_DAYS,
+  MAX_STREAK_FREEZES,
+} from '../services/streak.service';
 import { addXp } from '../services/xp.service';
 import { BadRequestError } from '../utils/errors';
-
-const XP_STREAK_SAVE_COST = 100;
 
 export default async function streaksRoutes(fastify: FastifyInstance) {
   fastify.get<{ Querystring: { weeks?: string } }>('/calendar', async (request, reply) => {
     const weeksCount = Math.min(Math.max(Number(request.query.weeks) || 4, 1), 12);
     const today = startOfUtcDay(new Date());
-    const startDate = addDays(today, -(weeksCount * 7 - 1));
+    const startDate = calendarStartDate(today, weeksCount);
 
     const rows = await fastify.prisma.streakHistory.findMany({
       where: { userId: request.user!.id, activityDate: { gte: startDate } },
@@ -31,6 +41,40 @@ export default async function streaksRoutes(fastify: FastifyInstance) {
     }
 
     reply.send(weeks);
+  });
+
+  // Real streak state (not the possibly-stale stored counter) plus whether a missed day can be revived.
+  fastify.get('/status', async (request, reply) => {
+    const { user, status } = await syncStreak(fastify.prisma, request.user!.id);
+    const [freezesUsed, xpSavesUsed] = await Promise.all([
+      fastify.prisma.streakHistory.count({ where: { userId: user.id, protectedBy: 'freeze' } }),
+      fastify.prisma.streakHistory.count({ where: { userId: user.id, protectedBy: 'xp' } }),
+    ]);
+    reply.send({
+      ...status,
+      freezesUsed,
+      xpSavesUsed,
+      streakMax: user.streakMax,
+      streakFreezesAvailable: user.streakFreezesAvailable,
+      xp: user.xp,
+      xpCost: XP_STREAK_SAVE_COST,
+      freezeEarnEveryDays: FREEZE_EARN_EVERY_DAYS,
+      freezeCap: MAX_STREAK_FREEZES,
+    });
+  });
+
+  fastify.post('/revive', async (request, reply) => {
+    const parsed = reviveStreakSchema.safeParse(request.body);
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    const { user, status } = await fastify.prisma.$transaction((tx) => reviveStreak(tx, request.user!.id, parsed.data.method));
+    reply.send({
+      streakCurrent: user.streakCurrent,
+      streakMax: user.streakMax,
+      streakFreezesAvailable: user.streakFreezesAvailable,
+      xp: user.xp,
+      state: status.state,
+    });
   });
 
   fastify.post('/protect', async (request, reply) => {

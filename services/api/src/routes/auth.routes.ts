@@ -13,6 +13,7 @@ import {
   checkAvailabilitySchema,
 } from '../schemas/auth.schema';
 import * as authService from '../services/auth.service';
+import { syncStreak } from '../services/streak.service';
 import { BadRequestError } from '../utils/errors';
 import { saveNurseryVerificationPhoto, saveNgoVerificationDocument, saveNgoPastWorkPhoto } from '../services/upload.service';
 import { splitMultipartBody, splitMultipartNamedFiles } from '../utils/multipart';
@@ -230,7 +231,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
     instance.get('/me', async (request, reply) => {
       const impact = await refreshUserImpact(fastify.prisma, request.user!.id);
-      const user = await fastify.prisma.user.findUniqueOrThrow({ where: { id: request.user!.id } });
+      const { user } = await syncStreak(fastify.prisma, request.user!.id);
       reply.send({ ...authService.toPublicUser(user), co2NextYearKg: impact.co2NextYearKg });
     });
 

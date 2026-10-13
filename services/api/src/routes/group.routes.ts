@@ -4,7 +4,7 @@ import { saveGroupLogo } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
 import { BadRequestError } from '../utils/errors';
 import { updateGroupProfileSchema, setMemberRoleSchema, createGroupChallengeSchema } from '../schemas/group.schema';
-import { startOfUtcDay, addDays } from '../services/streak.service';
+import { startOfUtcDay, addDays, calendarStartDate } from '../services/streak.service';
 import { getGroupActivity } from '../services/groupActivity.service';
 
 function serializeGroupProfile(group: any) {
@@ -122,7 +122,7 @@ export default async function groupRoutes(fastify: FastifyInstance) {
     const group = await groupService.getOwnProfile(fastify.prisma, request.user!.id);
     const weeksCount = Math.min(Math.max(Number(request.query.weeks) || 4, 1), 12);
     const today = startOfUtcDay(new Date());
-    const startDate = addDays(today, -(weeksCount * 7 - 1));
+    const startDate = calendarStartDate(today, weeksCount);
 
     const rows = await fastify.prisma.groupStreakHistory.findMany({
       where: { groupId: group.id, activityDate: { gte: startDate } },

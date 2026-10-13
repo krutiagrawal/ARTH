@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
-import { Text } from '../components/common/AppText';
+import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -8,20 +8,37 @@ import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
+import { Sheet } from '../components/common/Sheet';
+import { OutlineChip } from '../components/common/OutlineChip';
 import { useMyDonations } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PageFooter } from '../components/common/PageFooter';
 import { infiniteScrollProps } from '../hooks/useInfiniteList';
-import type { ApiMyDonation } from '../api/donations';
+import type { ApiMyDonation, DonationPeriod, DonationStatus } from '../api/donations';
 
 import { TEXT } from '../constants/typography';
 
-const STATUS_STYLE: Record<ApiMyDonation['status'], { bg: string; color: string; label: string }> = {
+const STATUS_STYLE: Record<DonationStatus, { bg: string; color: string; label: string }> = {
   succeeded: { bg: 'rgba(94,133,80,0.15)', color: COLORS.forest, label: '✓ Received' },
   pending: { bg: 'rgba(212,168,83,0.22)', color: COLORS.earthDark, label: 'Pending' },
   failed: { bg: 'rgba(194,74,59,0.12)', color: COLORS.coral, label: 'Failed' },
   refunded: { bg: 'rgba(194,74,59,0.12)', color: COLORS.coral, label: 'Refunded' },
 };
+
+const STATUS_FILTERS: { key: DonationStatus; label: string }[] = [
+  { key: 'succeeded', label: 'Received' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'failed', label: 'Failed' },
+  { key: 'refunded', label: 'Refunded' },
+];
+
+const PERIOD_FILTERS: { key: DonationPeriod; label: string }[] = [
+  { key: '30d', label: 'Last 30 days' },
+  { key: '6m', label: 'Last 6 months' },
+  { key: '1y', label: 'Last year' },
+];
+
+const SEARCH_DEBOUNCE_MS = 350;
 
 function formatRupees(cents: number) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`;
@@ -34,6 +51,15 @@ function formatDate(iso: string) {
 function monthKey(iso: string) {
   const d = new Date(iso);
   return d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+}
+
+function ActiveChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <TouchableOpacity style={styles.activeChip} onPress={onRemove} accessibilityRole="button" accessibilityLabel={`Remove filter ${label}`}>
+      <Text style={styles.activeChipText} numberOfLines={1}>{label}</Text>
+      <Text style={styles.activeChipX}>✕</Text>
+    </TouchableOpacity>
+  );
 }
 
 function DonationRow({ d, navigation }: { d: ApiMyDonation; navigation: any }) {
@@ -63,20 +89,41 @@ function DonationRow({ d, navigation }: { d: ApiMyDonation; navigation: any }) {
 
 export function MyDonationsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const listQuery = useMyDonations();
-  const { data, isLoading, refetch } = listQuery;
+
+  const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [status, setStatus] = useState<DonationStatus | null>(null);
+  const [period, setPeriod] = useState<DonationPeriod | null>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  // Search runs on the server (the list is paged), so wait for a pause in typing before querying.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  const listQuery = useMyDonations({
+    q: debouncedQuery || undefined,
+    status: status ?? undefined,
+    period: period ?? undefined,
+  });
+  const { data, isLoading, isPlaceholderData, refetch } = listQuery;
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
   const donations = data?.donations ?? [];
+  const summary = data?.summary;
+  const matchCount = data?.total ?? 0;
 
-  // Totals cover what has been loaded so far (list is paginated); only money actually received counts.
-  const summary = useMemo(() => {
-    const ok = donations.filter((d) => d.status === 'succeeded');
-    return {
-      totalCents: ok.reduce((sum, d) => sum + d.amountCents, 0),
-      count: ok.length,
-      ngos: new Set(ok.map((d) => d.ngoName)).size,
-    };
-  }, [donations]);
+  const activeCount = (status ? 1 : 0) + (period ? 1 : 0);
+  const filtersActive = activeCount > 0 || debouncedQuery !== '';
+  const clearChips = () => {
+    setStatus(null);
+    setPeriod(null);
+  };
+  const clearAll = () => {
+    setQuery('');
+    setDebouncedQuery('');
+    clearChips();
+  };
 
   const groups = useMemo(() => {
     const out: { month: string; items: ApiMyDonation[] }[] = [];
@@ -88,6 +135,8 @@ export function MyDonationsScreen({ navigation }: any) {
     }
     return out;
   }, [donations]);
+
+  const hasNoDonationsAtAll = !isLoading && summary != null && summary.allCount === 0;
 
   return (
     <View style={styles.container}>
@@ -106,7 +155,7 @@ export function MyDonationsScreen({ navigation }: any) {
 
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
-      ) : donations.length === 0 ? (
+      ) : hasNoDonationsAtAll ? (
         <EmptyState
           icon="💚"
           title="No donations yet"
@@ -118,36 +167,121 @@ export function MyDonationsScreen({ navigation }: any) {
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           {...infiniteScrollProps(listQuery)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
-          <BorderCard style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>You've given</Text>
-            <Text style={styles.summaryAmount}>{formatRupees(summary.totalCents)}</Text>
-            <View style={styles.statsRow}>
-              <View style={styles.stat}>
-                <Text style={styles.statValue}>{summary.count}</Text>
-                <Text style={styles.statLabel}>donation{summary.count === 1 ? '' : 's'}</Text>
+          {summary && (
+            <BorderCard style={styles.summaryCard}>
+              <Text style={styles.summaryLabel}>You've given</Text>
+              <Text style={styles.summaryAmount}>{formatRupees(summary.totalCents)}</Text>
+              <View style={styles.statsRow}>
+                <View style={styles.stat}>
+                  <Text style={styles.statValue}>{summary.count}</Text>
+                  <Text style={styles.statLabel}>donation{summary.count === 1 ? '' : 's'}</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.stat}>
+                  <Text style={styles.statValue}>{summary.ngos}</Text>
+                  <Text style={styles.statLabel}>NGO{summary.ngos === 1 ? '' : 's'} supported</Text>
+                </View>
               </View>
-              <View style={styles.statDivider} />
-              <View style={styles.stat}>
-                <Text style={styles.statValue}>{summary.ngos}</Text>
-                <Text style={styles.statLabel}>NGO{summary.ngos === 1 ? '' : 's'} supported</Text>
-              </View>
-            </View>
-          </BorderCard>
+            </BorderCard>
+          )}
 
-          {groups.map((g) => (
-            <View key={g.month}>
-              <Text style={styles.monthLabel}>{g.month}</Text>
-              {g.items.map((d) => (
-                <DonationRow key={d.id} d={d} navigation={navigation} />
-              ))}
+          <View style={styles.searchRow}>
+            <View style={styles.searchBox}>
+              <Text style={styles.searchIcon}>🔍</Text>
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Search campaign or NGO"
+                placeholderTextColor={COLORS.textMuted}
+                style={styles.searchInput}
+                returnKeyType="search"
+                autoCorrect={false}
+              />
+              {query !== '' && (
+                <TouchableOpacity onPress={() => setQuery('')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Clear search">
+                  <Text style={styles.searchClear}>✕</Text>
+                </TouchableOpacity>
+              )}
             </View>
-          ))}
+            <TouchableOpacity style={styles.filterBtn} onPress={() => setFilterOpen(true)} accessibilityRole="button" accessibilityLabel="Filters">
+              <Text style={styles.filterBtnText}>⚙ Filters</Text>
+              {activeCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{activeCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {filtersActive && (
+            <View style={styles.metaRow}>
+              <Text style={styles.countText}>{matchCount} donation{matchCount === 1 ? '' : 's'}</Text>
+            </View>
+          )}
+
+          {activeCount > 0 && (
+            <View style={styles.activeRow}>
+              {status && <ActiveChip label={STATUS_FILTERS.find((f) => f.key === status)!.label} onRemove={() => setStatus(null)} />}
+              {period && <ActiveChip label={PERIOD_FILTERS.find((f) => f.key === period)!.label} onRemove={() => setPeriod(null)} />}
+              <TouchableOpacity onPress={clearChips} accessibilityRole="button">
+                <Text style={styles.clearAll}>Clear all</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={isPlaceholderData ? styles.stale : undefined}>
+            {donations.length === 0 ? (
+              <View style={styles.noMatch}>
+                <Text style={styles.noMatchTitle}>No donations match</Text>
+                {filtersActive && (
+                  <TouchableOpacity onPress={clearAll} accessibilityRole="button">
+                    <Text style={styles.clearAll}>Clear search & filters</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              groups.map((g) => (
+                <View key={g.month}>
+                  <Text style={styles.monthLabel}>{g.month}</Text>
+                  {g.items.map((d) => (
+                    <DonationRow key={d.id} d={d} navigation={navigation} />
+                  ))}
+                </View>
+              ))
+            )}
+          </View>
           <PageFooter loading={listQuery.isFetchingNextPage} />
         </ScrollView>
       )}
+
+      <Sheet visible={filterOpen} onClose={() => setFilterOpen(false)} title="Filters" scrollable>
+        <Text style={styles.sheetLabel}>Status</Text>
+        <View style={styles.wrapRow}>
+          {STATUS_FILTERS.map((f) => (
+            <OutlineChip key={f.key} label={f.label} active={status === f.key} onPress={() => setStatus(status === f.key ? null : f.key)} />
+          ))}
+        </View>
+
+        <Text style={styles.sheetLabel}>Time period</Text>
+        <View style={styles.wrapRow}>
+          {PERIOD_FILTERS.map((f) => (
+            <OutlineChip key={f.key} label={f.label} active={period === f.key} onPress={() => setPeriod(period === f.key ? null : f.key)} />
+          ))}
+        </View>
+
+        <View style={styles.sheetFooter}>
+          <TouchableOpacity onPress={clearChips} disabled={activeCount === 0} accessibilityRole="button">
+            <Text style={[styles.clearAll, activeCount === 0 && { opacity: 0.4 }]}>Clear all</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.applyBtn} onPress={() => setFilterOpen(false)} accessibilityRole="button">
+            <Text style={styles.applyText}>Show {matchCount} donation{matchCount === 1 ? '' : 's'}</Text>
+          </TouchableOpacity>
+        </View>
+      </Sheet>
     </View>
   );
 }
@@ -161,7 +295,7 @@ const styles = StyleSheet.create({
   headerTitle: { flex: 1, ...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
 
-  summaryCard: { alignItems: 'center', marginBottom: 8 },
+  summaryCard: { alignItems: 'center', marginBottom: 14 },
   summaryLabel: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
   summaryAmount: { fontSize: 34, fontWeight: '800', color: COLORS.forest, marginTop: 2 },
   statsRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', marginTop: 14 },
@@ -170,7 +304,33 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
   statDivider: { width: 1.5, height: 28, backgroundColor: COLORS.warmBrown, opacity: 0.3 },
 
-  monthLabel: { fontSize: 12, fontWeight: '700', color: COLORS.textMuted, textTransform: 'uppercase', marginTop: 16, marginBottom: 8 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, height: 44, borderRadius: 14, paddingHorizontal: 12, borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  searchIcon: { fontSize: 14 },
+  searchInput: { flex: 1, fontSize: 14, color: COLORS.textPrimary, paddingVertical: 0 },
+  searchClear: { fontSize: 14, color: COLORS.textMuted },
+  filterBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 44, borderRadius: 14, paddingHorizontal: 12, borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  filterBtnText: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary },
+  badge: { minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 5, backgroundColor: COLORS.forest, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { fontSize: 11, fontWeight: '700', color: COLORS.white },
+  metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  countText: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted },
+  activeRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 12 },
+  activeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '100%', paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  activeChipText: { fontSize: 12, fontWeight: '600', color: COLORS.textPrimary, flexShrink: 1 },
+  activeChipX: { fontSize: 11, color: COLORS.textMuted },
+  clearAll: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
+  sheetLabel: { fontSize: 12, fontWeight: '700', color: COLORS.textMuted, textTransform: 'uppercase', marginTop: 12, marginBottom: 6 },
+  wrapRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  sheetFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 20 },
+  applyBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: RADIUS.full, backgroundColor: COLORS.forest },
+  applyText: { fontSize: 14, fontWeight: '700', color: COLORS.white },
+
+  stale: { opacity: 0.5 },
+  noMatch: { alignItems: 'center', paddingVertical: 32, gap: 8 },
+  noMatchTitle: { ...TEXT.subheading, color: COLORS.textSecondary },
+
+  monthLabel: { fontSize: 12, fontWeight: '700', color: COLORS.textMuted, textTransform: 'uppercase', marginTop: 6, marginBottom: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: RADIUS.md, padding: 14, marginBottom: 10 },
   iconWrap: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(94,133,80,0.12)' },
   icon: { fontSize: 18 },

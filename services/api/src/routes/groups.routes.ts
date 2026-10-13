@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import * as groupService from '../services/group.service';
 import { BadRequestError } from '../utils/errors';
 import { joinGroupSchema } from '../schemas/group.schema';
-import { startOfUtcDay, addDays } from '../services/streak.service';
+import { startOfUtcDay, addDays, calendarStartDate } from '../services/streak.service';
 import { getGroupActivity } from '../services/groupActivity.service';
 import { listGroupDrives } from '../services/drive.service';
 import { serializeDrive } from './drives.routes';
@@ -112,7 +112,7 @@ export default async function groupsRoutes(fastify: FastifyInstance) {
       await groupService.getGroupForMember(fastify.prisma, request.user!.id, request.params.id);
       const weeksCount = Math.min(Math.max(Number(request.query.weeks) || 4, 1), 12);
       const today = startOfUtcDay(new Date());
-      const startDate = addDays(today, -(weeksCount * 7 - 1));
+      const startDate = calendarStartDate(today, weeksCount);
 
       const rows = await fastify.prisma.groupStreakHistory.findMany({
         where: { groupId: request.params.id, activityDate: { gte: startDate } },

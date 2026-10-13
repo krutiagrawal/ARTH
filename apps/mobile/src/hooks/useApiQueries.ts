@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
 import { pageParams, totalPageParams, mergePages, totalInfinite, flatItems, arrayPageParams, flatArrays } from './useInfiniteList';
 import type { ApiPublicFollowersPage } from '../api/publicFollowers';
 import { useAuth } from '../context/AuthContext';
@@ -27,7 +27,7 @@ import {
 import { fetchChallenges, joinChallenge, leaveChallenge, fetchChallengeFriendsJoined } from '../api/challenges';
 import { fetchGlobalCounter } from '../api/community';
 import { fetchSettings, updateSettings, type ApiUserSettings } from '../api/settings';
-import { protectStreak } from '../api/streaks';
+import { protectStreak, fetchStreakStatus, reviveStreak } from '../api/streaks';
 import { fetchFeed, cheerActivity } from '../api/feed';
 import {
   fetchPublicProfile,
@@ -109,6 +109,7 @@ import {
   fetchMyDonations,
   CreateCampaignInput,
   type DonationExtras,
+  type MyDonationsFilters,
 } from '../api/donations';
 import {
   fetchNgoProfile,
@@ -782,6 +783,26 @@ export function useUpdateSettings() {
   });
 }
 
+export function useStreakStatus() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['streaks', 'status'],
+    queryFn: fetchStreakStatus,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useReviveStreak() {
+  const queryClient = useQueryClient();
+  const { refreshUser } = useAuth();
+  return useMutation({
+    mutationFn: (method: 'freeze' | 'xp') => reviveStreak(method),
+    onSuccess: async () => {
+      await Promise.all([queryClient.invalidateQueries({ queryKey: ['streaks'] }), refreshUser()]);
+    },
+  });
+}
+
 export function useProtectStreak() {
   const queryClient = useQueryClient();
   const { refreshUser } = useAuth();
@@ -789,7 +810,7 @@ export function useProtectStreak() {
     mutationFn: (method: 'plant' | 'freeze' | 'xp') => protectStreak(method),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['streaks', 'calendar'] }),
+        queryClient.invalidateQueries({ queryKey: ['streaks'] }),
         refreshUser(),
       ]);
     },
@@ -1357,12 +1378,14 @@ export function useMyCampaigns() {
   });
 }
 
-export function useMyDonations() {
+export function useMyDonations(filters: MyDonationsFilters = {}) {
   const { isAuthenticated } = useAuth();
   return useInfiniteQuery({
-    queryKey: ['campaigns', 'mine-donations'],
-    queryFn: ({ pageParam }) => fetchMyDonations({ page: pageParam, take: 30 }),
+    queryKey: ['campaigns', 'mine-donations', filters],
+    queryFn: ({ pageParam }) => fetchMyDonations({ ...filters, page: pageParam, take: 30 }),
     enabled: isAuthenticated,
+    // Keep showing the previous results while a new search/filter loads, instead of flashing empty.
+    placeholderData: keepPreviousData,
     ...totalInfinite<Awaited<ReturnType<typeof fetchMyDonations>>, 'donations'>('donations'),
   });
 }

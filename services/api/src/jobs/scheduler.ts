@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { runStreakAtRiskJob, runStreakBrokenJob } from './streaks.job';
+import { runStreakAtRiskJob, runStreakBrokenJob, runStreakStaleResetJob } from './streaks.job';
 import { runReengagementJob } from './reengagement.job';
 import { runCartAbandonedJob } from './cartAbandoned.job';
 import { runNurseryFulfillmentTodayJob } from './nurseryFulfillmentToday.job';
@@ -33,6 +33,7 @@ export function startScheduler(app: FastifyInstance): void {
     try {
       await runStreakAtRiskJob(app.prisma);
       await runStreakBrokenJob(app.prisma);
+      await runStreakStaleResetJob(app.prisma);
       await runReengagementJob(app.prisma);
       await runCartAbandonedJob(app.prisma);
       await runNurseryFulfillmentTodayJob(app.prisma);

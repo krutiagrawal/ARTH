@@ -32,9 +32,14 @@ interface OwnedListFilter {
 }
 
 interface MyDonationsFilter {
+  q?: string;
+  status?: 'succeeded' | 'pending' | 'failed' | 'refunded';
+  period?: '30d' | '6m' | '1y';
   page?: number;
   take?: number;
 }
+
+const PERIOD_DAYS = { '30d': 30, '6m': 182, '1y': 365 } as const;
 
 const campaignInclude = {
   ngo: true,
@@ -205,18 +210,47 @@ export async function listMyDonations(prisma: PrismaClient, userId: string, filt
   const take = Math.min(filter.take ?? 50, 50);
   const page = Math.max(filter.page ?? 1, 1);
 
-  const [donations, total] = await Promise.all([
+  const where = {
+    userId,
+    ...(filter.status ? { status: filter.status } : {}),
+    ...(filter.period ? { createdAt: { gte: new Date(Date.now() - PERIOD_DAYS[filter.period] * 24 * 60 * 60 * 1000) } } : {}),
+    ...(filter.q
+      ? {
+          OR: [
+            { campaign: { title: { contains: filter.q, mode: 'insensitive' as const } } },
+            { campaign: { ngo: { orgName: { contains: filter.q, mode: 'insensitive' as const } } } },
+          ],
+        }
+      : {}),
+  };
+
+  // Lifetime totals ignore the search/filters: they're the "you've given" headline, and the
+  // list below can then page through any slice without the totals jumping around.
+  const settled = { userId, status: 'succeeded' as const };
+  const [donations, total, sum, settledCount, ngoRows, anyCount] = await Promise.all([
     prisma.donation.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
+      where,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take,
       skip: (page - 1) * take,
       include: { campaign: { include: { ngo: true } } },
     }),
+    prisma.donation.count({ where }),
+    prisma.donation.aggregate({ where: settled, _sum: { amountCents: true } }),
+    prisma.donation.count({ where: settled }),
+    prisma.donation.findMany({ where: settled, distinct: ['campaignId'], select: { campaign: { select: { ngoId: true } } } }),
     prisma.donation.count({ where: { userId } }),
   ]);
 
-  return { donations, total };
+  const summary = {
+    totalCents: sum._sum.amountCents ?? 0,
+    count: settledCount,
+    ngos: new Set(ngoRows.map((r) => r.campaign.ngoId)).size,
+    /** Donations of any status — lets the client tell "no donations yet" from "no matches". */
+    allCount: anyCount,
+  };
+
+  return { donations, total, summary };
 }
 
 export async function createDonationIntent(

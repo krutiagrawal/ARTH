@@ -4,12 +4,13 @@ import { toPublicUser, issueTokenPair, logoutAll } from '../services/auth.servic
 import { hashPassword, comparePassword } from '../utils/password';
 import { BadRequestError, ConflictError, UnauthorizedError } from '../utils/errors';
 import { refreshUserImpact } from '../services/treeImpact.service';
+import { syncStreak } from '../services/streak.service';
 
 export default async function usersRoutes(fastify: FastifyInstance) {
   fastify.get('/me', async (request, reply) => {
     // Trees keep growing, so the stored CO2 figure is re-derived whenever the profile is read.
     const impact = await refreshUserImpact(fastify.prisma, request.user!.id);
-    const user = await fastify.prisma.user.findUniqueOrThrow({ where: { id: request.user!.id } });
+    const { user } = await syncStreak(fastify.prisma, request.user!.id);
     reply.send({ ...toPublicUser(user), co2NextYearKg: impact.co2NextYearKg });
   });
 

@@ -45,6 +45,14 @@ export const ownedListQuerySchema = z.object({
   take: z.coerce.number().int().min(1).max(50).optional(),
 });
 
+export const myDonationsQuerySchema = z.object({
+  q: z.string().trim().max(200).optional(),
+  status: z.enum(['succeeded', 'pending', 'failed', 'refunded']).optional(),
+  period: z.enum(['30d', '6m', '1y']).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  take: z.coerce.number().int().min(1).max(50).optional(),
+});
+
 export const paginationQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
   take: z.coerce.number().int().min(1).max(50).optional(),

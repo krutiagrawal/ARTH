@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Text } from './AppText';
 import { COLORS } from '../../constants/colors';
 import { BorderCard } from './BorderCard';
@@ -13,18 +13,17 @@ import { TEXT } from '../../constants/typography';
  */
 
 /**
- * The calendar API always returns a rolling window ending exactly today (backend:
- * `startDate = today - (weeksCount*7 - 1)`, sequential days from there) — so today's real
- * calendar date for any (weekIndex, dayIndex) cell can be derived client-side without the API
- * needing to send dates. Used to tell "missed" (past, not done) apart from "future" (not
+ * The calendar API returns Monday-anchored weeks, the last one being the current week (backend:
+ * `calendarStartDate`) — so the real calendar date for any (weekIndex, dayIndex) cell can be
+ * derived client-side without the API needing to send dates. Used to tell "missed" (past, not done) apart from "future" (not
  * reached yet) and to mark today's cell, none of which the raw boolean grid alone can express.
  */
 export function classifyStreakDay(weekIndex: number, dayIndex: number, totalWeeks: number) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const totalDays = totalWeeks * 7;
+  const daysSinceMonday = (today.getDay() + 6) % 7;
   const startDate = new Date(today);
-  startDate.setDate(startDate.getDate() - (totalDays - 1));
+  startDate.setDate(startDate.getDate() - (daysSinceMonday + (totalWeeks - 1) * 7));
   const date = new Date(startDate);
   date.setDate(date.getDate() + (weekIndex * 7 + dayIndex));
 
@@ -34,12 +33,28 @@ export function classifyStreakDay(weekIndex: number, dayIndex: number, totalWeek
   };
 }
 
-export function StreakCalendar({ streakCurrent, weeks }: { streakCurrent: number; weeks: StreakWeek[] }) {
+export function StreakCalendar({
+  streakCurrent,
+  weeks,
+  onInfoPress,
+}: {
+  streakCurrent: number;
+  weeks: StreakWeek[];
+  /** Shows an ⓘ button (freezes, rules). Only the individual streak has any of that. */
+  onInfoPress?: () => void;
+}) {
   return (
     <BorderCard style={styles.streakCalCard}>
       <View style={styles.streakCalHeader}>
         <View>
-          <Text style={styles.streakCalTitleDark}>Streak Calendar</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.streakCalTitleDark}>Streak Calendar</Text>
+            {onInfoPress ? (
+              <TouchableOpacity onPress={onInfoPress} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="How streaks work">
+                <Text style={styles.infoIcon}>ⓘ</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
           <Text style={styles.streakCalSubDark}>Current: {streakCurrent} days 🔥</Text>
         </View>
         <View style={styles.streakCountBadge}>
@@ -87,6 +102,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  infoIcon: { fontSize: 16, color: COLORS.textMuted },
   streakCalTitleDark: {
     ...TEXT.statSmall, fontSize: 16,
     color: COLORS.textPrimary,

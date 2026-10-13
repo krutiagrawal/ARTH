@@ -428,6 +428,10 @@ export function NotificationsScreen({ navigation }: any) {
         if (driveId) navigation.navigate('DriveDetail', { driveId });
         return;
       }
+      if (n.type === 'streak_at_risk' || n.type === 'streak_broken') {
+        navigation.navigate('StreakProtection');
+        return;
+      }
       if (n.type === 'ngo_streak_at_risk' || n.type === 'ngo_streak_broken' || n.type === 'ngo_impact_milestone') {
         navigation.navigate('NgoStreakBadges');
         return;

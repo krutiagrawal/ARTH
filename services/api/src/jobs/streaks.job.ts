@@ -67,6 +67,27 @@ export async function runStreakAtRiskJob(prisma: PrismaClient): Promise<void> {
 }
 
 /**
+ * Zeroes `User.streakCurrent` for users whose last active day is older than yesterday — the stored
+ * counter only changes on activity, so without this it keeps showing a streak that already broke.
+ * Runs after runStreakBrokenJob in the tick, because that job reads the counter for its message.
+ * `streakMax` is untouched, and revive recomputes from the ledger so nothing is lost.
+ */
+export async function runStreakStaleResetJob(prisma: PrismaClient): Promise<void> {
+  try {
+    const yesterday = addDays(startOfUtcDay(new Date()), -1);
+    await prisma.user.updateMany({
+      where: {
+        streakCurrent: { gt: 0 },
+        streakHistory: { none: { activityDate: { gte: yesterday }, ...activeDayWhere } },
+      },
+      data: { streakCurrent: 0 },
+    });
+  } catch (error) {
+    console.warn('[jobs] streak-stale-reset failed:', error);
+  }
+}
+
+/**
  * Users who let a full day pass with no planted row, i.e. the streak has actually broken.
  * `User.streakCurrent` stays stale (only recomputed lazily by recordPlantedToday on their next
  * plant — see streak.service.ts), so this is detected independently from the StreakHistory
@@ -101,7 +122,7 @@ export async function runStreakBrokenJob(prisma: PrismaClient): Promise<void> {
         data: { previousStreak: user.streakCurrent },
         push: {
           title: 'Your streak took an L 💔',
-          body: `Your ${user.streakCurrent}-day streak broke — start a new one today. We believe in you.`,
+          body: `Your ${user.streakCurrent}-day streak broke. Revive it with a freeze or XP, or start a new one today.`,
         },
       });
     }

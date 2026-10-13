@@ -15,7 +15,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { COLORS } from '../constants/colors';
+import { COLORS, GRADIENTS } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
@@ -23,8 +23,9 @@ import { Mascot } from '../components/common/Mascot';
 import { FloatingParticles } from '../components/common/FloatingParticles';
 import { useHaptics } from '../hooks/useHaptics';
 import { useAuth } from '../context/AuthContext';
-import { useProtectStreak } from '../hooks/useApiQueries';
+import { useProtectStreak, useReviveStreak, useStreakStatus } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { StreakInfoSheet } from '../components/streak/StreakInfoSheet';
 
 import { TEXT } from '../constants/typography';
 const { width: SW, height: SH } = Dimensions.get('window');
@@ -33,7 +34,29 @@ type ProtectionStage = 'warning' | 'choosing' | 'saved';
 
 const XP_STREAK_SAVE_COST = 100;
 
-function buildFreezeOptions(streakFreezesAvailable: number, xp: number) {
+function buildFreezeOptions(streakFreezesAvailable: number, xp: number, revive = false) {
+  if (revive) {
+    return [
+      {
+        id: 'freeze',
+        title: 'Use Streak Freeze',
+        subtitle: 'Fill in the day you missed with a freeze.',
+        icon: '🧊',
+        cost: `${streakFreezesAvailable} remaining`,
+        recommended: true,
+        disabled: streakFreezesAvailable <= 0,
+      },
+      {
+        id: 'xp',
+        title: 'Spend XP Tokens',
+        subtitle: `Use ${XP_STREAK_SAVE_COST} XP to fill in the day you missed`,
+        icon: '⚡',
+        cost: `${XP_STREAK_SAVE_COST} XP`,
+        recommended: false,
+        disabled: xp < XP_STREAK_SAVE_COST,
+      },
+    ];
+  }
   return [
     {
       id: 'plant',
@@ -89,13 +112,13 @@ function HeartAnimation() {
   );
 }
 
-function StreakCounter({ streakCurrent }: { streakCurrent: number }) {
+function StreakCounter({ streakCurrent, sublabel = 'At risk of breaking ⚠️' }: { streakCurrent: number; sublabel?: string }) {
   const countStyle = useAnimatedStyle(() => ({ opacity: 1 }));
 
   return (
     <View style={styles.streakCountContainer}>
       <LinearGradient
-        colors={['#FF6B35', '#FFD700', '#FF9500']}
+        colors={[COLORS.sageDark, COLORS.forest, COLORS.forestDeep]}
         style={styles.streakCountGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -104,14 +127,14 @@ function StreakCounter({ streakCurrent }: { streakCurrent: number }) {
         <View style={styles.streakCountContent}>
           <Text style={styles.streakCountNum}>{streakCurrent}</Text>
           <Text style={styles.streakCountLabel}>Day Streak</Text>
-          <Text style={styles.streakCountSublabel}>At risk of breaking ⚠️</Text>
+          <Text style={styles.streakCountSublabel}>{sublabel}</Text>
         </View>
       </LinearGradient>
     </View>
   );
 }
 
-function SavedAnimation({ onDone, streakCurrent }: { onDone: () => void; streakCurrent: number }) {
+function SavedAnimation({ onDone, streakCurrent, revived = false }: { onDone: () => void; streakCurrent: number; revived?: boolean }) {
   const scale = useSharedValue(0);
   const opacity = useSharedValue(0);
   const textOpacity = useSharedValue(0);
@@ -144,7 +167,7 @@ function SavedAnimation({ onDone, streakCurrent }: { onDone: () => void; streakC
 
       <Animated.View style={shieldStyle}>
         <LinearGradient
-          colors={[COLORS.amberLight, COLORS.golden, COLORS.earth]}
+          colors={[COLORS.sageLight, COLORS.sage, COLORS.forest]}
           style={styles.shieldGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -154,9 +177,9 @@ function SavedAnimation({ onDone, streakCurrent }: { onDone: () => void; streakC
       </Animated.View>
 
       <Animated.View style={[styles.savedText, textStyle]}>
-        <Text style={styles.savedTitle}>Streak Saved! 🎉</Text>
+        <Text style={styles.savedTitle}>{revived ? 'Streak Revived! 🎉' : 'Streak Saved! 🎉'}</Text>
         <Text style={styles.savedSubtitle}>
-          Your {streakCurrent}-day streak lives on.{'\n'}Amazing dedication!
+          {revived ? `Your streak is back at ${streakCurrent} days.` : `Your ${streakCurrent}-day streak lives on.`}{'\n'}Amazing dedication!
         </Text>
       </Animated.View>
 
@@ -180,12 +203,30 @@ export function StreakProtectionScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const protectStreakMutation = useProtectStreak();
-  const { refreshing, onRefresh } = usePullToRefresh();
+  const reviveMutation = useReviveStreak();
+  const streakStatus = useStreakStatus();
+  const { refreshing, onRefresh } = usePullToRefresh(streakStatus.refetch);
 
-  const freezeOptions = buildFreezeOptions(user?.streakFreezesAvailable ?? 0, user?.xp ?? 0);
+  const status = streakStatus.data;
+  // A missed day sits behind us: offer to buy it back. Otherwise it's the usual "save today" flow.
+  const reviving = !!status?.revivable;
+  const alreadySafe = !!status && !status.revivable && status.state === 'safe';
+  const activeMutation = reviving ? reviveMutation : protectStreakMutation;
+  const [revivedStreak, setRevivedStreak] = useState(0);
+  const [infoOpen, setInfoOpen] = useState(false);
+
+  const freezeOptions = buildFreezeOptions(
+    status?.streakFreezesAvailable ?? user?.streakFreezesAvailable ?? 0,
+    status?.xp ?? user?.xp ?? 0,
+    reviving,
+  );
 
   const handleContinue = useCallback(async () => {
     if (stage === 'warning') {
+      if (alreadySafe) {
+        handleDismiss();
+        return;
+      }
       setStage('choosing');
       return;
     }
@@ -198,13 +239,18 @@ export function StreakProtectionScreen({ navigation }: any) {
 
     setProtectError(null);
     try {
-      await protectStreakMutation.mutateAsync(selectedOption as 'freeze' | 'xp');
+      if (reviving) {
+        const result = await reviveMutation.mutateAsync(selectedOption as 'freeze' | 'xp');
+        setRevivedStreak(result.streakCurrent);
+      } else {
+        await protectStreakMutation.mutateAsync(selectedOption as 'freeze' | 'xp');
+      }
       success();
       setStage('saved');
     } catch (e) {
       setProtectError(e instanceof Error ? e.message : 'Could not protect your streak. Please try again.');
     }
-  }, [stage, selectedOption, success, navigation, protectStreakMutation]);
+  }, [stage, selectedOption, success, navigation, protectStreakMutation, reviveMutation, reviving]);
 
   const handleDismiss = useCallback(() => {
     if (navigation.canGoBack()) {
@@ -217,11 +263,7 @@ export function StreakProtectionScreen({ navigation }: any) {
       <StatusBar style="light" />
 
       <LinearGradient
-        colors={
-          stage === 'saved'
-            ? [COLORS.forest, COLORS.forestDeep, COLORS.nightForest]
-            : ['#1A0A0A', '#3D1A00', '#5C2D00']
-        }
+        colors={GRADIENTS.deepForest as any}
         style={StyleSheet.absoluteFill}
         start={{ x: 0.2, y: 0 }}
         end={{ x: 0.8, y: 1 }}
@@ -229,7 +271,7 @@ export function StreakProtectionScreen({ navigation }: any) {
 
       {stage === 'saved' ? (
         <>
-          <SavedAnimation onDone={handleDismiss} streakCurrent={user?.streakCurrent ?? 0} />
+          <SavedAnimation onDone={handleDismiss} streakCurrent={reviving || revivedStreak ? revivedStreak : (user?.streakCurrent ?? 0)} revived={reviving || revivedStreak > 0} />
           <View style={[styles.savedButton, { paddingBottom: insets.bottom + 24 }]}>
             <AnimatedButton
               label="Continue Growing 🌱"
@@ -259,7 +301,28 @@ export function StreakProtectionScreen({ navigation }: any) {
           </View>
 
           {/* Message */}
-          {stage === 'warning' && (
+          {stage === 'warning' && alreadySafe && (
+            <View style={styles.messageSection}>
+              <Text style={styles.messageTitle}>Your streak is safe 🌿</Text>
+              <Text style={styles.messageBody}>
+                You've already been active today, and there's no missed day to bring back. Come back tomorrow!
+              </Text>
+            </View>
+          )}
+
+          {stage === 'warning' && reviving && (
+            <View style={styles.messageSection}>
+              <Text style={styles.messageTitle}>
+                Your streak broke{'\n'}but it isn't gone 💔
+              </Text>
+              <Text style={styles.messageBody}>
+                You missed yesterday and lost your {status?.previousStreak ?? 0}-day streak. Revive it now and you'll be back at{' '}
+                {status?.restoredStreak ?? 0} days.
+              </Text>
+            </View>
+          )}
+
+          {stage === 'warning' && !reviving && !alreadySafe && (
             <View style={styles.messageSection}>
               <Text style={styles.messageTitle}>
                 Hey {user?.name ?? 'there'}, don't{'\n'}let your streak fade 🌿
@@ -274,16 +337,19 @@ export function StreakProtectionScreen({ navigation }: any) {
           {stage === 'choosing' && (
             <View style={styles.messageSection}>
               <Text style={styles.messageTitle}>
-                How would you like to{'\n'}protect your streak? 🛡️
+                {reviving ? `How would you like to${'\n'}revive your streak? 🛡️` : `How would you like to${'\n'}protect your streak? 🛡️`}
               </Text>
               <Text style={styles.messageBody}>
-                Choose the option that feels right for you today.
+                {reviving ? 'This fills in the day you missed so the run continues.' : 'Choose the option that feels right for you today.'}
               </Text>
             </View>
           )}
 
           {/* Streak counter */}
-          <StreakCounter streakCurrent={user?.streakCurrent ?? 0} />
+          <StreakCounter
+            streakCurrent={reviving ? (status?.previousStreak ?? 0) : (status?.streakCurrent ?? user?.streakCurrent ?? 0)}
+            sublabel={reviving ? 'Broke yesterday 💔' : alreadySafe ? 'Safe for today ✅' : 'At risk of breaking ⚠️'}
+          />
 
           {/* Record */}
           <BorderCard style={styles.recordCard}>
@@ -293,6 +359,21 @@ export function StreakProtectionScreen({ navigation }: any) {
               <Text style={styles.recordValue}>{user?.streakMax ?? 0} days – you can beat it!</Text>
             </View>
           </BorderCard>
+
+          {/* Freeze balance + link to the rules */}
+          {status && (
+            <TouchableOpacity style={styles.freezeSummary} onPress={() => setInfoOpen(true)} activeOpacity={0.85} accessibilityRole="button">
+              <View style={styles.freezeSummaryLeft}>
+                <Text style={styles.freezeSummaryMain}>
+                  🧊 {status.streakFreezesAvailable} of {status.freezeCap} freezes left
+                </Text>
+                <Text style={styles.freezeSummarySub}>
+                  {status.freezesUsed} used · {status.xp} XP available
+                </Text>
+              </View>
+              <Text style={styles.freezeSummaryLink}>How streaks work ›</Text>
+            </TouchableOpacity>
+          )}
 
           {/* Options (choosing stage) */}
           {stage === 'choosing' && (
@@ -336,6 +417,12 @@ export function StreakProtectionScreen({ navigation }: any) {
             </View>
           )}
 
+          {stage === 'choosing' && status && (
+            <Text style={styles.freezeHint}>
+              🧊 Earn a free streak freeze every {status.freezeEarnEveryDays} days of streak (you can hold up to {status.freezeCap}).
+            </Text>
+          )}
+
           {protectError && <Text style={styles.errorText}>{protectError}</Text>}
 
           {/* CTA */}
@@ -343,22 +430,28 @@ export function StreakProtectionScreen({ navigation }: any) {
             <AnimatedButton
               label={
                 stage === 'warning'
-                  ? '🛡️  Save My Streak'
-                  : protectStreakMutation.isPending
-                    ? 'Protecting...'
+                  ? alreadySafe
+                    ? 'Got it'
+                    : reviving
+                      ? '🛡️  Revive My Streak'
+                      : '🛡️  Save My Streak'
+                  : activeMutation.isPending
+                    ? reviving ? 'Reviving...' : 'Protecting...'
                     : selectedOption
                       ? '✓  Confirm'
                       : 'Choose an option'
               }
               onPress={handleContinue}
-              variant={stage === 'choosing' && !selectedOption ? 'secondary' : 'golden'}
+              variant={stage === 'choosing' && !selectedOption ? 'secondary' : 'primary'}
               size="lg"
               fullWidth
-              disabled={(stage === 'choosing' && !selectedOption) || protectStreakMutation.isPending}
+              disabled={(stage === 'choosing' && !selectedOption) || activeMutation.isPending || streakStatus.isLoading}
             />
           </View>
         </ScrollView>
       )}
+
+      <StreakInfoSheet visible={infoOpen} onClose={() => setInfoOpen(false)} />
     </View>
   );
 }
@@ -405,27 +498,29 @@ const styles = StyleSheet.create({
     lineHeight: 23,
   },
   streakCountContainer: {
-    ...SHADOWS.golden,
+    ...SHADOWS.md,
+    alignSelf: 'center',
   },
   streakCountGradient: {
-    borderRadius: RADIUS.xxl,
-    padding: 24,
+    borderRadius: RADIUS.xl,
+    paddingVertical: 14,
+    paddingHorizontal: 22,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
   },
   heartEmoji: {
-    fontSize: 48,
+    fontSize: 34,
   },
   streakCountContent: {
-    flex: 1,
+    alignItems: 'flex-start',
   },
   streakCountNum: {
-    ...TEXT.stat, fontSize: 52, lineHeight: 58,
+    ...TEXT.stat, fontSize: 34, lineHeight: 38,
     color: COLORS.white,
   },
   streakCountLabel: {
-    ...TEXT.statSmall, fontSize: 16,
+    ...TEXT.statSmall, fontSize: 14,
     color: COLORS.white,
   },
   streakCountSublabel: {
@@ -469,14 +564,36 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   optionCardSelected: {
-    borderColor: COLORS.golden,
-    backgroundColor: 'rgba(212,168,83,0.15)',
+    borderColor: COLORS.sageLight,
+    backgroundColor: 'rgba(168,196,153,0.16)',
   },
   optionCardRecommended: {
     borderColor: 'rgba(168,196,153,0.4)',
   },
   optionCardDisabled: {
     opacity: 0.4,
+  },
+  freezeSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    padding: 14,
+    borderRadius: RADIUS.xl,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  freezeSummaryLeft: { flex: 1 },
+  freezeSummaryMain: { fontSize: 14, fontWeight: '700', color: COLORS.white },
+  freezeSummarySub: { fontSize: 12, color: COLORS.mintLight, marginTop: 2, opacity: 0.85 },
+  freezeSummaryLink: { fontSize: 12, fontWeight: '700', color: COLORS.sageLight },
+  freezeHint: {
+    fontSize: 12,
+    color: COLORS.mintLight,
+    textAlign: 'center',
+    lineHeight: 17,
+    opacity: 0.85,
   },
   errorText: {
     fontSize: 13,
@@ -520,7 +637,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   optionTitleSelected: {
-    color: COLORS.amberLight,
+    color: COLORS.mintLight,
   },
   optionSubtitle: {
     fontSize: 12,
@@ -537,8 +654,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   optionCheckSelected: {
-    backgroundColor: COLORS.golden,
-    borderColor: COLORS.golden,
+    backgroundColor: COLORS.sage,
+    borderColor: COLORS.sage,
   },
   optionCheckIcon: {
     fontSize: 13,
@@ -559,7 +676,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    ...SHADOWS.golden,
+    ...SHADOWS.md,
   },
   shieldEmoji: {
     fontSize: 52,

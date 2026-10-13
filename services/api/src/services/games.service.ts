@@ -2,7 +2,7 @@ import { Prisma, GameKey, GamePlay } from '@arth/db';
 import { addXp } from './xp.service';
 import { completeMissionByType } from './missions.service';
 import { evaluateAchievements } from './achievement.service';
-import { startOfUtcDay, recordActivityToday, isActiveDay } from './streak.service';
+import { startOfUtcDay, recordActivityToday, isActiveDay, getStreakStatus } from './streak.service';
 import { BadRequestError, ConflictError } from '../utils/errors';
 import { GAMES, GAME_KEYS } from '../games';
 import { GameCategory, GameDefinition, GuessInput, PlayView, SubmitPayload, xpFor } from '../games/types';
@@ -125,7 +125,7 @@ export async function getGamesStatus(tx: Prisma.TransactionClient, userId: strin
       select: { gameKey: true, playDate: true },
     }),
     tx.streakHistory.findUnique({ where: { userId_activityDate: { userId, activityDate: today } } }),
-    tx.user.findUniqueOrThrow({ where: { id: userId }, select: { streakCurrent: true } }),
+    getStreakStatus(tx, userId),
   ]);
   const streaks = computeGameStreaks(finishedPlays, today);
   const games: (GameSummary & { streak: GameStreak })[] = [];

@@ -7,6 +7,7 @@ import {
   listCampaignsQuerySchema,
   ownedListQuerySchema,
   paginationQuerySchema,
+  myDonationsQuerySchema,
 } from '../schemas/donations.schema';
 import { saveCampaignPhoto } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
@@ -51,12 +52,13 @@ export default async function donationsRoutes(fastify: FastifyInstance) {
   });
 
   fastify.get('/mine-donations', async (request, reply) => {
-    const parsed = paginationQuerySchema.safeParse(request.query);
+    const parsed = myDonationsQuerySchema.safeParse(request.query);
     if (!parsed.success) throw new BadRequestError('Invalid query parameters');
 
-    const { donations, total } = await donationService.listMyDonations(fastify.prisma, request.user!.id, parsed.data);
+    const { donations, total, summary } = await donationService.listMyDonations(fastify.prisma, request.user!.id, parsed.data);
     reply.send({
       total,
+      summary,
       donations: donations.map((d) => ({
         id: d.id,
         amountCents: d.amountCents,
