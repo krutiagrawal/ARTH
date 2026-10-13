@@ -5,9 +5,10 @@ import { hasRecentNotification } from './dedupe';
 
 // No per-user timezone is stored anywhere in this schema, so the "evening nudge" feel is
 // approximated with a fixed UTC window rather than a real per-user local evening.
-// ~12:00-17:00 UTC is ~17:30-22:30 IST.
-const EVENING_START_UTC_HOUR = 12;
-const EVENING_END_UTC_HOUR = 17;
+// 12:30-18:00 UTC is 18:00-23:30 IST — the "at risk" nudge goes out from 6 PM, matching when the
+// app starts showing the streak as at risk.
+const EVENING_START_UTC_MINUTES = 12 * 60 + 30;
+const EVENING_END_UTC_MINUTES = 18 * 60;
 
 const individualWithReminders = {
   role: 'user' as const,
@@ -22,8 +23,8 @@ const individualWithReminders = {
  */
 export async function runStreakAtRiskJob(prisma: PrismaClient): Promise<void> {
   const now = new Date();
-  const hour = now.getUTCHours();
-  if (hour < EVENING_START_UTC_HOUR || hour > EVENING_END_UTC_HOUR) return;
+  const minutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+  if (minutes < EVENING_START_UTC_MINUTES || minutes > EVENING_END_UTC_MINUTES) return;
 
   try {
     const today = startOfUtcDay(now);
@@ -57,7 +58,7 @@ export async function runStreakAtRiskJob(prisma: PrismaClient): Promise<void> {
         data: { streakCurrent: user.streakCurrent },
         push: {
           title: `🔥 ${user.streakCurrent}-day streak alert!`,
-          body: 'Play a quick game or plant a tree today to keep it going.',
+          body: 'Play a quick game or plant a tree before the day resets to keep it going.',
         },
       });
     }

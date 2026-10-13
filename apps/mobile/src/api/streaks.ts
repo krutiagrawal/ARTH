@@ -36,6 +36,13 @@ export interface StreakStatus {
   freezeCap: number;
 }
 
+/** "At risk" is only surfaced from 6 PM (device time) — earlier in the day there is still plenty of time. */
+export const AT_RISK_FROM_HOUR = 18;
+
+export function isAtRiskHours(now = new Date()): boolean {
+  return now.getHours() >= AT_RISK_FROM_HOUR;
+}
+
 export async function fetchStreakStatus(): Promise<StreakStatus> {
   return apiFetch<StreakStatus>('/api/streaks/status');
 }

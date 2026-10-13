@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useIsFocused } from '@react-navigation/native';
 import { View, StyleSheet, Dimensions, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated, {
@@ -23,6 +24,7 @@ import { Mascot } from '../components/common/Mascot';
 import { FloatingParticles } from '../components/common/FloatingParticles';
 import { useHaptics } from '../hooks/useHaptics';
 import { useAuth } from '../context/AuthContext';
+import { isAtRiskHours } from '../api/streaks';
 import { useProtectStreak, useReviveStreak, useStreakStatus } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { StreakInfoSheet } from '../components/streak/StreakInfoSheet';
@@ -214,6 +216,20 @@ export function StreakProtectionScreen({ navigation }: any) {
   const activeMutation = reviving ? reviveMutation : protectStreakMutation;
   const [revivedStreak, setRevivedStreak] = useState(0);
   const [infoOpen, setInfoOpen] = useState(false);
+  // Set when the user heads off to plant a tree to save today's streak; cleared once we celebrate.
+  const [awaitingPlant, setAwaitingPlant] = useState(false);
+  const isFocused = useIsFocused();
+
+  // Planting happens on another screen stacked on top of this one. The plant mutation refreshes the
+  // streak status behind it, so by the time the user comes back (Back from the celebration card)
+  // the streak is already safe: show the 'Streak Saved' message instead of the save options.
+  useEffect(() => {
+    if (awaitingPlant && isFocused && status?.state === 'safe' && !streakStatus.isFetching) {
+      setAwaitingPlant(false);
+      success();
+      setStage('saved');
+    }
+  }, [awaitingPlant, isFocused, status?.state, streakStatus.isFetching, success]);
 
   const freezeOptions = buildFreezeOptions(
     status?.streakFreezesAvailable ?? user?.streakFreezesAvailable ?? 0,
@@ -233,7 +249,9 @@ export function StreakProtectionScreen({ navigation }: any) {
     if (stage !== 'choosing' || !selectedOption) return;
 
     if (selectedOption === 'plant') {
-      navigation.replace('PlantTree');
+      // Push (not replace) so Back from planting returns here, to the saved-streak message.
+      setAwaitingPlant(true);
+      navigation.navigate('PlantTree');
       return;
     }
 
@@ -271,7 +289,7 @@ export function StreakProtectionScreen({ navigation }: any) {
 
       {stage === 'saved' ? (
         <>
-          <SavedAnimation onDone={handleDismiss} streakCurrent={reviving || revivedStreak ? revivedStreak : (user?.streakCurrent ?? 0)} revived={reviving || revivedStreak > 0} />
+          <SavedAnimation onDone={handleDismiss} streakCurrent={reviving || revivedStreak ? revivedStreak : (status?.streakCurrent ?? user?.streakCurrent ?? 0)} revived={reviving || revivedStreak > 0} />
           <View style={[styles.savedButton, { paddingBottom: insets.bottom + 24 }]}>
             <AnimatedButton
               label="Continue Growing 🌱"
@@ -348,7 +366,7 @@ export function StreakProtectionScreen({ navigation }: any) {
           {/* Streak counter */}
           <StreakCounter
             streakCurrent={reviving ? (status?.previousStreak ?? 0) : (status?.streakCurrent ?? user?.streakCurrent ?? 0)}
-            sublabel={reviving ? 'Broke yesterday 💔' : alreadySafe ? 'Safe for today ✅' : 'At risk of breaking ⚠️'}
+            sublabel={reviving ? 'Broke yesterday 💔' : alreadySafe ? 'Safe for today ✅' : isAtRiskHours() ? 'At risk of breaking ⚠️' : 'Keep it going today 🌱'}
           />
 
           {/* Record */}

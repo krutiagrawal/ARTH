@@ -491,7 +491,7 @@ function useGameMutationSuccess<S extends ApiGameState>(key: S['key']) {
     queryClient.invalidateQueries({ queryKey: ['games', 'status'] });
     if (!result.reward) return;
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['streaks', 'calendar'] }),
+      queryClient.invalidateQueries({ queryKey: ['streaks'] }),
       queryClient.invalidateQueries({ queryKey: ['achievements'] }),
       queryClient.invalidateQueries({ queryKey: ['leaderboard'] }),
       // Finishing the daily lesson completes the "Learn Today" quest server-side.
@@ -540,6 +540,8 @@ export function useStreakCalendar(weeks = 4) {
     queryKey: ['streaks', 'calendar', weeks],
     queryFn: () => fetchStreakCalendar(weeks),
     enabled: isAuthenticated,
+    // Streak days change on every plant/game/revive, so never serve a cached grid on open.
+    staleTime: 0,
   });
 }
 
@@ -789,6 +791,7 @@ export function useStreakStatus() {
     queryKey: ['streaks', 'status'],
     queryFn: fetchStreakStatus,
     enabled: isAuthenticated,
+    staleTime: 0,
   });
 }
 
@@ -2138,7 +2141,7 @@ export function usePlantTree() {
         queryClient.invalidateQueries({ queryKey: ['missions', 'today'] }),
         queryClient.invalidateQueries({ queryKey: ['social', 'posts'] }),
         queryClient.invalidateQueries({ queryKey: ['achievements'] }),
-        queryClient.invalidateQueries({ queryKey: ['streaks', 'calendar'] }),
+        queryClient.invalidateQueries({ queryKey: ['streaks'] }),
         queryClient.invalidateQueries({ queryKey: ['leaderboard'] }),
         refreshUser(),
       ]);
