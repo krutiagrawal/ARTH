@@ -23,6 +23,10 @@ export function serializeCampaign(c: any) {
     coverPhotoUri: c.coverPhotoUrl,
     goalAmountCents: c.goalAmountCents ?? null,
     raisedAmountCents: c.raisedAmountCents,
+    donorCount: c.donorCount ?? 0,
+    recentDonors: c.recentDonors ?? [],
+    category: c.category ?? null,
+    endsAt: c.endsAt ?? null,
     status: c.status,
     createdAt: c.createdAt,
   };

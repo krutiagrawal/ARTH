@@ -32,6 +32,47 @@ export interface GameReward {
   level: number;
 }
 
+export interface GameStreak {
+  current: number;
+  max: number;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Per-game streaks, derived from finished plays rather than stored: the unique
+ * (user, game, day) row already is the "played that day" record, so there is nothing to keep in
+ * sync. Like the main streak, finishing a game counts whether it was won or lost. A streak that
+ * was last extended yesterday is still alive — it only breaks once today ends unplayed.
+ */
+export function computeGameStreaks(
+  plays: { gameKey: GameKey; playDate: Date }[],
+  today: Date
+): Map<GameKey, GameStreak> {
+  const daysByGame = new Map<GameKey, number[]>();
+  for (const p of plays) {
+    const day = Math.round(startOfUtcDay(p.playDate).getTime() / DAY_MS);
+    const days = daysByGame.get(p.gameKey);
+    if (days) days.push(day);
+    else daysByGame.set(p.gameKey, [day]);
+  }
+
+  const todayDay = Math.round(today.getTime() / DAY_MS);
+  const result = new Map<GameKey, GameStreak>();
+  for (const [key, days] of daysByGame) {
+    const sorted = [...new Set(days)].sort((a, b) => a - b);
+    let max = 0;
+    let run = 0;
+    for (let i = 0; i < sorted.length; i++) {
+      run = i > 0 && sorted[i] === sorted[i - 1] + 1 ? run + 1 : 1;
+      max = Math.max(max, run);
+    }
+    const last = sorted[sorted.length - 1];
+    result.set(key, { current: last >= todayDay - 1 ? run : 0, max });
+  }
+  return result;
+}
+
 function summarize(def: GameDefinition, play: GamePlay | null | undefined): GameSummary {
   const { key, title, description, icon, category, maxXp } = def.meta;
   return {
@@ -77,16 +118,21 @@ function buildState(def: GameDefinition, play: GamePlay | null, date: Date, ctx?
 
 export async function getGamesStatus(tx: Prisma.TransactionClient, userId: string) {
   const today = startOfUtcDay(new Date());
-  const [plays, streakRow, user] = await Promise.all([
+  const [plays, finishedPlays, streakRow, user] = await Promise.all([
     tx.gamePlay.findMany({ where: { userId, playDate: today } }),
+    tx.gamePlay.findMany({
+      where: { userId, status: { not: 'in_progress' } },
+      select: { gameKey: true, playDate: true },
+    }),
     tx.streakHistory.findUnique({ where: { userId_activityDate: { userId, activityDate: today } } }),
     tx.user.findUniqueOrThrow({ where: { id: userId }, select: { streakCurrent: true } }),
   ]);
-  const games: GameSummary[] = [];
+  const streaks = computeGameStreaks(finishedPlays, today);
+  const games: (GameSummary & { streak: GameStreak })[] = [];
   for (const key of GAME_KEYS) {
     const def = definitionFor(key);
     const play = plays.find((p) => p.gameKey === key) ?? null;
-    const summary = summarize(def, play);
+    const summary = { ...summarize(def, play), streak: streaks.get(key) ?? { current: 0, max: 0 } };
     // DB-backed games (the daily lesson) can show today's content on their hub card.
     if (def.load && def.describe) {
       const description = def.describe(await def.load(tx, today, toView(play)));

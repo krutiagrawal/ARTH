@@ -12,6 +12,7 @@ import { formatKg } from '../utils/impact';
 import { FONTS, TEXT } from '../constants/typography';
 import { SHADOWS } from '../constants/theme';
 import { EcoWidget } from '../components/common/EcoWidget';
+import { NotificationBell } from '../components/social/NotificationBell';
 import { ThemedCard } from '../components/common/ThemedCard';
 import { ForestHeroCanvas } from '../components/common/ForestHeroCanvas';
 import { Mascot } from '../components/common/Mascot';
@@ -309,11 +310,14 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
               <Text style={[styles.greeting, { color: theme.textOnSky }]}>{theme.greeting} {theme.emoji}</Text>
               <Text style={[styles.orgName, { color: theme.textOnSky }]}>{profile?.orgName ?? user?.name ?? 'Your NGO'}</Text>
             </View>
-            <TouchableOpacity style={styles.avatarButton} onPress={() => navigation.navigate('NgoProfile')}>
-              <LinearGradient colors={[COLORS.sageLight, COLORS.forest]} style={styles.avatar}>
-                <Text style={styles.avatarText}>{user?.avatarEmoji ?? '🌱'}</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+            <View style={styles.headerRight}>
+              <NotificationBell onPress={() => navigation.navigate('Notifications')} />
+              <TouchableOpacity style={styles.avatarButton} onPress={() => navigation.navigate('NgoProfile')}>
+                <LinearGradient colors={[COLORS.sageLight, COLORS.forest]} style={styles.avatar}>
+                  <Text style={styles.avatarText}>{user?.avatarEmoji ?? '🌱'}</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.statsRow}>
@@ -453,6 +457,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12, zIndex: 10 },
   greeting: { fontSize: 13, fontWeight: '500', letterSpacing: 0.3, textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
   orgName: { ...TEXT.heading, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 5 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   avatarButton: {},
   avatar: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', ...SHADOWS.sage },
   avatarText: { fontSize: 22 },

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { CAMPAIGN_CATEGORIES, type CampaignCategory } from '../api/donations';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,11 +24,19 @@ export function NgoCreateCampaignScreen({ navigation }: any) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [goalRupees, setGoalRupees] = useState('');
+  const [durationDays, setDurationDays] = useState('');
+  const [category, setCategory] = useState<CampaignCategory | null>(null);
   const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const days = durationDays ? Number(durationDays) : 0;
+
   const handleSubmit = async () => {
     setError(null);
+    if (durationDays && (days < 1 || days > 365)) {
+      setError('Duration must be between 1 and 365 days.');
+      return;
+    }
     if (!title.trim() || !description.trim()) {
       setError('Title and description are required.');
       return;
@@ -37,6 +46,8 @@ export function NgoCreateCampaignScreen({ navigation }: any) {
         title: title.trim(),
         description: description.trim(),
         goalAmountCents: goalRupees ? Math.round(Number(goalRupees) * 100) : undefined,
+        category: category ?? undefined,
+        endsAt: days ? new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString() : undefined,
         photo: photo ?? undefined,
       });
       confirm('Campaign created', 'Your donation campaign is live.');
@@ -94,6 +105,32 @@ export function NgoCreateCampaignScreen({ navigation }: any) {
             keyboardType="number-pad"
           />
 
+          <FormField
+            label="Runs for (days, optional)"
+            value={durationDays}
+            onChangeText={(v: string) => setDurationDays(v.replace(/[^0-9]/g, '').slice(0, 3))}
+            placeholder="eg - 30 (leave empty for no end date)"
+            keyboardType="number-pad"
+          />
+
+          <Text style={styles.fieldLabel}>Category (optional)</Text>
+          <View style={styles.chipRow}>
+            {CAMPAIGN_CATEGORIES.map((c) => {
+              const selected = category === c.key;
+              return (
+                <TouchableOpacity
+                  key={c.key}
+                  onPress={() => setCategory(selected ? null : c.key)}
+                  style={[styles.chip, selected && styles.chipSelected]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                >
+                  <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{c.emoji} {c.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
           {error && <Text style={styles.error}>{error}</Text>}
 
           <AnimatedButton
@@ -113,6 +150,12 @@ export function NgoCreateCampaignScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary, marginTop: 4, marginBottom: 8 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1.5, borderColor: COLORS.sage, backgroundColor: 'transparent' },
+  chipSelected: { backgroundColor: COLORS.sage },
+  chipText: { fontSize: 13, fontWeight: '600', color: COLORS.forest },
+  chipTextSelected: { color: COLORS.white },
   error: { fontSize: 13, color: COLORS.coral, marginTop: 12 },
   submitButton: { marginTop: 20 },
 });

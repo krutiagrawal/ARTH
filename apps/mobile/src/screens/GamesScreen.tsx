@@ -15,7 +15,7 @@ import { useSlideUp } from '../hooks/useAnimations';
 import { useHaptics } from '../hooks/useHaptics';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { useGamesStatus } from '../hooks/useApiQueries';
-import type { ApiGameSummary, GameCategory, GameKey, GameStatus } from '../api/games';
+import type { ApiGameSummary, ApiGameStatusItem, GameCategory, GameKey, GameStatus } from '../api/games';
 
 /** Where each game opens. The "one option per round" games share a single screen. */
 export function routeForGame(key: GameKey): { name: string; params?: object } {
@@ -50,15 +50,19 @@ function statusLabel(game: ApiGameSummary): { text: string; done: boolean } {
   return { text: `Up to +${game.maxXp} XP`, done: false };
 }
 
-function GameCard({ game, onPress }: { game: ApiGameSummary; onPress: () => void }) {
+function GameCard({ game, onPress }: { game: ApiGameStatusItem; onPress: () => void }) {
   const { text, done } = statusLabel(game);
+  const streak = game.streak.current;
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={onPress} accessibilityRole="button" accessibilityLabel={game.title}>
       <GlassCard variant={done ? 'sage' : 'light'} style={styles.gameCard}>
         <View style={styles.gameRow}>
           <IconBadge icon={game.icon} color={COLORS.forest} size={48} />
           <View style={styles.gameText}>
-            <Text style={styles.gameTitle}>{game.title}</Text>
+            <Text style={styles.gameTitle}>
+              {game.title}
+              {streak > 0 ? <Text style={[styles.gameStreak, !done && styles.gameStreakAtRisk]}>{`  🔥 ${streak}`}</Text> : null}
+            </Text>
             <Text style={styles.gameDesc}>{game.description}</Text>
           </View>
           <View style={[styles.pill, done && styles.pillDone]}>
@@ -157,6 +161,9 @@ const styles = StyleSheet.create({
   gameRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
   gameText: { flex: 1 },
   gameTitle: { ...TEXT.subheading, color: COLORS.textPrimary },
+  gameStreak: { ...TEXT.caption, color: COLORS.sageDark },
+  // Streak is carried over from yesterday but not yet extended today.
+  gameStreakAtRisk: { color: COLORS.textSecondary },
   gameDesc: { ...TEXT.bodySmall, color: COLORS.textSecondary, marginTop: 2 },
   pill: { backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: RADIUS.full, paddingHorizontal: 10, paddingVertical: 5 },
   pillDone: { backgroundColor: COLORS.sageDark },

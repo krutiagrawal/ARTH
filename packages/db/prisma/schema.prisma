@@ -2190,6 +2190,10 @@ model DonationCampaign {
   description     String
   goalAmountCents Int?           @map("goal_amount_cents")
   coverPhotoUrl   String?        @map("cover_photo_url")
+  // One of CAMPAIGN_CATEGORIES (services/api/src/schemas/donations.schema.ts); null = uncategorised.
+  category        String?
+  // After this moment the campaign stops appearing in the public list and stops taking donations.
+  endsAt          DateTime?      @map("ends_at")
   status          CampaignStatus @default(active)
   createdAt       DateTime       @default(now()) @map("created_at")
   updatedAt       DateTime       @updatedAt @map("updated_at")

@@ -12,6 +12,8 @@ interface CreateCampaignInput {
   description: string;
   goalAmountCents?: number;
   coverPhotoUrl?: string;
+  category?: string;
+  endsAt?: Date;
 }
 
 interface UpdateCampaignInput {
@@ -19,6 +21,8 @@ interface UpdateCampaignInput {
   description?: string;
   goalAmountCents?: number | null;
   coverPhotoUrl?: string;
+  category?: string | null;
+  endsAt?: Date | null;
 }
 
 interface OwnedListFilter {
@@ -34,12 +38,35 @@ interface MyDonationsFilter {
 
 const campaignInclude = {
   ngo: true,
-  donations: { where: { status: 'succeeded' as const }, select: { amountCents: true } },
+  donations: {
+    where: { status: 'succeeded' as const },
+    orderBy: { createdAt: 'desc' as const },
+    select: { amountCents: true, userId: true, user: { select: { name: true } } },
+  },
 };
 
-function withRaisedAmount<T extends { donations: { amountCents: number }[] }>(campaign: T) {
+interface CampaignDonationRow {
+  amountCents: number;
+  userId: string;
+  user: { name: string };
+}
+
+const RECENT_DONOR_LIMIT = 3;
+
+// Donations arrive newest-first (see campaignInclude), so the first-seen order of donors is
+// already "most recent first". Only first names are exposed — this list is public.
+function withRaisedAmount<T extends { donations: CampaignDonationRow[] }>(campaign: T) {
   const raisedAmountCents = campaign.donations.reduce((sum, d) => sum + d.amountCents, 0);
-  return { ...campaign, raisedAmountCents };
+  const donors = new Map<string, string>();
+  for (const d of campaign.donations) {
+    if (!donors.has(d.userId)) donors.set(d.userId, d.user.name.trim().split(/\s+/)[0] || 'Someone');
+  }
+  return {
+    ...campaign,
+    raisedAmountCents,
+    donorCount: donors.size,
+    recentDonors: [...donors.values()].slice(0, RECENT_DONOR_LIMIT),
+  };
 }
 
 async function findOwnedCampaignOrThrow(prisma: PrismaClient, ngoUserId: string, campaignId: string) {
@@ -104,7 +131,12 @@ export async function reopenCampaign(prisma: PrismaClient, ngoUserId: string, ca
 
 export async function listCampaigns(prisma: PrismaClient, filter: { ngoId?: string } = {}) {
   const campaigns = await prisma.donationCampaign.findMany({
-    where: { status: 'active', ngo: { status: 'approved' }, ...(filter.ngoId ? { ngoId: filter.ngoId } : {}) },
+    where: {
+      status: 'active',
+      ngo: { status: 'approved' },
+      OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }],
+      ...(filter.ngoId ? { ngoId: filter.ngoId } : {}),
+    },
     include: campaignInclude,
     orderBy: { createdAt: 'desc' },
     take: 500,
@@ -188,6 +220,9 @@ export async function createDonationIntent(
   const campaign = await prisma.donationCampaign.findUnique({ where: { id: campaignId }, include: { ngo: true } });
   if (!campaign || campaign.status !== 'active' || campaign.ngo.status !== 'approved') {
     throw new NotFoundError('Campaign not found');
+  }
+  if (campaign.endsAt && campaign.endsAt.getTime() <= Date.now()) {
+    throw new ConflictError('This campaign has ended');
   }
   if (campaign.ngo.userId === userId) throw new ForbiddenError('You cannot donate to your own campaign');
 

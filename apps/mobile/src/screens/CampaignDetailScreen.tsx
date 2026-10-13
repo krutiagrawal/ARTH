@@ -27,7 +27,8 @@ function formatRupees(cents: number) {
 }
 
 export function CampaignDetailScreen({ navigation, route }: any) {
-  const { campaignId } = route.params as { campaignId: string };
+  // `presetAmount` (rupees) comes from the quick-donate chips on the campaigns list.
+  const { campaignId, presetAmount } = route.params as { campaignId: string; presetAmount?: number };
   const insets = useSafeAreaInsets();
   const { success, error: errorHaptic } = useHaptics();
   const { data: campaign, isLoading, refetch } = useCampaign(campaignId);
@@ -39,7 +40,7 @@ export function CampaignDetailScreen({ navigation, route }: any) {
   const queryClient = useQueryClient();
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
-  const [selectedAmount, setSelectedAmount] = useState<number | null>(500);
+  const [selectedAmount, setSelectedAmount] = useState<number | null>(presetAmount ?? 500);
   const [customAmount, setCustomAmount] = useState('');
   const [paying, setPaying] = useState(false);
   const [donationError, setDonationError] = useState('');

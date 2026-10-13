@@ -9,9 +9,26 @@ export interface ApiCampaign {
   coverPhotoUri: string | null;
   goalAmountCents: number | null;
   raisedAmountCents: number;
+  /** Distinct people who have donated. */
+  donorCount: number;
+  /** First names of the latest donors, newest first (max 3). */
+  recentDonors: string[];
+  category: CampaignCategory | null;
+  /** ISO timestamp the campaign stops taking donations; null = open-ended. */
+  endsAt: string | null;
   status: 'active' | 'closed';
   createdAt: string;
 }
+
+export const CAMPAIGN_CATEGORIES = [
+  { key: 'planting', label: 'Planting', emoji: '🌳' },
+  { key: 'restoration', label: 'Restoration', emoji: '🌿' },
+  { key: 'awareness', label: 'Awareness', emoji: '📣' },
+  { key: 'wildlife', label: 'Wildlife', emoji: '🦜' },
+  { key: 'community', label: 'Community', emoji: '🤝' },
+  { key: 'other', label: 'Other', emoji: '💚' },
+] as const;
+export type CampaignCategory = (typeof CAMPAIGN_CATEGORIES)[number]['key'];
 
 export async function fetchCampaigns(params: { ngoId?: string } = {}): Promise<ApiCampaign[]> {
   const qs = params.ngoId ? `?ngoId=${params.ngoId}` : '';
@@ -65,6 +82,9 @@ export interface CreateCampaignInput {
   title: string;
   description: string;
   goalAmountCents?: number;
+  category?: CampaignCategory;
+  /** ISO timestamp. */
+  endsAt?: string;
   photo?: { uri: string; name: string; type: string };
 }
 
@@ -73,6 +93,8 @@ export async function createCampaign(input: CreateCampaignInput): Promise<ApiCam
   form.append('title', input.title);
   form.append('description', input.description);
   if (input.goalAmountCents !== undefined) form.append('goalAmountCents', String(input.goalAmountCents));
+  if (input.category) form.append('category', input.category);
+  if (input.endsAt) form.append('endsAt', input.endsAt);
   if (input.photo) {
     form.append('photo', toFormFile(input.photo.uri), input.photo.name);
   }

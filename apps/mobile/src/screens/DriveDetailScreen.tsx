@@ -35,7 +35,7 @@ import { DriveRsvpSheet } from '../components/drives/DriveRsvpSheet';
 import { AttendeeCard } from '../components/drives/AttendeeCard';
 import { CancelDriveSheet } from '../components/drives/CancelDriveSheet';
 import { CancelRsvpSheet } from '../components/drives/CancelRsvpSheet';
-import type { DriveRsvpInput, RsvpCancelReason } from '../api/drives';
+import type { DriveRsvpInput, RsvpCancelReason, ApiDrivePlantSponsor } from '../api/drives';
 
 import { TEXT } from '../constants/typography';
 // Loaded only once a sponsorship payment is actually in flight — see PaymentSheetRunner's own
@@ -45,6 +45,22 @@ const LazyPaymentSheetRunner = React.lazy(() => import('../components/payments/P
 
 function formatRupees(cents: number) {
   return `₹${(cents / 100).toLocaleString('en-IN')}`;
+}
+
+// One sponsor can fund the same plant several times; the API returns a row per sponsorship, so
+// collapse them into a single line with a count and the combined amount.
+function groupSponsors(sponsors: ApiDrivePlantSponsor[]) {
+  const byHandle = new Map<string, { name: string; handle: string; count: number; totalCents: number }>();
+  for (const s of sponsors) {
+    const existing = byHandle.get(s.handle);
+    if (existing) {
+      existing.count += 1;
+      existing.totalCents += s.amountCents;
+    } else {
+      byHandle.set(s.handle, { name: s.name, handle: s.handle, count: 1, totalCents: s.amountCents });
+    }
+  }
+  return [...byHandle.values()];
 }
 
 export function DriveDetailScreen({ navigation, route }: any) {
@@ -344,9 +360,9 @@ export function DriveDetailScreen({ navigation, route }: any) {
                       <Text style={styles.plantName}>{plant.speciesName}</Text>
                       <Text style={styles.plantMeta}>{formatRupees(plant.priceCents)}</Text>
                       {plant.sponsors?.length ? (
-                        plant.sponsors.map((s: any) => (
-                          <Text key={s.id} style={styles.sponsorEntry}>
-                            {s.name} (@{s.handle}) · {formatRupees(s.amountCents)}
+                        groupSponsors(plant.sponsors).map((s) => (
+                          <Text key={s.handle} style={styles.sponsorEntry}>
+                            {s.name} (@{s.handle}){s.count > 1 ? ` · ×${s.count}` : ''} · {formatRupees(s.totalCents)}
                           </Text>
                         ))
                       ) : (

@@ -32,8 +32,18 @@ export interface ApiGameSummary {
   maxXp: number;
 }
 
+/** This game's own daily streak, independent of the main streak. */
+export interface ApiGameStreak {
+  current: number;
+  max: number;
+}
+
+export interface ApiGameStatusItem extends ApiGameSummary {
+  streak: ApiGameStreak;
+}
+
 export interface ApiGamesStatus {
-  games: ApiGameSummary[];
+  games: ApiGameStatusItem[];
   completedCount: number;
   streakActiveToday: boolean;
   streakCurrent: number;
