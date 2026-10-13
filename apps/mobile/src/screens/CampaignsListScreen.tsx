@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl, TextInput, Image } from 'react-native';
-import { Text } from '../components/common/AppText';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl, Image } from 'react-native';
+import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -9,6 +9,8 @@ import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
+import { Sheet } from '../components/common/Sheet';
+import { OutlineChip } from '../components/common/OutlineChip';
 import { useCampaigns } from '../hooks/useApiQueries';
 import { useHaptics } from '../hooks/useHaptics';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -54,6 +56,12 @@ function fundedFraction(c: ApiCampaign): number | null {
   return c.goalAmountCents ? c.raisedAmountCents / c.goalAmountCents : null;
 }
 
+/** Whole-number percent, but never a misleading "0%" once money has come in. */
+function fundedPercentLabel(fraction: number): string {
+  const pct = Math.floor(fraction * 100);
+  return pct === 0 && fraction > 0 ? '<1%' : `${pct}%`;
+}
+
 function daysLeft(c: ApiCampaign): number | null {
   if (!c.endsAt) return null;
   return Math.max(0, Math.ceil((new Date(c.endsAt).getTime() - Date.now()) / DAY_MS));
@@ -68,6 +76,8 @@ function donorLine(c: ApiCampaign): string | null {
   if (c.donorCount === 0) return null;
   const others = c.donorCount - c.recentDonors.length;
   const names = c.recentDonors.join(', ');
+  // Anonymous donors are counted but never named.
+  if (!names) return `${c.donorCount} ${c.donorCount === 1 ? 'person' : 'people'} donated`;
   if (others > 0) return `${names} and ${others} other${others === 1 ? '' : 's'} donated`;
   return `${names} donated`;
 }
@@ -102,15 +112,16 @@ function sortCampaigns(list: ApiCampaign[], sort: SortKey): ApiCampaign[] {
   }
 }
 
-function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+function categoryLabel(key: CampaignCategory) {
+  const c = CAMPAIGN_CATEGORIES.find((x) => x.key === key);
+  return c ? `${c.emoji} ${c.label}` : key;
+}
+
+function ActiveChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={[styles.chip, selected && styles.chipSelected]}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-    >
-      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
+    <TouchableOpacity style={styles.activeChip} onPress={onRemove} accessibilityRole="button" accessibilityLabel={`Remove filter ${label}`}>
+      <Text style={styles.activeChipText} numberOfLines={1}>{label}</Text>
+      <Text style={styles.activeChipX}>✕</Text>
     </TouchableOpacity>
   );
 }
@@ -127,6 +138,8 @@ export function CampaignsListScreen({ navigation }: any) {
   const [category, setCategory] = useState<CampaignCategory | null>(null);
   const [quickFilter, setQuickFilter] = useState<QuickFilter | null>(null);
   const [ngoFilter, setNgoFilter] = useState<string | null>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
 
   const ngos = useMemo(() => {
     const byId = new Map<string, { id: string; name: string; count: number }>();
@@ -158,12 +171,16 @@ export function CampaignsListScreen({ navigation }: any) {
     return sortCampaigns(filtered, sort);
   }, [campaigns, query, sort, category, quickFilter, ngoFilter]);
 
-  const filtersActive = !!(query.trim() || category || quickFilter || ngoFilter);
-  const clearFilters = () => {
-    setQuery('');
+  const activeCount = [quickFilter, category, ngoFilter].filter(Boolean).length;
+  const filtersActive = !!(query.trim() || activeCount);
+  const clearChips = () => {
     setCategory(null);
     setQuickFilter(null);
     setNgoFilter(null);
+  };
+  const clearFilters = () => {
+    setQuery('');
+    clearChips();
   };
 
   const openCampaign = (c: ApiCampaign, presetAmount?: number) => {
@@ -215,41 +232,51 @@ export function CampaignsListScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search campaigns or NGOs"
-              placeholderTextColor={COLORS.textSecondary}
-              style={styles.search}
-              returnKeyType="search"
-              autoCorrect={false}
-            />
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-              {QUICK_FILTERS.map((f) => (
-                <Chip key={f.key} label={f.label} selected={quickFilter === f.key} onPress={() => setQuickFilter(quickFilter === f.key ? null : f.key)} />
-              ))}
-              {CAMPAIGN_CATEGORIES.map((c) => (
-                <Chip key={c.key} label={`${c.emoji} ${c.label}`} selected={category === c.key} onPress={() => setCategory(category === c.key ? null : c.key)} />
-              ))}
-            </ScrollView>
-
-            {ngos.length > 1 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-                {ngos.map((n) => (
-                  <Chip key={n.id} label={`${n.name} (${n.count})`} selected={ngoFilter === n.id} onPress={() => setNgoFilter(ngoFilter === n.id ? null : n.id)} />
-                ))}
-              </ScrollView>
-            )}
-
-            <View style={styles.sortRow}>
-              <Text style={styles.sortLabel}>Sort</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sortChips}>
-                {SORTS.map((s) => (
-                  <Chip key={s.key} label={s.label} selected={sort === s.key} onPress={() => setSort(s.key)} />
-                ))}
-              </ScrollView>
+            <View style={styles.searchRow}>
+              <View style={styles.searchBox}>
+                <Text style={styles.searchIcon}>🔍</Text>
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search campaigns or NGOs"
+                  placeholderTextColor={COLORS.textMuted}
+                  style={styles.searchInput}
+                  returnKeyType="search"
+                  autoCorrect={false}
+                />
+                {query !== '' && (
+                  <TouchableOpacity onPress={() => setQuery('')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Clear search">
+                    <Text style={styles.searchClear}>✕</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <TouchableOpacity style={styles.filterBtn} onPress={() => setFilterOpen(true)} accessibilityRole="button" accessibilityLabel="Filters">
+                <Text style={styles.filterBtnText}>⚙ Filters</Text>
+                {activeCount > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{activeCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
             </View>
+
+            <View style={styles.metaRow}>
+              <Text style={styles.countText}>{visible.length} campaign{visible.length === 1 ? '' : 's'}</Text>
+              <TouchableOpacity onPress={() => setSortOpen(true)} accessibilityRole="button" accessibilityLabel="Sort">
+                <Text style={styles.sortText}>Sort: {SORTS.find((x) => x.key === sort)?.label} ▾</Text>
+              </TouchableOpacity>
+            </View>
+
+            {activeCount > 0 && (
+              <View style={styles.activeRow}>
+                {quickFilter && <ActiveChip label={QUICK_FILTERS.find((f) => f.key === quickFilter)!.label} onRemove={() => setQuickFilter(null)} />}
+                {category && <ActiveChip label={categoryLabel(category)} onRemove={() => setCategory(null)} />}
+                {ngoFilter && <ActiveChip label={ngos.find((n) => n.id === ngoFilter)?.name ?? 'NGO'} onRemove={() => setNgoFilter(null)} />}
+                <TouchableOpacity onPress={clearChips} accessibilityRole="button">
+                  <Text style={styles.clearAll}>Clear all</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </>
         )}
 
@@ -301,16 +328,20 @@ export function CampaignsListScreen({ navigation }: any) {
                     </View>
                     <Text style={styles.fundedText}>
                       {goalReached
-                        ? 'Goal reached 🎉 — more donations still welcome'
-                        : `${Math.floor((fraction ?? 0) * 100)}% funded · ${formatRupees(c.goalAmountCents! - c.raisedAmountCents)} to go`}
+                        ? 'Goal reached 🎉 — thank you to everyone who donated'
+                        : `${fundedPercentLabel(fraction ?? 0)} funded ·${formatRupees(c.goalAmountCents! - c.raisedAmountCents)} to go`}
                     </Text>
                   </>
                 )}
 
+                {c.anonymousRaisedCents > 0 && (
+                  <Text style={styles.donorText}>🕶️ {formatRupees(c.anonymousRaisedCents)} given anonymously</Text>
+                )}
                 {donors && <Text style={styles.donorText}>💚 {donors}</Text>}
 
+                {!goalReached && (
                 <View style={styles.quickRow}>
-                  {QUICK_AMOUNTS.map((amt) => (
+                  {QUICK_AMOUNTS.filter((amt) => c.goalAmountCents == null || amt * 100 <= c.goalAmountCents - c.raisedAmountCents).map((amt) => (
                     <TouchableOpacity
                       key={amt}
                       style={styles.quickButton}
@@ -325,11 +356,63 @@ export function CampaignsListScreen({ navigation }: any) {
                     <Text style={styles.quickText}>Other</Text>
                   </TouchableOpacity>
                 </View>
+                )}
               </BorderCard>
             </TouchableOpacity>
           );
         })}
       </ScrollView>
+
+      <Sheet visible={filterOpen} onClose={() => setFilterOpen(false)} title="Filters" scrollable>
+        <Text style={styles.sheetLabel}>Quick filters</Text>
+        <View style={styles.wrapRow}>
+          {QUICK_FILTERS.map((f) => (
+            <OutlineChip key={f.key} label={f.label} active={quickFilter === f.key} onPress={() => setQuickFilter(quickFilter === f.key ? null : f.key)} />
+          ))}
+        </View>
+
+        <Text style={styles.sheetLabel}>Category</Text>
+        <View style={styles.wrapRow}>
+          {CAMPAIGN_CATEGORIES.map((c) => (
+            <OutlineChip key={c.key} label={`${c.emoji} ${c.label}`} active={category === c.key} onPress={() => setCategory(category === c.key ? null : c.key)} />
+          ))}
+        </View>
+
+        {ngos.length > 1 && (
+          <>
+            <Text style={styles.sheetLabel}>NGO</Text>
+            <View style={styles.wrapRow}>
+              {ngos.map((n) => (
+                <OutlineChip key={n.id} label={`${n.name} (${n.count})`} active={ngoFilter === n.id} onPress={() => setNgoFilter(ngoFilter === n.id ? null : n.id)} />
+              ))}
+            </View>
+          </>
+        )}
+
+        <View style={styles.sheetFooter}>
+          <TouchableOpacity onPress={clearChips} disabled={activeCount === 0} accessibilityRole="button">
+            <Text style={[styles.clearAll, activeCount === 0 && { opacity: 0.4 }]}>Clear all</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.applyBtn} onPress={() => setFilterOpen(false)} accessibilityRole="button">
+            <Text style={styles.applyText}>Show {visible.length} campaign{visible.length === 1 ? '' : 's'}</Text>
+          </TouchableOpacity>
+        </View>
+      </Sheet>
+
+      <Sheet visible={sortOpen} onClose={() => setSortOpen(false)} title="Sort by">
+        {SORTS.map((o) => (
+          <TouchableOpacity
+            key={o.key}
+            style={styles.sortOption}
+            onPress={() => { setSort(o.key); setSortOpen(false); }}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: sort === o.key }}
+          >
+            <Text style={[styles.sortOptionText, sort === o.key && styles.sortOptionActive]}>{o.label}</Text>
+            {sort === o.key && <Text style={styles.sortOptionActive}>✓</Text>}
+          </TouchableOpacity>
+        ))}
+      </Sheet>
     </View>
   );
 }
@@ -351,25 +434,31 @@ const styles = StyleSheet.create({
   myDonationsButton: { borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.sage, paddingHorizontal: 12, paddingVertical: 7 },
   myDonationsText: { fontSize: 12, fontWeight: '700', color: COLORS.forest },
 
-  search: {
-    height: 44,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: 16,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderWidth: 1,
-    borderColor: 'rgba(94,133,80,0.25)',
-    fontSize: 14,
-    color: COLORS.textPrimary,
-    marginBottom: 10,
-  },
-  chipRow: { gap: 8, paddingBottom: 10 },
-  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.sage },
-  chipSelected: { backgroundColor: COLORS.sage },
-  chipText: { fontSize: 12, fontWeight: '600', color: COLORS.forest },
-  chipTextSelected: { color: COLORS.white },
-  sortRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  sortLabel: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
-  sortChips: { gap: 8 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, height: 44, borderRadius: 14, paddingHorizontal: 12, borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  searchIcon: { fontSize: 14 },
+  searchInput: { flex: 1, fontSize: 14, color: COLORS.textPrimary, paddingVertical: 0 },
+  searchClear: { fontSize: 14, color: COLORS.textMuted },
+  filterBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 44, borderRadius: 14, paddingHorizontal: 12, borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  filterBtnText: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary },
+  badge: { minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 5, backgroundColor: COLORS.forest, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { fontSize: 11, fontWeight: '700', color: COLORS.white },
+  metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  countText: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted },
+  sortText: { fontSize: 12, fontWeight: '700', color: COLORS.textPrimary },
+  activeRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 12 },
+  activeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '100%', paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  activeChipText: { fontSize: 12, fontWeight: '600', color: COLORS.textPrimary, flexShrink: 1 },
+  activeChipX: { fontSize: 11, color: COLORS.textMuted },
+  clearAll: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
+  sheetLabel: { fontSize: 12, fontWeight: '700', color: COLORS.textMuted, textTransform: 'uppercase', marginTop: 12, marginBottom: 6 },
+  wrapRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  sheetFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 20 },
+  applyBtn: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: RADIUS.full, backgroundColor: COLORS.forest },
+  applyText: { fontSize: 14, fontWeight: '700', color: COLORS.white },
+  sortOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14 },
+  sortOptionText: { fontSize: 15, color: COLORS.textPrimary },
+  sortOptionActive: { fontWeight: '700', color: COLORS.forest },
 
   noMatch: { alignItems: 'center', paddingVertical: 32, gap: 8 },
   noMatchTitle: { ...TEXT.subheading, color: COLORS.textSecondary },

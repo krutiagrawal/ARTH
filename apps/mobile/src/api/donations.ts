@@ -9,6 +9,8 @@ export interface ApiCampaign {
   coverPhotoUri: string | null;
   goalAmountCents: number | null;
   raisedAmountCents: number;
+  /** Portion of raisedAmountCents given by donors who chose to be anonymous. */
+  anonymousRaisedCents: number;
   /** Distinct people who have donated. */
   donorCount: number;
   /** First names of the latest donors, newest first (max 3). */
@@ -47,10 +49,19 @@ export interface DonationIntent {
   clientSecret: string | null;
 }
 
-export async function createDonationIntent(campaignId: string, amountCents: number): Promise<DonationIntent> {
+export interface DonationExtras {
+  /** Hide the donor's name from the public donor line (the NGO still sees it). */
+  isAnonymous?: boolean;
+  /** Optional note to the NGO (max 300 chars). */
+  message?: string;
+  /** Optional PAN printed on the receipt for 80G claims. */
+  donorPan?: string;
+}
+
+export async function createDonationIntent(campaignId: string, amountCents: number, extras: DonationExtras = {}): Promise<DonationIntent> {
   return apiFetch<DonationIntent>(`/api/campaigns/${campaignId}/donate`, {
     method: 'POST',
-    body: { amountCents },
+    body: { amountCents, ...extras },
   });
 }
 

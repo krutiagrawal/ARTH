@@ -23,6 +23,7 @@ export function serializeCampaign(c: any) {
     coverPhotoUri: c.coverPhotoUrl,
     goalAmountCents: c.goalAmountCents ?? null,
     raisedAmountCents: c.raisedAmountCents,
+    anonymousRaisedCents: c.anonymousRaisedCents ?? 0,
     donorCount: c.donorCount ?? 0,
     recentDonors: c.recentDonors ?? [],
     category: c.category ?? null,
@@ -91,6 +92,8 @@ export default async function donationsRoutes(fastify: FastifyInstance) {
           amountCents: d.amountCents,
           currency: d.currency,
           donatedAt: d.createdAt,
+          isAnonymous: d.isAnonymous,
+          message: d.message,
         })),
       });
     },
@@ -181,6 +184,7 @@ export default async function donationsRoutes(fastify: FastifyInstance) {
       request.params.id,
       parsed.data.amountCents,
       parsed.data.currency ?? 'inr',
+      { isAnonymous: parsed.data.isAnonymous, message: parsed.data.message, donorPan: parsed.data.donorPan },
     );
 
     reply.status(201).send({ donationId: donation.id, clientSecret });

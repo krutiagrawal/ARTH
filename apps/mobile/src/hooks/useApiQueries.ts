@@ -108,6 +108,7 @@ import {
   reopenCampaign,
   fetchMyDonations,
   CreateCampaignInput,
+  type DonationExtras,
 } from '../api/donations';
 import {
   fetchNgoProfile,
@@ -1340,8 +1341,8 @@ export function useCampaign(id: string | null) {
 
 export function useCreateDonationIntent() {
   return useMutation({
-    mutationFn: ({ campaignId, amountCents }: { campaignId: string; amountCents: number }) =>
-      createDonationIntent(campaignId, amountCents),
+    mutationFn: ({ campaignId, amountCents, ...extras }: { campaignId: string; amountCents: number } & DonationExtras) =>
+      createDonationIntent(campaignId, amountCents, extras),
   });
 }
 

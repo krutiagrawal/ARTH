@@ -23,6 +23,16 @@ export const updateCampaignSchema = z.object({
 export const createDonationSchema = z.object({
   amountCents: z.coerce.number().int().min(100).max(1_000_000_00),
   currency: z.string().length(3).optional(),
+  isAnonymous: z.boolean().optional(),
+  message: z.string().trim().max(300).optional(),
+  // Indian PAN: 5 letters, 4 digits, 1 letter. Empty string = not provided.
+  donorPan: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/, 'Enter a valid PAN (e.g. ABCDE1234F)')
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
 });
 
 export const listCampaignsQuerySchema = z.object({

@@ -1,7 +1,7 @@
 import { PrismaClient } from '@arth/db';
 import { randomUUID } from 'node:crypto';
 import { getStripeClient } from '../lib/stripe';
-import { ConflictError, ForbiddenError, NotFoundError, ServiceUnavailableError } from '../utils/errors';
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, ServiceUnavailableError } from '../utils/errors';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
 import { confirmOrderPayment } from './order.service';
 import { notify } from './notification.service';
@@ -41,31 +41,37 @@ const campaignInclude = {
   donations: {
     where: { status: 'succeeded' as const },
     orderBy: { createdAt: 'desc' as const },
-    select: { amountCents: true, userId: true, user: { select: { name: true } } },
+    select: { amountCents: true, userId: true, isAnonymous: true, user: { select: { name: true } } },
   },
 };
 
 interface CampaignDonationRow {
   amountCents: number;
   userId: string;
+  isAnonymous: boolean;
   user: { name: string };
 }
 
 const RECENT_DONOR_LIMIT = 3;
 
 // Donations arrive newest-first (see campaignInclude), so the first-seen order of donors is
-// already "most recent first". Only first names are exposed — this list is public.
+// already "most recent first". Only first names are exposed — this list is public — and donors
+// who chose to be anonymous count toward donorCount but are never named.
 function withRaisedAmount<T extends { donations: CampaignDonationRow[] }>(campaign: T) {
   const raisedAmountCents = campaign.donations.reduce((sum, d) => sum + d.amountCents, 0);
-  const donors = new Map<string, string>();
+  const anonymousRaisedCents = campaign.donations.filter((d) => d.isAnonymous).reduce((sum, d) => sum + d.amountCents, 0);
+  const donors = new Set<string>();
+  const named = new Map<string, string>();
   for (const d of campaign.donations) {
-    if (!donors.has(d.userId)) donors.set(d.userId, d.user.name.trim().split(/\s+/)[0] || 'Someone');
+    donors.add(d.userId);
+    if (!d.isAnonymous && !named.has(d.userId)) named.set(d.userId, d.user.name.trim().split(/\s+/)[0] || 'Someone');
   }
   return {
     ...campaign,
     raisedAmountCents,
+    anonymousRaisedCents,
     donorCount: donors.size,
-    recentDonors: [...donors.values()].slice(0, RECENT_DONOR_LIMIT),
+    recentDonors: [...named.values()].slice(0, RECENT_DONOR_LIMIT),
   };
 }
 
@@ -160,7 +166,7 @@ export async function listOwnedCampaigns(prisma: PrismaClient, ngoUserId: string
       ngoId: ngo.id,
       ...(filter.q ? { title: { contains: filter.q, mode: 'insensitive' as const } } : {}),
     },
-    include: { ...campaignInclude, donations: { select: { amountCents: true, status: true } } },
+    include: { ...campaignInclude, donations: { select: { amountCents: true, status: true, isAnonymous: true } } },
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     take,
     skip: (page - 1) * take,
@@ -169,6 +175,9 @@ export async function listOwnedCampaigns(prisma: PrismaClient, ngoUserId: string
     ...c,
     raisedAmountCents: c.donations
       .filter((d) => d.status === 'succeeded')
+      .reduce((sum, d) => sum + d.amountCents, 0),
+    anonymousRaisedCents: c.donations
+      .filter((d) => d.status === 'succeeded' && d.isAnonymous)
       .reduce((sum, d) => sum + d.amountCents, 0),
   }));
 }
@@ -184,7 +193,7 @@ export async function listCampaignDonations(prisma: PrismaClient, ngoUserId: str
       orderBy: { createdAt: 'desc' },
       take,
       skip: (page - 1) * take,
-      select: { id: true, amountCents: true, currency: true, createdAt: true, user: { select: { name: true, handle: true } } },
+      select: { id: true, amountCents: true, currency: true, createdAt: true, isAnonymous: true, message: true, user: { select: { name: true, handle: true } } },
     }),
     prisma.donation.count({ where: { campaignId: campaign.id, status: 'succeeded' } }),
   ]);
@@ -216,6 +225,7 @@ export async function createDonationIntent(
   campaignId: string,
   amountCents: number,
   currency = 'inr',
+  extras: { isAnonymous?: boolean; message?: string; donorPan?: string } = {},
 ) {
   const campaign = await prisma.donationCampaign.findUnique({ where: { id: campaignId }, include: { ngo: true } });
   if (!campaign || campaign.status !== 'active' || campaign.ngo.status !== 'approved') {
@@ -225,6 +235,20 @@ export async function createDonationIntent(
     throw new ConflictError('This campaign has ended');
   }
   if (campaign.ngo.userId === userId) throw new ForbiddenError('You cannot donate to your own campaign');
+
+  // A donation can't push the total past the NGO's goal. Only settled donations count, matching
+  // the raised total shown to donors. Campaigns without a goal have no cap.
+  if (campaign.goalAmountCents != null) {
+    const { _sum } = await prisma.donation.aggregate({
+      where: { campaignId, status: 'succeeded' },
+      _sum: { amountCents: true },
+    });
+    const remainingCents = campaign.goalAmountCents - (_sum.amountCents ?? 0);
+    if (remainingCents <= 0) throw new ConflictError('This campaign has already reached its goal');
+    if (amountCents > remainingCents) {
+      throw new BadRequestError(`This campaign only needs ${formatRupees(remainingCents, currency)} more. Please enter that amount or less.`);
+    }
+  }
 
   // getStripeClient() throws ServiceUnavailableError when STRIPE_SECRET_KEY isn't configured —
   // in a local/dev environment without Stripe set up, that's not a hard stop: skip creating a
@@ -253,6 +277,9 @@ export async function createDonationIntent(
       userId,
       amountCents,
       currency,
+      isAnonymous: extras.isAnonymous ?? false,
+      message: extras.message || null,
+      donorPan: extras.donorPan || null,
       stripePaymentIntentId: paymentIntent?.id,
       status: paymentIntent ? 'pending' : 'succeeded',
     },
@@ -285,7 +312,7 @@ async function finalizeSucceededDonation(prisma: PrismaClient, donationId: strin
     userId: donation.campaign.ngo.userId,
     type: 'ngo_donation_received',
     actorUserId: donation.userId,
-    data: { campaignId: donation.campaignId, campaignTitle: donation.campaign.title, amountCents: donation.amountCents },
+    data: { campaignId: donation.campaignId, campaignTitle: donation.campaign.title, amountCents: donation.amountCents, message: donation.message },
     push: {
       title: donation.campaign.ngo.orgName,
       body: `${donation.user.name} donated ₹${(donation.amountCents / 100).toLocaleString('en-IN')} to ${donation.campaign.title}`,
@@ -313,6 +340,7 @@ function buildReceiptHtml(donation: {
   currency: string;
   createdAt: Date;
   donorName: string;
+  donorPan: string | null;
   campaignTitle: string;
   ngoOrgName: string;
   ngoEightyG: string | null;
@@ -325,6 +353,7 @@ function buildReceiptHtml(donation: {
       <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
         <tr><td style="padding: 6px 0; color: #6e6355;">Date</td><td style="padding: 6px 0; text-align: right;">${donation.createdAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</td></tr>
         <tr><td style="padding: 6px 0; color: #6e6355;">Donor</td><td style="padding: 6px 0; text-align: right;">${donation.donorName}</td></tr>
+        ${donation.donorPan ? `<tr><td style="padding: 6px 0; color: #6e6355;">Donor PAN</td><td style="padding: 6px 0; text-align: right;">${donation.donorPan}</td></tr>` : ''}
         <tr><td style="padding: 6px 0; color: #6e6355;">Received by</td><td style="padding: 6px 0; text-align: right;">${donation.ngoOrgName}</td></tr>
         <tr><td style="padding: 6px 0; color: #6e6355;">Campaign</td><td style="padding: 6px 0; text-align: right;">${donation.campaignTitle}</td></tr>
         <tr><td style="padding: 12px 0 6px; font-weight: bold; border-top: 1px solid #ddd;">Amount</td><td style="padding: 12px 0 6px; text-align: right; font-weight: bold; border-top: 1px solid #ddd;">${formatRupees(donation.amountCents, donation.currency)}</td></tr>
@@ -365,6 +394,7 @@ async function sendDonationReceiptEmail(prisma: PrismaClient, donationId: string
       currency: donation.currency,
       createdAt: donation.createdAt,
       donorName: donation.user.name,
+      donorPan: donation.donorPan,
       campaignTitle: donation.campaign.title,
       ngoOrgName: donation.campaign.ngo.orgName,
       ngoEightyG: donation.campaign.ngo.eightyGRegistrationNumber,
@@ -395,6 +425,7 @@ export async function getDonationReceiptHtml(prisma: PrismaClient, requestingUse
     currency: donation.currency,
     createdAt: donation.createdAt,
     donorName: donation.user.name,
+    donorPan: donation.donorPan,
     campaignTitle: donation.campaign.title,
     ngoOrgName: donation.campaign.ngo.orgName,
     ngoEightyG: donation.campaign.ngo.eightyGRegistrationNumber,

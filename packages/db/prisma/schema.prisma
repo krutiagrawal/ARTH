@@ -2216,6 +2216,12 @@ model Donation {
   // Set once, when the webhook first marks the donation `succeeded` — never regenerated, so the
   // same receipt number is stable across repeat views/emails. Null for pending/failed donations.
   receiptNumber         String?        @unique @map("receipt_number")
+  // Hides the donor's name from the public "X and N others donated" line; the receiving NGO still sees it.
+  isAnonymous           Boolean        @default(false) @map("is_anonymous")
+  // Optional note from the donor to the NGO.
+  message               String?
+  // Optional donor PAN, printed on the receipt for 80G claims.
+  donorPan              String?        @map("donor_pan")
   createdAt             DateTime       @default(now()) @map("created_at")
   updatedAt             DateTime       @updatedAt @map("updated_at")
 
