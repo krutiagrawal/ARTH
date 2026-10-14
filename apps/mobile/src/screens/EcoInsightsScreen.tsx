@@ -17,6 +17,7 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { ImpactStatsCard } from '../components/common/ImpactStatsCard';
 import { FloatingParticles } from '../components/common/FloatingParticles';
 import { ShareCardModal } from '../components/common/ShareCardModal';
+import { ImpactShareCard } from '../components/share/ImpactShareCard';
 import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
 import { useHaptics } from '../hooks/useHaptics';
 import { useAuth } from '../context/AuthContext';
@@ -267,23 +268,7 @@ export function EcoInsightsScreen({ navigation }: any) {
         title="Share your impact"
         caption="Check out my environmental impact on ARTH 🌍"
       >
-        <LinearGradient colors={GRADIENTS.deepForest as any} style={styles.impactShareFill}>
-          <Text style={styles.impactShareKicker}>🌍 MY IMPACT</Text>
-          <Text style={styles.impactShareHeadline}>{user?.name ? `${user.name}'s Forest` : 'My Forest'}</Text>
-          <View style={styles.impactShareCardWrap}>
-            <ImpactStatsCard
-              co2={co2}
-              treesPlanted={treesPlanted}
-              daysActive={streak}
-              stats={[
-                { value: `${co2.toFixed(1)}kg`, label: 'CO₂ Absorbed' },
-                { value: treesPlanted, label: 'Trees Planted' },
-                { value: streak, label: 'Day Streak' },
-              ]}
-            />
-          </View>
-          <Text style={styles.impactShareWatermark}>🌱 Growing my impact with ARTH</Text>
-        </LinearGradient>
+        <ImpactShareCard name={user?.name} co2={co2} treesPlanted={treesPlanted} streak={streak} />
       </ShareCardModal>
     </View>
   );
@@ -315,32 +300,6 @@ const styles = StyleSheet.create({
   },
   shareIcon: {
     fontSize: 20,
-  },
-
-  impactShareFill: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: SPACING.lg,
-  },
-  impactShareKicker: {
-    ...TYPOGRAPHY.kicker,
-    color: COLORS.mintLight,
-  },
-  impactShareHeadline: {
-    ...TYPOGRAPHY.display2,
-    color: COLORS.white,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  impactShareCardWrap: {
-    width: '100%',
-    marginTop: SPACING.xl,
-  },
-  impactShareWatermark: {
-    ...TYPOGRAPHY.caption,
-    color: 'rgba(255,255,255,0.75)',
-    marginTop: SPACING.xl,
   },
 
   heroCard: {

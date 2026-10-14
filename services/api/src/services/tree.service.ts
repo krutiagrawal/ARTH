@@ -161,6 +161,8 @@ export async function plantTree(prisma: PrismaClient, input: PlantTreeInput) {
         await tx.user.update({ where: { id: input.userId }, data: { treesPlantedCount: { increment: 1 } } });
         await refreshUserCo2(tx, input.userId);
         await completeMissionByType(tx, input.userId, 'plant', false);
+        // Like the planted count and quest above, the streak day isn't gated on admin review.
+        await recordPlantedToday(tx, input.userId);
       }
       return { tree, provenanceFollowUp: null as ProvenanceFollowUp | null };
     }
