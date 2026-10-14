@@ -15,6 +15,7 @@ export default async function themesRoutes(fastify: FastifyInstance) {
         name: theme.name,
         preview: theme.previewEmoji,
         unlocked: theme.userForestThemes[0]?.unlocked ?? false,
+        unlockCriteria: theme.unlockCriteria,
       }))
     );
   });

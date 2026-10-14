@@ -12,7 +12,8 @@ import { EFFECTIVE_WIDTH } from '../../utils/responsive';
 import { TEXT } from '../../constants/typography';
 const GAP = 8;
 const H_PADDING = 16 * 2; // ProfileScreen body horizontal padding (both sides)
-const THUMB = (EFFECTIVE_WIDTH - H_PADDING - GAP * 2) / 3;
+// Floored so three thumbs plus two gaps never exceed the row by a fraction of a pixel and wrap to two.
+const THUMB = Math.floor((EFFECTIVE_WIDTH - H_PADDING - GAP * 2) / 3);
 
 function isActive(expiresAt: string): boolean {
   return new Date(expiresAt).getTime() > Date.now();

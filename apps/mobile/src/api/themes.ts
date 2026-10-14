@@ -6,6 +6,8 @@ export interface ApiForestTheme {
   name: string;
   preview: string;
   unlocked: boolean;
+  /** How to unlock it, shown when a locked theme is tapped; null when none is set. */
+  unlockCriteria?: string | null;
 }
 
 export async function fetchThemes(): Promise<ApiForestTheme[]> {

@@ -129,7 +129,7 @@ export function ProfileAboutCard({
             <Text style={styles.title}>{isOwn ? 'About my planting' : `About ${firstName}`}</Text>
             {!open && !!summary && <Text style={styles.summary} numberOfLines={1}>{summary}</Text>}
           </View>
-          <Text style={styles.chevron}>{open ? '⌃' : '⌄'}</Text>
+          <View style={[styles.chevron, open && styles.chevronOpen]} />
         </TouchableOpacity>
 
         {open && (
@@ -219,12 +219,22 @@ export function ProfileAboutCard({
 }
 
 const styles = StyleSheet.create({
-  wrap: { paddingHorizontal: 16, marginTop: 16 },
+  wrap: { paddingHorizontal: 16, marginTop: 8, marginBottom: 16 },
   title: { ...TEXT.subheading, color: COLORS.textPrimary },
   prompt: { fontSize: 13, color: COLORS.textSecondary, marginTop: 4 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   summary: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
-  chevron: { fontSize: 18, fontWeight: '700', color: COLORS.textSecondary },
+  // Drawn rather than a text glyph, so it renders identically on every device font.
+  chevron: {
+    width: 9,
+    height: 9,
+    marginRight: 4,
+    borderRightWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: COLORS.textSecondary,
+    transform: [{ rotate: '45deg' }],
+  },
+  chevronOpen: { marginTop: 5, transform: [{ rotate: '-135deg' }] },
   body: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(139,107,71,0.15)' },
   goalRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   goalLabel: { fontSize: 12, fontWeight: '700', color: COLORS.sageDark },

@@ -355,8 +355,14 @@ export function UserProfileScreen({ route, navigation }: any) {
                     <View style={styles.tabBody}>
                       <ForestThemesPicker
                         themes={themes}
+                        selectedThemeId={user?.selectedForestThemeId}
                         onSelectUnlocked={(t) => selectThemeMutation.mutate(t.id)}
-                        onSelectLocked={() => confirm('Locked', 'Keep planting trees to unlock this forest theme!')}
+                        onSelectLocked={(t) =>
+                          confirm(
+                            `${t.preview} ${t.name} is locked`,
+                            t.unlockCriteria || 'Keep planting trees and earning achievements to unlock this forest theme!',
+                          )
+                        }
                       />
                     </View>
                   )}
