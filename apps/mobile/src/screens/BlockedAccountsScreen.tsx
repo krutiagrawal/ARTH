@@ -1,4 +1,5 @@
 import React from 'react';
+import { blockInputFor } from '../api/social';
 import { View, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -30,7 +31,7 @@ export function BlockedAccountsScreen({ navigation }: any) {
         text: 'Unblock',
         onPress: () =>
           unblock.mutate(
-            block.kind === 'ngo' ? { ngoId: block.targetId } : { userId: block.targetId },
+            blockInputFor({ kind: block.kind, id: block.targetId }),
           ),
       },
     ]);
@@ -81,7 +82,7 @@ export function BlockedAccountsScreen({ navigation }: any) {
                     {item.name}
                   </Text>
                   <Text style={styles.meta} numberOfLines={1}>
-                    {item.kind === 'ngo' ? 'Organisation' : item.handle ? `@${item.handle}` : 'Person'}
+                    {item.kind === 'ngo' ? 'Organisation' : item.kind === 'nursery' ? 'Nursery' : item.handle ? `@${item.handle}` : 'Person'}
                   </Text>
                 </View>
 
@@ -117,7 +118,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: COLORS.white,
+    borderWidth: 1.5,
+    borderColor: COLORS.earth,
     borderRadius: RADIUS.md,
     padding: 12,
   },
@@ -125,7 +127,8 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: COLORS.beige,
+    borderWidth: 1.5,
+    borderColor: COLORS.earth,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -139,7 +142,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.forest,
+    borderWidth: 1.5,
+    borderColor: COLORS.earth,
   },
-  unblockText: { fontSize: 12, fontWeight: '800', color: COLORS.white },
+  unblockText: { fontSize: 12, fontWeight: '800', color: COLORS.earthDark },
 });

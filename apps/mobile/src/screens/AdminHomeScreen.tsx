@@ -234,6 +234,7 @@ export function AdminHomeScreen({ navigation, onNavigateTab }: any) {
         {sceneryMode === 'wind' && <WindEffect count={6} />}
         {sceneryMode === 'leaves' && (
           <FloatingParticles
+            ambient
             count={5}
             type={theme.particleType === 'firefly' ? 'leaf' : theme.particleType}
             speedMultiplier={2.2}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Image, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { Text, TextInput } from '../common/AppText';
 import { Sheet } from '../common/Sheet';
-import * as Haptics from 'expo-haptics';
+import { useHaptics } from '../../hooks/useHaptics';
 import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
 import { RADIUS, SPACING, GLASS_DARK_STYLE } from '../../constants/theme';
 import { usePostStory } from '../../hooks/useApiQueries';
@@ -24,6 +24,7 @@ export function StoryPreviewModal({
   const [caption, setCaption] = useState('');
   const postStoryMutation = usePostStory();
   const confirm = useConfirm();
+  const { medium, success } = useHaptics();
   const previewUri = imageBase64 ? `data:image/jpeg;base64,${imageBase64}` : null;
 
   useEffect(() => {
@@ -32,7 +33,7 @@ export function StoryPreviewModal({
 
   const handleShareInstagram = () => {
     if (!previewUri) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    medium();
     shareImageToInstagramStory(previewUri, caption);
   };
 
@@ -42,7 +43,7 @@ export function StoryPreviewModal({
       { imageBase64, caption },
       {
         onSuccess: () => {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          success();
           onPosted?.();
           onClose();
         },

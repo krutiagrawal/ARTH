@@ -130,6 +130,13 @@ async function assembleNurseryProfile(prisma: PrismaClient, nursery: { id: strin
     }),
   ]);
 
+  const blockedByMe = viewerUserId
+    ? !!(await prisma.block.findFirst({
+        where: { blockerId: viewerUserId, blockedNurseryId: nursery.id },
+        select: { id: true },
+      }))
+    : false;
+
   return {
     id: nursery.id,
     nurseryName: nursery.nurseryName,
@@ -156,6 +163,7 @@ async function assembleNurseryProfile(prisma: PrismaClient, nursery: { id: strin
     followersCount,
     isFollowing: follow?.status === 'accepted',
     followStatus: follow?.status ?? null,
+    blockedByMe,
     recentPosts: recentPosts.map((p) => serializePost(p as any, viewerUserId)),
     stock,
   };

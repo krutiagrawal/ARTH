@@ -33,6 +33,7 @@ function FollowedRow({
   onUnfollow: () => void;
   unfollowing: boolean;
 }) {
+  const metaLine = [city, followStatus === 'pending' ? 'Requested' : null].filter(Boolean).join(' · ');
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
       <BorderCard noPadding style={styles.row}>
@@ -45,7 +46,7 @@ function FollowedRow({
         )}
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>{name}</Text>
-          <Text style={styles.meta}>{city ?? '—'}{followStatus === 'pending' ? ' · Requested' : ''}</Text>
+          {metaLine ? <Text style={styles.meta}>{metaLine}</Text> : null}
         </View>
         <TouchableOpacity onPress={onUnfollow} disabled={unfollowing} style={styles.unfollowButton}>
           <Text style={styles.unfollowText}>{unfollowing ? '…' : 'Unfollow'}</Text>

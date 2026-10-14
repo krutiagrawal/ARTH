@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSettings } from '../hooks/useApiQueries';
 import { getWeatherScene, type WeatherScene } from '../services/weatherService';
 
 export type SoundKey = 'woof' | 'friendAccepted';
@@ -69,8 +70,15 @@ const SoundContext = createContext<SoundContextValue>({
 });
 
 export function SoundProvider({ children }: { children: React.ReactNode }) {
-  const [isMuted, setIsMuted] = useState(false);
+  const [localMuted, setLocalMuted] = useState(false);
+  // Saved "Nature Sounds" setting (Settings > Experience); off silences everything.
+  const { data: settings } = useSettings();
+  const soundsOn = settings?.sounds ?? true;
+  const soundsOnRef = useRef(soundsOn);
+  soundsOnRef.current = soundsOn;
+  const isMuted = localMuted || !soundsOn;
   const isMutedRef = useRef(false);
+  const localMutedRef = useRef(false);
   const sceneRef = useRef<WeatherScene>('sunny');
 
   const birdsRef = useRef<AudioPlayer | null>(null);
@@ -85,8 +93,9 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
     const setup = async () => {
       // Restore mute preference first
       const stored = await AsyncStorage.getItem(MUTE_KEY);
-      const muted = stored === 'true';
-      if (mounted) { setIsMuted(muted); isMutedRef.current = muted; }
+      const storedMuted = stored === 'true';
+      const muted = storedMuted || !soundsOnRef.current;
+      if (mounted) { setLocalMuted(storedMuted); localMutedRef.current = storedMuted; isMutedRef.current = muted; }
 
       // Configure audio session before any playback
       await setAudioModeAsync({
@@ -137,30 +146,32 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const toggleMute = useCallback(() => {
-    setIsMuted(prev => {
-      const next = !prev;
-      isMutedRef.current = next;
-      AsyncStorage.setItem(MUTE_KEY, String(next));
-
-      const birdVol = sceneRef.current === 'rainy' ? VOL.birds_rainy : VOL.birds_sunny;
-      if (next) {
-        if (birdsRef.current) birdsRef.current.volume = 0;
-        if (pianoRef.current) pianoRef.current.volume = 0;
-        if (rainRef.current) rainRef.current.volume = 0;
-        birdsRef.current?.pause();
-        pianoRef.current?.pause();
-        rainRef.current?.pause();
-      } else {
-        if (birdsRef.current) birdsRef.current.volume = birdVol;
-        if (pianoRef.current) pianoRef.current.volume = VOL.piano;
-        if (sceneRef.current === 'rainy' && rainRef.current) rainRef.current.volume = VOL.rain;
-        birdsRef.current?.play();
-        pianoRef.current?.play();
-        if (sceneRef.current === 'rainy') rainRef.current?.play();
-      }
-      return next;
-    });
+    const next = !localMutedRef.current;
+    localMutedRef.current = next;
+    AsyncStorage.setItem(MUTE_KEY, String(next));
+    setLocalMuted(next);
   }, []);
+
+  // Apply the effective mute (local mute OR Nature Sounds off) to the running loops.
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+    const birdVol = sceneRef.current === 'rainy' ? VOL.birds_rainy : VOL.birds_sunny;
+    if (isMuted) {
+      if (birdsRef.current) birdsRef.current.volume = 0;
+      if (pianoRef.current) pianoRef.current.volume = 0;
+      if (rainRef.current) rainRef.current.volume = 0;
+      birdsRef.current?.pause();
+      pianoRef.current?.pause();
+      rainRef.current?.pause();
+    } else {
+      if (birdsRef.current) birdsRef.current.volume = birdVol;
+      if (pianoRef.current) pianoRef.current.volume = VOL.piano;
+      if (sceneRef.current === 'rainy' && rainRef.current) rainRef.current.volume = VOL.rain;
+      birdsRef.current?.play();
+      pianoRef.current?.play();
+      if (sceneRef.current === 'rainy') rainRef.current?.play();
+    }
+  }, [isMuted]);
 
   const playSound = useCallback(async (key: SoundKey) => {
     const src = ONE_SHOT_SRC[key];

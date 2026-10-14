@@ -124,7 +124,9 @@ export function viewerInclude(viewerId?: string) {
 function visibilityWhere(viewerId: string, blocked: BlockedIds): Prisma.PostWhereInput {
   const notBlocked: Prisma.PostWhereInput[] = [];
   if (blocked.userIds.length) notBlocked.push({ userId: { notIn: blocked.userIds } });
-  if (blocked.ngoIds.length) notBlocked.push({ ngoId: { notIn: blocked.ngoIds } });
+  // ngoId / nurseryId are nullable, and SQL `NOT IN` drops NULL rows, so allow null explicitly.
+  if (blocked.ngoIds.length) notBlocked.push({ OR: [{ ngoId: null }, { ngoId: { notIn: blocked.ngoIds } }] });
+  if (blocked.nurseryIds.length) notBlocked.push({ OR: [{ nurseryId: null }, { nurseryId: { notIn: blocked.nurseryIds } }] });
 
   return {
     AND: [

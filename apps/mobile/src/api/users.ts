@@ -24,6 +24,8 @@ export interface ApiPublicProfile {
   isOnline: boolean;
   lastActiveAt: string | null;
   friendStatus: 'none' | 'pending' | 'accepted';
+  /** True when the viewer has blocked this account. */
+  blockedByMe?: boolean;
 }
 
 export interface ApiSession {

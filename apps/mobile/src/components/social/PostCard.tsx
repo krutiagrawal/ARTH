@@ -140,7 +140,7 @@ export function PostCard({
         options.push({
           key: 'block',
           icon: '🚫',
-          label: post.author.kind === 'ngo' ? `Block ${post.author.name}` : 'Block this person',
+          label: post.author.kind === 'ngo' || post.author.kind === 'nursery' ? `Block ${post.author.name}` : 'Block this person',
           hint: 'Hides their posts and stories both ways',
           destructive: true,
           onPress: () =>

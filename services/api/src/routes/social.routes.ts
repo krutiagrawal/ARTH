@@ -23,8 +23,11 @@ const blockSchema = z
   .object({
     userId: z.string().uuid().optional(),
     ngoId: z.string().uuid().optional(),
+    nurseryId: z.string().uuid().optional(),
   })
-  .refine((v) => !v.userId !== !v.ngoId, { message: 'Provide exactly one of userId or ngoId' });
+  .refine((v) => [v.userId, v.ngoId, v.nurseryId].filter(Boolean).length === 1, {
+    message: 'Provide exactly one of userId, ngoId or nurseryId',
+  });
 
 /**
  * The viewer-facing social surface: the main feed, saved posts, moderation actions, the

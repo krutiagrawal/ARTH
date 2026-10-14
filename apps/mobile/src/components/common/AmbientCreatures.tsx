@@ -11,6 +11,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { useEffect } from 'react';
+import { useAmbientEnabled } from '../../hooks/useAmbientEnabled';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import type { TimePeriod } from '../../hooks/useTimeTheme';
 
@@ -215,6 +216,8 @@ export function AmbientCreatures({
   fireflyCount?: number;
   fireflyAreaHeight?: number;
 }) {
+  const ambientEnabled = useAmbientEnabled();
+  if (!ambientEnabled) return null;
   const isNight = period === 'night' || period === 'lateNight';
   return isNight ? (
     <AmbientFireflies count={fireflyCount} areaHeight={fireflyAreaHeight} />

@@ -609,7 +609,7 @@ model UserSettings {
   userId           String   @id @map("user_id")
   haptics          Boolean  @default(true)
   notifications    Boolean  @default(true)
-  ambientMode      Boolean  @default(false) @map("ambient_mode")
+  ambientMode      Boolean  @default(true) @map("ambient_mode")
   sounds           Boolean  @default(true)
   darkMode         Boolean  @default(false) @map("dark_mode")
   streakReminders  Boolean  @default(true) @map("streak_reminders")
@@ -959,6 +959,7 @@ model NurseryProfile {
   bulkRequirementResponses BulkRequirementResponse[]
   suppliedTrees            Tree[]
   deliveryPartners         DeliveryPartnerProfile[]
+  blockedBy                Block[]
 
   @@index([status])
   @@map("nursery_profiles")
@@ -2006,7 +2007,7 @@ model DrivePickupPoint {
   arrivalBy DateTime @map("arrival_by")
   order     Int
 
-  drive Drive @relation(fields: [driveId], references: [id], onDelete: Cascade)
+  drive Drive       @relation(fields: [driveId], references: [id], onDelete: Cascade)
   rsvps DriveRsvp[]
 
   @@index([driveId])
@@ -2046,26 +2047,26 @@ model DrivePlantSponsorship {
 }
 
 model DriveRsvp {
-  id          String     @id @default(uuid())
-  driveId     String     @map("drive_id")
-  userId      String     @map("user_id")
-  status      RsvpStatus @default(confirmed)
+  id                    String     @id @default(uuid())
+  driveId               String     @map("drive_id")
+  userId                String     @map("user_id")
+  status                RsvpStatus @default(confirmed)
   // Null until the NGO marks the (completed) drive's attendance — distinct from `status`, which
   // only tracks whether the RSVP itself was cancelled, not whether the person actually showed up.
-  attended    Boolean?
-  hoursLogged Float?     @map("hours_logged")
-  role        String?
+  attended              Boolean?
+  hoursLogged           Float?     @map("hours_logged")
+  role                  String?
   // Volunteer-supplied details collected on the RSVP confirm form. Null on RSVPs made before the
   // form existed. `pickupPointId` null on an ngo_provided drive means "I'll come by myself".
   phone                 String?
-  emergencyContactName  String? @map("emergency_contact_name")
-  emergencyContactPhone String? @map("emergency_contact_phone")
+  emergencyContactName  String?    @map("emergency_contact_name")
+  emergencyContactPhone String?    @map("emergency_contact_phone")
   note                  String?
-  pickupPointId         String? @map("pickup_point_id")
+  pickupPointId         String?    @map("pickup_point_id")
   // Why the volunteer cancelled — set when status flips to cancelled, cleared on re-RSVP.
-  cancelReason          String? @map("cancel_reason")
-  cancelNote            String? @map("cancel_note")
-  createdAt   DateTime   @default(now()) @map("created_at")
+  cancelReason          String?    @map("cancel_reason")
+  cancelNote            String?    @map("cancel_note")
+  createdAt             DateTime   @default(now()) @map("created_at")
 
   drive       Drive             @relation(fields: [driveId], references: [id], onDelete: Cascade)
   user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -2472,18 +2473,21 @@ model ContentReport {
 // A viewer hiding someone. Filtered in both directions at read time, so neither party sees the
 // other's posts or stories once a block exists.
 model Block {
-  id            String   @id @default(uuid())
-  blockerId     String   @map("blocker_id")
-  blockedUserId String?  @map("blocked_user_id")
-  blockedNgoId  String?  @map("blocked_ngo_id")
-  createdAt     DateTime @default(now()) @map("created_at")
+  id               String   @id @default(uuid())
+  blockerId        String   @map("blocker_id")
+  blockedUserId    String?  @map("blocked_user_id")
+  blockedNgoId     String?  @map("blocked_ngo_id")
+  blockedNurseryId String?  @map("blocked_nursery_id")
+  createdAt        DateTime @default(now()) @map("created_at")
 
-  blocker     User        @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
-  blockedUser User?       @relation("BlockedUser", fields: [blockedUserId], references: [id], onDelete: Cascade)
-  blockedNgo  NgoProfile? @relation(fields: [blockedNgoId], references: [id], onDelete: Cascade)
+  blocker        User            @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedUser    User?           @relation("BlockedUser", fields: [blockedUserId], references: [id], onDelete: Cascade)
+  blockedNgo     NgoProfile?     @relation(fields: [blockedNgoId], references: [id], onDelete: Cascade)
+  blockedNursery NurseryProfile? @relation(fields: [blockedNurseryId], references: [id], onDelete: Cascade)
 
   @@unique([blockerId, blockedUserId])
   @@unique([blockerId, blockedNgoId])
+  @@unique([blockerId, blockedNurseryId])
   @@index([blockerId])
   @@map("blocks")
 }

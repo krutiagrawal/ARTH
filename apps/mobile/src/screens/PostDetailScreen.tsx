@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { blockInputFor } from '../api/social';
 import { View, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -65,7 +66,7 @@ export function PostDetailScreen({ navigation, route }: any) {
             onReport={() => setReporting(true)}
             onBlock={(p) =>
               blockTarget.mutate(
-                p.author.kind === 'ngo' ? { ngoId: p.author.id } : { userId: p.author.id },
+                blockInputFor(p.author),
                 { onSuccess: () => navigation.goBack() },
               )
             }

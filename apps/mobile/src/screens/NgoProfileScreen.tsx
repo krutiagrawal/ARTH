@@ -21,7 +21,8 @@ import { DrivesTabContent } from '../components/profile/DrivesTabContent';
 import { CampaignsTabContent } from '../components/profile/CampaignsTabContent';
 import { AdoptableTreesTabContent } from '../components/profile/AdoptableTreesTabContent';
 import { useAuth } from '../context/AuthContext';
-import { useBlockTarget, useNgoPosts, useMyPortfolio } from '../hooks/useSocialQueries';
+import { useBlockTarget, useUnblockTarget, useNgoPosts, useMyPortfolio } from '../hooks/useSocialQueries';
+import { BlockedProfileNotice } from '../components/social/BlockedProfileNotice';
 import {
   useNgoProfile,
   useNgoStats,
@@ -178,6 +179,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
   const followMutation = useFollowNgo();
   const unfollowMutation = useUnfollowNgo();
   const blockTarget = useBlockTarget();
+  const unblockTarget = useUnblockTarget();
 
   const effectiveNgoId = isOwn ? ownProfile.data?.id : ngoId;
   const ringStatus = useRingStatus({ ngoIds: effectiveNgoId ? [effectiveNgoId] : [] });
@@ -249,7 +251,11 @@ export function NgoProfileScreen({ route, navigation }: any) {
     else followMutation.mutate(ngoId);
   };
 
-  const menuOptions: ActionSheetOption[] = [
+  const blockedByMe = !isOwn && !!publicProfile.data?.blockedByMe;
+
+  const menuOptions: ActionSheetOption[] = blockedByMe
+    ? [{ key: 'unblock', icon: '✅', label: 'Unblock', onPress: () => ngoId && unblockTarget.mutate({ ngoId }) }]
+    : [
     { key: 'report', icon: '🚩', label: 'Report this organisation', onPress: () => setReporting(true) },
     {
       key: 'block',
@@ -257,7 +263,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
       label: 'Block',
       hint: 'Hides their posts and stories from you',
       destructive: true,
-      onPress: () => ngoId && blockTarget.mutate({ ngoId }, { onSuccess: () => navigation.goBack() }),
+      onPress: () => ngoId && blockTarget.mutate({ ngoId }),
     },
   ];
 
@@ -293,6 +299,14 @@ export function NgoProfileScreen({ route, navigation }: any) {
         />
       ) : isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
+      ) : blockedByMe ? (
+        <BlockedProfileNotice
+          name={name}
+          avatarUrl={logoUrl}
+          avatarEmoji="🌿"
+          onUnblock={() => ngoId && unblockTarget.mutate({ ngoId })}
+          busy={unblockTarget.isPending}
+        />
       ) : (
         <PostGrid
           posts={tab === 'posts' ? posts : []}

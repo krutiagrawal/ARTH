@@ -22,6 +22,7 @@ import { Figtree_800ExtraBold } from '@expo-google-fonts/figtree/800ExtraBold';
 import { Figtree_900Black } from '@expo-google-fonts/figtree/900Black';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppNavigator } from './src/navigation/AppNavigator';
+import { SettingsSync } from './src/components/common/SettingsSync';
 import { SoundProvider } from './src/context/SoundContext';
 import { AuthProvider } from './src/context/AuthContext';
 import { ReduceMotionProvider } from './src/context/ReduceMotionContext';
@@ -117,6 +118,7 @@ export default function App() {
             <ConfirmDialogProvider>
               <AuthProvider>
                 <SoundProvider>
+                  <SettingsSync />
                   <AppProviders>
                     <AppNavigator />
                   </AppProviders>

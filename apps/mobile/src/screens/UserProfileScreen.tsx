@@ -21,7 +21,8 @@ import { ForestThemesPicker } from '../components/profile/ForestThemesPicker';
 import { useAuth } from '../context/AuthContext';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { useSoundSystem } from '../hooks/useSoundSystem';
-import { useUserPosts, useBlockTarget } from '../hooks/useSocialQueries';
+import { useUserPosts, useBlockTarget, useUnblockTarget } from '../hooks/useSocialQueries';
+import { BlockedProfileNotice } from '../components/social/BlockedProfileNotice';
 import {
   useAchievements,
   useUserAchievements,
@@ -65,6 +66,7 @@ export function UserProfileScreen({ route, navigation }: any) {
   const { playSound } = useSoundSystem();
   const respondFriendRequest = useRespondFriendRequest();
   const blockTarget = useBlockTarget();
+  const unblockTarget = useUnblockTarget();
   const [pendingRequest, setPendingRequest] = useState(!!friendRequestId);
   const [menuOpen, setMenuOpen] = useState(false);
   const [reporting, setReporting] = useState(false);
@@ -182,7 +184,18 @@ export function UserProfileScreen({ route, navigation }: any) {
     respondFriendRequest.mutate({ id: friendRequestId, action: 'decline' }, { onSuccess: () => navigation.goBack() });
   };
 
-  const menuOptions: ActionSheetOption[] = !isOwn
+  const blockedByMe = !isOwn && !!publicProfile.data?.blockedByMe;
+
+  const menuOptions: ActionSheetOption[] = blockedByMe
+    ? [
+        {
+          key: 'unblock',
+          icon: '✅',
+          label: 'Unblock',
+          onPress: () => userId && unblockTarget.mutate({ userId }),
+        },
+      ]
+    : !isOwn
     ? [
         ...(friendStatus === 'accepted'
           ? [
@@ -212,7 +225,7 @@ export function UserProfileScreen({ route, navigation }: any) {
               {
                 text: 'Block',
                 style: 'destructive' as const,
-                onPress: () => userId && blockTarget.mutate({ userId }, { onSuccess: () => navigation.goBack() }),
+                onPress: () => userId && blockTarget.mutate({ userId }),
               },
             ]),
         },
@@ -244,6 +257,15 @@ export function UserProfileScreen({ route, navigation }: any) {
 
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
+      ) : blockedByMe ? (
+        <BlockedProfileNotice
+          name={name}
+          handle={handle}
+          avatarEmoji={avatarEmoji}
+          avatarUrl={avatarUrl}
+          onUnblock={() => userId && unblockTarget.mutate({ userId })}
+          busy={unblockTarget.isPending}
+        />
       ) : (
         <PostGrid
           posts={tab === 'posts' ? posts : []}
@@ -288,7 +310,7 @@ export function UserProfileScreen({ route, navigation }: any) {
                 ]}
                 primaryAction={
                   isOwn
-                    ? { label: 'Edit profile', icon: '✎', onPress: () => navigation?.navigate('EditProfile'), variant: 'outline' }
+                    ? { label: 'Edit profile', icon: '✎', onPress: () => navigation?.navigate('Settings'), variant: 'outline' }
                     : {
                         label: friendLabel(friendStatus),
                         icon: friendIcon(friendStatus),
@@ -314,7 +336,7 @@ export function UserProfileScreen({ route, navigation }: any) {
                 treesThisYear={treesThisYear}
                 bestStreak={bestStreak}
                 isOwn={isOwn}
-                onEdit={() => navigation?.navigate('EditProfile')}
+                onEdit={() => navigation?.navigate('Settings')}
               />
               <ProfileTabBar activeTab={tab} onChange={setTab} />
               {tab === 'contributions' && (

@@ -113,7 +113,7 @@ export async function getStoryFeed(prisma: PrismaClient, viewerId: string): Prom
     .map((f) => (f.requesterId === viewerId ? f.addresseeId : f.requesterId))
     .filter((id) => !blocked.userIds.includes(id));
   const ngoIds = follows.map((f) => f.ngoId).filter((id): id is string => id != null && !blocked.ngoIds.includes(id));
-  const nurseryIds = follows.map((f) => f.nurseryId).filter((id): id is string => id != null);
+  const nurseryIds = follows.map((f) => f.nurseryId).filter((id): id is string => id != null && !blocked.nurseryIds.includes(id));
   const groupIds = memberships.map((m) => m.groupId);
 
   if (friendIds.length === 0 && ngoIds.length === 0 && nurseryIds.length === 0 && groupIds.length === 0) return [];

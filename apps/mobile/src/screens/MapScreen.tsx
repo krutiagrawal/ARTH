@@ -1020,6 +1020,22 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
         </TouchableOpacity>
       </View>
 
+      {/* Location tracking switched off in Settings: centred prompt to turn it back on. */}
+      {!locationTrackingEnabled && (
+        <View style={styles.locationOffWrap} pointerEvents="box-none">
+          <BlurView intensity={85} tint={isNight ? 'dark' : 'light'} style={[styles.locationOffCard, styles.mapGlass, isNight && styles.mapGlassNight]}>
+            <Text style={styles.locationOffIcon}>📍</Text>
+            <Text style={[styles.locationOffTitle, isNight && styles.lightText]}>Location tracking is off</Text>
+            <Text style={[styles.locationOffBody, isNight && styles.lightText]}>
+              Turn on Location Tracking from Settings to see where you are and plant nearby.
+            </Text>
+            <TouchableOpacity style={styles.locationOffBtn} onPress={() => navigation.navigate('Settings')} accessibilityRole="button">
+              <Text style={styles.locationOffBtnText}>Open Settings</Text>
+            </TouchableOpacity>
+          </BlurView>
+        </View>
+      )}
+
       {/* Rendered here or after the bottom sheet below — sibling order, not zIndex, decides both paint and touch priority on Android. */}
       {!isNgo && trees.length > 0 && plantHereButton}
 
@@ -1214,6 +1230,13 @@ const styles = StyleSheet.create({
   statsDiv: { width: 1, height: 32, backgroundColor: 'rgba(0,0,0,0.1)', alignSelf: 'center' },
   statsDivDark: { backgroundColor: 'rgba(255,255,255,0.15)' },
 
+  locationOffWrap: { position: "absolute", top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
+  locationOffCard: { borderRadius: 20, padding: 20, alignItems: 'center', overflow: 'hidden', maxWidth: 340 },
+  locationOffIcon: { fontSize: 32, marginBottom: 8 },
+  locationOffTitle: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  locationOffBody: { fontSize: 13, color: COLORS.textPrimary, textAlign: 'center', marginTop: 6, lineHeight: 18 },
+  locationOffBtn: { marginTop: 14, backgroundColor: COLORS.sage, borderRadius: 14, paddingHorizontal: 20, paddingVertical: 10 },
+  locationOffBtnText: { fontSize: 14, fontWeight: '700', color: COLORS.white },
   bottomSheet: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   bottomBlur: { borderTopLeftRadius: 22, borderTopRightRadius: 22, overflow: 'hidden', paddingTop: 14, paddingBottom: 8 },
   bottomTitle: { fontSize: 12, fontWeight: '600', color: COLORS.textPrimary, paddingHorizontal: 16, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.6 },

@@ -123,6 +123,13 @@ async function assembleNgoProfile(prisma: PrismaClient, ngo: { id: string } & Re
   }
   const withRsvpFlag = (d: { id: string } & Record<string, any>) => ({ ...d, isRsvped: rsvpedDriveIds.has(d.id) });
 
+  const blockedByMe = viewerUserId
+    ? !!(await prisma.block.findFirst({
+        where: { blockerId: viewerUserId, blockedNgoId: ngo.id },
+        select: { id: true },
+      }))
+    : false;
+
   return {
     id: ngo.id,
     orgName: ngo.orgName,
@@ -138,6 +145,7 @@ async function assembleNgoProfile(prisma: PrismaClient, ngo: { id: string } & Re
     isFollowing: follow?.status === 'accepted',
     // Distinct from isFollowing so the button can read "Requested" on an approval-gated NGO.
     followStatus: follow?.status ?? null,
+    blockedByMe,
     featuredDrives: featuredDrives.map(withRsvpFlag),
     upcomingDrives: upcomingDrives.map(withRsvpFlag),
     recentUpdates,

@@ -52,7 +52,7 @@ export async function fetchMyReports(page = 1): Promise<{ total: number; reports
 export interface ApiBlock {
   id: string;
   createdAt: string;
-  kind: 'user' | 'ngo';
+  kind: 'user' | 'ngo' | 'nursery';
   targetId: string;
   name: string;
   handle: string | null;
@@ -64,11 +64,24 @@ export async function fetchBlocks(cursor?: string): Promise<Page<ApiBlock>> {
   return apiFetch<Page<ApiBlock>>(pagedPath('/api/blocks', cursor, {}, 30));
 }
 
-export async function blockTarget(input: { userId?: string; ngoId?: string }): Promise<void> {
+export interface BlockInput {
+  userId?: string;
+  ngoId?: string;
+  nurseryId?: string;
+}
+
+/** Maps a post author / block row to the id field the block endpoints expect. */
+export function blockInputFor(target: { kind: string; id: string }): BlockInput {
+  if (target.kind === 'ngo') return { ngoId: target.id };
+  if (target.kind === 'nursery') return { nurseryId: target.id };
+  return { userId: target.id };
+}
+
+export async function blockTarget(input: BlockInput): Promise<void> {
   await apiFetch<void>('/api/blocks', { method: 'POST', body: input });
 }
 
-export async function unblockTarget(input: { userId?: string; ngoId?: string }): Promise<void> {
+export async function unblockTarget(input: BlockInput): Promise<void> {
   await apiFetch<void>('/api/blocks', { method: 'DELETE', body: input });
 }
 

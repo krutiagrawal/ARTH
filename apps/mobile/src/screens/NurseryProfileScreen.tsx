@@ -10,6 +10,9 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { LocationActions } from '../components/common/LocationActions';
 import { ReportSheet } from '../components/social/ReportSheet';
+import { ActionSheet, type ActionSheetOption } from '../components/social/ActionSheet';
+import { BlockedProfileNotice } from '../components/social/BlockedProfileNotice';
+import { useConfirm } from '../context/ConfirmDialogContext';
 import { ProfileHeader } from '../components/profile/ProfileHeader';
 import { ProfileTabBar, type ProfileTabKey } from '../components/profile/ProfileTabBar';
 import { PostGrid } from '../components/profile/PostGrid';
@@ -18,7 +21,7 @@ import { NurserySaplingsTabContent } from '../components/profile/NurserySaplings
 import { GrowthLevelBadge, GROWTH_LEVEL_META } from '../components/common/GrowthLevelBadge';
 import { TrustScoreGauge } from '../components/common/TrustScoreGauge';
 import { ContributionStreakCard } from '../components/common/ContributionStreakCard';
-import { useNurseryPosts, useNurseryFollowers } from '../hooks/useSocialQueries';
+import { useNurseryPosts, useNurseryFollowers, useBlockTarget, useUnblockTarget } from '../hooks/useSocialQueries';
 import {
   useNurseryProfile,
   useNurseryStats,
@@ -68,6 +71,11 @@ export function NurseryProfileScreen({ route, navigation }: any) {
   const followMutation = useFollowNursery();
   const unfollowMutation = useUnfollowNursery();
   const [reporting, setReporting] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const confirm = useConfirm();
+  const blockTarget = useBlockTarget();
+  const unblockTarget = useUnblockTarget();
+  const blockedByMe = !isOwn && !!publicProfile.data?.blockedByMe;
 
   const effectiveNurseryId = isOwn ? ownProfile.data?.id : nurseryId;
   const ringStatus = useRingStatus({ nurseryIds: effectiveNurseryId ? [effectiveNurseryId] : [] });
@@ -239,6 +247,28 @@ export function NurseryProfileScreen({ route, navigation }: any) {
     </>
   );
 
+  const menuOptions: ActionSheetOption[] = blockedByMe
+    ? [{ key: 'unblock', icon: '✅', label: 'Unblock', onPress: () => nurseryId && unblockTarget.mutate({ nurseryId }) }]
+    : [
+        { key: 'report', icon: '🚩', label: 'Report this nursery', onPress: () => setReporting(true) },
+        {
+          key: 'block',
+          icon: '🚫',
+          label: 'Block',
+          hint: 'Hides their posts and stories from you',
+          destructive: true,
+          onPress: () =>
+            confirm(`Block ${name}?`, 'You will stop seeing their posts and stories.', [
+              { text: 'Cancel', style: 'cancel' as const },
+              {
+                text: 'Block',
+                style: 'destructive' as const,
+                onPress: () => nurseryId && blockTarget.mutate({ nurseryId }),
+              },
+            ]),
+        },
+      ];
+
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
@@ -256,9 +286,9 @@ export function NurseryProfileScreen({ route, navigation }: any) {
         )}
         {isOwn ? null : (
           <View style={styles.headerActions}>
-            <TouchableOpacity onPress={() => setReporting(true)} style={styles.iconButton} hitSlop={8}>
+            <TouchableOpacity onPress={() => setMenuOpen(true)} style={styles.iconButton} hitSlop={8}>
               <View style={styles.iconBlur}>
-                <Text style={styles.iconText}>🚩</Text>
+                <Text style={styles.iconText}>⋯</Text>
               </View>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => navigation.navigate('Cart')} style={styles.iconButton}>
@@ -280,6 +310,14 @@ export function NurseryProfileScreen({ route, navigation }: any) {
         />
       ) : isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
+      ) : blockedByMe ? (
+        <BlockedProfileNotice
+          name={name}
+          avatarUrl={logoUrl}
+          avatarEmoji="🌳"
+          onUnblock={() => nurseryId && unblockTarget.mutate({ nurseryId })}
+          busy={unblockTarget.isPending}
+        />
       ) : tab === 'drives' ? (
         // Saplings tab gets its own plain ScrollView instead of living inside PostGrid's
         // FlatList — a search input buried in a FlatList's ListHeaderComponent fights with the
@@ -391,6 +429,9 @@ export function NurseryProfileScreen({ route, navigation }: any) {
         />
       )}
 
+      {!isOwn && (
+        <ActionSheet visible={menuOpen} onClose={() => setMenuOpen(false)} title={name} options={menuOptions} />
+      )}
       <ReportSheet visible={reporting} onClose={() => setReporting(false)} targetType="nursery" targetId={nurseryId ?? null} targetLabel="this nursery" />
     </View>
   );

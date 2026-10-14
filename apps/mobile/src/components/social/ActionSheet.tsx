@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Text } from '../common/AppText';
 import { Sheet } from '../common/Sheet';
 import { COLORS } from '../../constants/colors';
-import { RADIUS, SPACING } from '../../constants/theme';
+import { RADIUS } from '../../constants/theme';
 
 export interface ActionSheetOption {
   key: string;
@@ -51,11 +51,6 @@ export function ActionSheet({ visible, onClose, title, options }: ActionSheetPro
             </View>
           </TouchableOpacity>
         ))}
-
-        <TouchableOpacity style={styles.cancel} activeOpacity={0.7} onPress={onClose}>
-          <Text style={styles.icon}>✕</Text>
-          <Text style={styles.cancelText}>Cancel</Text>
-        </TouchableOpacity>
       </View>
     </Sheet>
   );
@@ -76,15 +71,4 @@ const styles = StyleSheet.create({
   label: { fontSize: 15, fontWeight: '600', color: COLORS.textPrimary },
   labelDestructive: { color: COLORS.danger },
   hint: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
-  cancel: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: SPACING.sm,
-    paddingVertical: 13,
-    borderRadius: RADIUS.md,
-    backgroundColor: 'rgba(0,0,0,0.04)',
-    alignItems: 'center',
-  },
-  cancelText: { fontSize: 15, fontWeight: '700', color: COLORS.textSecondary },
 });

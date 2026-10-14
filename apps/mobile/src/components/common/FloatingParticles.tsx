@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import { StyleSheet, View, Dimensions } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
+import { useAmbientEnabled } from '../../hooks/useAmbientEnabled';
 import { useParticles, useParticleAnimation, Particle } from '../../hooks/useParticles';
 
 const { width: SW, height: SH } = Dimensions.get('window');
@@ -16,6 +17,8 @@ interface FloatingParticlesProps {
   areaHeight?: number;
   /** Scales the fall duration (>1 = slower, <1 = faster). Defaults to 1 (unchanged elsewhere). */
   speedMultiplier?: number;
+  /** Decorative hero particles: hidden when Ambient Mode is switched off in Settings. */
+  ambient?: boolean;
 }
 
 const ParticleItem = memo(({ particle, topOffset, travelDistance }: { particle: Particle; topOffset: number; travelDistance?: number }) => {
@@ -76,7 +79,7 @@ export function LeafShape({ size, color }: { size: number; color: string }) {
   );
 }
 
-export const FloatingParticles = memo(function FloatingParticles({
+const FloatingParticlesInner = memo(function FloatingParticlesInner({
   count = 10,
   type = 'leaf',
   style,
@@ -94,6 +97,12 @@ export const FloatingParticles = memo(function FloatingParticles({
       ))}
     </View>
   );
+});
+
+export const FloatingParticles = memo(function FloatingParticles({ ambient, ...rest }: FloatingParticlesProps) {
+  const ambientEnabled = useAmbientEnabled();
+  if (ambient && !ambientEnabled) return null;
+  return <FloatingParticlesInner {...rest} />;
 });
 
 const styles = StyleSheet.create({

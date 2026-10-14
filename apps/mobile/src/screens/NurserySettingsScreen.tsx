@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
+import { FeedbackSheet } from '../components/common/FeedbackSheet';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,7 +29,7 @@ import { TEXT } from '../constants/typography';
 const DEFAULT_SETTINGS: ApiUserSettings = {
   haptics: true,
   notifications: true,
-  ambientMode: false,
+  ambientMode: true,
   sounds: true,
   darkMode: false,
   streakReminders: true,
@@ -92,15 +93,8 @@ export function NurserySettingsScreen({ navigation }: any) {
     );
   };
 
-  const handleSendFeedback = async () => {
-    const url = 'mailto:support@plantapp.example?subject=ARTH%20Feedback';
-    const canOpen = await Linking.canOpenURL(url);
-    if (canOpen) {
-      Linking.openURL(url);
-    } else {
-      confirm('No email app found', 'Please email us directly at support@plantapp.example');
-    }
-  };
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const handleSendFeedback = () => setFeedbackOpen(true);
 
   return (
     <View style={styles.container}>
@@ -144,7 +138,7 @@ export function NurserySettingsScreen({ navigation }: any) {
               variant="light"
               icon="🌟"
               label="Ambient Mode"
-              sublabel="Immersive background sounds & animations"
+              sublabel="Birds, fireflies & floating animations"
               accent={COLORS.golden}
               rightElement={
                 <Toggle
@@ -414,6 +408,7 @@ export function NurserySettingsScreen({ navigation }: any) {
           </View>
         </ScrollView>
       )}
+      <FeedbackSheet visible={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </View>
   );
 }

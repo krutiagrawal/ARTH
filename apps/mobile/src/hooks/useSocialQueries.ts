@@ -512,6 +512,9 @@ export function useBlockTarget() {
       queryClient.invalidateQueries({ queryKey: ['social'] });
       queryClient.invalidateQueries({ queryKey: ['stories'] });
       queryClient.invalidateQueries({ queryKey: ['follows'] });
+      queryClient.invalidateQueries({ queryKey: ['users', 'public'] });
+      queryClient.invalidateQueries({ queryKey: ['ngos', 'public'] });
+      queryClient.invalidateQueries({ queryKey: ['nurseries', 'public'] });
     },
   });
 }
@@ -524,6 +527,9 @@ export function useUnblockTarget() {
       queryClient.invalidateQueries({ queryKey: socialKeys.blocks });
       queryClient.invalidateQueries({ queryKey: ['social'] });
       queryClient.invalidateQueries({ queryKey: ['stories'] });
+      queryClient.invalidateQueries({ queryKey: ['users', 'public'] });
+      queryClient.invalidateQueries({ queryKey: ['ngos', 'public'] });
+      queryClient.invalidateQueries({ queryKey: ['nurseries', 'public'] });
     },
   });
 }

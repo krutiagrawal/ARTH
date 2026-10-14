@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
+import { blockInputFor } from '../api/social';
 import { View, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -77,7 +78,7 @@ export function SavedPostsScreen({ navigation }: any) {
               onPressLikes={(p) => navigation.navigate('PostLikes', { postId: p.id })}
               onPressDrive={(p) => p.driveId && navigation.navigate('DriveDetail', { driveId: p.driveId })}
               onReport={(p) => setReportTarget(p)}
-              onBlock={(p) => blockTarget.mutate(p.author.kind === 'ngo' ? { ngoId: p.author.id } : { userId: p.author.id })}
+              onBlock={(p) => blockTarget.mutate(blockInputFor(p.author))}
               onDelete={(p) => deletePost.mutate(p.id)}
               isTogglingLike={toggleLike.isPending && toggleLike.variables?.id === item.id}
             />

@@ -38,6 +38,13 @@ export default async function usersPublicRoutes(fastify: FastifyInstance) {
         friendStatus = friendship ? (friendship.status as 'pending' | 'accepted') : 'none';
       }
 
+      const blockedByMe = request.user && request.user.id !== user.id
+        ? !!(await fastify.prisma.block.findFirst({
+            where: { blockerId: request.user.id, blockedUserId: user.id },
+            select: { id: true },
+          }))
+        : false;
+
       // Each section is individually hideable by its owner; hidden values go out as null (not 0)
       // so the client can tell "hidden" apart from "none yet".
       const showCity = user.settings?.showCity ?? true;
@@ -72,6 +79,7 @@ export default async function usersPublicRoutes(fastify: FastifyInstance) {
         isOnline: user.lastActiveAt ? Date.now() - user.lastActiveAt.getTime() < 5 * 60 * 1000 : false,
         lastActiveAt: user.lastActiveAt,
         friendStatus,
+        blockedByMe,
       });
     },
   );

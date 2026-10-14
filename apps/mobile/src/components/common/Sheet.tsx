@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Modal, Dimensions, ScrollView } from 'react-native';
 import { Text } from './AppText';
-import { IconBadge } from './IconBadge';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
 import { RADIUS, SPACING, SHADOWS } from '../../constants/theme';
@@ -82,12 +81,7 @@ export function Sheet({
                 accessibilityRole="button"
                 accessibilityLabel="Close"
               >
-                <IconBadge
-                  icon="✕"
-                  color={isNightMode ? COLORS.white : COLORS.earth}
-                  size={30}
-                  round
-                />
+                <Text style={[styles.closeIcon, isNightMode && styles.closeIconNight]}>✕</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -146,6 +140,8 @@ const styles = StyleSheet.create({
   closeButton: {
     marginLeft: SPACING.sm,
   },
+  closeIcon: { fontSize: 20, fontWeight: '700', color: COLORS.forest },
+  closeIconNight: { color: COLORS.white },
   content: {
     paddingBottom: SPACING.md,
   },

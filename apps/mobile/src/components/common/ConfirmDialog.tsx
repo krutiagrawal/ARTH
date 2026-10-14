@@ -40,12 +40,6 @@ export function ConfirmDialog({
     button.onPress?.();
   };
 
-  const buttonVariant = (style?: ConfirmButtonStyle) => {
-    if (style === 'destructive') return 'danger' as const;
-    if (style === 'cancel') return 'ghost' as const;
-    return 'primary' as const;
-  };
-
   return (
     <Sheet visible={visible} onClose={onClose} variant="fade">
       <View style={styles.content}>
@@ -66,10 +60,11 @@ export function ConfirmDialog({
               key={`${button.text}-${index}`}
               label={button.text}
               onPress={() => handlePress(button)}
-              variant={buttonVariant(button.style)}
+              variant="ghost"
               size="md"
               fullWidth
               style={styles.button}
+              textStyle={button.style === 'destructive' ? styles.destructiveText : styles.buttonText}
             />
           ))}
         </View>
@@ -90,5 +85,8 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   buttons: { width: '100%', marginTop: SPACING.xs },
-  button: { marginTop: SPACING.sm },
+  // Outline-only (no fill) so every dialog button is just a brown outline.
+  button: { marginTop: SPACING.sm, borderWidth: 1.5, borderColor: COLORS.earth },
+  buttonText: { color: COLORS.earthDark },
+  destructiveText: { color: COLORS.danger },
 });

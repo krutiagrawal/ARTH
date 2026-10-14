@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Image, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
+import { FeedbackSheet } from '../components/common/FeedbackSheet';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
@@ -40,7 +41,7 @@ const GROUP_TYPES: { value: 'family' | 'school' | 'club' | 'other'; label: strin
 const DEFAULT_SETTINGS: ApiUserSettings = {
   haptics: true,
   notifications: true,
-  ambientMode: false,
+  ambientMode: true,
   sounds: true,
   darkMode: false,
   streakReminders: true,
@@ -111,15 +112,8 @@ export function GroupSettingsScreen({ navigation }: any) {
     );
   };
 
-  const handleSendFeedback = async () => {
-    const url = 'mailto:support@plantapp.example?subject=ARTH%20Feedback';
-    const canOpen = await Linking.canOpenURL(url);
-    if (canOpen) {
-      Linking.openURL(url);
-    } else {
-      confirm('No email app found', 'Please email us directly at support@plantapp.example');
-    }
-  };
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const handleSendFeedback = () => setFeedbackOpen(true);
 
   useEffect(() => {
     if (!profile) return;
@@ -236,7 +230,7 @@ export function GroupSettingsScreen({ navigation }: any) {
             <SettingsRow
               icon="🌟"
               label="Ambient Mode"
-              sublabel="Immersive background sounds & animations"
+              sublabel="Birds, fireflies & floating animations"
               accent={COLORS.golden}
               rightElement={
                 <Toggle
@@ -466,6 +460,7 @@ export function GroupSettingsScreen({ navigation }: any) {
           </View>
         </ScrollView>
       )}
+      <FeedbackSheet visible={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </View>
   );
 }
