@@ -299,6 +299,15 @@ export function UserProfileScreen({ route, navigation }: any) {
                 }
               />
               <ProfileAboutCard
+                firstName={name.split(' ')[0]}
+                level={level}
+                treesTotal={treesPlantedOrNull}
+                badges={badgesOrNull}
+                memberSince={memberSince}
+                co2Kg={isOwn ? Number(user?.totalCo2Absorbed ?? 0) : null}
+                plantingSpace={isOwn ? user?.plantingSpace : undefined}
+                homeSunlight={isOwn ? user?.homeSunlight : undefined}
+                motivation={isOwn ? user?.motivation : undefined}
                 experience={experience}
                 interests={interests}
                 plantingGoal={plantingGoal}

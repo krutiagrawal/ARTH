@@ -20,6 +20,7 @@ import {
 import { ApiError, resolveMediaUrl } from '../api/client';
 import { BorderCard } from '../components/common/BorderCard';
 import { Toggle } from '../components/common/Toggle';
+import { CityPickerField } from '../components/common/CityPickerField';
 import { assetToPhoto } from '../components/common/PhotoPickerField';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -38,22 +39,12 @@ import {
 
 import { TEXT } from '../constants/typography';
 const HANDLE_REGEX = /^[a-z0-9_]+$/;
-const CITY_CHARS = /[^\p{L}\p{M} .,'’-]/gu;
-const CITY_REGEX = /^\p{L}[\p{L}\p{M} .,'’-]*$/u;
 const MIN_BIRTH_YEAR = 1900;
 const MIN_AGE_YEARS = 5;
 const MAX_GOAL = 10000;
 
 // Each validator returns an error message, or null when the value is fine. They run on every
 // keystroke, so the user sees what is wrong while typing instead of after pressing Save.
-function validateCity(value: string): string | null {
-  const v = value.trim();
-  if (v.length === 0) return null; // optional
-  if (v.length < 2) return 'City must be at least 2 characters.';
-  if (!CITY_REGEX.test(v)) return 'City must start with a letter and use only letters, spaces, commas, . - or ’.';
-  return null;
-}
-
 function validateGoal(value: string): string | null {
   if (value === '') return null; // optional
   const n = Number(value);
@@ -227,10 +218,9 @@ export function EditProfileScreen({ navigation }: any) {
     !handleFormatError && handleChanged,
   );
   const handleError = handleFormatError ?? (handleTaken ? 'This handle is already taken.' : null);
-  const cityError = validateCity(city);
   const goalError = validateGoal(goal);
   const dobError = validateDob(dob);
-  const hasErrors = !!(nameError || handleError || cityError || goalError || dobError);
+  const hasErrors = !!(nameError || handleError || goalError || dobError);
   const canSave = !hasErrors && !handleChecking;
 
   const avatarUrl = resolveMediaUrl(user?.avatarUrl);
@@ -396,16 +386,7 @@ export function EditProfileScreen({ navigation }: any) {
             </Text>
           )}
 
-          <Text style={styles.label}>City</Text>
-          <TextInput
-            style={[styles.input, cityError && styles.inputInvalid]}
-            value={city}
-            onChangeText={(text) => setCity(text.replace(CITY_CHARS, '').replace(/^\s+/, ''))}
-            placeholder="eg - Pune"
-            placeholderTextColor={COLORS.textLight}
-            maxLength={100}
-          />
-          <FieldError message={cityError} />
+          <CityPickerField value={city} onChange={setCity} />
 
           <View style={styles.labelRow}>
             <Text style={styles.label}>Bio</Text>
