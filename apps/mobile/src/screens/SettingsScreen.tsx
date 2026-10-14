@@ -33,6 +33,9 @@ const DEFAULT_SETTINGS: ApiUserSettings = {
   locationTracking: true,
   publicProfile: true,
   analyticsEnabled: true,
+  showCity: true,
+  showStats: true,
+  showInterests: true,
   pinnedTimeTheme: null,
 };
 

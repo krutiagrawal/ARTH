@@ -66,6 +66,7 @@ export function useDeviceWeather() {
 
   return {
     weather,
+    coords,
     isLoading: !permissionDenied && !weather && (query.isLoading || !coords),
   };
 }

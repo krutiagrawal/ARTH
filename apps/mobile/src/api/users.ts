@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, toFormFile } from './client';
 import { persistAuthResponse, deviceInfo, type ApiUser, type AuthResponse } from './auth';
 
 export interface ApiPublicProfile {
@@ -7,10 +7,20 @@ export interface ApiPublicProfile {
   handle: string;
   bio: string | null;
   avatarEmoji: string;
+  avatarUrl: string | null;
+  memberSince: string;
+  /** City, interests and stats are each null/empty when their owner has hidden that section. */
+  city: string | null;
+  gardeningExperience: string | null;
+  speciesInterest: string[];
+  plantingGoal: number | null;
+  treesPlantedThisYear: number | null;
+  statsHidden: boolean;
   level: number;
-  treesPlantedCount: number;
-  streakCurrent: number;
-  badgesCount: number;
+  treesPlantedCount: number | null;
+  streakCurrent: number | null;
+  streakMax: number | null;
+  badgesCount: number | null;
   isOnline: boolean;
   lastActiveAt: string | null;
   friendStatus: 'none' | 'pending' | 'accepted';
@@ -27,11 +37,22 @@ export async function fetchPublicProfile(userId: string): Promise<ApiPublicProfi
   return apiFetch<ApiPublicProfile>(`/api/users/${userId}`);
 }
 
-export async function updateMe(input: { name?: string; handle?: string; avatarEmoji?: string; bio?: string | null; city?: string }): Promise<ApiUser> {
+export async function updateMe(input: { name?: string; handle?: string; avatarEmoji?: string; bio?: string | null; city?: string | null }): Promise<ApiUser> {
   return apiFetch<ApiUser>('/api/users/me', { method: 'PATCH', body: input });
 }
 
+export async function uploadAvatar(photo: { uri: string; name: string; type: string }): Promise<ApiUser> {
+  const form = new FormData();
+  form.append('photo', toFormFile(photo.uri), photo.name);
+  return apiFetch<ApiUser>('/api/users/me/avatar', { method: 'POST', body: form, isForm: true });
+}
+
+export async function removeAvatar(): Promise<ApiUser> {
+  return apiFetch<ApiUser>('/api/users/me/avatar', { method: 'DELETE' });
+}
+
 export interface PersonalizeInput {
+  city?: string;
   plantingSpace?: ('balcony' | 'terrace' | 'garden' | 'farmland' | 'city_outskirts' | 'open_land' | 'none')[];
   gardeningExperience?: 'beginner' | 'intermediate' | 'experienced';
   motivation?: ('home_gardening' | 'environmental_cause' | 'school_or_csr_project' | 'hobby' | 'other')[];

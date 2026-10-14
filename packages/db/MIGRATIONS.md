@@ -104,3 +104,4 @@ Prisma migrations live in `prisma/migrations/` (one folder per migration, applie
 | 75 | `20261013120000_drive_cancel_reason` |
 | 76 | `20261013130000_campaign_category_deadline` |
 | 77 | `20261013140000_donation_anonymous_message_pan` |
+| 78 | `20261014100000_profile_photo_privacy` |

@@ -483,6 +483,8 @@ model User {
   handle       String   @unique
   bio          String?  @db.VarChar(160)
   avatarEmoji  String   @default("🧑") @map("avatar_emoji")
+  // Optional profile photo; when set it replaces the emoji avatar wherever the profile is shown.
+  avatarUrl    String?  @map("avatar_url")
   city         String?
 
   // Personalization — collected on an optional, skippable step right after Individual
@@ -614,6 +616,10 @@ model UserSettings {
   locationTracking Boolean  @default(true) @map("location_tracking")
   publicProfile    Boolean  @default(true) @map("public_profile")
   analyticsEnabled Boolean  @default(true) @map("analytics_enabled")
+  // Per-section visibility on the public profile (publicProfile above hides the whole thing).
+  showCity         Boolean  @default(true) @map("show_city")
+  showStats        Boolean  @default(true) @map("show_stats")
+  showInterests    Boolean  @default(true) @map("show_interests")
   // Which homepage time-of-day theme to always show, instead of following real time of day.
   // Null = auto (default, current behavior). Stores a TimePeriod key (e.g. "goldenHour") —
   // validated against the enum at the Zod layer (services/api/src/schemas/users.schema.ts),

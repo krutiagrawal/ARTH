@@ -12,6 +12,18 @@ export interface ApiUser {
   bio: string | null;
   phone?: string | null;
   avatarEmoji: string;
+  /** Uploaded profile photo (server-relative path; pass through `resolveMediaUrl`). Replaces the emoji when set. */
+  avatarUrl?: string | null;
+  city?: string | null;
+  plantingSpace?: string[];
+  gardeningExperience?: string | null;
+  motivation?: string[];
+  dateOfBirth?: string | null;
+  speciesInterest?: string[];
+  homeSunlight?: string | null;
+  plantingGoal?: number | null;
+  /** Trees planted since 1 Jan; only present on GET /users/me. */
+  treesPlantedThisYear?: number;
   xp: number;
   level: number;
   streakCurrent: number;

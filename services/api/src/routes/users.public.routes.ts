@@ -38,16 +38,37 @@ export default async function usersPublicRoutes(fastify: FastifyInstance) {
         friendStatus = friendship ? (friendship.status as 'pending' | 'accepted') : 'none';
       }
 
+      // Each section is individually hideable by its owner; hidden values go out as null (not 0)
+      // so the client can tell "hidden" apart from "none yet".
+      const showCity = user.settings?.showCity ?? true;
+      const showStats = user.settings?.showStats ?? true;
+      const showInterests = user.settings?.showInterests ?? true;
+      const treesPlantedThisYear =
+        showStats && user.plantingGoal
+          ? await fastify.prisma.tree.count({
+              where: { userId: user.id, plantedAt: { gte: new Date(new Date().getFullYear(), 0, 1) } },
+            })
+          : null;
+
       reply.send({
         id: user.id,
         name: user.name,
         handle: user.handle,
         bio: user.bio,
         avatarEmoji: user.avatarEmoji,
+        avatarUrl: user.avatarUrl,
+        memberSince: user.createdAt,
+        city: showCity ? user.city : null,
+        gardeningExperience: showInterests ? user.gardeningExperience : null,
+        speciesInterest: showInterests ? user.speciesInterest : [],
+        plantingGoal: showStats ? user.plantingGoal : null,
+        treesPlantedThisYear,
         level: user.level,
-        treesPlantedCount: user.treesPlantedCount,
-        streakCurrent: user.streakCurrent,
-        badgesCount: user.badgesCount,
+        treesPlantedCount: showStats ? user.treesPlantedCount : null,
+        streakCurrent: showStats ? user.streakCurrent : null,
+        streakMax: showStats ? user.streakMax : null,
+        badgesCount: showStats ? user.badgesCount : null,
+        statsHidden: !showStats,
         isOnline: user.lastActiveAt ? Date.now() - user.lastActiveAt.getTime() < 5 * 60 * 1000 : false,
         lastActiveAt: user.lastActiveAt,
         friendStatus,

@@ -5,13 +5,18 @@ import { hashPassword, comparePassword } from '../utils/password';
 import { BadRequestError, ConflictError, UnauthorizedError } from '../utils/errors';
 import { refreshUserImpact } from '../services/treeImpact.service';
 import { syncStreak } from '../services/streak.service';
+import { saveUserAvatar } from '../services/upload.service';
+import { splitMultipartBody } from '../utils/multipart';
 
 export default async function usersRoutes(fastify: FastifyInstance) {
   fastify.get('/me', async (request, reply) => {
     // Trees keep growing, so the stored CO2 figure is re-derived whenever the profile is read.
     const impact = await refreshUserImpact(fastify.prisma, request.user!.id);
     const { user } = await syncStreak(fastify.prisma, request.user!.id);
-    reply.send({ ...toPublicUser(user), co2NextYearKg: impact.co2NextYearKg });
+    const treesPlantedThisYear = await fastify.prisma.tree.count({
+      where: { userId: user.id, plantedAt: { gte: new Date(new Date().getFullYear(), 0, 1) } },
+    });
+    reply.send({ ...toPublicUser(user), co2NextYearKg: impact.co2NextYearKg, treesPlantedThisYear });
   });
 
   fastify.patch('/me', async (request, reply) => {
@@ -30,6 +35,22 @@ export default async function usersRoutes(fastify: FastifyInstance) {
       data: parsed.data,
     });
 
+    reply.send(toPublicUser(updated));
+  });
+
+  // Profile photo. Replaces the emoji avatar wherever the profile is shown; DELETE reverts to it.
+  fastify.post('/me/avatar', async (request, reply) => {
+    const { file } = splitMultipartBody(request.body as any, 'photo');
+    if (!file) throw new BadRequestError('A photo is required');
+
+    const buffer = await file.toBuffer();
+    const avatarUrl = await saveUserAvatar({ filename: file.filename, mimetype: file.mimetype, buffer });
+    const updated = await fastify.prisma.user.update({ where: { id: request.user!.id }, data: { avatarUrl } });
+    reply.send(toPublicUser(updated));
+  });
+
+  fastify.delete('/me/avatar', async (request, reply) => {
+    const updated = await fastify.prisma.user.update({ where: { id: request.user!.id }, data: { avatarUrl: null } });
     reply.send(toPublicUser(updated));
   });
 

@@ -32,6 +32,8 @@ import { fetchFeed, cheerActivity } from '../api/feed';
 import {
   fetchPublicProfile,
   updateMe,
+  uploadAvatar,
+  removeAvatar,
   personalizeMe,
   changePassword,
   fetchSessions,
@@ -823,8 +825,24 @@ export function useProtectStreak() {
 export function useUpdateMe() {
   const { setUser } = useAuth();
   return useMutation({
-    mutationFn: (input: { name?: string; handle?: string; avatarEmoji?: string; bio?: string | null }) => updateMe(input),
+    mutationFn: (input: { name?: string; handle?: string; avatarEmoji?: string; bio?: string | null; city?: string | null }) => updateMe(input),
     onSuccess: (updated) => setUser(updated),
+  });
+}
+
+export function useUploadAvatar() {
+  const { setUser } = useAuth();
+  return useMutation({
+    mutationFn: (photo: { uri: string; name: string; type: string }) => uploadAvatar(photo),
+    onSuccess: (updated) => setUser((prev) => (prev ? { ...prev, ...updated } : updated)),
+  });
+}
+
+export function useRemoveAvatar() {
+  const { setUser } = useAuth();
+  return useMutation({
+    mutationFn: () => removeAvatar(),
+    onSuccess: (updated) => setUser((prev) => (prev ? { ...prev, ...updated } : updated)),
   });
 }
 

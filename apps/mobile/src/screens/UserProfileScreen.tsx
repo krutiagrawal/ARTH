@@ -11,6 +11,8 @@ import { Toast } from '../components/common/Toast';
 import { ActionSheet, type ActionSheetOption } from '../components/social/ActionSheet';
 import { ReportSheet } from '../components/social/ReportSheet';
 import { ProfileHeader } from '../components/profile/ProfileHeader';
+import { ProfileAboutCard } from '../components/profile/ProfileAboutCard';
+import { resolveMediaUrl } from '../api/client';
 import { ProfileTabBar, type ProfileTabKey } from '../components/profile/ProfileTabBar';
 import { PostGrid } from '../components/profile/PostGrid';
 import { AchievementsTabContent } from '../components/profile/AchievementsTabContent';
@@ -124,9 +126,29 @@ export function UserProfileScreen({ route, navigation }: any) {
   const avatarEmoji = isOwn ? user?.avatarEmoji : publicProfile.data?.avatarEmoji;
   const level = isOwn ? user?.level ?? 1 : publicProfile.data?.level ?? 1;
   const xp = isOwn ? user?.xp ?? 0 : 0;
-  const treesPlanted = isOwn ? user?.treesPlantedCount ?? 0 : publicProfile.data?.treesPlantedCount ?? 0;
-  const streakCurrent = isOwn ? user?.streakCurrent ?? 0 : publicProfile.data?.streakCurrent ?? 0;
-  const badgesCount = isOwn ? user?.badgesCount ?? 0 : publicProfile.data?.badgesCount ?? 0;
+  // Another person's stats come back null when they've hidden them — shown as "–", not 0.
+  const treesPlantedOrNull = isOwn ? user?.treesPlantedCount ?? 0 : publicProfile.data?.treesPlantedCount ?? null;
+  const streakCurrentOrNull = isOwn ? user?.streakCurrent ?? 0 : publicProfile.data?.streakCurrent ?? null;
+  const badgesOrNull = isOwn ? user?.badgesCount ?? 0 : publicProfile.data?.badgesCount ?? null;
+  const treesPlanted = treesPlantedOrNull ?? 0;
+  const streakCurrent = streakCurrentOrNull ?? 0;
+  const avatarUrl = resolveMediaUrl(isOwn ? user?.avatarUrl : publicProfile.data?.avatarUrl);
+  const city = isOwn ? user?.city : publicProfile.data?.city;
+  const memberSince = isOwn ? user?.createdAt : publicProfile.data?.memberSince;
+  const metaLine =
+    [
+      city ? `📍 ${city}` : null,
+      memberSince
+        ? `🌱 Planting since ${new Date(memberSince).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(' · ') || null;
+  const experience = isOwn ? user?.gardeningExperience : publicProfile.data?.gardeningExperience;
+  const interests = (isOwn ? user?.speciesInterest : publicProfile.data?.speciesInterest) ?? [];
+  const plantingGoal = isOwn ? user?.plantingGoal : publicProfile.data?.plantingGoal;
+  const treesThisYear = isOwn ? user?.treesPlantedThisYear : publicProfile.data?.treesPlantedThisYear;
+  const bestStreak = isOwn ? user?.streakMax : publicProfile.data?.streakMax;
   const friendStatus = isOwn ? 'accepted' : publicProfile.data?.friendStatus ?? 'none';
 
   const toggleFriend = () => {
@@ -249,6 +271,7 @@ export function UserProfileScreen({ route, navigation }: any) {
               )}
               <ProfileHeader
                 topInset={insets.top}
+                avatarUrl={avatarUrl}
                 avatarEmoji={avatarEmoji ?? '🧑‍🌾'}
                 xpProgress={isOwn ? { progress: getXpProgress(xp, level).progress, level } : null}
                 storyRing={ringUserId ? ringStatus.data?.users[ringUserId] : null}
@@ -256,15 +279,16 @@ export function UserProfileScreen({ route, navigation }: any) {
                 name={name}
                 handle={handle}
                 bio={bio}
+                meta={metaLine}
                 stats={[
-                  { value: treesPlanted, label: 'Trees' },
-                  { value: streakCurrent, label: 'Streak' },
-                  { value: badgesCount, label: 'Badges', onPress: () => setTab('achievements') },
+                  { value: treesPlantedOrNull ?? '–', label: 'Trees' },
+                  { value: streakCurrentOrNull ?? '–', label: 'Streak' },
+                  { value: badgesOrNull ?? '–', label: 'Badges', onPress: () => setTab('achievements') },
                   ...(isOwn ? [{ value: myRank ? `#${myRank}` : '–', label: 'Rank' }] : []),
                 ]}
                 primaryAction={
                   isOwn
-                    ? { label: 'Edit profile', icon: '✎', onPress: () => navigation?.navigate('Settings'), variant: 'outline' }
+                    ? { label: 'Edit profile', icon: '✎', onPress: () => navigation?.navigate('EditProfile'), variant: 'outline' }
                     : {
                         label: friendLabel(friendStatus),
                         icon: friendIcon(friendStatus),
@@ -273,6 +297,15 @@ export function UserProfileScreen({ route, navigation }: any) {
                         variant: friendStatus === 'accepted' ? 'outline' : friendStatus === 'pending' ? 'pending' : 'solid',
                       }
                 }
+              />
+              <ProfileAboutCard
+                experience={experience}
+                interests={interests}
+                plantingGoal={plantingGoal}
+                treesThisYear={treesThisYear}
+                bestStreak={bestStreak}
+                isOwn={isOwn}
+                onEdit={() => navigation?.navigate('EditProfile')}
               />
               <ProfileTabBar activeTab={tab} onChange={setTab} />
               {tab === 'contributions' && (
@@ -290,7 +323,7 @@ export function UserProfileScreen({ route, navigation }: any) {
                         )}
                       </View>
                       <View style={styles.contributionsStat}>
-                        <Text style={styles.contributionsNum}>{treesPlanted}</Text>
+                        <Text style={styles.contributionsNum}>{treesPlantedOrNull ?? '–'}</Text>
                         <Text style={styles.contributionsLabel}>Trees planted</Text>
                       </View>
                       <View style={styles.contributionsStat}>

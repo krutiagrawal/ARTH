@@ -23,6 +23,7 @@ import {
 import { useTimeTheme, isNightlikePeriod, type TimeTheme, type TimePeriod } from '../hooks/useTimeTheme';
 import { MuteButton } from '../components/common/MuteButton';
 import { NotificationBell } from '../components/social/NotificationBell';
+import { ForestPulsePill } from '../components/home/ForestPulsePill';
 import { AmbientCreatures } from '../components/common/AmbientCreatures';
 import { TreeCard } from '../components/common/TreeCard';
 import { Sheet } from '../components/common/Sheet';
@@ -30,6 +31,7 @@ import { useHaptics } from '../hooks/useHaptics';
 import { useAuth } from '../context/AuthContext';
 import { useTrees, useTodayMissions, useEcoFacts, useSettings, useGamesStatus, useStreakStatus } from '../hooks/useApiQueries';
 import { isAtRiskHours } from '../api/streaks';
+import { resolveMediaUrl } from '../api/client';
 import { useDeviceWeather } from '../hooks/useDeviceWeather';
 import type { ApiUser } from '../api/auth';
 import type { ApiTree } from '../api/trees';
@@ -94,6 +96,7 @@ function HeroSection({
   navigation,
   onNavigateTab,
   weather,
+  coords,
   blurTarget,
 }: {
   theme: TimeTheme;
@@ -101,6 +104,7 @@ function HeroSection({
   navigation: any;
   onNavigateTab: (tab: string) => void;
   weather: ApiWeather | null;
+  coords: { lat: number; lng: number } | null;
   blurTarget: RefObject<View | null>;
 }) {
   const insets = useSafeAreaInsets();
@@ -171,7 +175,11 @@ function HeroSection({
               colors={[COLORS.sageLight, COLORS.forest]}
               style={styles.avatar}
             >
-              <Text style={styles.avatarText}>{user?.avatarEmoji ?? '🧑‍🌾'}</Text>
+              {user?.avatarUrl ? (
+                <Image source={{ uri: resolveMediaUrl(user.avatarUrl) }} style={styles.avatarPhoto} />
+              ) : (
+                <Text style={styles.avatarText}>{user?.avatarEmoji ?? '🧑‍🌾'}</Text>
+              )}
             </LinearGradient>
             <View style={styles.xpBadge}>
               <Text style={styles.xpBadgeText}>Lv.{user?.level ?? 1}</Text>
@@ -233,25 +241,17 @@ function HeroSection({
         tint={theme.cardTint === 'dark' ? 'dark' : 'light'}
         blurTarget={blurTarget}
         style={styles.forestStats}
-        pointerEvents="none"
       >
         <View style={[styles.forestStatsOverlay, { backgroundColor: hexToRgba(theme.cardBackground, theme.cardOverlayAlpha) }]} />
-        <View style={styles.forestStatRow}>
-          <View style={styles.forestStat}>
-            <Text style={[styles.forestStatNum, { color: homeTextColor(theme, theme.textPrimaryOnCard) }]}>{user?.treesPlantedCount ?? 0}</Text>
-            <Text style={[styles.forestStatLabel, { color: homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true }) }]}>Trees</Text>
-          </View>
-          <View style={[styles.forestStatDivider, { backgroundColor: theme.cardBorder }]} />
-          <View style={styles.forestStat}>
-            <Text style={[styles.forestStatNum, { color: homeTextColor(theme, theme.textPrimaryOnCard) }]}>{(user?.totalCo2Absorbed ?? 0).toFixed(1)}</Text>
-            <Text style={[styles.forestStatLabel, { color: homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true }) }]}>kg CO₂</Text>
-          </View>
-          <View style={[styles.forestStatDivider, { backgroundColor: theme.cardBorder }]} />
-          <View style={styles.forestStat}>
-            <Text style={[styles.forestStatNum, { color: homeTextColor(theme, theme.textPrimaryOnCard) }]}>Lv.{user?.level ?? 1}</Text>
-            <Text style={[styles.forestStatLabel, { color: homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true }) }]}>Forest</Text>
-          </View>
-        </View>
+        <ForestPulsePill
+          user={user}
+          weather={weather}
+          coords={coords}
+          navigation={navigation}
+          primaryColor={homeTextColor(theme, theme.textPrimaryOnCard)}
+          secondaryColor={homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true })}
+          accentColor={homeTextColor(theme, theme.accentColor)}
+        />
       </BlurView>
     </View>
   );
@@ -598,7 +598,7 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
   const insets = useSafeAreaInsets();
   const bottomNavClearance = useBottomNavClearance();
   const { user } = useAuth();
-  const { weather } = useDeviceWeather();
+  const { weather, coords } = useDeviceWeather();
   const sceneryMode = getSceneryMode(weather);
   const [growSheetVisible, setGrowSheetVisible] = useState(false);
   // blurMethod is intentionally omitted (Android "dimezisBlurView*" crashes the RenderThread on
@@ -627,7 +627,7 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
       >
         {/* Illustrated hero — header, stat row, scenery, and stats pill all scroll together as
             one normal-flow block instead of a fixed backdrop the rest of the page scrolls over. */}
-        <HeroSection theme={theme} user={user} navigation={navigation} onNavigateTab={onNavigateTab} weather={weather} blurTarget={blurTargetRef} />
+        <HeroSection theme={theme} user={user} navigation={navigation} onNavigateTab={onNavigateTab} weather={weather} coords={coords} blurTarget={blurTargetRef} />
 
         {/* Primary "take action" entry point — outranks quests/XP below it in hierarchy */}
         <View style={styles.growCtaSection}>
@@ -858,6 +858,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...SHADOWS.sage,
   },
+  avatarPhoto: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+  },
   avatarText: {
     fontSize: 22,
   },
@@ -921,31 +926,6 @@ const styles = StyleSheet.create({
   forestStatsOverlay: {
     ...{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 } as const,
     backgroundColor: 'rgba(255,255,255,0.55)',
-  },
-  forestStatRow: {
-    flexDirection: 'row',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  forestStat: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  forestStatNum: {
-    ...TEXT.statSmall, fontSize: 16,
-    color: COLORS.forestDeep,
-  },
-  forestStatLabel: {
-    fontSize: 10,
-    color: COLORS.textPrimary,
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  forestStatDivider: {
-    width: 1,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    marginVertical: 4,
   },
   growCtaSection: {
     marginTop: 12,

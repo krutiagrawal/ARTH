@@ -15,16 +15,18 @@ import { useSlideUp } from '../hooks/useAnimations';
 import { usePersonalizeMe } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import type { PersonalizeInput } from '../api/users';
+import {
+  SPACE_OPTIONS,
+  SUNLIGHT_OPTIONS,
+  EXPERIENCE_OPTIONS,
+  MOTIVATION_OPTIONS,
+  SPECIES_OPTIONS,
+  type PersonalizeOption,
+} from '../constants/personalization';
 
 import { TEXT } from '../constants/typography';
 type StepKey = 'space' | 'sunlight' | 'experience' | 'motivation' | 'species' | 'goal' | 'dob';
 type StepType = 'single' | 'multi' | 'number' | 'date';
-
-interface Option {
-  value: string;
-  label: string;
-  icon: string;
-}
 
 interface StepDef {
   key: StepKey;
@@ -32,46 +34,8 @@ interface StepDef {
   emoji: string;
   question: string;
   helper?: string;
-  options?: Option[];
+  options?: PersonalizeOption[];
 }
-
-const SPACE_OPTIONS: Option[] = [
-  { value: 'balcony', label: 'Balcony', icon: '🪴' },
-  { value: 'terrace', label: 'Terrace', icon: '🏠' },
-  { value: 'garden', label: 'Garden', icon: '🌳' },
-  { value: 'farmland', label: 'Farmland', icon: '🌾' },
-  { value: 'city_outskirts', label: 'In and around the city', icon: '🏙️' },
-  { value: 'open_land', label: 'Open land or hillsides', icon: '⛰️' },
-  { value: 'none', label: "I don't have space yet", icon: '🤷' },
-];
-
-const SUNLIGHT_OPTIONS: Option[] = [
-  { value: 'full_sun', label: 'Full sun most of the day', icon: '☀️' },
-  { value: 'partial_shade', label: 'Partial shade', icon: '⛅' },
-  { value: 'shade', label: 'Mostly shaded', icon: '🌥️' },
-];
-
-const EXPERIENCE_OPTIONS: Option[] = [
-  { value: 'beginner', label: "I'm just starting out", icon: '🌱' },
-  { value: 'intermediate', label: "I've grown a few plants", icon: '🌿' },
-  { value: 'experienced', label: 'I know my way around a garden', icon: '🌳' },
-];
-
-const MOTIVATION_OPTIONS: Option[] = [
-  { value: 'home_gardening', label: 'Growing things at home', icon: '🏡' },
-  { value: 'environmental_cause', label: 'The environmental cause', icon: '🌍' },
-  { value: 'school_or_csr_project', label: 'A school or CSR project', icon: '🏫' },
-  { value: 'hobby', label: "It's just a hobby", icon: '🎨' },
-  { value: 'other', label: 'Something else', icon: '✨' },
-];
-
-const SPECIES_OPTIONS: Option[] = [
-  { value: 'fruit', label: 'Fruit trees', icon: '🍎' },
-  { value: 'flowering', label: 'Flowering trees', icon: '🌸' },
-  { value: 'shade', label: 'Shade trees', icon: '🌳' },
-  { value: 'medicinal', label: 'Medicinal plants', icon: '🌿' },
-  { value: 'native', label: 'Native species', icon: '🍃' },
-];
 
 const ALL_STEPS: StepDef[] = [
   { key: 'space', type: 'multi', emoji: '🏡', question: 'Where will you be planting?', helper: 'Pick as many as you like', options: SPACE_OPTIONS },

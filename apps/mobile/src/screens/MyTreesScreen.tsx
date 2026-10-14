@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl, TextInput, Image, LayoutAnimation } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +7,6 @@ import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { EmptyState } from '../components/common/EmptyState';
 import { useTreesMap, useTreesPaged } from '../hooks/useApiQueries';
-import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import { PageFooter } from '../components/common/PageFooter';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { STATUS_META } from '../constants/treeHealth';
@@ -22,26 +21,63 @@ const DEFAULT_CENTER: [number, number] = [78.9629, 20.5937];
 const GROWTH_STAGE_EMOJI = ['🌱', '🌿', '🌳', '🌲', '🎋'];
 const GROWTH_STAGE_LABEL = ['Seedling', 'Sprouting', 'Growing', 'Maturing', 'Flourishing'];
 
-// Tiles per row — 2 reads comfortably on phones; 3 also fits if tiles should be denser.
-const COLUMNS = 2;
-const GRID_GAP = 12;
+const PAGE = 30;
 
-// Flat outlined tile (no fill / glass), matching the app's brown-outline card language.
-function TreeTile({ tree, onPress }: { tree: ApiTree; onPress: () => void }) {
+type HealthFilter = 'all' | TreeHealthStatus;
+type SortKey = 'newest' | 'oldest' | 'growth' | 'co2' | 'name';
+const SORTS: { key: SortKey; label: string }[] = [
+  { key: 'newest', label: 'Newest' },
+  { key: 'oldest', label: 'Oldest' },
+  { key: 'growth', label: 'Most grown' },
+  { key: 'co2', label: 'Most CO₂' },
+  { key: 'name', label: 'A–Z' },
+];
+
+function formatAge(tree: ApiTree): string {
+  const days = tree.ageDays ?? Math.max(0, Math.floor((Date.now() - new Date(tree.plantedAt).getTime()) / 86400000));
+  if (days < 1) return 'Planted today';
+  if (days < 60) return `${days} ${days === 1 ? 'day' : 'days'} old`;
+  if (days < 730) return `${Math.round(days / 30)} months old`;
+  return `${(days / 365).toFixed(1)} years old`;
+}
+
+// Full-width row: photo (or growth emoji) on the left, identity + growth in the middle, health and
+// CO2 on the right. One row per line so a tree's details never get squeezed into half a screen.
+function TreeRow({ tree, onPress }: { tree: ApiTree; onPress: () => void }) {
   const stageIndex = tree.growthStage - 1;
   const health = STATUS_META[tree.healthStatus];
   return (
-    <TouchableOpacity style={styles.tile} activeOpacity={0.8} onPress={onPress}>
-      <Text style={styles.tileEmoji}>{GROWTH_STAGE_EMOJI[stageIndex]}</Text>
-      <Text style={styles.tileName} numberOfLines={1}>{tree.nickname}</Text>
-      <Text style={styles.tileSpecies} numberOfLines={1}>{tree.species}</Text>
-      <View style={styles.growthBar}>
-        <View style={[styles.growthFill, { width: `${(tree.growthStage / 5) * 100}%` }]} />
+    <TouchableOpacity style={styles.row} activeOpacity={0.8} onPress={onPress}>
+      <View style={styles.thumb}>
+        {tree.photoUri ? (
+          <Image source={{ uri: tree.photoUri }} style={styles.thumbImage} />
+        ) : (
+          <Text style={styles.thumbEmoji}>{tree.speciesEmoji || GROWTH_STAGE_EMOJI[stageIndex]}</Text>
+        )}
+        <View style={styles.stageBadge}>
+          <Text style={styles.stageBadgeText}>{GROWTH_STAGE_EMOJI[stageIndex]}</Text>
+        </View>
       </View>
-      <Text style={styles.tileMeta} numberOfLines={1}>{GROWTH_STAGE_LABEL[stageIndex]}</Text>
-      {tree.location ? <Text style={styles.tileMeta} numberOfLines={1}>📍 {tree.location.split(',')[0]}</Text> : null}
-      <View style={[styles.healthPill, { borderColor: health.color }]}>
-        <Text style={[styles.healthPillText, { color: health.color }]} numberOfLines={1}>{health.emoji} {health.label}</Text>
+      <View style={styles.rowBody}>
+        <View style={styles.rowTop}>
+          <Text style={styles.rowName} numberOfLines={1}>{tree.nickname}</Text>
+          <View style={[styles.healthPill, { borderColor: health.color }]}>
+            <Text style={[styles.healthPillText, { color: health.color }]} numberOfLines={1}>{health.emoji} {health.label}</Text>
+          </View>
+        </View>
+        <Text style={styles.rowSpecies} numberOfLines={1}>{tree.species} · {formatAge(tree)}</Text>
+        <View style={styles.growthRow}>
+          <View style={styles.growthBar}>
+            <View style={[styles.growthFill, { width: `${(tree.growthStage / 5) * 100}%` }]} />
+          </View>
+          <Text style={styles.growthLabel}>{GROWTH_STAGE_LABEL[stageIndex]}</Text>
+        </View>
+        <View style={styles.rowFoot}>
+          <Text style={styles.rowMeta} numberOfLines={1}>
+            {tree.location ? `📍 ${tree.location.split(',')[0]}` : '📍 Location not set'}
+          </Text>
+          <Text style={styles.rowMeta}>{'💨'} {(tree.co2Absorbed ?? 0).toFixed(1)} kg</Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -66,6 +102,39 @@ export function MyTreesScreen({ navigation, route }: any) {
   }, [listQuery.data]);
   const { refreshing, onRefresh } = usePullToRefresh([refetch, listQuery.refetch]);
 
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<HealthFilter>('all');
+  const [sort, setSort] = useState<SortKey>('newest');
+  const [visible, setVisible] = useState(PAGE);
+  const [sortOpen, setSortOpen] = useState(false);
+  const toggleSort = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSortOpen((o) => !o);
+  };
+  // Search, filter and non-default sorts need every tree, so they run over the full map feed; the
+  // untouched default view keeps using the server-paged list.
+  const isDefaultView = query.trim() === '' && filter === 'all' && sort === 'newest';
+
+  const filteredTrees = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const out = (trees ?? []).filter((t) => {
+      if (filter !== 'all' && t.healthStatus !== filter) return false;
+      if (!q) return true;
+      return [t.nickname, t.species, t.location ?? ''].some((f) => f.toLowerCase().includes(q));
+    });
+    const by: Record<SortKey, (a: ApiTree, b: ApiTree) => number> = {
+      newest: (a, b) => new Date(b.plantedAt).getTime() - new Date(a.plantedAt).getTime(),
+      oldest: (a, b) => new Date(a.plantedAt).getTime() - new Date(b.plantedAt).getTime(),
+      growth: (a, b) => b.growthStage - a.growthStage || (b.ageDays ?? 0) - (a.ageDays ?? 0),
+      co2: (a, b) => (b.co2Absorbed ?? 0) - (a.co2Absorbed ?? 0),
+      name: (a, b) => a.nickname.localeCompare(b.nickname),
+    };
+    return out.sort(by[sort]);
+  }, [trees, query, filter, sort]);
+
+  useEffect(() => setVisible(PAGE), [query, filter, sort]);
+  const shownTrees = isDefaultView ? pagedTrees : filteredTrees.slice(0, visible);
+
   const counts = useMemo(() => {
     const tally: Record<TreeHealthStatus, number> = {
       not_checked: 0,
@@ -79,6 +148,9 @@ export function MyTreesScreen({ navigation, route }: any) {
   }, [trees]);
 
   const total = trees?.length ?? 0;
+  const totalCo2 = useMemo(() => (trees ?? []).reduce((sum, t) => sum + (t.co2Absorbed ?? 0), 0), [trees]);
+  const totalOxygen = useMemo(() => (trees ?? []).reduce((sum, t) => sum + (t.oxygenKg ?? 0), 0), [trees]);
+  const needsAttention = counts.struggling + counts.not_checked;
 
   const pins = useMemo<LeafletPin[]>(
     () =>
@@ -161,30 +233,143 @@ export function MyTreesScreen({ navigation, route }: any) {
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
-          {...infiniteScrollProps(listQuery)}
+          scrollEventThrottle={200}
+          onScroll={(e) => {
+            const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+            if (layoutMeasurement.height + contentOffset.y < contentSize.height - 400) return;
+            if (isDefaultView) {
+              if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) listQuery.fetchNextPage();
+            } else if (visible < filteredTrees.length) {
+              setVisible((v) => v + PAGE);
+            }
+          }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
-          <Text style={styles.totalLine}>{total} {total === 1 ? 'tree' : 'trees'}</Text>
-          <View style={styles.countsRow}>
-            {COUNT_ORDER.filter((status) => counts[status] > 0).map((status) => (
-              <View key={status} style={[styles.countPill, { borderColor: STATUS_META[status].color }]}>
-                <Text style={[styles.countPillText, { color: STATUS_META[status].color }]}>
-                  {counts[status]} {STATUS_META[status].label}
-                </Text>
-              </View>
-            ))}
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryStat}>
+              <Text style={styles.summaryNum}>{total}</Text>
+              <Text style={styles.summaryLabel}>{total === 1 ? 'Tree' : 'Trees'}</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryStat}>
+              <Text style={styles.summaryNum}>{totalCo2.toFixed(1)}</Text>
+              <Text style={styles.summaryLabel}>kg CO₂</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryStat}>
+              <Text style={styles.summaryNum}>{totalOxygen.toFixed(1)}</Text>
+              <Text style={styles.summaryLabel}>kg O₂</Text>
+            </View>
           </View>
 
-          <View style={styles.grid}>
-            {pagedTrees.map((tree) => (
-              <TreeTile
-                key={tree.id}
-                tree={tree}
-                onPress={() => navigation.navigate('TreePassport', { kind: 'tree', id: tree.id })}
-              />
-            ))}
+          {needsAttention > 0 && filter === 'all' && (
+            <TouchableOpacity
+              style={styles.attention}
+              activeOpacity={0.8}
+              onPress={() => setFilter(counts.struggling > 0 ? 'struggling' : 'not_checked')}
+            >
+              <Text style={styles.attentionEmoji}>{counts.struggling > 0 ? '🥀' : '🩺'}</Text>
+              <Text style={styles.attentionText}>
+                {counts.struggling > 0
+                  ? `${counts.struggling} ${counts.struggling === 1 ? 'tree is' : 'trees are'} struggling — tap to review`
+                  : `${counts.not_checked} ${counts.not_checked === 1 ? 'tree hasn’t' : 'trees haven’t'} had a health check`}
+              </Text>
+              <Text style={styles.attentionChevron}>›</Text>
+            </TouchableOpacity>
+          )}
+
+          <View style={styles.searchBox}>
+            <Text style={styles.searchIcon}>{'🔍'}</Text>
+            <TextInput
+              style={styles.searchInput}
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search by name, species or place"
+              placeholderTextColor={COLORS.textMuted}
+              returnKeyType="search"
+              autoCorrect={false}
+            />
+            {query.length > 0 && (
+              <TouchableOpacity onPress={() => setQuery('')} hitSlop={10}>
+                <Text style={styles.searchClear}>{'✕'}</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <PageFooter loading={listQuery.isFetchingNextPage} />
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+            <TouchableOpacity
+              style={[styles.filterChip, filter === 'all' && styles.filterChipActive]}
+              onPress={() => setFilter('all')}
+            >
+              <Text style={[styles.filterChipText, filter === 'all' && styles.filterChipTextActive]}>All {total}</Text>
+            </TouchableOpacity>
+            {COUNT_ORDER.filter((status) => counts[status] > 0).map((status) => {
+              const active = filter === status;
+              return (
+                <TouchableOpacity
+                  key={status}
+                  style={[styles.filterChip, { borderColor: STATUS_META[status].color }, active && { backgroundColor: STATUS_META[status].color }]}
+                  onPress={() => setFilter(active ? 'all' : status)}
+                >
+                  <Text style={[styles.filterChipText, { color: active ? COLORS.white : STATUS_META[status].color }]}>
+                    {STATUS_META[status].emoji} {STATUS_META[status].label} {counts[status]}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          <View style={styles.resultsRow}>
+            <Text style={styles.resultsCount}>
+              {isDefaultView ? total : filteredTrees.length} {(isDefaultView ? total : filteredTrees.length) === 1 ? 'tree' : 'trees'}
+            </Text>
+            <TouchableOpacity style={styles.sortButton} activeOpacity={0.8} onPress={toggleSort}>
+              <Text style={styles.sortButtonText}>Sort: {SORTS.find((o) => o.key === sort)?.label}</Text>
+              <Text style={[styles.sortCaret, sortOpen && styles.sortCaretOpen]}>▾</Text>
+            </TouchableOpacity>
+          </View>
+          {sortOpen && (
+            <View style={styles.sortMenu}>
+              {SORTS.map((o, i) => (
+                <TouchableOpacity
+                  key={o.key}
+                  style={[styles.sortOption, i > 0 && styles.sortOptionBorder]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    setSort(o.key);
+                    toggleSort();
+                  }}
+                >
+                  <Text style={[styles.sortOptionText, sort === o.key && styles.sortOptionTextActive]}>{o.label}</Text>
+                  {sort === o.key && <Text style={styles.sortCheck}>✓</Text>}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {shownTrees.length === 0 ? (
+            <View style={styles.noMatch}>
+              <Text style={styles.noMatchEmoji}>{'🔎'}</Text>
+              <Text style={styles.noMatchText}>No trees match your search</Text>
+              <TouchableOpacity onPress={() => { setQuery(''); setFilter('all'); }}>
+                <Text style={styles.noMatchClear}>Clear filters</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.list}>
+              {shownTrees.map((tree) => (
+                <TreeRow
+                  key={tree.id}
+                  tree={tree}
+                  onPress={() => navigation.navigate('TreePassport', { kind: 'tree', id: tree.id })}
+                />
+              ))}
+            </View>
+          )}
+          <PageFooter loading={isDefaultView && listQuery.isFetchingNextPage} />
+          <TouchableOpacity style={styles.plantButton} activeOpacity={0.85} onPress={() => navigation.navigate('PlantTree')}>
+            <Text style={styles.plantButtonText}>{'🌱'}  Plant another tree</Text>
+          </TouchableOpacity>
         </ScrollView>
       )}
     </View>
@@ -205,18 +390,59 @@ const styles = StyleSheet.create({
   toggleText: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary },
   toggleTextActive: { color: COLORS.white },
   headerOverMap: { backgroundColor: 'rgba(255,248,237,0.92)' },
-  totalLine: { ...TEXT.statSmall, fontSize: 22, color: COLORS.textPrimary, marginTop: 4, marginBottom: 10 },
-  countsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
-  countPill: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1.5 },
-  countPillText: { fontSize: 12, fontWeight: '700' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
-  tile: { width: `${100 / COLUMNS - 2}%`, flexGrow: 1, alignItems: 'center', padding: 14, gap: 4, borderRadius: 20, borderWidth: 1.5, borderColor: COLORS.warmBrown, backgroundColor: 'transparent' },
-  tileEmoji: { fontSize: 34, marginBottom: 2 },
-  tileName: { fontSize: 15, fontWeight: '800', color: COLORS.textPrimary },
-  tileSpecies: { fontSize: 12, color: COLORS.textSecondary },
-  growthBar: { alignSelf: 'stretch', height: 5, borderRadius: 3, backgroundColor: 'rgba(160,114,74,0.2)', marginVertical: 4, overflow: 'hidden' },
+  summaryCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderRadius: 20, borderWidth: 1.5, borderColor: COLORS.warmBrown, marginTop: 4, marginBottom: 12 },
+  summaryStat: { flex: 1, alignItems: 'center' },
+  summaryNum: { ...TEXT.statSmall, fontSize: 22, color: COLORS.textPrimary },
+  summaryLabel: { fontSize: 11, fontWeight: '600', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
+  summaryDivider: { width: 1, height: 28, backgroundColor: 'rgba(160,114,74,0.3)' },
+  attention: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 16, borderWidth: 1.5, borderColor: COLORS.amber, backgroundColor: 'rgba(255,170,40,0.12)', marginBottom: 12 },
+  attentionEmoji: { fontSize: 20 },
+  attentionText: { flex: 1, fontSize: 13, fontWeight: '700', color: COLORS.textPrimary },
+  attentionChevron: { fontSize: 22, color: COLORS.textSecondary },
+  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, height: 44, borderRadius: 14, borderWidth: 1.5, borderColor: COLORS.warmBrown, marginBottom: 10 },
+  searchIcon: { fontSize: 14 },
+  searchInput: { flex: 1, fontSize: 14, color: COLORS.textPrimary, paddingVertical: 0 },
+  searchClear: { fontSize: 14, color: COLORS.textSecondary, fontWeight: '700' },
+  chipRow: { gap: 8, paddingBottom: 10, alignItems: 'center' },
+  filterChip: { paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1.5, borderColor: COLORS.sageDark },
+  filterChipActive: { backgroundColor: COLORS.sageDark },
+  filterChipText: { fontSize: 12, fontWeight: '700', color: COLORS.sageDark },
+  filterChipTextActive: { color: COLORS.white },
+  resultsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  resultsCount: { fontSize: 13, fontWeight: '700', color: COLORS.textSecondary },
+  sortButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  sortButtonText: { fontSize: 12, fontWeight: '700', color: COLORS.textPrimary },
+  sortCaret: { fontSize: 12, color: COLORS.textPrimary },
+  sortCaretOpen: { transform: [{ rotate: '180deg' }] },
+  sortMenu: { borderRadius: 16, borderWidth: 1.5, borderColor: COLORS.warmBrown, backgroundColor: COLORS.cream, marginBottom: 10, overflow: 'hidden' },
+  sortOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 16 },
+  sortOptionBorder: { borderTopWidth: 1, borderTopColor: 'rgba(160,114,74,0.25)' },
+  sortOptionText: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary },
+  sortOptionTextActive: { fontWeight: '800', color: COLORS.sageDark },
+  sortCheck: { fontSize: 14, fontWeight: '800', color: COLORS.sageDark },
+  list: { gap: 12, marginTop: 4 },
+  row: { flexDirection: 'row', gap: 12, padding: 12, borderRadius: 20, borderWidth: 1.5, borderColor: COLORS.warmBrown, backgroundColor: 'transparent' },
+  thumb: { width: 76, height: 76, borderRadius: 16, backgroundColor: 'rgba(143,174,125,0.25)', alignItems: 'center', justifyContent: 'center' },
+  thumbImage: { width: 76, height: 76, borderRadius: 16 },
+  thumbEmoji: { fontSize: 36 },
+  stageBadge: { position: 'absolute', right: -6, bottom: -6, width: 26, height: 26, borderRadius: 13, backgroundColor: COLORS.cream, borderWidth: 1.5, borderColor: COLORS.warmBrown, alignItems: 'center', justifyContent: 'center' },
+  stageBadgeText: { fontSize: 13 },
+  rowBody: { flex: 1, justifyContent: 'center', gap: 3 },
+  rowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  rowName: { flex: 1, fontSize: 16, fontWeight: '800', color: COLORS.textPrimary },
+  rowSpecies: { fontSize: 12, color: COLORS.textSecondary },
+  growthRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 2 },
+  growthBar: { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(160,114,74,0.2)', overflow: 'hidden' },
   growthFill: { height: '100%', borderRadius: 3, backgroundColor: COLORS.sageDark },
-  tileMeta: { fontSize: 11, color: COLORS.textSecondary },
-  healthPill: { marginTop: 4, paddingVertical: 3, paddingHorizontal: 8, borderRadius: 999, borderWidth: 1.5 },
+  growthLabel: { fontSize: 11, fontWeight: '600', color: COLORS.textSecondary },
+  rowFoot: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
+  rowMeta: { fontSize: 11, color: COLORS.textSecondary, flexShrink: 1 },
+  healthPill: { paddingVertical: 2, paddingHorizontal: 8, borderRadius: 999, borderWidth: 1.5 },
   healthPillText: { fontSize: 10, fontWeight: '700' },
+  noMatch: { alignItems: 'center', paddingVertical: 40, gap: 6 },
+  noMatchEmoji: { fontSize: 34 },
+  noMatchText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary },
+  noMatchClear: { fontSize: 13, fontWeight: '800', color: COLORS.sageDark, marginTop: 4 },
+  plantButton: { marginTop: 18, paddingVertical: 14, borderRadius: 999, backgroundColor: COLORS.sageDark, alignItems: 'center' },
+  plantButtonText: { fontSize: 15, fontWeight: '800', color: COLORS.white },
 });

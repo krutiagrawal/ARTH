@@ -168,6 +168,7 @@ export function toPublicUser(user: User) {
     handle: user.handle,
     bio: user.bio,
     avatarEmoji: user.avatarEmoji,
+    avatarUrl: user.avatarUrl,
     phone: user.phone,
     city: user.city,
     plantingSpace: user.plantingSpace,

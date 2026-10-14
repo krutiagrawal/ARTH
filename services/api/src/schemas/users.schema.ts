@@ -1,7 +1,21 @@
 import { z } from 'zod';
 
+// Same character rules as the Edit Profile form, so the API rejects what the form already blocks.
+const personName = z
+  .string()
+  .trim()
+  .min(2, 'Name must be at least 2 characters')
+  .max(60)
+  .regex(/^\p{L}[\p{L}\p{M} .'’-]*$/u, 'Name can only contain letters, spaces, . - and apostrophes');
+const cityName = z
+  .string()
+  .trim()
+  .min(2, 'City must be at least 2 characters')
+  .max(100)
+  .regex(/^\p{L}[\p{L}\p{M} .,'’-]*$/u, 'City can only contain letters, spaces, commas, . - and apostrophes');
+
 export const updateMeSchema = z.object({
-  name: z.string().min(1).max(60).optional(),
+  name: personName.optional(),
   handle: z
     .string()
     .min(3)
@@ -10,7 +24,7 @@ export const updateMeSchema = z.object({
     .optional(),
   avatarEmoji: z.string().min(1).max(8).optional(),
   bio: z.string().max(160).nullable().optional(),
-  city: z.string().min(1).max(100).optional(),
+  city: cityName.nullable().optional(),
 });
 
 // Fields collected on the optional, skippable "personalize your experience" step shown
@@ -37,6 +51,9 @@ export const updateSettingsSchema = z.object({
   locationTracking: z.boolean().optional(),
   publicProfile: z.boolean().optional(),
   analyticsEnabled: z.boolean().optional(),
+  showCity: z.boolean().optional(),
+  showStats: z.boolean().optional(),
+  showInterests: z.boolean().optional(),
   pinnedTimeTheme: z
     .enum(['dawn', 'morning', 'afternoon', 'goldenHour', 'sunset', 'blueHour', 'night', 'lateNight'])
     .nullable()

@@ -86,6 +86,10 @@ export function saveStockPhoto(photo: PhotoInput): Promise<string> {
   return saveImage(photo, 'stock');
 }
 
+export function saveUserAvatar(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'avatars');
+}
+
 export function saveCorporateLogo(photo: PhotoInput): Promise<string> {
   return saveImage(photo, 'corporate-logos');
 }
