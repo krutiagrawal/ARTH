@@ -24,6 +24,7 @@ import { assetToPhoto } from '../components/common/PhotoPickerField';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { useAvailabilityCheck } from '../hooks/useAvailabilityCheck';
+import { validateName, NAME_DISALLOWED_CHARS } from '../utils/nameValidation';
 import type { PersonalizeInput } from '../api/users';
 import type { ApiUserSettings } from '../api/settings';
 import {
@@ -37,8 +38,6 @@ import {
 
 import { TEXT } from '../constants/typography';
 const HANDLE_REGEX = /^[a-z0-9_]+$/;
-const NAME_CHARS = /[^\p{L}\p{M} .'’-]/gu;
-const NAME_REGEX = /^\p{L}[\p{L}\p{M} .'’-]*$/u;
 const CITY_CHARS = /[^\p{L}\p{M} .,'’-]/gu;
 const CITY_REGEX = /^\p{L}[\p{L}\p{M} .,'’-]*$/u;
 const MIN_BIRTH_YEAR = 1900;
@@ -47,14 +46,6 @@ const MAX_GOAL = 10000;
 
 // Each validator returns an error message, or null when the value is fine. They run on every
 // keystroke, so the user sees what is wrong while typing instead of after pressing Save.
-function validateName(value: string): string | null {
-  const v = value.trim();
-  if (v.length === 0) return 'Name is required.';
-  if (v.length < 2) return 'Name must be at least 2 characters.';
-  if (!NAME_REGEX.test(v)) return 'Name must start with a letter and use only letters, spaces, . - or ’.';
-  return null;
-}
-
 function validateCity(value: string): string | null {
   const v = value.trim();
   if (v.length === 0) return null; // optional
@@ -380,7 +371,7 @@ export function EditProfileScreen({ navigation }: any) {
           <TextInput
             style={[styles.input, nameError && styles.inputInvalid]}
             value={name}
-            onChangeText={(text) => setName(text.replace(NAME_CHARS, '').replace(/^\s+/, ''))}
+            onChangeText={(text) => setName(text.replace(NAME_DISALLOWED_CHARS, '').replace(/^\s+/, '').replace(/ {2,}/g, ' '))}
             placeholder="eg - Your name"
             placeholderTextColor={COLORS.textLight}
             maxLength={60}

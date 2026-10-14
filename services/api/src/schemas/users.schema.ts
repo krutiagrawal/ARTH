@@ -1,12 +1,11 @@
 import { z } from 'zod';
+import { validateName } from '../utils/nameValidation';
 
 // Same character rules as the Edit Profile form, so the API rejects what the form already blocks.
-const personName = z
-  .string()
-  .trim()
-  .min(2, 'Name must be at least 2 characters')
-  .max(60)
-  .regex(/^\p{L}[\p{L}\p{M} .'’-]*$/u, 'Name can only contain letters, spaces, . - and apostrophes');
+const personName = z.string().superRefine((value, ctx) => {
+  const error = validateName(value);
+  if (error) ctx.addIssue({ code: z.ZodIssueCode.custom, message: error });
+});
 const cityName = z
   .string()
   .trim()
