@@ -18,6 +18,18 @@ const FREE_DELIVERY_THRESHOLD_CENTS = 49900;
 // delivery fee, which pickup orders skip entirely).
 const PLATFORM_FEE_CENTS = 100;
 
+// A buyer who cancels after paying (status 'confirmed') forfeits this fee, deducted from the
+// refund; cancelling before payment is free. Nursery- and admin-initiated cancels always refund
+// in full. 10% of the sapling subtotal, never less than the floor, never more than the total.
+const CANCELLATION_FEE_PERCENT = 10;
+const CANCELLATION_FEE_MIN_CENTS = 1000;
+
+export function cancellationFeeFor(order: { status: string; subtotalCents: number; totalCents: number }) {
+  if (order.status !== 'confirmed') return 0;
+  const fee = Math.max(Math.round((order.subtotalCents * CANCELLATION_FEE_PERCENT) / 100), CANCELLATION_FEE_MIN_CENTS);
+  return Math.min(fee, order.totalCents);
+}
+
 function generateHandoffCode() {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
@@ -134,9 +146,13 @@ function serializeOrder(order: any) {
     deliveryFeeCents: order.deliveryFeeCents,
     platformFeeCents: order.platformFeeCents,
     totalCents: order.totalCents,
+    // What cancelling would cost right now (0 unless paid) vs. what was actually kept on a cancelled order.
+    cancellationFeeQuoteCents: cancellationFeeFor(order),
+    cancellationFeeCents: order.cancellationFeeCents ?? 0,
     currency: order.currency,
     scheduledFor: order.scheduledFor,
     pickupWindowLabel: order.pickupWindowLabel,
+    customerNote: order.customerNote ?? null,
     handoffCode: order.handoffCode,
     createdAt: order.createdAt,
     confirmedAt: order.confirmedAt,
@@ -174,6 +190,7 @@ interface CheckoutInput {
   fulfillmentType: 'pickup' | 'delivery';
   addressId?: string;
   pickupWindowLabel?: string;
+  customerNote?: string;
   scheduledFor?: string;
 }
 
@@ -192,7 +209,7 @@ export async function checkout(prisma: PrismaClient, userId: string, input: Chec
     if (!nursery.offersPickup) throw new BadRequestError('This nursery does not offer pickup');
   }
 
-  const subtotalCents = items.reduce((sum, i) => sum + i.stock.priceCents! * i.quantity, 0);
+  const subtotalCents = items.reduce((sum, i) => sum + (i.stock.priceCents ?? 0) * i.quantity, 0);
 
   let deliveryFeeCents = 0;
   if (input.fulfillmentType === 'delivery') {
@@ -256,6 +273,7 @@ export async function checkout(prisma: PrismaClient, userId: string, input: Chec
           addressId,
           fulfillmentType: input.fulfillmentType,
           pickupWindowLabel: input.fulfillmentType === 'pickup' ? input.pickupWindowLabel : undefined,
+          customerNote: input.customerNote || undefined,
           scheduledFor: input.scheduledFor ? new Date(input.scheduledFor) : undefined,
           subtotalCents,
           deliveryFeeCents,
@@ -263,7 +281,7 @@ export async function checkout(prisma: PrismaClient, userId: string, input: Chec
           totalCents,
           stripePaymentIntentId: paymentIntent?.id,
           items: {
-            create: items.map((i) => ({ stockId: i.stockId, species: i.stock.species, quantity: i.quantity, unitPriceCents: i.stock.priceCents! })),
+            create: items.map((i) => ({ stockId: i.stockId, species: i.stock.species, quantity: i.quantity, unitPriceCents: i.stock.priceCents ?? 0 })),
           },
         },
         include: orderInclude,
@@ -407,10 +425,15 @@ export async function cancelMyOrder(prisma: PrismaClient, userId: string, orderI
     throw new ForbiddenError('This order can no longer be cancelled');
   }
 
+  const feeCents = cancellationFeeFor(order);
   if (order.stripePaymentIntentId) {
     const stripe = getStripeClient();
     if (order.status === 'confirmed') {
-      await stripe.refunds.create({ payment_intent: order.stripePaymentIntentId });
+      // Partial refund when a fee applies; Stripe refunds the full charge when amount is omitted.
+      await stripe.refunds.create({
+        payment_intent: order.stripePaymentIntentId,
+        ...(feeCents > 0 ? { amount: order.totalCents - feeCents } : {}),
+      });
     } else {
       // Nothing was captured yet at pending_payment — release the authorization instead of
       // refunding. Best-effort: if Stripe already settled it (a payment landing right as the user
@@ -423,7 +446,7 @@ export async function cancelMyOrder(prisma: PrismaClient, userId: string, orderI
   await restockCancelledOrder(prisma, order.id);
 
   const updated = await prisma.$transaction(async (tx) => {
-    const result = await tx.order.update({ where: { id: order.id }, data: { status: 'cancelled', cancelledAt: new Date() } });
+    const result = await tx.order.update({ where: { id: order.id }, data: { status: 'cancelled', cancelledAt: new Date(), cancellationFeeCents: feeCents } });
     // A buyer-initiated cancel is just as much a break in the nursery's fulfilment record as a
     // nursery-initiated one (nurseryCancelOrder, above) — without this, the nursery's public Trust
     // Score kept counting the now-cancelled order as a success until the weekly reputation job

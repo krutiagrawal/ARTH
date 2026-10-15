@@ -96,7 +96,7 @@ export function NurseryProfileScreen({ route, navigation }: any) {
       : [publicProfile.refetch, refetchPosts],
   );
 
-  const [tab, setTab] = useState<ProfileTabKey>('posts');
+  const [tab, setTab] = useState<ProfileTabKey>(route?.params?.initialTab ?? 'posts');
   const openPost = useCallback(
     (post: ApiPost) => {
       if (!effectiveNurseryId) return;
@@ -123,7 +123,13 @@ export function NurseryProfileScreen({ route, navigation }: any) {
 
   const toggleFollow = () => {
     if (!nurseryId) return;
-    if (isFollowingOrPending) unfollowMutation.mutate(nurseryId);
+    if (isFollowingOrPending) {
+      const pending = followStatus === 'pending';
+      confirm(pending ? 'Cancel follow request?' : 'Unfollow?', pending ? `Your request to follow ${name} will be withdrawn.` : `Are you sure you want to unfollow ${name}?`, [
+        { text: pending ? 'Keep request' : 'Cancel', style: 'cancel' },
+        { text: pending ? 'Withdraw' : 'Unfollow', style: 'destructive', onPress: () => unfollowMutation.mutate(nurseryId) },
+      ]);
+    }
     else followMutation.mutate(nurseryId);
   };
 

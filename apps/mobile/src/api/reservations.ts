@@ -4,6 +4,7 @@ import type { ReservationStatus } from './nursery';
 
 export interface ApiMyReservation {
   id: string;
+  stockId: string;
   quantity: number;
   status: ReservationStatus;
   message: string | null;

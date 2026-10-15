@@ -113,8 +113,10 @@ export async function getAdminNurseryProfile(prisma: PrismaClient, nurseryId: st
 }
 
 async function assembleNurseryProfile(prisma: PrismaClient, nursery: { id: string } & Record<string, any>, viewerUserId?: string) {
-  const [stock, followersCount, follow, recentPosts] = await Promise.all([
-    prisma.saplingStock.findMany({ where: { nurseryId: nursery.id, quantity: { gt: 0 } }, orderBy: { species: 'asc' } }),
+  const [allStock, followersCount, follow, recentPosts] = await Promise.all([
+    // Stocked-out species stay on the profile (shown as "Stocked out") rather than vanishing, so a
+    // buyer can still see what the nursery grows; they just sort below what's available.
+    prisma.saplingStock.findMany({ where: { nurseryId: nursery.id }, orderBy: { species: 'asc' } }),
     prisma.follow.count({ where: { nurseryId: nursery.id, status: 'accepted' } }),
     viewerUserId
       ? prisma.follow.findUnique({
@@ -129,6 +131,8 @@ async function assembleNurseryProfile(prisma: PrismaClient, nursery: { id: strin
       include: viewerInclude(viewerUserId),
     }),
   ]);
+
+  const stock = [...allStock].sort((a, b) => Number(a.quantity < 1) - Number(b.quantity < 1));
 
   const blockedByMe = viewerUserId
     ? !!(await prisma.block.findFirst({

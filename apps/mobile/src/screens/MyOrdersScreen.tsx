@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
-import { Text } from '../components/common/AppText';
+import React, { useMemo, useState } from 'react';
+import { View, Linking, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
+import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -8,11 +8,13 @@ import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
-import { useMyOrders } from '../hooks/useApiQueries';
+import { useMyOrders, useCancelOrder } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { flattenPages, infiniteScrollProps } from '../hooks/useInfiniteList';
 import { PageFooter } from '../components/common/PageFooter';
+import { cancelOrderMessage, needsNurseryContact } from '../api/orders';
 import type { ApiOrder, OrderStatus } from '../api/orders';
+import { useConfirm } from '../context/ConfirmDialogContext';
 
 import { TEXT } from '../constants/typography';
 function formatRupees(cents: number) {
@@ -43,20 +45,72 @@ const STATUS_COLOR: Record<OrderStatus, string> = {
   cancelled: COLORS.dangerDark,
 };
 
-function OrderRow({ order, onPress }: { order: ApiOrder; onPress: () => void }) {
+type Filter = 'all' | 'active' | 'completed' | 'cancelled';
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'active', label: 'Active' },
+  { key: 'completed', label: 'Completed' },
+  { key: 'cancelled', label: 'Cancelled' },
+];
+
+const COMPLETED: OrderStatus[] = ['picked_up', 'delivered', 'plantation_verified'];
+function bucket(status: OrderStatus): Exclude<Filter, 'all'> {
+  if (status === 'cancelled') return 'cancelled';
+  return COMPLETED.includes(status) ? 'completed' : 'active';
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function OrderRow({ order, navigation }: { order: ApiOrder; navigation: any }) {
+  const confirm = useConfirm();
+  const cancelMutation = useCancelOrder();
+  const canCancel = ['pending_payment', 'confirmed'].includes(order.status);
+  const openOrder = () => navigation.navigate('OrderDetail', { orderId: order.id });
+  const openNursery = () => navigation.navigate('NurseryPublicProfile', { nurseryId: order.nursery.id });
+  const handleCancel = () =>
+    confirm('Cancel this order?', cancelOrderMessage(order), [
+      { text: 'Keep order', style: 'cancel' },
+      { text: 'Cancel order', style: 'destructive', onPress: () => cancelMutation.mutate(order.id) },
+    ]);
+
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-      <BorderCard noPadding style={styles.row}>
+    <BorderCard noPadding style={styles.row}>
+      <TouchableOpacity onPress={openOrder} activeOpacity={0.85} style={styles.rowTop}>
         <View style={{ flex: 1 }}>
           <Text style={styles.nursery}>{order.nursery.nurseryName}</Text>
-          <Text style={styles.items} numberOfLines={1}>
+          <Text style={styles.items} numberOfLines={2}>
             {order.items.map((i) => `${i.species} × ${i.quantity}`).join(', ')}
           </Text>
           <Text style={[styles.status, { color: STATUS_COLOR[order.status] }]}>{STATUS_LABEL[order.status]}</Text>
         </View>
         <Text style={styles.total}>{formatRupees(order.totalCents)}</Text>
-      </BorderCard>
-    </TouchableOpacity>
+      </TouchableOpacity>
+      <Text style={styles.meta}>
+        #{order.id.slice(-6).toUpperCase()} · {formatDate(order.createdAt)} · {order.fulfillmentType === 'delivery' ? '🚚 Delivery' : '🏪 Pickup'}
+      </Text>
+      <View style={styles.actions}>
+        {order.status === 'out_for_delivery' ? (
+          <TouchableOpacity onPress={openOrder}><Text style={styles.linkText}>Track order</Text></TouchableOpacity>
+        ) : null}
+        {canCancel ? (
+          <TouchableOpacity onPress={handleCancel} disabled={cancelMutation.isPending}>
+            <Text style={styles.cancelText}>{cancelMutation.isPending ? 'Cancelling…' : 'Cancel order'}</Text>
+          </TouchableOpacity>
+        ) : null}
+        {needsNurseryContact(order.status) ? (
+          <TouchableOpacity onPress={() => (order.nursery.contactPhone ? Linking.openURL(`tel:${order.nursery.contactPhone}`) : openNursery())}>
+            <Text style={styles.cancelText}>Contact nursery</Text>
+          </TouchableOpacity>
+        ) : null}
+        {!canCancel && !needsNurseryContact(order.status) ? (
+          <TouchableOpacity onPress={openNursery}><Text style={styles.linkText}>Buy again</Text></TouchableOpacity>
+        ) : null}
+        <TouchableOpacity onPress={openNursery}><Text style={styles.linkText}>View nursery</Text></TouchableOpacity>
+        <TouchableOpacity onPress={openOrder}><Text style={styles.linkText}>Details</Text></TouchableOpacity>
+      </View>
+    </BorderCard>
   );
 }
 
@@ -66,6 +120,27 @@ export function MyOrdersScreen({ navigation }: any) {
   const { isLoading, refetch } = query;
   const orders = flattenPages(query.data);
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
+  const [filter, setFilter] = useState<Filter>('all');
+  const [search, setSearch] = useState('');
+
+  const counts = useMemo(() => {
+    const c: Record<Filter, number> = { all: orders.length, active: 0, completed: 0, cancelled: 0 };
+    for (const o of orders) c[bucket(o.status)] += 1;
+    return c;
+  }, [orders]);
+
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return orders.filter((o) => {
+      if (filter !== 'all' && bucket(o.status) !== filter) return false;
+      if (!q) return true;
+      return (
+        o.nursery.nurseryName.toLowerCase().includes(q) ||
+        o.id.toLowerCase().includes(q) ||
+        o.items.some((i) => i.species.toLowerCase().includes(q))
+      );
+    });
+  }, [orders, filter, search]);
 
   return (
     <View style={styles.container}>
@@ -87,17 +162,37 @@ export function MyOrdersScreen({ navigation }: any) {
       ) : orders.length === 0 ? (
         <EmptyState icon="📦" title="No orders yet" body="Saplings you buy from nurseries will show up here." />
       ) : (
-        <ScrollView
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
-          showsVerticalScrollIndicator={false}
-          {...infiniteScrollProps(query)}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
-        >
-          {orders.map((order) => (
-            <OrderRow key={order.id} order={order} onPress={() => navigation.navigate('OrderDetail', { orderId: order.id })} />
-          ))}
-          <PageFooter loading={query.isFetchingNextPage} />
-        </ScrollView>
+        <>
+          <TextInput
+            style={styles.search}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search by nursery, sapling or order #"
+            placeholderTextColor={COLORS.textMuted}
+            autoCorrect={false}
+          />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
+            {FILTERS.map((f) => (
+              <TouchableOpacity key={f.key} onPress={() => setFilter(f.key)} style={[styles.chip, filter === f.key && styles.chipActive]} activeOpacity={0.8}>
+                <Text style={[styles.chipText, filter === f.key && styles.chipTextActive]}>{f.label} ({counts[f.key]})</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <ScrollView
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            {...infiniteScrollProps(query)}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+          >
+            {visible.length === 0 ? (
+              <Text style={styles.noneText}>No matching orders.</Text>
+            ) : (
+              visible.map((order) => <OrderRow key={order.id} order={order} navigation={navigation} />)
+            )}
+            <PageFooter loading={query.isFetchingNextPage} />
+          </ScrollView>
+        </>
       )}
     </View>
   );
@@ -111,9 +206,22 @@ const styles = StyleSheet.create({
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
-  row: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.md, padding: 14, marginBottom: 10 },
+  row: { borderRadius: RADIUS.md, padding: 14, marginBottom: 10, gap: 8 },
+  rowTop: { flexDirection: 'row', alignItems: 'center' },
   nursery: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
   items: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   status: { fontSize: 12, fontWeight: '700', marginTop: 4 },
   total: { fontSize: 15, fontWeight: '800', color: COLORS.textPrimary },
+  meta: { fontSize: 11, color: COLORS.textMuted },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  linkText: { fontSize: 12, color: COLORS.forest, fontWeight: '700' },
+  cancelText: { fontSize: 12, color: COLORS.coral, fontWeight: '700' },
+  search: { marginHorizontal: 20, marginBottom: 10, paddingHorizontal: 14, paddingVertical: 10, borderRadius: RADIUS.md, borderWidth: 1, borderColor: 'rgba(107,68,35,0.35)', fontSize: 14, color: COLORS.textPrimary },
+  filterScroll: { flexGrow: 0 },
+  filterRow: { paddingHorizontal: 20, gap: 8, paddingBottom: 10 },
+  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: RADIUS.full, borderWidth: 1, borderColor: 'rgba(107,68,35,0.35)' },
+  chipActive: { backgroundColor: COLORS.forest, borderColor: COLORS.forest },
+  chipText: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
+  chipTextActive: { color: COLORS.white },
+  noneText: { fontSize: 13, color: COLORS.textMuted, textAlign: 'center', marginTop: 32 },
 });

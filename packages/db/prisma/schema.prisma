@@ -1214,6 +1214,9 @@ model Order {
   // nursery's configured pickupWindows the customer picked.
   scheduledFor          DateTime?            @map("scheduled_for")
   pickupWindowLabel     String?              @map("pickup_window_label")
+  // Optional free-text message from the buyer to the nursery, entered at checkout.
+  customerNote          String?              @map("customer_note")
+  cancellationFeeCents  Int                  @default(0) @map("cancellation_fee_cents")
   confirmedAt           DateTime?            @map("confirmed_at")
   packedAt              DateTime?            @map("packed_at")
   readyForPickupAt      DateTime?            @map("ready_for_pickup_at")

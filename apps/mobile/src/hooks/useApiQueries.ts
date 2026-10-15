@@ -643,7 +643,10 @@ export function useSendFriendRequest() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (addresseeId: string) => sendFriendRequest(addresseeId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['friends'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['friends'] });
+      queryClient.invalidateQueries({ queryKey: ['users', 'search'] });
+    },
   });
 }
 
@@ -3163,10 +3166,15 @@ export function useMyOrder(id: string | null) {
 export function useCheckout() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (addressId: string) => checkout(addressId),
+    mutationFn: ({ addressId, customerNote }: { addressId: string; customerNote?: string }) =>
+      checkout(addressId, customerNote),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
       queryClient.invalidateQueries({ queryKey: ['orders', 'mine'] });
+      // Checkout takes stock out immediately, so every nursery listing (public profile, own stock)
+      // has to refetch or a just-bought-out sapling would keep showing as available.
+      queryClient.invalidateQueries({ queryKey: ['nurseries'] });
+      queryClient.invalidateQueries({ queryKey: ['nursery'] });
     },
   });
 }

@@ -13,10 +13,12 @@ import { useHaptics } from '../hooks/useHaptics';
 import { useMyOrder, useCancelOrder, useSubmitOrderReview } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ApiError } from '../api/client';
+import { cancelOrderMessage, needsNurseryContact } from '../api/orders';
 import type { ApiOrderItem, OrderFulfillmentType, OrderStatus } from '../api/orders';
 import { SUNLIGHT_LABEL, WATER_LABEL } from '../constants/plantingGuide';
 
 import { TEXT } from '../constants/typography';
+import { useConfirm } from '../context/ConfirmDialogContext';
 // This screen must never import react-native-maps directly (or anything re-exported from it,
 // like AnimatedRegion) — Metro evaluates the whole package on import, including its native
 // MapView binding, which has no native module in Expo Go on Android. React.lazy() defers that
@@ -166,6 +168,7 @@ export function OrderDetailScreen({ route, navigation }: any) {
   const { success, error: errorHaptic } = useHaptics();
   const { data: order, isLoading, refetch } = useMyOrder(orderId);
   const cancelMutation = useCancelOrder();
+  const confirm = useConfirm();
   const [actionError, setActionError] = useState('');
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
@@ -299,6 +302,15 @@ export function OrderDetailScreen({ route, navigation }: any) {
             </>
           )}
 
+          {order.customerNote ? (
+            <>
+              <Text style={styles.sectionTitle}>Your note to the nursery</Text>
+              <BorderCard style={styles.card}>
+                <Text style={styles.addressText}>{order.customerNote}</Text>
+              </BorderCard>
+            </>
+          ) : null}
+
           {['delivered', 'picked_up', 'plantation_verified'].includes(order.status) && !order.review && (
             <ReviewForm orderId={order.id} showDeliveryRating={order.fulfillmentType === 'delivery' && !!order.tracking?.riderName} />
           )}
@@ -316,7 +328,12 @@ export function OrderDetailScreen({ route, navigation }: any) {
           {canCancel && (
             <AnimatedButton
               label={cancelMutation.isPending ? 'Cancelling…' : 'Cancel order'}
-              onPress={handleCancel}
+              onPress={() =>
+                confirm('Cancel this order?', cancelOrderMessage(order), [
+                  { text: 'Keep order', style: 'cancel' },
+                  { text: 'Cancel order', style: 'destructive', onPress: handleCancel },
+                ])
+              }
               variant="secondary"
               size="md"
               fullWidth
@@ -324,6 +341,25 @@ export function OrderDetailScreen({ route, navigation }: any) {
               style={{ marginTop: 8 }}
             />
           )}
+          {order.status === 'cancelled' && order.cancellationFeeCents > 0 ? (
+            <Text style={styles.addressText}>
+              Cancellation fee {formatRupees(order.cancellationFeeCents)} · refunded {formatRupees(order.totalCents - order.cancellationFeeCents)}
+            </Text>
+          ) : null}
+          {needsNurseryContact(order.status) ? (
+            <AnimatedButton
+              label={order.nursery.contactPhone ? 'Contact nursery to cancel' : 'View nursery'}
+              onPress={() =>
+                order.nursery.contactPhone
+                  ? Linking.openURL(`tel:${order.nursery.contactPhone}`)
+                  : navigation.navigate('NurseryPublicProfile', { nurseryId: order.nursery.id })
+              }
+              variant="secondary"
+              size="md"
+              fullWidth
+              style={{ marginTop: 8 }}
+            />
+          ) : null}
         </ScrollView>
       )}
     </View>

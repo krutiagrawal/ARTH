@@ -14,9 +14,11 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ApiError } from '../api/client';
 
 import { TEXT } from '../constants/typography';
+import { useConfirm } from '../context/ConfirmDialogContext';
 export function AddToCartScreen({ navigation, route }: any) {
   const { nurseryId, stockId } = route.params as { nurseryId: string; stockId: string };
   const insets = useSafeAreaInsets();
+  const confirm = useConfirm();
   const { success, error: errorHaptic } = useHaptics();
   const { data: profile, isLoading, refetch } = useNurseryPublicProfile(nurseryId);
   const stock = profile?.stock.find((s) => s.id === stockId);
@@ -100,7 +102,15 @@ export function AddToCartScreen({ navigation, route }: any) {
                   <Text style={styles.stepperButtonText}>−</Text>
                 </TouchableOpacity>
                 <Text style={styles.stepperValue}>{quantity}</Text>
-                <TouchableOpacity style={styles.stepperButton} onPress={() => adjustQuantity(1)} disabled={quantity >= maxQuantity}>
+                <TouchableOpacity
+                  style={[styles.stepperButton, quantity >= maxQuantity && { opacity: 0.4 }]}
+                  onPress={() =>
+                    quantity >= maxQuantity
+                      ? confirm('No more available', `Only ${maxQuantity} ${stock.species} in stock.`)
+                      : adjustQuantity(1)
+                  }
+                  accessibilityState={{ disabled: quantity >= maxQuantity }}
+                >
                   <Text style={styles.stepperButtonText}>+</Text>
                 </TouchableOpacity>
               </View>
@@ -141,8 +151,8 @@ const styles = StyleSheet.create({
   stockLine: { fontSize: 13, color: COLORS.textSecondary },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 8, marginTop: 4 },
   stepperRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24, marginBottom: 24 },
-  stepperButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.white, borderWidth: 1.5, borderColor: COLORS.sand, alignItems: 'center', justifyContent: 'center' },
-  stepperButtonText: { fontSize: 22, fontWeight: '700', color: COLORS.forest },
+  stepperButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.earth, alignItems: 'center', justifyContent: 'center' },
+  stepperButtonText: { fontSize: 22, fontWeight: '700', color: COLORS.earth },
   stepperValue: { ...TEXT.stat, fontSize: 28, color: COLORS.textPrimary, minWidth: 48, textAlign: 'center' },
   errorText: { fontSize: 13, color: COLORS.dangerDark, textAlign: 'center', marginBottom: 12 },
   requestButton: { marginTop: 4 },

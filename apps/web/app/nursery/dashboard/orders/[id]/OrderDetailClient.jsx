@@ -163,6 +163,12 @@ export default function OrderDetailClient({ orderId }) {
               </p>
             </div>
           )}
+          {order.customerNote && (
+            <div className="sm:col-span-2">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Note from customer</p>
+              <p className="mt-1 whitespace-pre-wrap">{order.customerNote}</p>
+            </div>
+          )}
           {order.scheduledFor && (
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Scheduled for</p>

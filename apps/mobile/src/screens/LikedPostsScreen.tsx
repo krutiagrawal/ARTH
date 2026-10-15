@@ -1,17 +1,12 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { blockInputFor } from '../api/social';
-import { View, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { View, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
-import { RADIUS, SPACING } from '../constants/theme';
-import { EmptyState } from '../components/common/EmptyState';
-import { PostCard } from '../components/social/PostCard';
-import { ReportSheet } from '../components/social/ReportSheet';
-import { useBlockTarget, useDeletePost, useLikedPosts, useToggleLike, useToggleSave } from '../hooks/useSocialQueries';
-import type { ApiPost } from '../api/posts';
+import { PostGrid } from '../components/profile/PostGrid';
+import { useLikedPosts } from '../hooks/useSocialQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 import { TEXT } from '../constants/typography';
@@ -21,11 +16,6 @@ export function LikedPostsScreen({ navigation }: any) {
   const { data, isLoading, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useLikedPosts();
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
-  const toggleLike = useToggleLike();
-  const toggleSave = useToggleSave();
-  const deletePost = useDeletePost();
-  const blockTarget = useBlockTarget();
-  const [reportTarget, setReportTarget] = useState<ApiPost | null>(null);
 
   const posts = useMemo(() => data?.pages.flatMap((p) => p.posts) ?? [], [data]);
 
@@ -33,14 +23,6 @@ export function LikedPostsScreen({ navigation }: any) {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const openAuthor = useCallback(
-    (post: ApiPost) => {
-      if (post.author.kind === 'ngo') navigation.navigate('NgoPublicProfile', { ngoId: post.author.id });
-      else if (post.author.kind === 'nursery') navigation.navigate('NurseryPublicProfile', { nurseryId: post.author.id });
-      else if (post.author.kind === 'user') navigation.navigate('UserPublicProfile', { userId: post.author.id });
-    },
-    [navigation],
-  );
 
   return (
     <View style={styles.container}>
@@ -60,35 +42,20 @@ export function LikedPostsScreen({ navigation }: any) {
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : (
-        <FlatList
-          data={posts}
-          keyExtractor={(p) => p.id}
-          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
-          showsVerticalScrollIndicator={false}
-          onRefresh={onRefresh}
-          refreshing={refreshing}
+        // Tiles open ProfilePostFeed in 'liked' mode: the tapped post full-size, scrollable
+        // through the rest of the liked list.
+        <PostGrid
+          posts={posts}
+          onPressPost={(p: any) => navigation.navigate('ProfilePostFeed', { authorKind: 'liked', initialPostId: p.id })}
           onEndReached={onEndReached}
-          onEndReachedThreshold={0.6}
-          renderItem={({ item }) => (
-            <PostCard
-              post={item}
-              onToggleLike={(p) => toggleLike.mutate({ id: p.id, liked: p.likedByMe })}
-              onToggleSave={(p) => toggleSave.mutate({ id: p.id, saved: p.savedByMe })}
-              onPressAuthor={openAuthor}
-              onPressLikes={(p) => navigation.navigate('PostLikes', { postId: p.id })}
-              onPressDrive={(p) => p.driveId && navigation.navigate('DriveDetail', { driveId: p.driveId })}
-              onReport={(p) => setReportTarget(p)}
-              onBlock={(p) => blockTarget.mutate(blockInputFor(p.author))}
-              onDelete={(p) => deletePost.mutate(p.id)}
-              isTogglingLike={toggleLike.isPending && toggleLike.variables?.id === item.id}
-            />
-          )}
-          ListFooterComponent={isFetchingNextPage ? <ActivityIndicator style={styles.footer} color={COLORS.forest} /> : null}
-          ListEmptyComponent={<EmptyState icon="💚" title="No liked posts yet" body="Posts you like will show up here." />}
+          isFetchingNextPage={isFetchingNextPage}
+          emptyTitle="No liked posts yet"
+          emptyBody="Posts you like will show up here."
+          refreshing={refreshing}
+          onRefresh={onRefresh}
         />
       )}
 
-      <ReportSheet visible={reportTarget !== null} onClose={() => setReportTarget(null)} targetType="post" targetId={reportTarget?.id ?? null} />
     </View>
   );
 }
@@ -100,6 +67,4 @@ const styles = StyleSheet.create({
   backBlur: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
-  list: { paddingHorizontal: SPACING.md, paddingTop: SPACING.sm },
-  footer: { marginVertical: SPACING.md },
 });

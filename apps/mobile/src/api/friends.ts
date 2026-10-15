@@ -26,6 +26,7 @@ export interface ApiUserSearchResult {
   handle: string;
   avatarEmoji: string;
   level: number;
+  friendStatus: 'none' | 'sent' | 'received' | 'friends';
 }
 
 export async function fetchFriends(cursor?: string): Promise<Page<ApiFriend>> {

@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { searchAddress, reverseGeocode } from '../utils/geocode';
+import { searchAddress, reverseGeocode, verifyPincode } from '../utils/geocode';
 
 export default async function geocodeRoutes(fastify: FastifyInstance) {
   fastify.get<{ Querystring: { q?: string; lat?: string; lng?: string } }>('/search', async (request, reply) => {
@@ -8,6 +8,10 @@ export default async function geocodeRoutes(fastify: FastifyInstance) {
     const near = request.query.lat && request.query.lng && Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : undefined;
     const suggestions = await searchAddress(request.query.q ?? '', near);
     reply.send(suggestions);
+  });
+
+  fastify.get<{ Querystring: { lat?: string; lng?: string; pincode?: string } }>('/verify-pincode', async (request, reply) => {
+    reply.send(await verifyPincode(Number(request.query.lat), Number(request.query.lng), request.query.pincode ?? ''));
   });
 
   fastify.get<{ Querystring: { lat?: string; lng?: string } }>('/reverse', async (request, reply) => {

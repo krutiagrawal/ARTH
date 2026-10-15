@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,7 +13,8 @@ import { EmptyState } from '../components/common/EmptyState';
 import { AddressSearchField } from '../components/common/AddressSearchField';
 import { useAddresses, useCreateAddress, useUpdateAddress, useDeleteAddress } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
-import { reverseGeocode } from '../api/geocode';
+import { reverseGeocode, verifyPincode, type ApiPincodeCheck } from '../api/geocode';
+import { useConfirm } from '../context/ConfirmDialogContext';
 import { isValidPincode } from '../utils/validation';
 import { ApiError } from '../api/client';
 import type { ApiAddress } from '../api/addresses';
@@ -22,6 +23,13 @@ import { TEXT } from '../constants/typography';
 function AddressCard({ address }: { address: ApiAddress }) {
   const updateMutation = useUpdateAddress();
   const deleteMutation = useDeleteAddress();
+  const confirm = useConfirm();
+
+  const confirmDelete = () =>
+    confirm(`Delete ${address.label || 'this address'}?`, "This can't be undone.", [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate(address.id) },
+    ]);
 
   return (
     <BorderCard noPadding style={styles.row}>
@@ -39,7 +47,7 @@ function AddressCard({ address }: { address: ApiAddress }) {
               <Text style={styles.actionText}>Set as default</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity onPress={() => deleteMutation.mutate(address.id)}>
+          <TouchableOpacity onPress={confirmDelete}>
             <Text style={[styles.actionText, styles.deleteText]}>Delete</Text>
           </TouchableOpacity>
         </View>
@@ -66,6 +74,42 @@ export function AddressBookScreen({ navigation }: any) {
   const [locating, setLocating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [locationNotice, setLocationNotice] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Does the typed pincode actually belong to the chosen address? "Save address" stays blocked
+  // until the answer is a match.
+  const [pincodeCheck, setPincodeCheck] = useState<{ status: 'idle' | 'checking' | ApiPincodeCheck['status']; actual?: string }>({
+    status: 'idle',
+  });
+  useEffect(() => {
+    if (!coords || !isValidPincode(pincode)) {
+      setPincodeCheck({ status: 'idle' });
+      return;
+    }
+    let stale = false;
+    setPincodeCheck({ status: 'checking' });
+    verifyPincode(coords.lat, coords.lng, pincode.trim())
+      .then((r) => !stale && setPincodeCheck(r))
+      .catch(() => !stale && setPincodeCheck({ status: 'unverified' }));
+    return () => {
+      stale = true;
+    };
+  }, [coords, pincode]);
+
+  const pincodeNotice: { ok: boolean; text: string } | null =
+    pincodeCheck.status === 'checking'
+      ? { ok: true, text: 'Checking pincode…' }
+      : pincodeCheck.status === 'match'
+        ? { ok: true, text: '✓ Pincode matches this address' }
+        : pincodeCheck.status === 'mismatch'
+          ? {
+              ok: false,
+              text: pincodeCheck.actual
+                ? `Pincode doesn’t match this address — the location is in ${pincodeCheck.actual}`
+                : 'Pincode doesn’t match this address',
+            }
+          : pincodeCheck.status === 'unverified'
+            ? { ok: false, text: 'We couldn’t verify this pincode right now. Check it and try again.' }
+            : null;
 
   const useCurrentLocation = async () => {
     setLocating(true);
@@ -108,6 +152,10 @@ export function AddressBookScreen({ navigation }: any) {
     }
     if (!coords) {
       setError('Tap "Use current location" so deliveries can be tracked to this address.');
+      return;
+    }
+    if (pincodeCheck.status !== 'match') {
+      setError('Enter a pincode that matches this address.');
       return;
     }
     await createMutation.mutateAsync({ line1: line1.trim(), pincode: pincode.trim(), lat: coords.lat, lng: coords.lng });
@@ -164,7 +212,7 @@ export function AddressBookScreen({ navigation }: any) {
                 }}
               />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { marginTop: 12 }]}
                 placeholder="eg - Pincode"
                 placeholderTextColor={COLORS.textLight}
                 value={pincode}
@@ -184,7 +232,19 @@ export function AddressBookScreen({ navigation }: any) {
                 </Text>
               )}
               {error && <Text style={styles.errorText}>{error}</Text>}
-              <AnimatedButton label="Save address" onPress={handleAdd} variant="primary" size="md" fullWidth disabled={createMutation.isPending || !coords} />
+              {pincodeNotice && (
+                <Text style={[styles.locationNoticeText, pincodeNotice.ok ? styles.locationNoticeOk : styles.locationNoticeWarn]}>
+                  {pincodeNotice.text}
+                </Text>
+              )}
+              <AnimatedButton
+                label="Save address"
+                onPress={handleAdd}
+                variant="primary"
+                size="md"
+                fullWidth
+                disabled={createMutation.isPending || !coords || pincodeCheck.status !== 'match'}
+              />
             </BorderCard>
           ) : (
             <TouchableOpacity onPress={() => setShowForm(true)} style={styles.addAddressButton}>

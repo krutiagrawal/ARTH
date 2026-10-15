@@ -117,6 +117,28 @@ export default async function usersRoutes(fastify: FastifyInstance) {
       select: { id: true, name: true, handle: true, avatarEmoji: true, level: true },
     });
 
-    reply.send(users);
+    // Lets the client keep showing "Sent"/"Friends" for people already connected, instead of
+    // offering "Add" again after the search panel is reopened.
+    const me = request.user!.id;
+    const ids = users.map((u) => u.id);
+    const friendships = ids.length
+      ? await fastify.prisma.friendship.findMany({
+          where: {
+            status: { in: ['pending', 'accepted'] },
+            OR: [
+              { requesterId: me, addresseeId: { in: ids } },
+              { addresseeId: me, requesterId: { in: ids } },
+            ],
+          },
+          select: { requesterId: true, addresseeId: true, status: true },
+        })
+      : [];
+    const statusByUser = new Map<string, 'sent' | 'received' | 'friends'>();
+    for (const f of friendships) {
+      const other = f.requesterId === me ? f.addresseeId : f.requesterId;
+      statusByUser.set(other, f.status === 'accepted' ? 'friends' : f.requesterId === me ? 'sent' : 'received');
+    }
+
+    reply.send(users.map((u) => ({ ...u, friendStatus: statusByUser.get(u.id) ?? 'none' })));
   });
 }

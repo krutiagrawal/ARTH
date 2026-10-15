@@ -26,8 +26,9 @@ function WishlistRow({ item, navigation }: { item: ApiWishlistItem; navigation: 
       : '';
 
   const goTo = () => {
-    if (item.nurseryId) navigation.navigate('NurseryPublicProfile', { nurseryId: item.nurseryId });
-    else if (item.stock) navigation.navigate('NurseryPublicProfile', { nurseryId: item.stock.nursery.id });
+    // Saplings live on the 'drives' tab slot of a nursery profile; saved nurseries open there too.
+    if (item.nurseryId) navigation.navigate('NurseryPublicProfile', { nurseryId: item.nurseryId, initialTab: 'drives' });
+    else if (item.stock) navigation.navigate('NurseryPublicProfile', { nurseryId: item.stock.nursery.id, initialTab: 'drives' });
   };
 
   return (

@@ -21,6 +21,7 @@ import { DrivesTabContent } from '../components/profile/DrivesTabContent';
 import { CampaignsTabContent } from '../components/profile/CampaignsTabContent';
 import { AdoptableTreesTabContent } from '../components/profile/AdoptableTreesTabContent';
 import { useAuth } from '../context/AuthContext';
+import { useConfirm } from '../context/ConfirmDialogContext';
 import { useBlockTarget, useUnblockTarget, useNgoPosts, useMyPortfolio } from '../hooks/useSocialQueries';
 import { BlockedProfileNotice } from '../components/social/BlockedProfileNotice';
 import {
@@ -178,6 +179,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
   const publicAchievements = useNgoPublicAchievements(isOwn ? undefined : ngoId);
   const followMutation = useFollowNgo();
   const unfollowMutation = useUnfollowNgo();
+  const confirm = useConfirm();
   const blockTarget = useBlockTarget();
   const unblockTarget = useUnblockTarget();
 
@@ -247,7 +249,13 @@ export function NgoProfileScreen({ route, navigation }: any) {
 
   const toggleFollow = () => {
     if (!ngoId) return;
-    if (isFollowingOrPending) unfollowMutation.mutate(ngoId);
+    if (isFollowingOrPending) {
+      const pending = followStatus === 'pending';
+      confirm(pending ? 'Cancel follow request?' : 'Unfollow?', pending ? `Your request to follow ${name} will be withdrawn.` : `Are you sure you want to unfollow ${name}?`, [
+        { text: pending ? 'Keep request' : 'Cancel', style: 'cancel' },
+        { text: pending ? 'Withdraw' : 'Unfollow', style: 'destructive', onPress: () => unfollowMutation.mutate(ngoId) },
+      ]);
+    }
     else followMutation.mutate(ngoId);
   };
 

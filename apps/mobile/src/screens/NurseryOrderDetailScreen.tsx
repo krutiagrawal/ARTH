@@ -112,6 +112,15 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
             </View>
           </BorderCard>
 
+          {order.customerNote ? (
+            <>
+              <Text style={styles.sectionTitle}>Note from customer</Text>
+              <BorderCard style={styles.card}>
+                <Text style={styles.addressText}>{order.customerNote}</Text>
+              </BorderCard>
+            </>
+          ) : null}
+
           {!isPickup && order.address && (
             <>
               <Text style={styles.sectionTitle}>Deliver to</Text>

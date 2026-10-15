@@ -99,6 +99,15 @@ function AddFriendPanel({ onClose, navigation }: { onClose: () => void; navigati
   const sendRequestMutation = useSendFriendRequest();
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
 
+  // Server status survives closing the panel; sentIds only covers the moment between tapping Add
+  // and the refreshed search results arriving.
+  const buttonState = (user: { id: string; friendStatus: string }) => {
+    if (user.friendStatus === 'friends') return { label: 'Friends ✓', disabled: true };
+    if (user.friendStatus === 'sent' || sentIds.has(user.id)) return { label: 'Sent ✓', disabled: true };
+    if (user.friendStatus === 'received') return { label: 'Requested you', disabled: true };
+    return { label: 'Add', disabled: false };
+  };
+
   return (
     <View style={styles.addFriendPanel}>
       <View style={styles.addFriendSearchBox}>
@@ -135,14 +144,14 @@ function AddFriendPanel({ onClose, navigation }: { onClose: () => void; navigati
           </View>
           <TouchableOpacity
             style={styles.searchResultButton}
-            disabled={sentIds.has(user.id)}
+            disabled={buttonState(user).disabled}
             onPress={(e) => {
               e.stopPropagation();
               sendRequestMutation.mutate(user.id);
               setSentIds(prev => new Set(prev).add(user.id));
             }}
           >
-            <Text style={styles.searchResultButtonText}>{sentIds.has(user.id) ? 'Sent ✓' : 'Add'}</Text>
+            <Text style={styles.searchResultButtonText}>{buttonState(user).label}</Text>
           </TouchableOpacity>
         </TouchableOpacity>
       ))}

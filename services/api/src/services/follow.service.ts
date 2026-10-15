@@ -64,7 +64,7 @@ export async function unfollowNgo(prisma: PrismaClient, userId: string, ngoId: s
 /** NGOs the caller follows. Pending requests are included so the UI can show "Requested". */
 export async function listFollowedNgos(prisma: PrismaClient, userId: string) {
   const follows = await prisma.follow.findMany({
-    where: { followerId: userId },
+    where: { followerId: userId, ngoId: { not: null } },
     orderBy: { createdAt: 'desc' },
     include: { ngo: { select: { id: true, orgName: true, logoUrl: true, city: true } } },
   });

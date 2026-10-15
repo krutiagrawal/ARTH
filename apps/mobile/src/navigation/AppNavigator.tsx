@@ -488,7 +488,7 @@ export type RootStackParamList = {
   NgoPortfolioEntry: { entry?: any } | undefined;
   Notifications: undefined;
   PostDetail: { postId: string };
-  ProfilePostFeed: { authorKind: 'user' | 'ngo' | 'nursery' | 'group'; authorId: string; initialPostId: string };
+  ProfilePostFeed: { authorKind: 'user' | 'ngo' | 'nursery' | 'group' | 'liked'; authorId?: string; initialPostId: string };
   PublicFollowers: { kind: 'ngo' | 'nursery'; id: string; name: string };
   PostLikes: { postId: string };
   BlockedAccounts: undefined;

@@ -2,12 +2,18 @@ import React, { useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Keyboard } from 'react-native';
 import { Text, TextInput } from '../common/AppText';
 import * as ImagePicker from 'expo-image-picker';
+import Svg, { Path } from 'react-native-svg';
+import { useNavigation } from '@react-navigation/native';
+import { useConfirm } from '../../context/ConfirmDialogContext';
 import { COLORS } from '../../constants/colors';
 import { RADIUS } from '../../constants/theme';
 import { BorderCard } from '../common/BorderCard';
 import { EmptyState } from '../common/EmptyState';
 import { resolveMediaUrl } from '../../api/client';
 import {
+  useWishlist,
+  useAddWishlistItem,
+  useRemoveWishlistItem,
   useCart,
   useAddCartItem,
   useUpdateCartItem,
@@ -49,6 +55,8 @@ function OwnThumb({ item }: { item: ApiSaplingStock }) {
 }
 
 function CartControls({ item }: { item: ApiSaplingStock }) {
+  const navigation = useNavigation<any>();
+  const confirm = useConfirm();
   const { data: cart } = useCart();
   const addMutation = useAddCartItem();
   const updateMutation = useUpdateCartItem();
@@ -58,8 +66,30 @@ function CartControls({ item }: { item: ApiSaplingStock }) {
   const soldOut = item.quantity < 1;
   const busy = addMutation.isPending || updateMutation.isPending || removeMutation.isPending;
 
+  // Looks disabled but stays tappable so it can explain itself — a silently dead button reads as a bug.
   if (soldOut) {
-    return <View style={styles.soldOutChip}><Text style={styles.soldOutText}>Sold out</Text></View>;
+    return (
+      <TouchableOpacity
+        style={[styles.addButton, styles.addButtonDisabled]}
+        onPress={() => confirm('Stocked out', `${item.species} is stocked out right now.`)}
+        accessibilityState={{ disabled: true }}
+      >
+        <Text style={styles.addButtonText}>+ Add</Text>
+      </TouchableOpacity>
+    );
+  }
+
+  // Free saplings can't go in the cart (the API refuses them) — they're requested from the nursery
+  // through the reservation flow instead.
+  if (item.isFree) {
+    return (
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => navigation.navigate('SaplingReservation', { nurseryId: item.nurseryId, stockId: item.id })}
+      >
+        <Text style={styles.addButtonText}>Request</Text>
+      </TouchableOpacity>
+    );
   }
 
   if (!cartItem) {
@@ -69,6 +99,8 @@ function CartControls({ item }: { item: ApiSaplingStock }) {
       </TouchableOpacity>
     );
   }
+
+  const atMax = cartItem.quantity >= item.quantity;
 
   const adjust = (delta: number) => {
     const next = cartItem.quantity + delta;
@@ -82,10 +114,48 @@ function CartControls({ item }: { item: ApiSaplingStock }) {
         <Text style={styles.stepperButtonText}>−</Text>
       </TouchableOpacity>
       <Text style={styles.stepperValue}>{cartItem.quantity}</Text>
-      <TouchableOpacity style={styles.stepperButton} onPress={() => adjust(1)} disabled={busy || cartItem.quantity >= item.quantity}>
+      <TouchableOpacity
+        style={[styles.stepperButton, atMax && styles.stepperButtonDisabled]}
+        onPress={() =>
+          atMax
+            ? confirm('No more available', `Only ${item.quantity} ${item.species} in stock, and all of them are in your cart.`)
+            : adjust(1)
+        }
+        disabled={busy}
+        accessibilityState={{ disabled: atMax }}
+      >
         <Text style={styles.stepperButtonText}>+</Text>
       </TouchableOpacity>
     </View>
+  );
+}
+
+// Heart toggle: saved saplings also get a "back in stock" notification, which is why it stays
+// available on sold-out rows where there's nothing to add to the cart.
+function WishlistHeart({ item }: { item: ApiSaplingStock }) {
+  const { data: wishlist } = useWishlist();
+  const addMutation = useAddWishlistItem();
+  const removeMutation = useRemoveWishlistItem();
+  const saved = wishlist?.find((w) => w.stockId === item.id);
+  const busy = addMutation.isPending || removeMutation.isPending;
+  return (
+    <TouchableOpacity
+      onPress={() => (saved ? removeMutation.mutate(saved.id) : addMutation.mutate({ stockId: item.id }))}
+      disabled={busy}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel={saved ? 'Remove from wishlist' : 'Add to wishlist'}
+    >
+      <Svg width={24} height={24} viewBox="0 0 24 24">
+        <Path
+          d="M12 20.5s-7.5-4.6-9.2-9.3C1.7 8 3.4 4.8 6.6 4.5c1.9-.2 3.7.8 5.4 2.9 1.7-2.1 3.5-3.1 5.4-2.9 3.2.3 4.9 3.5 3.8 6.7-1.7 4.7-9.2 9.3-9.2 9.3z"
+          fill={saved ? COLORS.coral : 'none'}
+          stroke={saved ? COLORS.coral : COLORS.earth}
+          strokeWidth={2}
+          strokeLinejoin="round"
+        />
+      </Svg>
+    </TouchableOpacity>
   );
 }
 
@@ -103,9 +173,15 @@ function SaplingRow({ item, isOwn }: { item: ApiSaplingStock; isOwn: boolean }) 
       <View style={styles.info}>
         <Text style={styles.species} numberOfLines={1}>{item.species}</Text>
         <Text style={styles.meta}>
-          {item.quantity} available · {item.isFree ? 'Free' : item.priceCents != null ? `₹${(item.priceCents / 100).toFixed(0)}` : 'Priced'}
+          {item.quantity < 1 ? (
+            <Text style={styles.soldOutInline}>Stocked out</Text>
+          ) : (
+            `${item.quantity} available`
+          )}{' '}
+          · {item.isFree ? 'Free' : item.priceCents != null ? `₹${(item.priceCents / 100).toFixed(0)}` : 'Priced'}
         </Text>
       </View>
+      {!isOwn && <WishlistHeart item={item} />}
       {!isOwn && <CartControls item={item} />}
     </View>
   );
@@ -252,9 +328,12 @@ const styles = StyleSheet.create({
   info: { flex: 1 },
   species: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
   meta: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
-  addButton: { backgroundColor: COLORS.forest, borderRadius: RADIUS.full, paddingHorizontal: 14, paddingVertical: 8 },
+  addButton: { backgroundColor: COLORS.forest, borderRadius: RADIUS.full, minWidth: 84, paddingHorizontal: 14, paddingVertical: 8, alignItems: 'center' },
   addButtonText: { fontSize: 12, fontWeight: '700', color: COLORS.white },
   soldOutChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: RADIUS.full, backgroundColor: 'rgba(0,0,0,0.06)' },
+  soldOutInline: { fontWeight: '700', color: COLORS.dangerDark },
+  addButtonDisabled: { opacity: 0.4 },
+  stepperButtonDisabled: { opacity: 0.4 },
   soldOutText: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted },
   stepperRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   stepperButton: { width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.beige, alignItems: 'center', justifyContent: 'center' },

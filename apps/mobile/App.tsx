@@ -29,6 +29,8 @@ import { ReduceMotionProvider } from './src/context/ReduceMotionContext';
 import { ConfirmDialogProvider } from './src/context/ConfirmDialogContext';
 import { COLORS } from './src/constants/colors';
 
+import Constants from 'expo-constants';
+
 const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '';
 
 const queryClient = new QueryClient({
@@ -63,7 +65,9 @@ function AppProviders({ children }: { children: React.ReactNode }) {
   // Renders without StripeProvider until a publishable key is configured — and even
   // then, falls back to plain children if the native module can't load — so the rest
   // of the app (unrelated to donations) still boots regardless of Stripe's state.
-  if (!STRIPE_PUBLISHABLE_KEY) return <>{children}</>;
+  // Expo Go has no Stripe native module, so loading the package throws ("reload of undefined")
+  // even though the boundary below recovers — skip it there and only load in a dev client/build.
+  if (!STRIPE_PUBLISHABLE_KEY || Constants.appOwnership === 'expo') return <>{children}</>;
   return (
     <StripeErrorBoundary fallback={<>{children}</>}>
       <Suspense fallback={<>{children}</>}>

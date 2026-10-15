@@ -454,6 +454,7 @@ export interface ApiNurseryOrder {
   fulfillmentType: 'pickup' | 'delivery';
   scheduledFor: string | null;
   pickupWindowLabel: string | null;
+  customerNote: string | null;
   readyForPickupAt: string | null;
   pickedUpAt: string | null;
   plantationVerifiedAt: string | null;

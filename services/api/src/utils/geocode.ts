@@ -155,6 +155,56 @@ async function searchNominatim(trimmed: string): Promise<AddressSuggestion[]> {
   return suggestions;
 }
 
+export interface PincodeCheck {
+  /** match: the pincode belongs to this location. mismatch: it doesn't. unverified: the lookup
+   * services were unreachable or had no data, so nothing can be said either way. */
+  status: 'match' | 'mismatch' | 'unverified';
+  /** The pincode OpenStreetMap has for the location, when it has one. */
+  actual?: string;
+}
+
+function distanceKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const h =
+    Math.sin(rad(bLat - aLat) / 2) ** 2 +
+    Math.cos(rad(aLat)) * Math.cos(rad(bLat)) * Math.sin(rad(bLng - aLng) / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(h));
+}
+
+// OSM's postcode on a single building is sometimes missing or a neighbour's, so a pincode that
+// differs from it can still be right when it sits this close to the pincode's own centre.
+const PINCODE_NEAR_KM = 2.5;
+// With no postcode on the location at all, fall back to "is it inside this pincode's area".
+const PINCODE_AREA_KM = 6;
+
+/** Does `pincode` actually belong to the place at lat/lng? Never throws. */
+export async function verifyPincode(lat: number, lng: number, pincode: string): Promise<PincodeCheck> {
+  const pin = pincode.trim();
+  if (!/^\d{6}$/.test(pin) || !Number.isFinite(lat) || !Number.isFinite(lng)) return { status: 'unverified' };
+
+  let actual: string | undefined;
+  const reverse = await throttledFetch(`${NOMINATIM_REVERSE_URL}?format=json&addressdetails=1&zoom=18&lat=${lat}&lon=${lng}`);
+  if (reverse) {
+    const r = (await reverse.json().catch(() => null)) as { address?: { postcode?: string } } | null;
+    actual = r?.address?.postcode?.replace(/\s/g, '');
+  }
+  if (actual === pin) return { status: 'match', actual };
+
+  const centre = await throttledFetch(`${NOMINATIM_URL}?format=json&limit=1&countrycodes=in&postalcode=${pin}`);
+  const results = centre ? ((await centre.json().catch(() => [])) as Array<{ lat: string; lon: string }>) : [];
+  const first = results[0];
+  const cLat = Number(first?.lat);
+  const cLng = Number(first?.lon);
+  if (first && Number.isFinite(cLat) && Number.isFinite(cLng)) {
+    const km = distanceKm(lat, lng, cLat, cLng);
+    if (km <= (actual ? PINCODE_NEAR_KM : PINCODE_AREA_KM)) return { status: 'match', actual };
+    return { status: 'mismatch', actual };
+  }
+
+  // The pincode has no known location: if OSM at least knows this place's pincode, they differ.
+  return actual ? { status: 'mismatch', actual } : { status: 'unverified' };
+}
+
 /** lat/lng -> human-readable address, for "use current location" buttons that should fill an
  * address text field rather than leave it blank next to a silently-captured GPS pin. Never
  * throws — a failed/slow lookup just means the field stays as the user left it. */

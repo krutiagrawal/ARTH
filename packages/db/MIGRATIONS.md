@@ -107,3 +107,5 @@ Prisma migrations live in `prisma/migrations/` (one folder per migration, applie
 | 78 | `20261014100000_profile_photo_privacy` |
 | 79 | `20261014110000_ambient_mode_default_on` |
 | 80 | `20261014120000_block_nursery` |
+| 81 | `20261015120000_order_customer_note` |
+| 82 | `20261015130000_order_cancellation_fee` |

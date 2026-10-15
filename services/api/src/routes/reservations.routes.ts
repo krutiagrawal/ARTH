@@ -4,6 +4,7 @@ import * as reservationService from '../services/reservation.service';
 function serializeReservation(r: any) {
   return {
     id: r.id,
+    stockId: r.stockId,
     quantity: r.quantity,
     status: r.status,
     message: r.message,

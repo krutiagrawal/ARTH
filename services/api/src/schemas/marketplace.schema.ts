@@ -29,6 +29,7 @@ export const checkoutSchema = z
     fulfillmentType: z.enum(['pickup', 'delivery']).default('delivery'),
     addressId: z.string().uuid().optional(),
     pickupWindowLabel: z.string().max(100).optional(),
+    customerNote: z.string().trim().max(300, 'Note must be 300 characters or fewer').optional(),
     scheduledFor: z.string().datetime().optional(),
   })
   .refine((v) => v.fulfillmentType !== 'delivery' || !!v.addressId, {

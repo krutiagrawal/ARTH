@@ -1,5 +1,6 @@
 import { PrismaClient, Prisma } from '@arth/db';
-import { ForbiddenError, NotFoundError } from '../utils/errors';
+import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
+import { verifyPincode } from '../utils/geocode';
 
 interface UpsertAddressInput {
   label?: string;
@@ -38,7 +39,23 @@ export async function listAddresses(prisma: PrismaClient, userId: string) {
 
 // The first address a user ever saves becomes their default automatically — nobody should have
 // to remember to flip that toggle just to check out once.
+// Only a definite mismatch is rejected — if the lookup service is down ('unverified') the address
+// still saves, since the app itself already blocked the save on its own check.
+async function assertPincodeMatches(lat: number | undefined, lng: number | undefined, pincode: string) {
+  if (lat == null || lng == null) return;
+  const check = await verifyPincode(lat, lng, pincode);
+  if (check.status === 'mismatch') {
+    throw new BadRequestError(
+      check.actual
+        ? `Pincode ${pincode} doesn't match this address (the location is in ${check.actual})`
+        : `Pincode ${pincode} doesn't match this address`,
+    );
+  }
+}
+
 export async function createAddress(prisma: PrismaClient, userId: string, input: UpsertAddressInput) {
+  await assertPincodeMatches(input.lat, input.lng, input.pincode);
+
   const existingCount = await prisma.address.count({ where: { userId } });
   const makeDefault = input.isDefault === true || existingCount === 0;
 
@@ -53,6 +70,14 @@ export async function createAddress(prisma: PrismaClient, userId: string, input:
 export async function updateAddress(prisma: PrismaClient, userId: string, addressId: string, input: Partial<UpsertAddressInput>) {
   const address = await prisma.address.findFirst({ where: { id: addressId, userId } });
   if (!address) throw new NotFoundError('Address not found');
+
+  if (input.pincode !== undefined || input.lat !== undefined || input.lng !== undefined) {
+    await assertPincodeMatches(
+      input.lat ?? (address.lat != null ? Number(address.lat) : undefined),
+      input.lng ?? (address.lng != null ? Number(address.lng) : undefined),
+      input.pincode ?? address.pincode,
+    );
+  }
 
   return prisma.$transaction(async (tx) => {
     if (input.isDefault === true) {

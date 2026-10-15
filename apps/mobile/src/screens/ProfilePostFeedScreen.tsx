@@ -10,6 +10,7 @@ import { ReportSheet } from '../components/social/ReportSheet';
 import {
   useDeletePost,
   useGroupPosts,
+  useLikedPosts,
   useNgoPosts,
   useNurseryPosts,
   useToggleLike,
@@ -24,7 +25,8 @@ import type { ApiPost } from '../api/posts';
 // so this estimate only matters for rows the list hasn't reached yet.
 const ESTIMATED_ITEM_HEIGHT = 480;
 
-export type ProfilePostFeedAuthorKind = 'user' | 'ngo' | 'nursery' | 'group';
+// 'liked' isn't an author — it's the signed-in user's liked-posts list, which mixes authors.
+export type ProfilePostFeedAuthorKind = 'user' | 'ngo' | 'nursery' | 'group' | 'liked';
 
 /**
  * Opened by tapping a tile in any profile's post grid (user, NGO, nursery, or group) — lands on
@@ -48,11 +50,12 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
   const ngoPosts = useNgoPosts(authorKind === 'ngo' ? authorId : undefined);
   const nurseryPosts = useNurseryPosts(authorKind === 'nursery' ? authorId : undefined);
   const groupPosts = useGroupPosts(authorKind === 'group' ? authorId : undefined);
+  const likedPosts = useLikedPosts();
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, refetch } =
-    authorKind === 'ngo' ? ngoPosts : authorKind === 'nursery' ? nurseryPosts : authorKind === 'group' ? groupPosts : userPosts;
+    authorKind === 'ngo' ? ngoPosts : authorKind === 'nursery' ? nurseryPosts : authorKind === 'group' ? groupPosts : authorKind === 'liked' ? likedPosts : userPosts;
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
-  const posts = useMemo(() => data?.pages.flatMap((p) => p.posts) ?? [], [data]);
+  const posts = useMemo(() => (data?.pages.flatMap((p: any) => p.posts) ?? []) as ApiPost[], [data]);
 
   const ringStatus = useRingStatus({
     userIds: authorKind === 'user' && authorId ? [authorId] : [],
@@ -120,6 +123,15 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
     setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, animated: false }), 80);
   }, []);
 
+  const openAuthor = useCallback(
+    (post: ApiPost) => {
+      if (post.author.kind === 'ngo') navigation.navigate('NgoPublicProfile', { ngoId: post.author.id });
+      else if (post.author.kind === 'nursery') navigation.navigate('NurseryPublicProfile', { nurseryId: post.author.id });
+      else if (post.author.kind === 'user') navigation.navigate('UserPublicProfile', { userId: post.author.id });
+    },
+    [navigation],
+  );
+
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<ApiPost>) => (
       <View onLayout={(e) => itemHeights.current.set(item.id, e.nativeEvent.layout.height)}>
@@ -132,10 +144,11 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
           onReport={!item.isMine ? () => setReportTarget(item) : undefined}
           enableShare={false}
           storyRing={authorRing}
+          onPressAuthor={authorKind === 'liked' ? openAuthor : undefined}
         />
       </View>
     ),
-    [toggleLike, deletePost, authorRing],
+    [toggleLike, deletePost, authorRing, authorKind, openAuthor],
   );
 
   return (
@@ -143,7 +156,7 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
       <StatusBar style="dark" />
       <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
 
-      <ScreenHeader title="Posts" onBack={() => navigation.goBack()} />
+      <ScreenHeader title={authorKind === 'liked' ? 'Liked Posts' : 'Posts'} onBack={() => navigation.goBack()} />
 
       {isLoading && posts.length === 0 ? (
         <View style={styles.centre}>
