@@ -21,7 +21,7 @@ export default function ForestsClient({ forests }) {
 
   return (
     <div>
-      {/* Hero — heading + tagline stacked on the left, the map (the real
+      {/* Hero – heading + tagline stacked on the left, the map (the real
           highlight of this page) large on the right, no card chrome around it. */}
       <section className="pt-28 md:pt-36 pb-16 md:pb-24 px-5 md:px-10">
         <div className="grid grid-cols-12 gap-4 md:gap-6 items-start">
@@ -38,7 +38,7 @@ export default function ForestsClient({ forests }) {
         </div>
       </section>
 
-      {/* Editorial alternating rows — every forest, in order */}
+      {/* Editorial alternating rows – every forest, in order */}
       <section className="px-5 md:px-10 pb-24 md:pb-32">
         <p className="eyebrow mb-10 md:mb-14">Every forest, so far</p>
         <div className="space-y-20 md:space-y-32">

@@ -38,7 +38,7 @@ const PLANT_CATEGORY_LABELS = {
   large_trees: 'Large trees / saplings',
 }
 
-// Mirrors apps/mobile's GrowthLevelBadge / apps/web's nursery ReputationClient — same tiers,
+// Mirrors apps/mobile's GrowthLevelBadge / apps/web's nursery ReputationClient – same tiers,
 // admin-panel-local copy since this file has its own light Field/Section rendering style.
 const GROWTH_LEVEL_LABELS = {
   seedling: '🌱 Seedling',

@@ -9,7 +9,7 @@ import {
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000';
 
-// No existing constant in this app points at the web app's own public URL (apps/web) — every other
+// No existing constant in this app points at the web app's own public URL (apps/web) – every other
 // API_URL usage here targets the backend (services/api). Sapling QR codes need a web-reachable link
 // (a nursery may print/show this to a planter who then opens it outside the app), so this is a new,
 // separately configurable env var. Defaults to the local web dev server for parity with API_URL's
@@ -19,7 +19,7 @@ export const WEB_PUBLIC_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'http://localho
 /**
  * Wraps a device photo URI (from ImagePicker etc.) for `FormData.append`. Expo SDK 57 / RN's
  * New Architecture FormData bridge rejects the old `{uri, name, type}` object-literal trick
- * with "Unsupported FormDataPart implementation" on Android — it now requires a real Blob-like
+ * with "Unsupported FormDataPart implementation" on Android – it now requires a real Blob-like
  * part. `expo-file-system`'s `File` genuinely implements Blob, so it round-trips correctly.
  * Pass the returned value as `form.append(fieldName, toFormFile(uri), filename)`.
  */
@@ -30,14 +30,14 @@ export function toFormFile(uri: string): File {
 /**
  * Resolves a stored media path to an absolute URL the app can actually render.
  *
- * The API returns host-relative paths (`/uploads/drives/abc.jpg` — see the API's
+ * The API returns host-relative paths (`/uploads/drives/abc.jpg` – see the API's
  * `upload.service.ts`), and React Native's `<Image>` cannot resolve those: it renders nothing at
  * all, with no error, which is exactly how NGO drive thumbnails went missing. Every `<Image>`
  * whose URI came from the server must go through this.
  */
 export function resolveMediaUrl(path: string | null | undefined): string | undefined {
   if (!path) return undefined;
-  // Already-absolute URIs pass through untouched — including the `file://`/`content://` ones a
+  // Already-absolute URIs pass through untouched – including the `file://`/`content://` ones a
   // freshly picked local photo carries, which prefixing would silently corrupt.
   if (/^[a-z][a-z0-9+.-]*:/i.test(path)) return path;
   return `${API_URL}${path}`;
@@ -63,10 +63,10 @@ export function setUnauthorizedHandler(handler: UnauthorizedHandler | null) {
   onUnauthorized = handler;
 }
 
-// Fired whenever any request comes back ACCOUNT_BLOCKED, from any screen —
+// Fired whenever any request comes back ACCOUNT_BLOCKED, from any screen –
 // AuthContext registers this once and flips a global isBlocked flag that
 // AppNavigator's useBlockedRedirect() reacts to. Unlike onUnauthorized, this
-// does NOT clear tokens — the account stays "signed in" so the dedicated
+// does NOT clear tokens – the account stays "signed in" so the dedicated
 // blocked screen can render instead of bouncing to the login screen.
 type AccountBlockedHandler = (reason: string | null) => void;
 let onAccountBlocked: AccountBlockedHandler | null = null;

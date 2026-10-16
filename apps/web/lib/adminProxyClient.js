@@ -1,4 +1,4 @@
-// Shared by every admin/(shell) client component — was duplicated verbatim
+// Shared by every admin/(shell) client component – was duplicated verbatim
 // in AdminNgosClient.jsx/AdminGroupsClient.jsx before the Accounts/Nurseries/
 // Corporates/Reports/Ops/Tree-verification/Catalog pages needed the same thing.
 export async function proxy(path, opts = {}) {

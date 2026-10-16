@@ -6,7 +6,7 @@ import { RADIUS } from '../../constants/theme';
 import { EmptyState } from '../common/EmptyState';
 import { resolveMediaUrl } from '../../api/client';
 
-/** The fields this tab actually renders — satisfied by both a full `ApiDrive` and the lighter
+/** The fields this tab actually renders – satisfied by both a full `ApiDrive` and the lighter
  * `featuredDrives` shape on an NGO's public profile, so either can be passed without adapting. */
 export interface DriveListItem {
   id: string;
@@ -44,7 +44,7 @@ function DriveRow({ drive, onPress }: { drive: DriveListItem; onPress: () => voi
 
 /**
  * Role-parameterized: users/NGOs/groups all have a real notion of "their" drives (joined,
- * organized, or derived from members' RSVPs respectively). Nurseries don't run drives — there's
+ * organized, or derived from members' RSVPs respectively). Nurseries don't run drives – there's
  * no schema relation to fabricate one from, so that role gets an honest empty state instead.
  */
 export function DrivesTabContent({

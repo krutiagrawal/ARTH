@@ -21,16 +21,16 @@ function distanceLabel(rider: { lat: number; lng: number } | null, road: RoadInf
   if (road.roadSnapped) {
     return `${road.distanceKm.toFixed(1)} km by road${road.durationMin != null ? ` · ~${Math.round(road.durationMin)} min` : ''}`;
   }
-  return `${road.distanceKm.toFixed(1)} km to go — road route unavailable, showing straight line`;
+  return `${road.distanceKm.toFixed(1)} km to go – road route unavailable, showing straight line`;
 }
 
 /**
  * A single Leaflet/OSM WebView showing the rider + destination + a real road-snapped route,
  * fetched from OSRM's free public routing API directly inside the page's own JS (no backend
- * involvement needed — the WebView just makes its own HTTP request). Falls back to a straight
- * dashed line if that request fails (network hiccup, or the public demo server's rate limit — see
+ * involvement needed – the WebView just makes its own HTTP request). Falls back to a straight
+ * dashed line if that request fails (network hiccup, or the public demo server's rate limit – see
  * the note on OSRM_URL). Built exactly once at mount from whatever `rider`/`destination` are at
- * that moment — every later rider position update goes through
+ * that moment – every later rider position update goes through
  * `injectJavaScript('updateRider(...)')` instead of rebuilding `source.html`, since replacing that
  * prop makes react-native-webview reload the whole page. Re-fetches the route only when the rider
  * has moved more than ~30m since the last fetch, to avoid hammering OSRM on every GPS ping.
@@ -51,7 +51,7 @@ function TrackingWebView({
   const [road, setRoad] = useState<RoadInfo | null>(null);
 
   const [html] = useState(() => {
-    // Gives the map a real view immediately (setView), before the async OSRM fetch resolves —
+    // Gives the map a real view immediately (setView), before the async OSRM fetch resolves –
     // Leaflet needs a center/zoom established before it can render any layers added to it.
     const initialFetchJs = rider
       ? `map.setView([${rider.lat}, ${rider.lng}], 14); fetchRoadRoute(${rider.lat}, ${rider.lng});`
@@ -82,9 +82,9 @@ function TrackingWebView({
         if (route) { route.setLatLngs(points); } else { route = L.polyline(points, { color: '${COLORS.forest}', weight: 3, dashArray: '8, 6' }).addTo(map); }
         post({ distanceKm: haversineKm(riderLat, riderLng, destLat, destLng), durationMin: null, roadSnapped: false });
       }
-      // OSRM's free public demo server (router.project-osrm.org) — no API key, but rate-limited
+      // OSRM's free public demo server (router.project-osrm.org) – no API key, but rate-limited
       // and meant for light/evaluation use, not heavy production traffic. Falls back to a
-      // straight line (drawStraightLine) on any failure — timeout, network error, or rate limit.
+      // straight line (drawStraightLine) on any failure – timeout, network error, or rate limit.
       function fetchRoadRoute(riderLat, riderLng) {
         lastFetchOrigin = { lat: riderLat, lng: riderLng };
         if (!rider) { rider = L.marker([riderLat, riderLng], { icon: saplingIcon }).addTo(map); }
@@ -147,9 +147,9 @@ function TrackingWebView({
 }
 
 /**
- * The delivery partner's own "where do I go" map — their live position, the destination, and a
+ * The delivery partner's own "where do I go" map – their live position, the destination, and a
  * real road-snapped route between them, with a button to expand it to a fullscreen view. Renders
- * a Leaflet/OSM page inside a WebView rather than any native map library — see leafletMapHtml.ts
+ * a Leaflet/OSM page inside a WebView rather than any native map library – see leafletMapHtml.ts
  * for why. Everything touching that page lives in this module and TrackingWebView above, so
  * `React.lazy()`-loading it (see DeliveryPartnerQueueScreen.tsx) keeps the WebView fully out of
  * the eager screen graph.

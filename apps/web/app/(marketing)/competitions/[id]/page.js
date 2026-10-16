@@ -7,7 +7,7 @@ export default function Page() {
   return notFound()
 }
 
-/* ORIGINAL IMPLEMENTATION — restore after launch:
+/* ORIGINAL IMPLEMENTATION – restore after launch:
 
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'

@@ -21,7 +21,7 @@ import { TEXT } from '../constants/typography';
 export type HomeThemePickerRole = 'user' | 'ngo' | 'nursery';
 
 /** Swallows any navigation attempted from inside the full-homepage preview (tapping a mission,
- * a tree, the grow CTA, etc.) — the preview is a look-only sandbox, not a real live Home. */
+ * a tree, the grow CTA, etc.) – the preview is a look-only sandbox, not a real live Home. */
 const NOOP_NAVIGATION = { navigate: () => {}, goBack: () => {}, replace: () => {}, push: () => {} };
 
 const { width: SW } = Dimensions.get('window');
@@ -31,7 +31,7 @@ const PERIOD_ORDER: TimePeriod[] = ['dawn', 'morning', 'afternoon', 'goldenHour'
 
 /**
  * Lets the user either keep the homepage's illustrated theme auto-changing with real time of
- * day (default), or pin it to one specific period so it always looks the same — with a live
+ * day (default), or pin it to one specific period so it always looks the same – with a live
  * preview of the hero illustration before committing. The greeting text keeps changing with real
  * time of day either way; only the visual look gets pinned (see `useTimeTheme`'s `pinnedPeriod`
  * param, which this screen's preview also uses directly).
@@ -45,7 +45,7 @@ export function HomeThemePickerScreen({ navigation, route }: any) {
   const { refreshing, onRefresh } = usePullToRefresh();
   const insets = useSafeAreaInsets();
 
-  // Same hook every homepage card uses — passing `selected` previews exactly what pinning that
+  // Same hook every homepage card uses – passing `selected` previews exactly what pinning that
   // period would look like (greeting/emoji still live), and passing `null` previews "Auto".
   const previewTheme = useTimeTheme(selected);
 

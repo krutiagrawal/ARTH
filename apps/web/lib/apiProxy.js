@@ -1,5 +1,5 @@
 // Session + proxy plumbing shared by the /member, /ngo, and /admin areas. All
-// three are services/api accounts (role 'user' / 'ngo'-equivalent / 'admin') —
+// three are services/api accounts (role 'user' / 'ngo'-equivalent / 'admin') –
 // each gets its own httpOnly cookie pair, namespaced by role (see cookieNames
 // below), since a browser can hold more than one of these sessions at once.
 import { apiRequest, ApiError } from './apiClient'
@@ -28,7 +28,7 @@ export function clearAuthCookies(response, role) {
 }
 
 // Forwards a request to services/api using the stored role session, transparently
-// refreshing the access token once on a 401 — mirrors apps/mobile/src/api/client.ts.
+// refreshing the access token once on a 401 – mirrors apps/mobile/src/api/client.ts.
 export async function proxyToApi(request, role, path, { method = 'GET', body, isForm } = {}) {
   const { access, refresh } = cookieNames(role)
   const accessToken = request.cookies.get(access)?.value

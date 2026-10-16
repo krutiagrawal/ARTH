@@ -41,8 +41,8 @@ export async function fetchCampaign(id: string): Promise<ApiCampaign> {
   return apiFetch<ApiCampaign>(`/api/campaigns/${id}`);
 }
 
-// clientSecret is null when the backend has no Stripe key configured (local/dev only — see
-// donation.service.ts's createDonationIntent()) — the donation comes back already succeeded and
+// clientSecret is null when the backend has no Stripe key configured (local/dev only – see
+// donation.service.ts's createDonationIntent()) – the donation comes back already succeeded and
 // there's no payment sheet to present.
 export interface DonationIntent {
   donationId: string;
@@ -84,7 +84,7 @@ export interface MyDonationsSummary {
   totalCents: number;
   count: number;
   ngos: number;
-  /** Donations of any status — distinguishes "no donations yet" from "no matches". */
+  /** Donations of any status – distinguishes "no donations yet" from "no matches". */
   allCount: number;
 }
 

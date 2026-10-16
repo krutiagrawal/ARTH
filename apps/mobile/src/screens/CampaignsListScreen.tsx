@@ -328,7 +328,7 @@ export function CampaignsListScreen({ navigation }: any) {
                     </View>
                     <Text style={styles.fundedText}>
                       {goalReached
-                        ? 'Goal reached 🎉 — thank you to everyone who donated'
+                        ? 'Goal reached 🎉 – thank you to everyone who donated'
                         : `${fundedPercentLabel(fraction ?? 0)} funded ·${formatRupees(c.goalAmountCents! - c.raisedAmountCents)} to go`}
                     </Text>
                   </>

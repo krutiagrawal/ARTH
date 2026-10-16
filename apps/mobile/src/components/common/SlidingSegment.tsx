@@ -22,7 +22,7 @@ interface SlidingSegmentProps<T extends string> {
 const SLIDE_MS = 240;
 
 /**
- * Single-select options with no outline of their own — one brown outline sits on the selected
+ * Single-select options with no outline of their own – one brown outline sits on the selected
  * option and slides to the next when the selection changes.
  */
 export function SlidingSegment<T extends string>({ options, value, onChange, fill, small, style }: SlidingSegmentProps<T>) {

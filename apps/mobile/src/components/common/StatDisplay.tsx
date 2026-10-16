@@ -7,14 +7,14 @@ import { SPACING } from '../../constants/theme';
 
 /**
  * Big-number / small-label stat pattern (a strong number, a smaller caption, and an optional
- * clarifying line for estimates) — replaces the repeated ad hoc stat-pair markup scattered
+ * clarifying line for estimates) – replaces the repeated ad hoc stat-pair markup scattered
  * across Profile/Map/Community/Home/EcoWidget.
  */
 
 interface StatDisplayProps {
   value: string | number;
   label: string;
-  /** Use for estimated/derived metrics, e.g. "Estimated CO2 impact" — signals it's not exact. */
+  /** Use for estimated/derived metrics, e.g. "Estimated CO2 impact" – signals it's not exact. */
   sublabel?: string;
   color?: string;
   labelColor?: string;
@@ -22,7 +22,7 @@ interface StatDisplayProps {
   align?: 'left' | 'center';
   style?: ViewStyle;
   /** Escape hatch for non-numeric values (e.g. a tier badge) that shouldn't be forced into the
-   * big digit-sized type below — pass a fully custom node in place of the default value text. */
+   * big digit-sized type below – pass a fully custom node in place of the default value text. */
   valueNode?: React.ReactNode;
 }
 

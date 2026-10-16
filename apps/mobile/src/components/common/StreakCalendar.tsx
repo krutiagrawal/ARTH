@@ -7,14 +7,14 @@ import type { StreakWeek } from '../../api/streaks';
 
 import { TEXT } from '../../constants/typography';
 /**
- * Weekly streak grid — extracted from `ProfileScreen.tsx` so it can be reused for a
+ * Weekly streak grid – extracted from `ProfileScreen.tsx` so it can be reused for a
  * non-`User` streak (e.g. an NGO's weekly-update streak), which passes its own `weeks`/
  * `streakCurrent` data through the same props. Purely presentational, no data fetching.
  */
 
 /**
  * The calendar API returns Monday-anchored weeks, the last one being the current week (backend:
- * `calendarStartDate`) — so the real calendar date for any (weekIndex, dayIndex) cell can be
+ * `calendarStartDate`) – so the real calendar date for any (weekIndex, dayIndex) cell can be
  * derived client-side without the API needing to send dates. Used to tell "missed" (past, not done) apart from "future" (not
  * reached yet) and to mark today's cell, none of which the raw boolean grid alone can express.
  */

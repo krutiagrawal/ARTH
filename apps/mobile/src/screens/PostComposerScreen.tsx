@@ -27,7 +27,7 @@ type Mode = 'post' | 'story';
  *
  * Replaces the old camera-only NGO update screen. Gallery is allowed now because an NGO
  * documenting a drive is usually posting afterwards from photos its volunteers took, not live
- * from the field — the "happening right now" guarantee moved to Stories, which expire.
+ * from the field – the "happening right now" guarantee moved to Stories, which expire.
  */
 export function PostComposerScreen({ navigation, route }: any) {
   const bottomClearance = useBottomNavClearance();
@@ -40,17 +40,17 @@ export function PostComposerScreen({ navigation, route }: any) {
   const { refreshing, onRefresh } = usePullToRefresh([refetchDrives, refetchNgoProfile, refetchNurseryProfile]);
 
   const groupId: string | undefined = route?.params?.groupId;
-  // A group post is a member posting as themselves, tagged to the group — never the
+  // A group post is a member posting as themselves, tagged to the group – never the
   // NGO-style authorship switch, so the two contexts are mutually exclusive.
   const isNgo = !groupId && user?.role === 'ngo';
   const canPublishAsNgo = isNgo && ngoProfile?.status === 'approved';
   const isNursery = !groupId && user?.role === 'nursery';
   const canPublishAsNursery = isNursery && nurseryProfile?.status === 'approved';
   // The Group account's own login (no groupId param, distinct from a member tagging a post to
-  // their group above) publishing as the group itself — Group has no approval gate, so always on.
+  // their group above) publishing as the group itself – Group has no approval gate, so always on.
   const isGroupAccount = !groupId && user?.role === 'group';
   const canPublishAsGroup = isGroupAccount;
-  // A Group account only authors Stories today (its forest gallery) — permanent Post authorship
+  // A Group account only authors Stories today (its forest gallery) – permanent Post authorship
   // for groups isn't modeled on the backend yet, so the 'post' tab is hidden for it.
   const availableModes: Mode[] = isGroupAccount ? ['story'] : ['post', 'story'];
 

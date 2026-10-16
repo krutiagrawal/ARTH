@@ -1,4 +1,4 @@
-// Base64-encoded, pre-resized (160x160) copy of references/map_icon.png — the delivery
+// Base64-encoded, pre-resized (160x160) copy of references/map_icon.png – the delivery
 // tracking maps embed this directly as a data URI since the WebView/Leaflet page (see
 // leafletMapHtml.ts) has no access to the app's bundled asset files, only inline HTML/JS.
 // Regenerate by re-running the resize+base64 step against the source file if the artwork changes.

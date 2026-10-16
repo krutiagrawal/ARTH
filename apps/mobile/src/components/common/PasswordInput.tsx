@@ -38,7 +38,7 @@ interface PasswordInputProps extends Omit<TextInputProps, 'secureTextEntry'> {
 
 /**
  * A password TextInput with a trailing eye icon that toggles visibility.
- * Drop-in replacement for `<TextInput secureTextEntry />` — pass the usual TextInput props
+ * Drop-in replacement for `<TextInput secureTextEntry />` – pass the usual TextInput props
  * plus `inputStyle` for the field styling.
  */
 export function PasswordInput({

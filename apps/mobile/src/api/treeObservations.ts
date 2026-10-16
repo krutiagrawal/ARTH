@@ -13,7 +13,7 @@ export interface LogCommunityObservationInput {
   photo: { uri: string; name: string; type: string };
 }
 
-// Fresh-camera-only, strictly geofenced (~15m of the tree's true coordinates, server-side —
+// Fresh-camera-only, strictly geofenced (~15m of the tree's true coordinates, server-side –
 // see plantingLocation.service.ts). The confirmation screen that calls this already re-fetches
 // GPS right before submit, same convention as PlantTreeScreen's own submit-time fix.
 export async function logCommunityObservation(input: LogCommunityObservationInput): Promise<unknown> {

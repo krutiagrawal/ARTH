@@ -1,4 +1,4 @@
-# 🌱 Arth — Eco-Gamified Tree Planting App
+# 🌱 Arth – Eco-Gamified Tree Planting App
 
 A premium, visually immersive habit-building mobile app for tracking real-world tree planting with Duolingo-level polish and a cozy game aesthetic.
 
@@ -11,7 +11,7 @@ A premium, visually immersive habit-building mobile app for tracking real-world 
 |--------|-------------|
 | **Splash** | Cinematic intro with seed→tree animation, particle effects, mascot reveal |
 | **Onboarding** | 4 swipeable pages with parallax, animated dot indicators |
-| **Home** | Emotional core — streak, animated forest preview, daily missions, XP |
+| **Home** | Emotional core – streak, animated forest preview, daily missions, XP |
 | **Plant Tree** | Camera/upload, AI scan animation, species picker, success state |
 | **Map** | Custom Skia-drawn illustrated map, glowing location pins |
 | **Forest** | 3D-like parallax forest with day/night, birds, floating leaves |
@@ -21,13 +21,13 @@ A premium, visually immersive habit-building mobile app for tracking real-world 
 | **Settings** | Theme, haptics, notifications, account placeholders |
 
 ### Components
-- **Mascot** — Cozy farmer SVG character (dungarees, straw hat, holding sapling) with facial expressions
-- **GlassCard / BlurCard** — Glassmorphism cards
-- **AnimatedButton** — Spring-pressed gradient buttons
-- **ProgressRing** — Animated SVG rings
-- **EcoWidget / StreakWidget** — Reusable stat widgets
-- **FloatingParticles** — Leaf/petal/dust/firefly particle system
-- **BottomNav** — Floating glassmorphism tab bar with raised Plant button
+- **Mascot** – Cozy farmer SVG character (dungarees, straw hat, holding sapling) with facial expressions
+- **GlassCard / BlurCard** – Glassmorphism cards
+- **AnimatedButton** – Spring-pressed gradient buttons
+- **ProgressRing** – Animated SVG rings
+- **EcoWidget / StreakWidget** – Reusable stat widgets
+- **FloatingParticles** – Leaf/petal/dust/firefly particle system
+- **BottomNav** – Floating glassmorphism tab bar with raised Plant button
 
 ---
 
@@ -94,19 +94,19 @@ src/
 ## 🎨 Design System
 
 ### Color Palette
-- **Sage**: `#87A878` — primary green
-- **Forest**: `#2D5A27` — deep nature
-- **Beige**: `#F5EDD6` — warm background
-- **Golden**: `#D4A853` — achievements/XP
-- **Earth**: `#8B6B47` — warm brown
+- **Sage**: `#87A878` – primary green
+- **Forest**: `#2D5A27` – deep nature
+- **Beige**: `#F5EDD6` – warm background
+- **Golden**: `#D4A853` – achievements/XP
+- **Earth**: `#8B6B47` – warm brown
 
 ### Key Animation Patterns
-- `useFloat()` — gentle up/down floating
-- `useBreathing()` — subtle scale in/out
-- `useSlideUp()` — entrance from below
-- `useFadeIn()` — opacity entrance
-- `useSpringPress()` — tactile button press
-- `useParticleAnimation()` — leaves/petals floating upward
+- `useFloat()` – gentle up/down floating
+- `useBreathing()` – subtle scale in/out
+- `useSlideUp()` – entrance from below
+- `useFadeIn()` – opacity entrance
+- `useSpringPress()` – tactile button press
+- `useParticleAnimation()` – leaves/petals floating upward
 
 ---
 
@@ -127,7 +127,7 @@ src/
 
 ---
 
-## 🌿 Mascot — "Pip"
+## 🌿 Mascot – "Pip"
 
 The cozy farmer mascot appears throughout the app:
 - Wearing dungarees, straw hat, holding a sapling

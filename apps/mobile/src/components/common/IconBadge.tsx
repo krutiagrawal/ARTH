@@ -8,7 +8,7 @@ interface IconBadgeProps {
   icon: string;
   color?: string;
   size?: number;
-  /** Circular well instead of a rounded square — the reference's menu/list-row treatment. */
+  /** Circular well instead of a rounded square – the reference's menu/list-row treatment. */
   round?: boolean;
   style?: ViewStyle;
 }

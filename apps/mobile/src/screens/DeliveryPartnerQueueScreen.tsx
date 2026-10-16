@@ -20,7 +20,7 @@ import type { ApiDeliveryQueueItem } from '../api/deliveryPartnerApp';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 import { TEXT } from '../constants/typography';
-// This screen must never import react-native-maps directly — Metro evaluates the whole package
+// This screen must never import react-native-maps directly – Metro evaluates the whole package
 // on import, including its native MapView binding, which has no native module in Expo Go on
 // Android. React.lazy() defers that import until the map component actually mounts, and
 // MapErrorBoundary (below) catches it failing instead of taking down this whole card.
@@ -28,7 +28,7 @@ const LazyRiderDeliveryMap = React.lazy(() =>
   import('../components/common/RiderDeliveryMap').then((m) => ({ default: m.RiderDeliveryMap }))
 );
 
-/** Live device position for the "where am I relative to the destination" map — separate from
+/** Live device position for the "where am I relative to the destination" map – separate from
  * useDeliveryLocationReporting, which posts this same kind of fix to the backend for the
  * customer's tracking map. This one only drives the local map view and never leaves the device.
  * Active only while at least one order has been started (see DeliveryPartnerQueueScreen). */
@@ -99,7 +99,7 @@ function QueueCard({
         ) : (
           <View style={styles.noLocationBanner}>
             <Text style={styles.noLocationBannerText}>
-              No saved location for this address — use the address above and contact the customer for directions.
+              No saved location for this address – use the address above and contact the customer for directions.
             </Text>
           </View>
         )
@@ -199,7 +199,7 @@ export function DeliveryPartnerQueueScreen() {
 
       {hasStartedDelivery && (
         <View style={styles.banner}>
-          <Text style={styles.bannerText}>🌱 Delivery in progress — keep this app open so we can track your location.</Text>
+          <Text style={styles.bannerText}>🌱 Delivery in progress – keep this app open so we can track your location.</Text>
         </View>
       )}
 

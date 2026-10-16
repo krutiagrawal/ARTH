@@ -50,7 +50,7 @@ export function NgoSettingsScreen({ navigation }: any) {
   const [error, setError] = useState<string | null>(null);
   const cardAnim = useSlideUp(0, 24);
   const { medium } = useHaptics();
-  // A freshly picked photo is already an absolute `file://` URI — only the *stored* logo is a
+  // A freshly picked photo is already an absolute `file://` URI – only the *stored* logo is a
   // host-relative `/uploads/...` path that needs resolving against the API host.
   const logoUri = logo?.uri ?? resolveMediaUrl(profile?.logoUrl) ?? null;
 
@@ -123,7 +123,7 @@ export function NgoSettingsScreen({ navigation }: any) {
         logo: logo ?? undefined,
       });
       // The freshly-picked local file has now been uploaded and is reflected in `profile.logoUrl`
-      // (refetched via the mutation's onSuccess) — drop it so `logoUri` switches back to resolving
+      // (refetched via the mutation's onSuccess) – drop it so `logoUri` switches back to resolving
       // the stored URL instead of continuing to point at the local picked photo indefinitely.
       setLogo(null);
       confirm('Saved', 'Your NGO profile has been updated.');
@@ -148,7 +148,7 @@ export function NgoSettingsScreen({ navigation }: any) {
         }
       />
 
-      {/* Gate on the data itself, not `isLoading` — once a profile has loaded once, a background
+      {/* Gate on the data itself, not `isLoading` – once a profile has loaded once, a background
           refetch (e.g. right after Save invalidates the cache) must never blank the form back out
           from under the person still looking at it. */}
       {!profile ? (

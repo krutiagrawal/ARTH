@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils'
 
 // Every dashboard page previously capped itself at max-w-6xl/max-w-2xl on its
-// own outer div — the shared sidebar shell imposes no width cap itself
+// own outer div – the shared sidebar shell imposes no width cap itself
 // (SidebarInset is genuinely w-full), so that cap was squeezing content into
 // roughly two-thirds of the viewport for no reason. 1800px is a deliberate
 // ceiling (not uncapped) so content stays fluid on realistic desktop widths

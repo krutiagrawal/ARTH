@@ -32,7 +32,7 @@ export default function CustomCursor() {
   return (
     <>
       {/* mix-blend-difference relies on the cursor sharing a stacking context with
-          everything beneath it — this page has many transformed/blurred/opacity-
+          everything beneath it – this page has many transformed/blurred/opacity-
           animated layers (glass cards, GSAP-tweened captions) that each create
           their own stacking context, so the blend silently stopped applying against
           large parts of the hero and the cursor went invisible over light footage.

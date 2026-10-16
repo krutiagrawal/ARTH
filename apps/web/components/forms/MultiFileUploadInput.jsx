@@ -1,11 +1,12 @@
 'use client'
 
+import FieldLabel from '@/components/forms/FieldLabel'
 import { useRef, useMemo, useEffect } from 'react'
 import { X, ImagePlus } from 'lucide-react'
 
 /**
  * Multi-photo upload capped at `max` (5, for the proof-of-work "past plantation activities"
- * photos) — mirrors apps/mobile/src/components/social/MultiPhotoPickerField.tsx, minus reordering
+ * photos) – mirrors apps/mobile/src/components/social/MultiPhotoPickerField.tsx, minus reordering
  * since a handful of unordered photos doesn't need it on a desktop form.
  */
 export default function MultiFileUploadInput({ label, hint, files, onChange, max = 5 }) {
@@ -25,7 +26,7 @@ export default function MultiFileUploadInput({ label, hint, files, onChange, max
   return (
     <div>
       <div className="flex items-center justify-between">
-        {label && <span className="eyebrow">{label}</span>}
+        {label && <FieldLabel>{label}</FieldLabel>}
         <span className="text-xs text-muted-foreground">{files.length}/{max}</span>
       </div>
       {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}

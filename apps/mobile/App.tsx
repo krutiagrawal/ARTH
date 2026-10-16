@@ -7,7 +7,7 @@ import { StyleSheet, View } from 'react-native';
 import { useFonts } from 'expo-font';
 import { syncAndroidNavigationBarStyle } from './src/utils/androidNavigationBar';
 // Per-face subpath imports, not the package roots. Importing from the root pulls that package's
-// index, which requires every .ttf it ships — including all the italics we never use — and Metro
+// index, which requires every .ttf it ships – including all the italics we never use – and Metro
 // then bundles ~1.8 MB of dead font data.
 import { BricolageGrotesque_500Medium } from '@expo-google-fonts/bricolage-grotesque/500Medium';
 import { BricolageGrotesque_600SemiBold } from '@expo-google-fonts/bricolage-grotesque/600SemiBold';
@@ -39,7 +39,7 @@ const queryClient = new QueryClient({
   },
 });
 
-// @stripe/stripe-react-native ships native code Expo Go doesn't include — even just
+// @stripe/stripe-react-native ships native code Expo Go doesn't include – even just
 // importing the module (never mind rendering it) throws immediately there. Loaded
 // lazily and behind an error boundary, mirroring AppNavigator's MapScreen/
 // MapErrorBoundary pattern for the same class of problem, so the rest of the app
@@ -62,11 +62,11 @@ class StripeErrorBoundary extends React.Component<
 }
 
 function AppProviders({ children }: { children: React.ReactNode }) {
-  // Renders without StripeProvider until a publishable key is configured — and even
-  // then, falls back to plain children if the native module can't load — so the rest
+  // Renders without StripeProvider until a publishable key is configured – and even
+  // then, falls back to plain children if the native module can't load – so the rest
   // of the app (unrelated to donations) still boots regardless of Stripe's state.
   // Expo Go has no Stripe native module, so loading the package throws ("reload of undefined")
-  // even though the boundary below recovers — skip it there and only load in a dev client/build.
+  // even though the boundary below recovers – skip it there and only load in a dev client/build.
   if (!STRIPE_PUBLISHABLE_KEY || Constants.appOwnership === 'expo') return <>{children}</>;
   return (
     <StripeErrorBoundary fallback={<>{children}</>}>
@@ -98,12 +98,12 @@ const FONT_MAP = {
 export default function App() {
   const [fontsLoaded, fontError] = useFonts(FONT_MAP);
 
-  // A font failure must not brick the app — log it and render in the system face instead.
+  // A font failure must not brick the app – log it and render in the system face instead.
   if (fontError) console.warn('[App] font loading failed, falling back to system fonts:', fontError);
 
   // Dark icon/button style for the (transparent, edge-to-edge) nav bar, matching the app's
   // dominant light theme; screens with a full-bleed dark theme (Splash, Onboarding) override it
-  // themselves while mounted. See androidNavigationBar.ts — has no visible effect in Expo Go.
+  // themselves while mounted. See androidNavigationBar.ts – has no visible effect in Expo Go.
   useEffect(() => {
     syncAndroidNavigationBarStyle('dark');
   }, []);

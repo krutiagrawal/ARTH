@@ -120,8 +120,8 @@ export function EditNurseryProfileScreen({ navigation }: any) {
       confirm(
         'Location set',
         found
-          ? `Your nursery will now appear on the map. Address filled in as: ${found.label} — edit it above if that's not quite right.`
-          : "Your nursery will now appear on the map. We couldn't match an address for this pin — please type it in above.",
+          ? `Your nursery will now appear on the map. Address filled in as: ${found.label} – edit it above if that's not quite right.`
+          : "Your nursery will now appear on the map. We couldn't match an address for this pin – please type it in above.",
       );
     } catch (e) {
       confirm('Could not get location', 'Please try again.');

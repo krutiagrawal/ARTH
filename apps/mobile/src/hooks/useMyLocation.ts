@@ -11,7 +11,7 @@ export function useMyLocation() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [loading, setLoading] = useState(true);
   // Ambient/automatic reads (nearby sorting for directories, drives, adoptable trees) respect the
-  // Location Tracking preference — unlike explicit user-initiated location actions (planting a
+  // Location Tracking preference – unlike explicit user-initiated location actions (planting a
   // tree, setting a delivery address) which always need a real fix regardless of this setting.
   const { data: settings } = useSettings();
   const locationTrackingEnabled = settings?.locationTracking ?? true;

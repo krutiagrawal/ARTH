@@ -5,8 +5,8 @@ import Svg, { Defs, LinearGradient, RadialGradient, Stop, G, Path, Ellipse, Rect
  * The Donations empty-state illustration: a hand holding a glass jar with a heart inside and a
  * sprout growing out of the lid.
  *
- * Drawn rather than downloaded. The reference mockup's version isn't a real stock asset — every
- * search for it turned up only licensed Freepik/Vecteezy/iStock lookalikes, none an actual match —
+ * Drawn rather than downloaded. The reference mockup's version isn't a real stock asset – every
+ * search for it turned up only licensed Freepik/Vecteezy/iStock lookalikes, none an actual match –
  * and cropping it out of the mockup would mean a ~3.3x upscale of a 143x120px region. SVG stays
  * sharp at any size and carries no licence question.
  *
@@ -51,7 +51,7 @@ export function DonationJarIllustration({ size = 200 }: { size?: number }) {
 
       <Ellipse cx="84" cy="168" rx="44" ry="9" fill="url(#djGround)" />
 
-      {/* Sprout — drawn first so the stem reads as continuing down through the lid. */}
+      {/* Sprout – drawn first so the stem reads as continuing down through the lid. */}
       <G>
         <Path d="M96 96 C 96 74, 97 50, 100 28" stroke="#3E7A38" strokeWidth="3" fill="none" strokeLinecap="round" />
         <Path d="M99 38 C 88 28, 74 28, 68 36 C 76 46, 91 46, 99 38 Z" fill="#6FA85C" />
@@ -63,7 +63,7 @@ export function DonationJarIllustration({ size = 200 }: { size?: number }) {
         <Path d="M146 50 C 150 45, 156 45, 158 49 C 154 54, 148 54, 146 50 Z" fill="#7BB466" />
       </G>
 
-      {/* Forearm, cuff, then palm — all behind the jar, drawn back to front. */}
+      {/* Forearm, cuff, then palm – all behind the jar, drawn back to front. */}
       <Path d="M138 140 L 196 194" stroke="url(#djSkin)" strokeWidth="44" strokeLinecap="round" fill="none" />
       <Path d="M152 154 L 172 172" stroke="url(#djCuff)" strokeWidth="48" fill="none" />
       <Path

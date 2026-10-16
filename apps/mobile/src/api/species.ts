@@ -20,7 +20,7 @@ export async function deleteSpecies(id: string): Promise<void> {
   await apiFetch<void>(`/api/species/${id}`, { method: 'DELETE' });
 }
 
-// Tree/flower/environment glyphs only — mirrors the server's allow-list in species.schema.ts,
+// Tree/flower/environment glyphs only – mirrors the server's allow-list in species.schema.ts,
 // which rejects anything outside it, so keep the two in sync.
 export const SPECIES_EMOJI_OPTIONS = [
   '🌳', '🌲', '🌴', '🌵', '🎋', '🌱', '🪴', '🌿', '☘️', '🍀',
@@ -43,7 +43,7 @@ export interface ApiNearbyStock {
   stockId: string;
 }
 
-/** "Recommended nearby" card on PlantTreeScreen once a species is picked manually — surfaces
+/** "Recommended nearby" card on PlantTreeScreen once a species is picked manually – surfaces
  * ARTH nurseries stocking that species close to the planter's current GPS fix. */
 export async function fetchNearbyStock(speciesId: string, lat: number, lng: number, radiusKm = 15): Promise<ApiNearbyStock[]> {
   return apiFetch<ApiNearbyStock[]>(

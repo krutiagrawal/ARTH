@@ -66,7 +66,7 @@ export function ForestHeroCanvas({
   const celestialCx = width * 0.82;
   const celestialCy = height * theme.celestialY;
 
-  // Depth is exaggerated well beyond what a 200px widget needed — the amplitude and baseY spread
+  // Depth is exaggerated well beyond what a 200px widget needed – the amplitude and baseY spread
   // scale with the (now much taller) hero band so the three layers read as distinct rolling
   // hills rather than one flat, barely-visible strip along the bottom edge.
   const hillPaths = useMemo(
@@ -151,7 +151,7 @@ export function ForestHeroCanvas({
         <Circle cx={celestialCx} cy={celestialCy} r={22} color={theme.celestialColor} />
       </Group>
 
-      {/* Hills (far -> near) — far layer is semi-transparent so the sky shows through it
+      {/* Hills (far -> near) – far layer is semi-transparent so the sky shows through it
           (atmospheric haze), giving the three layers visible depth instead of reading as one
           flat band of similar-toned color. */}
       <Path path={hillPaths[0]} color={theme.hillColors[0]} opacity={0.6} />

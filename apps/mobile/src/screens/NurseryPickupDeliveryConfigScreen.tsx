@@ -80,9 +80,9 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
         const found = await reverseGeocode(lat, lng).catch(() => null);
         if (found) {
           setLine1(found.label);
-          setLocationNotice({ ok: true, text: '✓ Matched from GPS — check the address above is correct' });
+          setLocationNotice({ ok: true, text: '✓ Matched from GPS – check the address above is correct' });
         } else {
-          setLocationNotice({ ok: false, text: "Pin captured, but we couldn't find an address for it — please type it above" });
+          setLocationNotice({ ok: false, text: "Pin captured, but we couldn't find an address for it – please type it above" });
         }
       } else {
         setError('Location permission is needed so customers and delivery partners can track deliveries.');
@@ -104,11 +104,11 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
     setError(null);
     setSaved(false);
     if (!offersPickup && !offersDelivery) {
-      setError('Enable at least one of pickup or delivery — you can’t turn both off.');
+      setError('Enable at least one of pickup or delivery – you can’t turn both off.');
       return;
     }
     if (offersDelivery && !hasLocation && !line1.trim()) {
-      setError('Add your nursery\'s address or tap "Use current location" below before turning on delivery — customers and your delivery partners both need it to track deliveries.');
+      setError('Add your nursery\'s address or tap "Use current location" below before turning on delivery – customers and your delivery partners both need it to track deliveries.');
       return;
     }
     try {
@@ -185,7 +185,7 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
             />
             <View style={styles.locationRow}>
               <Text style={styles.locationStatus}>
-                {hasLocation ? '📍 Location set' : '📍 No location set — required to offer delivery'}
+                {hasLocation ? '📍 Location set' : '📍 No location set – required to offer delivery'}
               </Text>
               <TouchableOpacity onPress={useCurrentLocation} disabled={locating} style={styles.locationButton}>
                 <Text style={styles.locationButtonText}>{locating ? 'Locating…' : 'Use current location'}</Text>
@@ -226,7 +226,7 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
                 <Text style={styles.addRowText}>+ Add window</Text>
               </TouchableOpacity>
             </View>
-            {pickupWindows.length === 0 && <Text style={styles.emptyRowsText}>No pickup windows set — planters can pick up anytime.</Text>}
+            {pickupWindows.length === 0 && <Text style={styles.emptyRowsText}>No pickup windows set – planters can pick up anytime.</Text>}
             {pickupWindows.map((row, i) => (
               <BorderCard key={i} style={styles.rowCard} noPadding>
                 <View style={styles.rowContent}>
@@ -254,7 +254,7 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
             <Text style={styles.addRowText}>+ Add day</Text>
           </TouchableOpacity>
         </View>
-        {operatingHours.length === 0 && <Text style={styles.emptyRowsText}>No hours set — treated as always open.</Text>}
+        {operatingHours.length === 0 && <Text style={styles.emptyRowsText}>No hours set – treated as always open.</Text>}
         {operatingHours.map((row, i) => (
           <BorderCard key={i} style={styles.rowCard} noPadding>
             <View style={styles.rowContent}>

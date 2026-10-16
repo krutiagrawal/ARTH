@@ -7,14 +7,14 @@ export function isValidEmail(value: string): boolean {
   return EMAIL_REGEX.test(value.trim());
 }
 
-/** Bare 10-digit Indian mobile number — the +91 is a fixed UI prefix, never part of this value. */
+/** Bare 10-digit Indian mobile number – the +91 is a fixed UI prefix, never part of this value. */
 const PHONE_REGEX = /^[6-9]\d{9}$/;
 
 export function isValidPhone(value: string): boolean {
   return PHONE_REGEX.test(value);
 }
 
-/** Strips everything but digits and caps at 10 — feed every keystroke through this before storing
+/** Strips everything but digits and caps at 10 – feed every keystroke through this before storing
  * it in state, so the field can never even display more than a bare 10-digit number. */
 export function sanitizePhoneDigits(value: string): string {
   return value.replace(/\D/g, '').slice(0, 10);

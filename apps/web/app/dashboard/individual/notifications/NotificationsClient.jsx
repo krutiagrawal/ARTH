@@ -80,7 +80,7 @@ export default function NotificationsClient() {
     try {
       await proxy('/notifications/read', { method: 'POST', body: { ids: [id] } })
     } catch {
-      // best-effort — local state already flipped
+      // best-effort – local state already flipped
     }
   }
 

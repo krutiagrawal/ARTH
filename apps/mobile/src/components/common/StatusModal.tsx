@@ -9,7 +9,7 @@ import { TYPOGRAPHY } from '../../constants/typography';
 import { SPACING } from '../../constants/theme';
 
 // App-styled stand-in for Alert.alert, for the planting-eligibility flow's info/warning popups
-// (location unavailable, not an ARTH-approved spot, request failed) — a plain system alert reads
+// (location unavailable, not an ARTH-approved spot, request failed) – a plain system alert reads
 // jarringly inconsistent against the rest of the app's themed cards.
 export function StatusModal({
   visible,

@@ -24,7 +24,7 @@ const STATUS_LABEL = {
   cancelled: 'Cancelled',
 }
 
-// Matches nurseryCancelOrder's own allowed set (order.service.ts) — the backend rejects
+// Matches nurseryCancelOrder's own allowed set (order.service.ts) – the backend rejects
 // 'out_for_delivery' (a dispatched delivery can't be cancelled), so it's deliberately excluded here.
 const CANCELLABLE = ['confirmed', 'packed', 'ready_for_pickup']
 
@@ -153,13 +153,13 @@ export default function OrderDetailClient({ orderId }) {
           {order.fulfillmentType === 'pickup' ? (
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Pickup window</p>
-              <p className="mt-1">{order.pickupWindowLabel || '—'}</p>
+              <p className="mt-1">{order.pickupWindowLabel || '–'}</p>
             </div>
           ) : (
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Delivery address</p>
               <p className="mt-1">
-                {order.address ? [order.address.line1, order.address.line2, order.address.landmark, order.address.city, order.address.pincode].filter(Boolean).join(', ') : '—'}
+                {order.address ? [order.address.line1, order.address.line2, order.address.landmark, order.address.city, order.address.pincode].filter(Boolean).join(', ') : '–'}
               </p>
             </div>
           )}

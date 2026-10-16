@@ -6,7 +6,7 @@ import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
 import { SPACING } from '../../constants/theme';
 import { useStoryViewers } from '../../hooks/useApiQueries';
 
-/** "3h", "2d", "12 Mar" — matches PostCard's relativeTime formatting. */
+/** "3h", "2d", "12 Mar" – matches PostCard's relativeTime formatting. */
 function relativeTime(iso: string): string {
   const then = new Date(iso).getTime();
   const mins = Math.floor((Date.now() - then) / 60000);

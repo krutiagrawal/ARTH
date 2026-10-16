@@ -38,7 +38,7 @@ import { CancelRsvpSheet } from '../components/drives/CancelRsvpSheet';
 import type { DriveRsvpInput, RsvpCancelReason, ApiDrivePlantSponsor } from '../api/drives';
 
 import { TEXT } from '../constants/typography';
-// Loaded only once a sponsorship payment is actually in flight — see PaymentSheetRunner's own
+// Loaded only once a sponsorship payment is actually in flight – see PaymentSheetRunner's own
 // comment for why this keeps `@stripe/stripe-react-native` out of this screen's own module-scope
 // imports.
 const LazyPaymentSheetRunner = React.lazy(() => import('../components/payments/PaymentSheetRunner'));
@@ -69,7 +69,7 @@ export function DriveDetailScreen({ navigation, route }: any) {
   const { success, error: errorHaptic } = useHaptics();
   const { data: drive, isLoading, refetch } = useDrive(driveId);
   const { user } = useAuth();
-  // Only NGO-role viewers can possibly own this drive — an individual/nursery/other-NGO viewer
+  // Only NGO-role viewers can possibly own this drive – an individual/nursery/other-NGO viewer
   // must never fire this (it hits an NGO-owner-only endpoint that would just fail for them,
   // burning a connection slot this screen's own useDrive() fetch is competing for).
   const ngoProfile = useNgoProfile(user?.role === 'ngo');
@@ -95,7 +95,7 @@ export function DriveDetailScreen({ navigation, route }: any) {
   const [cancelSheetOpen, setCancelSheetOpen] = useState(false);
   const [cancelError, setCancelError] = useState('');
   const [sponsoringId, setSponsoringId] = useState<string | null>(null);
-  // Non-null only while a real payment sheet is in flight — mounts LazyPaymentSheetRunner below.
+  // Non-null only while a real payment sheet is in flight – mounts LazyPaymentSheetRunner below.
   const [activeClientSecret, setActiveClientSecret] = useState<string | null>(null);
 
   const isFull = !!drive && drive.capacity != null && drive.confirmedCount >= drive.capacity && !drive.isRsvped;
@@ -185,7 +185,7 @@ export function DriveDetailScreen({ navigation, route }: any) {
     try {
       const intent = await sponsorMutation.mutateAsync({ driveId: drive.id, plantId: plant.id });
 
-      // No Stripe key configured on the backend (local/dev only) — the sponsorship already came
+      // No Stripe key configured on the backend (local/dev only) – the sponsorship already came
       // back succeeded, so there's no payment sheet to present. Skip straight to success.
       if (intent.clientSecret) {
         setActiveClientSecret(intent.clientSecret);
@@ -195,7 +195,7 @@ export function DriveDetailScreen({ navigation, route }: any) {
       success();
       queryClient.invalidateQueries({ queryKey: ['drives', driveId] });
       // The Drives tab on an NGO's public profile embeds its own drive snapshots inside this
-      // separate query — never invalidated otherwise, so it kept showing pre-sponsorship counts.
+      // separate query – never invalidated otherwise, so it kept showing pre-sponsorship counts.
       queryClient.invalidateQueries({ queryKey: ['ngos', 'public'] });
       setSponsoringId(null);
     } catch (e) {

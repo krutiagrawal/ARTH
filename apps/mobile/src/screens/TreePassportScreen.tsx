@@ -139,7 +139,7 @@ function CheckInControl({ treeId }: { treeId: string }) {
       const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.85 });
       // Health only changes once a live photo is actually captured.
       if (result.canceled || !result.assets?.[0]) {
-        setHint('No photo taken — health was not updated.');
+        setHint('No photo taken – health was not updated.');
         return;
       }
       const uri = result.assets[0].uri;

@@ -15,7 +15,7 @@ export async function checkAvailability(params) {
 }
 
 /**
- * Debounced "is this already taken" check for a single registration field — fires ~500ms after
+ * Debounced "is this already taken" check for a single registration field – fires ~500ms after
  * the value settles, and only while `enabled` (pass the field's own format validity, so a
  * half-typed email/phone never triggers a request). Ignores stale responses if the value changes
  * again before a request resolves. Mirrors apps/mobile/src/hooks/useAvailabilityCheck.ts.

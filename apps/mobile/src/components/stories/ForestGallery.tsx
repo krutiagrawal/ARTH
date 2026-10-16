@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   },
   title: {
     ...TEXT.heading,
-    // Renders directly on ProfileScreen's cream background, not inside a dark card — must use
+    // Renders directly on ProfileScreen's cream background, not inside a dark card – must use
     // dark text (was COLORS.white, invisible on cream).
     color: COLORS.textPrimary,
   },

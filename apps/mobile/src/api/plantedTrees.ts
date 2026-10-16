@@ -1,7 +1,7 @@
 import { apiFetch, toFormFile } from './client';
 
 export type TreeHealthStatus = 'not_checked' | 'healthy' | 'struggling' | 'dead' | 'removed';
-/** A status you can actually log a check as — 'not_checked' is a derived absence-of-check state. */
+/** A status you can actually log a check as – 'not_checked' is a derived absence-of-check state. */
 export type ActionableHealthStatus = Exclude<TreeHealthStatus, 'not_checked'>;
 
 export interface ApiPlantedTree {
@@ -131,7 +131,7 @@ export interface ApiPlantationZone extends ZoneRollup {
 }
 
 export interface ApiPlantationSummary extends ZoneRollup {
-  /** null for the synthetic "Independent Plantings" bucket — trees with no drive. */
+  /** null for the synthetic "Independent Plantings" bucket – trees with no drive. */
   driveId: string | null;
   driveTitle: string;
   zoneCount: number;

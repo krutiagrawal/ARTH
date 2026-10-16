@@ -105,7 +105,7 @@ export function NurseryProfileScreen({ route, navigation }: any) {
     [navigation, effectiveNurseryId],
   );
 
-  // A suspended/removed nursery's public profile 404s — without this, `isLoading` (derived from
+  // A suspended/removed nursery's public profile 404s – without this, `isLoading` (derived from
   // `!data`) would stay true forever once the query settles on an error, leaving the screen
   // spinning indefinitely instead of telling the visitor the nursery is gone.
   const isError = isOwn ? ownProfile.isError : publicProfile.isError;
@@ -154,7 +154,7 @@ export function NurseryProfileScreen({ route, navigation }: any) {
                 {
                   value: GROWTH_LEVEL_META[ownProfile.data?.growthLevel ?? 'seedling'].label,
                   // The tier name plus emoji is too wide for the stat column's digit-sized type
-                  // (see StatDisplay's `numberSmall`, 32px) and was clipping mid-word — render it
+                  // (see StatDisplay's `numberSmall`, 32px) and was clipping mid-word – render it
                   // at a size that actually fits the column, in the display face instead of the
                   // plain numeral font.
                   valueNode: (
@@ -326,7 +326,7 @@ export function NurseryProfileScreen({ route, navigation }: any) {
         />
       ) : tab === 'drives' ? (
         // Saplings tab gets its own plain ScrollView instead of living inside PostGrid's
-        // FlatList — a search input buried in a FlatList's ListHeaderComponent fights with the
+        // FlatList – a search input buried in a FlatList's ListHeaderComponent fights with the
         // list's own layout tracking when the keyboard opens (glitchy push-then-dismiss). A
         // ScrollView doesn't have that problem and is the same keyboard-avoidance pattern
         // already used elsewhere in the app (e.g. NgoPortfolioEntryScreen).
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    // Floats over the vine photo now (topBar is an absolute overlay, not its own banner) — needs
+    // Floats over the vine photo now (topBar is an absolute overlay, not its own banner) – needs
     // a real backdrop to stay legible against green leaves, unlike the transparent version this
     // had when it sat on the plain cream background.
     backgroundColor: 'rgba(255,255,255,0.55)',

@@ -1,7 +1,7 @@
 // Shared nursery-profile enum options/labels, mirroring apps/mobile/src/constants/nursery.ts so
 // the same value <-> label mapping never drifts between mobile signup, web settings, and the
 // public nursery-detail page. `approxPlantCount` and `responsiblePersonRole` are stored on the
-// backend as free-text *labels* (not keys) — see NurseryRegisterScreen.tsx's submit payload — so
+// backend as free-text *labels* (not keys) – see NurseryRegisterScreen.tsx's submit payload – so
 // their option lists below are label-only, unlike the key/label pairs used for enum fields.
 
 export const NURSERY_TYPE_OPTIONS = [

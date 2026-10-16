@@ -16,7 +16,7 @@ export interface ConfirmButton {
   onPress?: () => void;
 }
 
-// App-styled stand-in for Alert.alert — a plain system alert reads jarringly inconsistent
+// App-styled stand-in for Alert.alert – a plain system alert reads jarringly inconsistent
 // against the rest of the app's themed cards. Mounted once at the app root by
 // ConfirmDialogContext; screens trigger it through the useConfirm() hook instead of
 // importing this directly.

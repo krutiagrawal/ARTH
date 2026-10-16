@@ -12,7 +12,7 @@ import { resolveMediaUrl } from '@/lib/media'
 import { usePagedList } from '@/hooks/usePagedList'
 import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
-/** Accounts I've blocked — shared by every role's dashboard (they all hit the same
+/** Accounts I've blocked – shared by every role's dashboard (they all hit the same
  * GET/DELETE /api/blocks, scoped to whichever session's `proxy` is passed in). */
 export default function BlockedAccountsClient({ proxy }) {
   const [unblockTarget, setUnblockTarget] = useState(null)

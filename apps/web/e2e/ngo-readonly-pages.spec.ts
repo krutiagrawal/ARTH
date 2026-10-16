@@ -38,7 +38,7 @@ test.describe('NGO read-only pages', () => {
     for (const title of ['Donations', 'RSVPs', 'Adoptions']) {
       await expect(page.getByRole('main').getByText(title, { exact: true })).toBeVisible()
     }
-    // Recharts renders an SVG per chart — three trend charts should produce three.
+    // Recharts renders an SVG per chart – three trend charts should produce three.
     await expect(page.locator('svg.recharts-surface')).toHaveCount(3, { timeout: 10_000 })
   })
 })

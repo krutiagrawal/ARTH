@@ -23,7 +23,7 @@ interface ToastProps {
 }
 
 /**
- * A single-message top banner. Deliberately not a queue/provider — each screen that needs one
+ * A single-message top banner. Deliberately not a queue/provider – each screen that needs one
  * owns its own `visible` boolean, which keeps this simple for the one-off "friend request
  * accepted" confirmation it was built for.
  */

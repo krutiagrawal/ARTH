@@ -19,7 +19,7 @@ interface StoriesTrayProps {
  * Horizontal tray of friends and followed NGOs with active stories.
  *
  * A group with something unseen gets a sage-green ring; once every story in it has been viewed
- * the ring turns brown — driven by the server's `hasUnseen`. The API already sorts unseen groups
+ * the ring turns brown – driven by the server's `hasUnseen`. The API already sorts unseen groups
  * first.
  */
 export function StoriesTray({ title = "Today's stories", tone = 'onDark' }: StoriesTrayProps) {

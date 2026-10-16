@@ -10,7 +10,7 @@ import { useReduceMotion } from '../../hooks/useReduceMotion';
 const { height: SH } = Dimensions.get('window');
 
 /**
- * Consolidated bottom-sheet / modal wrapper — shared corner radius, padding, header, close
+ * Consolidated bottom-sheet / modal wrapper – shared corner radius, padding, header, close
  * button, and backdrop behavior across the app instead of each screen hand-rolling its own
  * `Modal`. `variant="slideUp"` behaves like a bottom sheet (handle + slide-in), `variant="fade"`
  * centers a card. Reduce-motion aware: falls back to a plain fade regardless of variant.
@@ -26,7 +26,7 @@ interface SheetProps {
   maxHeight?: number;
   /**
    * 'auto' (default) always uses the light/cream chrome. 'dark' forces the dark chrome (light
-   * text, translucent handle/close button) — for content that's always a dark surface (e.g. a
+   * text, translucent handle/close button) – for content that's always a dark surface (e.g. a
    * picker over a night scene). Pair with `surfaceColor` to override the actual background
    * hex/rgba.
    */

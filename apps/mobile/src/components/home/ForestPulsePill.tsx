@@ -41,7 +41,7 @@ function plural(n: number, one: string, many: string) {
   return `${n} ${n === 1 ? one : many}`;
 }
 
-/** Cards in priority order — only the ones that currently apply are returned, so the pill never
+/** Cards in priority order – only the ones that currently apply are returned, so the pill never
  * pads itself with filler. Struggling/unchecked trees outrank everything because they're the only
  * thing here the user can act on to keep a tree alive. */
 function buildCards(

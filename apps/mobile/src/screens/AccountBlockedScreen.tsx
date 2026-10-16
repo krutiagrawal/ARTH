@@ -10,7 +10,7 @@ import { FONTS, TEXT } from '../constants/typography';
 import { RADIUS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 
-// Full-screen, no back button, sign-out only — reached via useBlockedRedirect()
+// Full-screen, no back button, sign-out only – reached via useBlockedRedirect()
 // in AppNavigator the moment any request comes back ACCOUNT_BLOCKED. Distinct
 // from the "BlockedAccounts" screen/route (that's the unrelated user-to-user
 // mute feature reachable from Settings).

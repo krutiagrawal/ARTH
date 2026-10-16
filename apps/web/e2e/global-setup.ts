@@ -10,7 +10,7 @@ export const TEST_NGO = {
   description: 'A test NGO for automated UI verification.',
 }
 
-// A second NGO, deliberately left at its default `pending` status — used to
+// A second NGO, deliberately left at its default `pending` status – used to
 // test approval-gating (disabled buttons, status banners) and to drive the
 // real admin approve/reject/suspend UI instead of the SQL bypass below.
 export const PENDING_NGO = {
@@ -22,7 +22,7 @@ export const PENDING_NGO = {
   description: 'A second test NGO, left pending, for approval-lifecycle testing.',
 }
 
-// Matches services/api/scripts/seed_e2e.ts — that script owns creating these
+// Matches services/api/scripts/seed_e2e.ts – that script owns creating these
 // accounts (with a known password, unlike create_admin.ts's random one), so
 // only the credentials are duplicated here for the specs to import.
 export const TEST_ADMIN = { email: 'admin.e2e@example.com', password: 'AdminPass123!' }
@@ -30,8 +30,8 @@ export const TEST_DONOR = { email: 'donor.e2e@example.com', password: 'DonorPass
 
 const API_URL = process.env.API_URL || 'http://localhost:4000'
 const apiDir = path.resolve(__dirname, '../../../services/api')
-// The Prisma schema/migrations now live in the shared packages/db workspace —
-// see packages/db/prisma/schema.prisma — services/api itself no longer has one.
+// The Prisma schema/migrations now live in the shared packages/db workspace –
+// see packages/db/prisma/schema.prisma – services/api itself no longer has one.
 const dbDir = path.resolve(__dirname, '../../../packages/db')
 
 async function registerNgo(ngo: typeof TEST_NGO) {
@@ -45,8 +45,8 @@ async function registerNgo(ngo: typeof TEST_NGO) {
   }
 }
 
-// Provisions (or reuses) fixed test accounts — an approved NGO, a pending
-// NGO, a platform admin, and a donor — plus a little seed activity data, so
+// Provisions (or reuses) fixed test accounts – an approved NGO, a pending
+// NGO, a platform admin, and a donor – plus a little seed activity data, so
 // the full e2e suite can log in and do real create/read operations through
 // the UI instead of relying on hardcoded dashboard fixtures.
 export default async function globalSetup() {

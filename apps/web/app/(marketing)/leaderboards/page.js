@@ -1,6 +1,6 @@
 // TODO(post-launch): re-enable leaderboards. Disabled before launch because
 // with only a handful of early planters the rankings are either empty or
-// obviously just the seed data — bring this back once there's enough real
+// obviously just the seed data – bring this back once there's enough real
 // planting activity for it to mean something. To restore: delete the stub
 // below and uncomment the original implementation.
 
@@ -23,14 +23,14 @@ export default function Page() {
   )
 }
 
-/* ORIGINAL IMPLEMENTATION — restore after launch:
+/* ORIGINAL IMPLEMENTATION – restore after launch:
 
 import { prisma } from '@/lib/prisma'
 import LeaderboardsClient from './LeaderboardsClient'
 
 export const metadata = {
   title: 'Leaderboards',
-  description: 'See who is leading the movement — individuals, communities, NGOs and cities.',
+  description: 'See who is leading the movement – individuals, communities, NGOs and cities.',
 }
 
 const CATEGORY_ORDER = ['Individuals', 'Communities', 'NGOs', 'Cities', 'Schools', 'Companies', 'Forests']

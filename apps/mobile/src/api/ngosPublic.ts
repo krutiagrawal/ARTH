@@ -36,17 +36,17 @@ export interface ApiPublicNgoProfile {
   volunteerCountEstimate: number | null;
   awards: Award[];
   followPolicy: FollowPolicy;
-  /** Accepted followers only — pending requests are not followers yet. */
+  /** Accepted followers only – pending requests are not followers yet. */
   followersCount: number;
   isFollowing: boolean;
   /** Distinct from `isFollowing` so the button can read "Requested". */
   followStatus: FollowStatus | null;
   /** True when the viewer has blocked this NGO. */
   blockedByMe?: boolean;
-  // Full ApiDrive shape (same as GET /api/drives/:id returns), not a trimmed summary — lets the
+  // Full ApiDrive shape (same as GET /api/drives/:id returns), not a trimmed summary – lets the
   // client seed its drive-detail cache from these list entries instead of re-fetching on tap.
   featuredDrives: ApiDrive[];
-  /** Drives still to come — a freshly-created drive shows up here, not in `featuredDrives`
+  /** Drives still to come – a freshly-created drive shows up here, not in `featuredDrives`
    * (which is completed-only, the "past work" showcase). */
   upcomingDrives: ApiDrive[];
   recentUpdates: ApiPost[];
@@ -67,7 +67,7 @@ export async function fetchNgoPublicProfile(id: string): Promise<ApiPublicNgoPro
   return apiFetch<ApiPublicNgoProfile>(`/api/ngos/${id}`);
 }
 
-/** Paginated public updates for one NGO — more than the 10 bundled in the profile. */
+/** Paginated public updates for one NGO – more than the 10 bundled in the profile. */
 export async function fetchNgoPublicUpdates(
   id: string,
   params: { page?: number; take?: number } = {},

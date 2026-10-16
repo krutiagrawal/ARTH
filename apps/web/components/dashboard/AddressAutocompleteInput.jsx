@@ -12,7 +12,7 @@ const DEBOUNCE_MS = 350
  * A plain address input with Nominatim (OpenStreetMap) search-as-you-type suggestions, so typing
  * a real address doesn't require getting every line right by hand. Search runs through our own
  * backend (`/geocode/search`, called via whichever role's `proxy` the caller passes in), which
- * holds the required Nominatim User-Agent header and request throttling — this component never
+ * holds the required Nominatim User-Agent header and request throttling – this component never
  * calls Nominatim directly.
  */
 export default function AddressAutocompleteInput({
@@ -70,7 +70,7 @@ export default function AddressAutocompleteInput({
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => setFocused(true)}
-        // A click on a suggestion fires after this blur — delay hiding the list long enough for
+        // A click on a suggestion fires after this blur – delay hiding the list long enough for
         // that click to land, or the list would vanish out from under the click first.
         onBlur={() => setTimeout(() => setFocused(false), 150)}
         placeholder={placeholder}

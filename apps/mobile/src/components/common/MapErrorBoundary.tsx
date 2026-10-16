@@ -6,7 +6,7 @@ import { RADIUS } from '../../constants/theme';
 
 /**
  * The delivery-tracking maps render inside a WebView (react-native-webview, a genuinely
- * Expo-Go-bundled module — see leafletMapHtml.ts for why no native map library is used). This
+ * Expo-Go-bundled module – see leafletMapHtml.ts for why no native map library is used). This
  * boundary is a defensive fallback for the WebView itself failing to load (e.g. no network
  * reaching the OSM tiles/Leaflet CDN). Wrap every map-rendering component reachable from
  * AppNavigator's eager screen graph in this, paired with a `React.lazy()` import of that

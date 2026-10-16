@@ -50,7 +50,7 @@ import { TEXT } from '../constants/typography';
 const { width: SW } = Dimensions.get('window');
 
 // MapLibre needs a native module that Expo Go (and any older dev build) does not contain, and a
-// plain top-level import of it throws at module load — which makes the lazy-loaded Map tab fail
+// plain top-level import of it throws at module load – which makes the lazy-loaded Map tab fail
 // with "Lazy element type must resolve to a class or function". Load it defensively and fall back
 // to a Leaflet/OSM WebView (LeafletPinMap) when it is missing.
 let ML: any = null;
@@ -62,11 +62,11 @@ try {
 const HAS_NATIVE_MAP = !!ML;
 const { Map, Camera, Marker, UserLocation, GeoJSONSource, Layer } = (ML ?? {}) as any;
 
-// [lng, lat] — MapLibre's coordinate order, opposite of react-native-maps' {latitude, longitude}.
+// [lng, lat] – MapLibre's coordinate order, opposite of react-native-maps' {latitude, longitude}.
 const INDIA_CENTER: [number, number] = [78.9629, 20.5937];
 const INDIA_ZOOM = 3.5;
 
-// Plain OpenStreetMap raster tiles — no API key or billing required, unlike Google Maps (which
+// Plain OpenStreetMap raster tiles – no API key or billing required, unlike Google Maps (which
 // this screen used before switching off react-native-maps; see project notes on why).
 const OSM_STYLE = {
   version: 8 as const,
@@ -75,7 +75,7 @@ const OSM_STYLE = {
       type: 'raster' as const,
       tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
       tileSize: 256,
-      // tile.openstreetmap.org only serves up to z19 — without this, zooming further sends
+      // tile.openstreetmap.org only serves up to z19 – without this, zooming further sends
       // requests for tiles that don't exist and the server answers with a 400.  MapLibre clamps
       // to this automatically, oversampling the z19 tile instead of erroring past it.
       maxzoom: 19,
@@ -98,7 +98,7 @@ const GROWTH_COLOR = ['#5BA847', '#3E8A2E', '#2D6B20', '#1E5214', '#0E3A0A'];
  *   - own tree      → solid filled pin bubble, growth-stage color + emoji (TreeMarker)
  *   - adoptable tree → outline-only pin bubble (unfilled center), sage accent (AdoptableTreeMarker)
  *   - NGO drive      → rounded golden-accent bubble, flag emoji (NgoDriveMarker)
- *   - nursery        → house-shaped marker, earth-brown accent (NurseryMarker) — only nurseries
+ *   - nursery        → house-shaped marker, earth-brown accent (NurseryMarker) – only nurseries
  *                       that have set a location in NurserySettingsScreen appear here
  * Tapping an adoptable-tree/drive marker navigates straight to its detail screen (where the
  * adopt/RSVP action lives) rather than opening an in-map info card like TreeMarker's, since
@@ -130,7 +130,7 @@ const STATUS_MODAL_CONTENT = {
   },
 } as const;
 
-// Generates an approximate geographic circle (equirectangular projection — accurate enough at
+// Generates an approximate geographic circle (equirectangular projection – accurate enough at
 // the radii used here, tens of meters to ~90km) as a GeoJSON polygon, since MapLibre's own
 // "circle" layer type sizes in constant screen pixels, not real-world meters like the radii the
 // approved-planting-zone and tree distinctness circles need.
@@ -247,7 +247,7 @@ function NgoDriveMarker({ drive, onPress }: { drive: ApiDrive & { lat: number; l
 }
 
 /** One pin per plantation drive that has logged trees, shown when the map is scoped to a single
- * NGO (via `route.params.ngoId`) — tapping opens an in-map info card with the zone breakdown,
+ * NGO (via `route.params.ngoId`) – tapping opens an in-map info card with the zone breakdown,
  * since there's no public detail screen for a plantation's survival stats to navigate to. */
 function PlantingMarker({ entry, onPress }: { entry: ApiPlantingMapEntry; onPress: () => void }) {
   return (
@@ -467,7 +467,7 @@ function TreeInfoCard({ tree, onClose, isNight, ownerName, ownerHandle, ownerEmo
   );
 }
 
-/** In-map info card for a `PlantingMarker` tap — there's no public detail screen for a
+/** In-map info card for a `PlantingMarker` tap – there's no public detail screen for a
  * plantation's survival stats, so this mirrors TreeInfoCard's bottom-sheet treatment instead of
  * navigating away. */
 function PlantingInfoCard({ entry, onClose, isNight }: {
@@ -559,18 +559,18 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
   const headerSlide = useSlideUp(0, 20, 350);
   const { user } = useAuth();
   const isNgo = mode === 'ngo';
-  // A nursery scoped in from NurseryImpactScreen's "View on map" button — when present, the tree
+  // A nursery scoped in from NurseryImpactScreen's "View on map" button – when present, the tree
   // layer shows only that nursery's sourced trees (via /trees/map?nurseryId=) instead of the
   // viewer's own personal forest.
   const scopeNurseryId: string | undefined = route?.params?.nurseryId;
-  // An NGO scoped in from NgoProfileScreen's "View on map" button — when present, drives and
+  // An NGO scoped in from NgoProfileScreen's "View on map" button – when present, drives and
   // adoptable trees are filtered to just this NGO, and its zone-level planting pins appear.
   const scopeNgoId: string | undefined = route?.params?.ngoId;
   const scopeNgoName: string | undefined = route?.params?.ngoName;
-  // Pushed as its own stack screen (has a route) rather than rendered as the Map tab — needs a back button.
+  // Pushed as its own stack screen (has a route) rather than rendered as the Map tab – needs a back button.
   const isPushedScreen = !!route?.key;
   // Both public and NGO-owned feeds are always fetched (stable per-mount `mode` prop, never
-  // toggles) so this never has to call hooks conditionally — whichever pair isn't relevant for
+  // toggles) so this never has to call hooks conditionally – whichever pair isn't relevant for
   // this mode is simply not used below. NGO mode has no personal "planted trees" concept at all.
   const { data: rawTrees = [] } = useTrees(undefined, !isNgo && !scopeNurseryId);
   const { data: nurseryScopedTrees = [] } = useTreesMap({ scope: 'global', nurseryId: scopeNurseryId }, !!scopeNurseryId);
@@ -598,7 +598,7 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
   ).size;
 
   // Detects the user's position. Also re-runs when the app returns to the foreground and, while
-  // there is still no fix, every few seconds — so switching GPS / location permission on while
+  // there is still no fix, every few seconds – so switching GPS / location permission on while
   // this screen is open is picked up automatically (the ⚠️ turns into 📍 and the map zooms in).
   const locationRef = useRef<Location.LocationObject | null>(null);
   const detectingRef = useRef(false);
@@ -625,7 +625,7 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
   }, []);
 
   useEffect(() => {
-    // Centering the map on the user's own position is ambient/automatic — it respects the
+    // Centering the map on the user's own position is ambient/automatic – it respects the
     // Location Tracking preference, unlike explicit actions like planting a tree.
     if (!locationTrackingEnabled) { setLocationPending(false); return; }
     detectLocation(true);
@@ -971,7 +971,7 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
         </View>
       )}
 
-      {/* Layer filter bubble — collapsed by default; tapping a layer shows only that layer. */}
+      {/* Layer filter bubble – collapsed by default; tapping a layer shows only that layer. */}
       {!selectedTree && !selectedPlanting && (
         <View style={[styles.legendWrap, { bottom: 160 + insets.bottom + (!isNgo && trees.length > 0 ? 124 : 62) }]}>
           <BlurView intensity={80} tint={isNight ? 'dark' : 'light'} style={[styles.legendBlur, styles.mapGlass, isNight && styles.mapGlassNight]}>
@@ -1036,7 +1036,7 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
         </View>
       )}
 
-      {/* Rendered here or after the bottom sheet below — sibling order, not zIndex, decides both paint and touch priority on Android. */}
+      {/* Rendered here or after the bottom sheet below – sibling order, not zIndex, decides both paint and touch priority on Android. */}
       {!isNgo && trees.length > 0 && plantHereButton}
 
       {/* Stats bar */}
@@ -1094,7 +1094,7 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
                       <Text style={styles.treeChipEmoji}>{GROWTH_EMOJI[tree.growthStage - 1]}</Text>
                       <View>
                         {/* Chip surface is always a near-solid light card (even at night), so its
-                            text stays fixed-dark — never swapped to light — regardless of isNight. */}
+                            text stays fixed-dark – never swapped to light – regardless of isNight. */}
                         <Text style={styles.treeChipName}>{tree.nickname}</Text>
                         <Text style={styles.treeChipLoc}>{tree.location?.split(',')[0] ?? 'Unknown'}</Text>
                       </View>

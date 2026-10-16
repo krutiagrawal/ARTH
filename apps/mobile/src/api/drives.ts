@@ -78,8 +78,8 @@ export async function leaveDrive(id: string, input: { reason: RsvpCancelReason; 
   await apiFetch<void>(`/api/drives/${id}/rsvp`, { method: 'DELETE', body: input });
 }
 
-// clientSecret is null when the backend has no Stripe key configured (local/dev only — see
-// drive.service.ts's sponsorPlant()) — the sponsorship comes back already succeeded and there's
+// clientSecret is null when the backend has no Stripe key configured (local/dev only – see
+// drive.service.ts's sponsorPlant()) – the sponsorship comes back already succeeded and there's
 // no payment sheet to present.
 export async function sponsorPlant(driveId: string, plantId: string): Promise<{ sponsorshipId: string; clientSecret: string | null }> {
   return apiFetch(`/api/drives/${driveId}/plants/${plantId}/sponsor`, { method: 'POST' });
@@ -111,7 +111,7 @@ export interface ApiSponsorHealthRollup {
   counts: { not_checked: number; healthy: number; struggling: number; dead: number; removed: number };
 }
 
-// Real PlantedTree health outcomes across every drive the user has sponsored — an aggregate,
+// Real PlantedTree health outcomes across every drive the user has sponsored – an aggregate,
 // not a per-sponsorship attribution (a sponsorship funds a catalog slot/drive, not one specific
 // physical tree).
 export async function fetchSponsorHealthRollup(): Promise<ApiSponsorHealthRollup> {
@@ -125,7 +125,7 @@ export interface ApiDriveTreeSummary {
   lastCheckedAt: string | null;
 }
 
-// Real per-drive tree-identification/health breakdown — every logged tree already has its own
+// Real per-drive tree-identification/health breakdown – every logged tree already has its own
 // identity (a publicId), this just surfaces the real counts, viewable by anyone who can see the
 // drive (attendee, sponsor), not NGO-owner-only.
 export async function fetchDriveTreeSummary(driveId: string): Promise<ApiDriveTreeSummary> {
@@ -146,7 +146,7 @@ export async function fetchMyDrives(page?: number, take?: number): Promise<ApiDr
   return apiFetch<ApiDrive[]>(`/api/drives/mine${page ? `?page=${page}&take=${take ?? 30}` : ''}`);
 }
 
-/** Cancels a drive the NGO organizes (e.g. rained out) — RSVPs stay recorded, the drive just
+/** Cancels a drive the NGO organizes (e.g. rained out) – RSVPs stay recorded, the drive just
  * stops accepting new ones and shows as cancelled everywhere it's listed. */
 export async function cancelDrive(id: string, reason: string): Promise<ApiDrive> {
   return apiFetch<ApiDrive>(`/api/drives/${id}`, { method: 'DELETE', body: { reason } });
@@ -222,7 +222,7 @@ export interface ApiDrivePlantSponsors {
   sponsors: ApiDrivePlantSponsor[];
 }
 
-/** Owner-only — the NGO can't sponsor its own drive (see sponsorPlant server-side), so its own
+/** Owner-only – the NGO can't sponsor its own drive (see sponsorPlant server-side), so its own
  * detail screen shows this instead of a "Sponsor" button. */
 export async function fetchDriveSponsors(driveId: string): Promise<{ plants: ApiDrivePlantSponsors[] }> {
   return apiFetch(`/api/drives/${driveId}/sponsors`);

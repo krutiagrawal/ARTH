@@ -26,37 +26,37 @@ interface EcoWidgetProps {
    * on any backdrop. Should contrast with `color`/`textColor` (dark halo for light text, and vice versa). */
   haloColor?: string;
   /** Renders on a dark/frosted-glass basis (dark background, light text) instead of the default
-   * light styling — for use over dark or variable-brightness backdrops (e.g. Home's time-of-day sky). */
+   * light styling – for use over dark or variable-brightness backdrops (e.g. Home's time-of-day sky). */
   dark?: boolean;
-  /** Time-of-day theme overrides for the 'glass' variant — when provided, these win over the
+  /** Time-of-day theme overrides for the 'glass' variant – when provided, these win over the
    * `dark` boolean's static look so the widget can be retinted per time-of-day period. Passing
    * `cardBackground` switches the card to a real BlurView + gradient wash (matching `ThemedCard`)
    * instead of the flat, non-blurred `GlassCard` fill. */
   cardBackground?: string;
-  /** Second gradient stop for the wash — same idea as `theme.cardBackgroundAlt`. Falls back to
+  /** Second gradient stop for the wash – same idea as `theme.cardBackgroundAlt`. Falls back to
    * `cardBackground` (a flat wash) when omitted. */
   cardBackgroundAlt?: string;
-  /** Alpha the wash colors are composited at over the blur — same idea as `theme.cardOverlayAlpha`. */
+  /** Alpha the wash colors are composited at over the blur – same idea as `theme.cardOverlayAlpha`. */
   cardOverlayAlpha?: number;
   textColor?: string;
   subTextColor?: string;
   borderColor?: string;
-  /** Ref to the screen's `BlurTargetView` — required on Android for the 'glass' + `cardBackground`
+  /** Ref to the screen's `BlurTargetView` – required on Android for the 'glass' + `cardBackground`
    * variant's `BlurView` to actually blur (otherwise it silently falls back to a flat tint there). */
   blurTarget?: RefObject<View | null>;
-  /** Applied to the widget's outermost wrapper — how a caller gives it a width in a grid. */
+  /** Applied to the widget's outermost wrapper – how a caller gives it a width in a grid. */
   style?: StyleProp<ViewStyle>;
   /** Stretch to fill the wrapper. Needed for equal-size grid tiles: the flex has to reach the
    * card itself, or the row's `alignItems: 'stretch'` has nothing to equalise and the tiles come
    * out content-sized at different heights. */
   fill?: boolean;
   /** Only applies with `fill`. `fill`'s width always comes from `flex: 1` (an equal share of the
-   * row), never from padding — so a `fill` tile's height, which IS content/padding-driven, ends
+   * row), never from padding – so a `fill` tile's height, which IS content/padding-driven, ends
    * up shorter than that flex-assigned width on typical phone screens, reading as a wide
    * horizontal capsule instead of a tile. Pass an explicit floor here to force the card taller
    * than it is wide regardless of how much icon/value/label content it holds. */
   fillMinHeight?: number;
-  /** Shrinks the icon/value/label text a step down from the default 'glass' sizing — for small
+  /** Shrinks the icon/value/label text a step down from the default 'glass' sizing – for small
    * tiles (e.g. a short `fillMinHeight`) where the default sizing reads as oversized/cramped. */
   compact?: boolean;
 }
@@ -92,11 +92,11 @@ export function EcoWidget({
   // otherwise overflow a three-across grid on a narrow phone, and the tighter horizontal padding
   // keeps two-word labels ("Upcoming drives") on two lines instead of three.
   const fillCardStyle = fill ? [styles.fillCard, fillMinHeight != null && { minHeight: fillMinHeight }] : null;
-  // A notch tighter than the default card, independent of `fill` — for a card that should just
+  // A notch tighter than the default card, independent of `fill` – for a card that should just
   // read a bit smaller without being squeezed into a fixed-height grid tile.
   const compactCardStyle = compact ? styles.compactCard : null;
 
-  // No card, border or blur — icon and text sit straight on the backdrop, kept readable by a halo.
+  // No card, border or blur – icon and text sit straight on the backdrop, kept readable by a halo.
   if (variant === 'bare' || variant === 'clear') {
     const isClear = variant === 'clear';
     const halo = {
@@ -109,7 +109,7 @@ export function EcoWidget({
         <TouchableOpacity activeOpacity={0.85} onPress={onPress} disabled={!onPress} style={[fillStyle, isClear ? styles.clearWidget : styles.bareWidget]}>
           {isClear && (
             <>
-              {/* Liquid-glass look: fully see-through (no blur, no tint) — just a specular
+              {/* Liquid-glass look: fully see-through (no blur, no tint) – just a specular
                   highlight sweeping from the top-left and a thin bright rim. */}
               <LinearGradient
                 colors={['rgba(255,255,255,0.38)', 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0)']}
@@ -170,7 +170,7 @@ export function EcoWidget({
     );
 
     // Time-themed usage (cardBackground given): a real BlurView + gradient wash, same recipe as
-    // `ThemedCard` — GlassCard's flat rgba fill gets fully overwritten by an opaque theme color
+    // `ThemedCard` – GlassCard's flat rgba fill gets fully overwritten by an opaque theme color
     // otherwise, which is why these tiles used to look like plain cards instead of glass.
     if (cardBackground) {
       return (
@@ -194,7 +194,7 @@ export function EcoWidget({
                 ]}
                 style={StyleSheet.absoluteFill}
               />
-              {/* Fake glass sheen — Android has no real live blur here, see HomeScreen.tsx. */}
+              {/* Fake glass sheen – Android has no real live blur here, see HomeScreen.tsx. */}
               <LinearGradient
                 colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
                 start={{ x: 0, y: 0 }}
@@ -222,7 +222,7 @@ export function EcoWidget({
 
   // Brown-border, no-fill replacement for `variant="glass"` used everywhere except Home (which
   // keeps the real glass-over-illustrated-sky look). Ignores the theme-tinted glass props
-  // (`cardBackground`/`dark`/etc.) entirely — those existed to keep text legible against a live
+  // (`cardBackground`/`dark`/etc.) entirely – those existed to keep text legible against a live
   // sky illustration, which no longer applies once the fill is gone.
   if (variant === 'outline') {
     return (
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     padding: 16,
     alignItems: 'center',
-    // A uniform border, not `borderLeftWidth` — a left-only border against this
+    // A uniform border, not `borderLeftWidth` – a left-only border against this
     // radius renders as a crescent hugging the corner rather than an accent bar.
     borderWidth: 1,
     borderColor: COLORS.sand,

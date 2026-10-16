@@ -12,15 +12,15 @@ interface PhoneFieldProps {
   onBlur?: () => void;
   placeholder?: string;
   dark?: boolean;
-  /** Shown below the field — format error, "already registered", etc. */
+  /** Shown below the field – format error, "already registered", etc. */
   error?: string | null;
-  /** Overrides the field box's chrome (background/border/margin) — for screens that need this
+  /** Overrides the field box's chrome (background/border/margin) – for screens that need this
    * field to match a different surrounding input style than FormFieldShell's default. */
   style?: StyleProp<ViewStyle>;
 }
 
 /**
- * A `+91`-prefixed, digits-only phone input capped at 10 characters — the country code is a fixed
+ * A `+91`-prefixed, digits-only phone input capped at 10 characters – the country code is a fixed
  * visual prefix, never part of the stored value, so every phone field in the app produces the
  * same bare-10-digit shape regardless of what the user tries to type.
  */

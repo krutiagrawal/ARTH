@@ -63,7 +63,7 @@ export function ReedClusterShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** A single fish in side profile — the `color` prop tints it (koi / goldfish / clownfish variants). */
+/** A single fish in side profile – the `color` prop tints it (koi / goldfish / clownfish variants). */
 export function FishShape({ color, size }: DecorationShapeProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 60 60">

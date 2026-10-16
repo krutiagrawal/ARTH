@@ -1,14 +1,14 @@
 /**
  * Person-name validation. Returns an error message, or null when the name is acceptable.
  *
- * IMPORTANT: keep in sync with services/api/src/utils/nameValidation.ts — the form blocks what
+ * IMPORTANT: keep in sync with services/api/src/utils/nameValidation.ts – the form blocks what
  * the API would reject, so the two must agree.
  */
 
 /** Characters a name may contain: letters (any script), combining marks, space, . ' ’ - */
 export const NAME_DISALLOWED_CHARS = /[^\p{L}\p{M} .'’-]/gu;
 
-// Words nobody is actually called — placeholders typed to get past a form.
+// Words nobody is actually called – placeholders typed to get past a form.
 const PLACEHOLDER_NAMES = new Set([
   'test', 'tester', 'testing', 'user', 'username', 'name', 'firstname', 'lastname', 'fullname',
   'null', 'undefined', 'unknown', 'anonymous', 'nil', 'none', 'na', 'nan', 'guest', 'demo',
@@ -18,7 +18,7 @@ const PLACEHOLDER_NAMES = new Set([
 // Words that would let someone pass as ARTH staff.
 const RESERVED_WORDS = new Set(['admin', 'administrator', 'moderator', 'support', 'official', 'staff']);
 
-// Runs of keys from the keyboard rows — somebody mashing the keyboard, not a name.
+// Runs of keys from the keyboard rows – somebody mashing the keyboard, not a name.
 const KEYBOARD_RUNS = ['qwer', 'asdf', 'zxcv', 'hjkl', 'uiop'];
 
 export function validateName(raw: string): string | null {

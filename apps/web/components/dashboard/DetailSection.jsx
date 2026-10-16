@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Shared building blocks for admin approval-detail sheets (nursery/NGO/corporate) — a labelled
+ * Shared building blocks for admin approval-detail sheets (nursery/NGO/corporate) – a labelled
  * group of fields, and a single label/value row that renders nothing when the value is empty.
  * Extracted out of AdminNurseriesClient.jsx once a second consumer (AdminNgosClient.jsx) needed
  * the identical pattern.

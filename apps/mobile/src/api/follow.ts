@@ -7,7 +7,7 @@ export interface ApiFollowedNgo {
   orgName: string;
   logoUrl: string | null;
   city: string | null;
-  /** 'pending' while an approval-gated NGO has yet to accept — render "Requested". */
+  /** 'pending' while an approval-gated NGO has yet to accept – render "Requested". */
   followStatus: FollowStatus;
 }
 
@@ -42,7 +42,7 @@ export async function fetchFollowedNurseries(): Promise<ApiFollowedNursery[]> {
 }
 
 /**
- * Legacy endpoint. The feed screen uses `fetchSocialFeed` from api/posts instead — that one is
+ * Legacy endpoint. The feed screen uses `fetchSocialFeed` from api/posts instead – that one is
  * cursor-paginated and includes friends' posts, not just followed NGOs.
  */
 export async function fetchFollowingFeed(): Promise<{ total: number; updates: ApiPost[] }> {

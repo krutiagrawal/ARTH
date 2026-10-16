@@ -13,7 +13,7 @@ export type StreakState = 'safe' | 'at_risk' | 'broken';
 
 export interface StreakStatus {
   state: StreakState;
-  /** The real streak — 0 once a full day has been missed. */
+  /** The real streak – 0 once a full day has been missed. */
   streakCurrent: number;
   /** One missed day (yesterday) can be bought back with a freeze or XP. */
   revivable: boolean;
@@ -36,7 +36,7 @@ export interface StreakStatus {
   freezeCap: number;
 }
 
-/** "At risk" is only surfaced from 6 PM (device time) — earlier in the day there is still plenty of time. */
+/** "At risk" is only surfaced from 6 PM (device time) – earlier in the day there is still plenty of time. */
 export const AT_RISK_FROM_HOUR = 18;
 
 export function isAtRiskHours(now = new Date()): boolean {

@@ -26,7 +26,7 @@ import { TEXT } from '../constants/typography';
 const { width: SW, height: SH } = Dimensions.get('window');
 const HERO_HEIGHT = SH * 0.4;
 /** Admin's non-hero chrome deliberately stays a fixed dark "control panel" tone regardless of
- * time of day (unlike NGO/User, whose page background follows the theme) — only the hero
+ * time of day (unlike NGO/User, whose page background follows the theme) – only the hero
  * illustration itself retints through the day. Matches this fixed color so the hero fades
  * seamlessly into the page instead of into a color that shifts under it. */
 export const PANEL_BG = '#0D2318';

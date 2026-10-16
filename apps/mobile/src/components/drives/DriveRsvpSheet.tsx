@@ -38,7 +38,7 @@ function nameProblem(value: string): string | null {
   const v = value.trim();
   if (!v) return 'Enter your emergency contact’s name';
   if (v.length < 2) return 'Name is too short';
-  if (!NAME_REGEX.test(v)) return 'Use letters only — no numbers or symbols';
+  if (!NAME_REGEX.test(v)) return 'Use letters only – no numbers or symbols';
   return null;
 }
 
@@ -46,7 +46,7 @@ const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
 
 /**
- * The RSVP isn't created by tapping "I'm in" — it's created when this form is submitted, so the
+ * The RSVP isn't created by tapping "I'm in" – it's created when this form is submitted, so the
  * NGO always has a reachable phone, an emergency contact and (when it runs the transport) knows
  * where each volunteer boards.
  */
@@ -61,7 +61,7 @@ export function DriveRsvpSheet({ visible, drive, defaultPhone, submitting, error
   const [note, setNote] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [tried, setTried] = useState(false);
-  // Fields the user has left at least once — their errors show without waiting for a submit tap.
+  // Fields the user has left at least once – their errors show without waiting for a submit tap.
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const touch = (k: string) => setTouched((t) => (t[k] ? t : { ...t, [k]: true }));
   const show = (k: string) => tried || !!touched[k];
@@ -80,7 +80,7 @@ export function DriveRsvpSheet({ visible, drive, defaultPhone, submitting, error
 
   const phoneError = show('phone') ? phoneProblem(phone) : null;
   const ecNameError = show('ecName') ? nameProblem(ecName) : null;
-  // The emergency contact must be someone else — it's who the NGO calls if the volunteer can't be reached.
+  // The emergency contact must be someone else – it's who the NGO calls if the volunteer can't be reached.
   const ecPhoneError = show('ecPhone') ? phoneProblem(ecPhone) ?? (ecPhone === phone ? 'Use a different number from your own' : null) : null;
   const boardingError = tried && hasTransport && !boarding ? 'Choose where you will board, or that you will come yourself' : null;
   const agreedError = tried && !agreed;

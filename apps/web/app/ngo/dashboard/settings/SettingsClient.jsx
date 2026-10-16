@@ -24,7 +24,7 @@ export default function SettingsClient() {
   const [phoneTouched, setPhoneTouched] = useState(false)
   const [websiteTouched, setWebsiteTouched] = useState(false)
 
-  // Format validation only, no real-time duplicate check — this edits NgoProfile.contactPhone (a
+  // Format validation only, no real-time duplicate check – this edits NgoProfile.contactPhone (a
   // business contact number), not the User.phone identity field, so it isn't subject to the
   // registration-time "already registered" rule.
   const phoneField = usePhoneField(form?.contactPhone ?? '', phoneTouched, { checkAvailability: false })
@@ -106,7 +106,7 @@ export default function SettingsClient() {
     }
   }
 
-  // Gate on the data itself, not `loading` — once a profile has loaded once, some other consumer
+  // Gate on the data itself, not `loading` – once a profile has loaded once, some other consumer
   // of this shared context re-running `refresh()` (flipping `loading` back to true) must never
   // blank this page's already-filled-in form back out to a skeleton from under the person editing it.
   if (!form) {

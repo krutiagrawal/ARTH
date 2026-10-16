@@ -11,7 +11,7 @@ const ICON_SIZE = 56;
 
 /**
  * A single Leaflet/OSM WebView tracking one moving point. The HTML/JS is built exactly once, at
- * mount, from whatever `lat`/`lng` are at that moment — every later position update goes through
+ * mount, from whatever `lat`/`lng` are at that moment – every later position update goes through
  * `injectJavaScript('animateTo(...)')` instead of rebuilding `source.html`, since replacing that
  * prop makes react-native-webview reload the whole page (undoing the smooth tween and flashing on
  * every ~8s poll). Rendering two of these (preview + fullscreen) is what lets the fullscreen one
@@ -67,7 +67,7 @@ function TrackingWebView({ lat, lng, style }: { lat: number; lng: number; style:
 /**
  * The customer-facing live-delivery map (a moving sapling marker), with a button to expand it to
  * a fullscreen view. Renders a Leaflet/OSM page inside a WebView rather than any native map
- * library — see leafletMapHtml.ts for why. Everything touching that page lives in this module and
+ * library – see leafletMapHtml.ts for why. Everything touching that page lives in this module and
  * TrackingWebView above, so `React.lazy()`-loading this file (see OrderDetailScreen.tsx) keeps
  * the WebView fully out of the eager screen graph.
  */

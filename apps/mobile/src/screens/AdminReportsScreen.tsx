@@ -24,7 +24,7 @@ const FILTERS: { key: ReportStatus | undefined; label: string }[] = [
 ];
 
 // 'accounts' is a shorthand the backend expands to targetType in (user, ngo,
-// nursery, corporate) — default tab, since account reports are what admin
+// nursery, corporate) – default tab, since account reports are what admin
 // needs to see first/on priority.
 const TARGET_TABS: { key: ReportTargetTypeFilter; label: string }[] = [
   { key: 'accounts', label: 'Accounts' },
@@ -157,7 +157,7 @@ function ReportRow({ report, onAct }: { report: ApiAdminReport; onAct: (a: Moder
 /**
  * Admin moderation queue.
  *
- * Every action asks for an optional reason before it commits — that reason lands in the audit log
+ * Every action asks for an optional reason before it commits – that reason lands in the audit log
  * and in the notification sent back to the reporter, so "why was this taken down" is answerable
  * later.
  */

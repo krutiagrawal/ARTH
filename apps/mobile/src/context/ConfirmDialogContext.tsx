@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useState } from 'react';
 import { ConfirmDialog, ConfirmButton } from '../components/common/ConfirmDialog';
 
 /**
- * Drop-in themed replacement for `Alert.alert(title, message, buttons)` — same call shape,
+ * Drop-in themed replacement for `Alert.alert(title, message, buttons)` – same call shape,
  * so existing call sites convert by swapping the import and function name. Renders through
  * ConfirmDialog (built on the shared Sheet) instead of the OS's unstyled native alert.
  */

@@ -29,7 +29,7 @@ export interface ApiPortfolioEntry {
 export interface PortfolioInput {
   title: string;
   description?: string;
-  /** ISO date. Must be in the past — upcoming work belongs in Drives. */
+  /** ISO date. Must be in the past – upcoming work belongs in Drives. */
   happenedOn: string;
   locationLabel?: string;
   city?: string;
@@ -79,7 +79,7 @@ export async function createPortfolioEntry(input: PortfolioInput): Promise<ApiPo
 }
 
 /**
- * Photos are replaced wholesale when `photos` is supplied and left alone when it is omitted —
+ * Photos are replaced wholesale when `photos` is supplied and left alone when it is omitted –
  * so an edit that only changes the title must not pass an empty array.
  */
 export async function updatePortfolioEntry(

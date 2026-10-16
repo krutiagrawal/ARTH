@@ -83,7 +83,7 @@ function RejectedPanel({ profile, onResubmitted }) {
   const [phoneTouched, setPhoneTouched] = useState(false)
   const [websiteTouched, setWebsiteTouched] = useState(false)
 
-  // Format validation only — this resubmits NgoProfile.contactPhone/website (business contact
+  // Format validation only – this resubmits NgoProfile.contactPhone/website (business contact
   // details), not the User.phone identity field, so no real-time duplicate check here.
   const phoneField = usePhoneField(form.contactPhone, phoneTouched, { checkAvailability: false })
   const websiteError = websiteTouched && form.website.trim() && !isValidWebsite(form.website) ? 'Enter a valid website URL' : null
@@ -253,7 +253,7 @@ function QuickActionChip({ action }) {
 }
 
 // Buckets `stats.activity` into 6 weekly counts so stat tiles get a
-// lightweight trend sparkline — the reference's sparklines are decorative
+// lightweight trend sparkline – the reference's sparklines are decorative
 // flourishes, not literal historical series, and no time-series endpoint
 // exists yet, so this derives one from data already on the page.
 function weeklySparkline(activity) {

@@ -181,7 +181,7 @@ export async function fetchNgoVolunteers(cursor?: string): Promise<Page<ApiVolun
   return apiFetch<Page<ApiVolunteer>>(pagedPath('/api/ngo/volunteers', cursor, {}, 30));
 }
 
-/** Cancels this person's confirmed RSVPs to the NGO's *upcoming* drives only — past attendance
+/** Cancels this person's confirmed RSVPs to the NGO's *upcoming* drives only – past attendance
  * history is untouched, so someone whose only participation was in the past will still show up
  * here afterward. */
 export async function removeNgoVolunteer(userId: string): Promise<{ cancelledCount: number }> {

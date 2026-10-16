@@ -22,7 +22,7 @@ export function RockStackShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** A classic toadstool — rounded cap on a stem, with a few pale spot accents. */
+/** A classic toadstool – rounded cap on a stem, with a few pale spot accents. */
 export function MushroomCapShape({ color, size }: DecorationShapeProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 60 60">

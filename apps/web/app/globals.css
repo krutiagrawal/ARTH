@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    /* ARTH — warm editorial palette */
+    /* ARTH – warm editorial palette */
     --background: 42 55% 95%;              /* #F8F4EC warm beige */
     --foreground: 24 25% 18%;              /* deep earth ink */
     --card: 42 45% 97%;
@@ -22,9 +22,9 @@
     --accent: 24 22% 35%;                  /* #6E5847 earth brown */
     --accent-foreground: 42 55% 95%;
     --olive: 65 22% 42%;                   /* soft olive */
-    --forest-deep: 152 42% 14%;            /* deep saturated forest green — Impact snapshot panel bg */
+    --forest-deep: 152 42% 14%;            /* deep saturated forest green – Impact snapshot panel bg */
     --forest-deep-foreground: 42 40% 92%;  /* warm cream text on the dark panel */
-    --sand: 38 48% 68%;                    /* light gold/sand — alternate stat-tile tone */
+    --sand: 38 48% 68%;                    /* light gold/sand – alternate stat-tile tone */
     --sand-foreground: 24 25% 18%;
     --destructive: 14 42% 52%;             /* muted terracotta */
     --destructive-foreground: 42 55% 95%;
@@ -162,7 +162,7 @@
 .animate-wing-flap { animation: wing-flap 0.4s ease-in-out infinite; transform-origin: center; }
 
 @media (hover: hover) and (pointer: fine) {
-  /* Scoped to the marketing site only (see app/(marketing)/layout.js) — the
+  /* Scoped to the marketing site only (see app/(marketing)/layout.js) – the
      NGO/admin dashboards render outside this subtree and keep the normal
      system cursor, since CustomCursor (the visual replacement) is only
      mounted on marketing pages. A bare `body` rule here would hide the

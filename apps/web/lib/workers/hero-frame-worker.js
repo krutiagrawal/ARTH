@@ -1,15 +1,15 @@
 /* ==================================================================================
-   Homepage hero — frame-sequence decode/draw worker.
+   Homepage hero – frame-sequence decode/draw worker.
    ------------------------------------------------------------------------------
    Owns everything about turning a scroll-derived frame index into pixels on the
    hero's <canvas>: fetching + decoding stills (via createImageBitmap, off the
    main thread) and drawing the current one with a cover-fit crop. This exists so
    GSAP/ScrollTrigger on the main thread never has to compete with image decode
-   work for the same thread — see app/page.js for the main-thread half of this
+   work for the same thread – see app/page.js for the main-thread half of this
    (message posting + the main-thread fallback used when OffscreenCanvas isn't
    available).
 
-   Classic (non-module) worker — no imports, so it runs in the broadest range of
+   Classic (non-module) worker – no imports, so it runs in the broadest range of
    browsers; everything it needs (fetch, createImageBitmap, self) is a worker
    global already.
    ================================================================================== */
@@ -55,7 +55,7 @@ function drawIndex(target) {
     sy = (bitmap.height - sh) * cfg.cropTopBias
   }
   // drawImage's destination rect (0,0,cw,ch) always covers the full canvas, so
-  // there's nothing left uncovered — no clearRect needed beforehand.
+  // there's nothing left uncovered – no clearRect needed beforehand.
   ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, cw, ch)
 }
 

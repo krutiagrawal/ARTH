@@ -82,7 +82,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'users', label: 'Users' },
 ];
 
-/** Available to every role's account — the NGOs and nurseries I follow, and the users I'm friends with. */
+/** Available to every role's account – the NGOs and nurseries I follow, and the users I'm friends with. */
 export function FollowingScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const confirm = useConfirm();

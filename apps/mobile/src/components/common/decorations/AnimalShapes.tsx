@@ -12,7 +12,7 @@ function vshade(id: string, color: string) {
   );
 }
 
-/** A sitting fox — pointed ears, bushy tail with a pale tip, white cheek/chest. */
+/** A sitting fox – pointed ears, bushy tail with a pale tip, white cheek/chest. */
 export function FoxShape({ color, size }: DecorationShapeProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 60 60">
@@ -33,7 +33,7 @@ export function FoxShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** A rabbit — upright with tall ears, round body and a fluffy cotton tail. */
+/** A rabbit – upright with tall ears, round body and a fluffy cotton tail. */
 export function RabbitShape({ color, size }: DecorationShapeProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 60 60">
@@ -51,7 +51,7 @@ export function RabbitShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** A young deer — slender body on thin legs with a raised head and short antlers. */
+/** A young deer – slender body on thin legs with a raised head and short antlers. */
 export function DeerShape({ color, size }: DecorationShapeProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 60 60">
@@ -70,7 +70,7 @@ export function DeerShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** A hedgehog — spiky quill dome over a small round face. */
+/** A hedgehog – spiky quill dome over a small round face. */
 export function HedgehogShape({ color, size }: DecorationShapeProps) {
   const spikes = [];
   for (let i = 0; i < 11; i++) {
@@ -93,7 +93,7 @@ export function HedgehogShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** A squirrel — crouched body with a big curling tail and a held acorn. */
+/** A squirrel – crouched body with a big curling tail and a held acorn. */
 export function SquirrelShape({ color, size }: DecorationShapeProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 60 60">
@@ -111,7 +111,7 @@ export function SquirrelShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** A turtle — domed patterned shell over a small head and stubby legs. */
+/** A turtle – domed patterned shell over a small head and stubby legs. */
 export function TurtleShape({ color, size }: DecorationShapeProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 60 60">
@@ -131,7 +131,7 @@ export function TurtleShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** A butterfly — four patterned wings around a slender body with antennae. */
+/** A butterfly – four patterned wings around a slender body with antennae. */
 export function ButterflyShape({ color, size }: DecorationShapeProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 60 60">
@@ -150,7 +150,7 @@ export function ButterflyShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** A bee — striped fuzzy body, translucent wings and a small stinger. */
+/** A bee – striped fuzzy body, translucent wings and a small stinger. */
 export function BeeShape({ color, size }: DecorationShapeProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 60 60">
@@ -165,7 +165,7 @@ export function BeeShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** A ladybug — red-domed shell with black spots and a small head. */
+/** A ladybug – red-domed shell with black spots and a small head. */
 export function LadybugShape({ color, size }: DecorationShapeProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 60 60">
@@ -189,7 +189,7 @@ export function LadybugShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** A snail — coiled spiral shell on a soft body with eye stalks. */
+/** A snail – coiled spiral shell on a soft body with eye stalks. */
 export function SnailShape({ color, size }: DecorationShapeProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 60 60">

@@ -16,7 +16,7 @@ function InviteCodeCard({ profile }) {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
-      // Clipboard access can fail (permissions, insecure context) — the code is
+      // Clipboard access can fail (permissions, insecure context) – the code is
       // still shown on screen, so this is a nice-to-have, not a hard requirement.
     }
   }

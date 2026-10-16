@@ -11,7 +11,7 @@ import CitySelect from './CitySelect'
 import { sanitizePhoneDigits } from '@/lib/validation'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/
-// Bare 10-digit Indian mobile number — the +91 prefix rendered by the 'phone' field type is
+// Bare 10-digit Indian mobile number – the +91 prefix rendered by the 'phone' field type is
 // never part of this value, matching what services/api's phoneSchema expects.
 const PHONE_REGEX = /^[6-9]\d{9}$/
 
@@ -62,7 +62,7 @@ function defaultsFromItem(fields, item) {
  * (name/label/type/required/apiName/toApi/fromApi/section).
  */
 // Consecutive short numeric fields (lat/lng, duration/capacity) are paired
-// into a single row instead of each taking a full-width line on its own —
+// into a single row instead of each taking a full-width line on its own –
 // the main lever for shortening the form enough to need less scrolling.
 function rowsFor(fields) {
   const rows = []

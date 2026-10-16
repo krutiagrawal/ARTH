@@ -7,13 +7,13 @@ import { SPACING } from '../../constants/theme';
 import { AnimatedButton } from './AnimatedButton';
 
 /**
- * Shared "nothing here yet" pattern — icon/emoji, a short human explanation, and an optional
- * next action — so no screen renders a blank view when a list is empty.
+ * Shared "nothing here yet" pattern – icon/emoji, a short human explanation, and an optional
+ * next action – so no screen renders a blank view when a list is empty.
  */
 
 interface EmptyStateProps {
   icon?: string;
-  /** A real illustration to render in place of the emoji — an `<Image>` or an SVG component. */
+  /** A real illustration to render in place of the emoji – an `<Image>` or an SVG component. */
   illustration?: React.ReactNode;
   title: string;
   body?: string;

@@ -110,7 +110,7 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
                   {r.priceCents != null
                     ? ` · ₹${(r.priceCents / 100).toFixed(0)} each · ₹${((r.priceCents * r.quantityOffered) / 100).toLocaleString('en-IN')} total`
                     : ' · Free'}
-                  {' · '}{[r.canPickup && 'Pickup', r.canDeliver && 'Delivery'].filter(Boolean).join(' + ') || '—'}
+                  {' · '}{[r.canPickup && 'Pickup', r.canDeliver && 'Delivery'].filter(Boolean).join(' + ') || '–'}
                 </Text>
                 {r.message ? <Text style={styles.offerMessage}>{r.message}</Text> : null}
                 <View style={[styles.statusBadge, badgeColor(r.status)]}>
@@ -233,7 +233,7 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
     if (id) setSelectedId(id);
   }, [route?.params?.openRequirementId]);
   // Linking to a catalog species (rather than just free text below) is what lets nurseries'
-  // stock get checked against this request — see bulkRequirement.service.ts's respondToRequirement,
+  // stock get checked against this request – see bulkRequirement.service.ts's respondToRequirement,
   // which only gates on quantity when requirement.speciesId is set.
   const [speciesId, setSpeciesId] = useState<string | null>(null);
   const [speciesQuery, setSpeciesQuery] = useState('');
@@ -291,9 +291,9 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
       const found = await reverseGeocode(lat, lng).catch(() => null);
       if (found) {
         setAddress(found.label);
-        setLocationNotice({ ok: true, text: '✓ Matched from GPS — check the address above is correct' });
+        setLocationNotice({ ok: true, text: '✓ Matched from GPS – check the address above is correct' });
       } else {
-        setLocationNotice({ ok: false, text: "Pin captured, but we couldn't find an address for it — the coordinates are still saved" });
+        setLocationNotice({ ok: false, text: "Pin captured, but we couldn't find an address for it – the coordinates are still saved" });
       }
     } catch {
       setError("Couldn't get your location. Please try again.");
@@ -428,7 +428,7 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
               {showAddSpecies && (
                 <View style={styles.inlineSpeciesBlock}>
                   <Text style={styles.formLabel}>
-                    Adding "{speciesQuery.trim() || '…'}" — edit the name in the search box above, then pick an emoji
+                    Adding "{speciesQuery.trim() || '…'}" – edit the name in the search box above, then pick an emoji
                   </Text>
                   <View style={styles.emojiGrid}>
                     {SPECIES_EMOJI_OPTIONS.map((emoji) => (
@@ -454,7 +454,7 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
             </>
           )}
           <Text style={styles.fieldHint}>
-            Matching a catalog species lets nurseries' existing stock be checked when they respond — leave blank for open-ended asks like "any native species".
+            Matching a catalog species lets nurseries' existing stock be checked when they respond – leave blank for open-ended asks like "any native species".
           </Text>
           <FormField maxLength={200} label="Additional description (optional)" value={speciesNote} onChangeText={setSpeciesNote} placeholder="eg - Native shade trees" />
           <FormField label="Quantity needed" value={quantityNeeded} onChangeText={setQuantityNeeded} placeholder="eg - 0" keyboardType="number-pad" />

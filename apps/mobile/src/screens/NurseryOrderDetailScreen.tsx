@@ -133,7 +133,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
           )}
 
           {/* Assigning/changing the delivery partner is available from the moment the order is
-              confirmed (not just once it's packed and dispatched) — a nursery may want to line up
+              confirmed (not just once it's packed and dispatched) – a nursery may want to line up
               a rider ahead of time, and should always be able to correct a mistaken pick right up
               until the order has actually left (picked up/delivered/cancelled). */}
           {!isPickup && ['confirmed', 'packed', 'out_for_delivery'].includes(order.status) && (
@@ -219,7 +219,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
 
           {order.status === 'packed' && !isPickup && (
             // If a rider was already picked in the "Delivery partner" section above, sending it
-            // out is one tap with that same partner — no need to pick again. Otherwise this still
+            // out is one tap with that same partner – no need to pick again. Otherwise this still
             // opens the picker and assigns + dispatches together, same as before.
             order.tracking?.deliveryPartnerId ? (
               <AnimatedButton
@@ -249,7 +249,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
 
           {order.status === 'out_for_delivery' && !isPickup && (
             order.tracking?.riderName ? (
-              // A delivery partner is assigned — confirming delivery with the customer's handoff
+              // A delivery partner is assigned – confirming delivery with the customer's handoff
               // code now happens in the partner's own app (DeliveryPartnerQueueScreen), not here.
               <View style={styles.otpHint}>
                 <Text style={styles.otpHintText}>Waiting for {order.tracking.riderName} to confirm delivery with the customer</Text>
@@ -275,7 +275,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
             )
           )}
 
-          {/* Matches nurseryCancelOrder's own allowed set (order.service.ts) — 'ready_for_pickup'
+          {/* Matches nurseryCancelOrder's own allowed set (order.service.ts) – 'ready_for_pickup'
               is included so a nursery can cancel a no-show pickup instead of holding the reserved
               stock hostage indefinitely. */}
           {['confirmed', 'packed', 'ready_for_pickup'].includes(order.status) && (
@@ -315,7 +315,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
       >
         {(deliveryPartners ?? []).filter((p) => p.isActive).length === 0 ? (
           <Text style={styles.emptyPartnersText}>
-            No active delivery partners yet — add one from the Delivery Partners screen first.
+            No active delivery partners yet – add one from the Delivery Partners screen first.
           </Text>
         ) : (
           (deliveryPartners ?? [])
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 8 },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 6, marginTop: 4 },
   input: {
-    // No fill — an outline on the page, not a panel laid over it. Matches FormField's recipe.
+    // No fill – an outline on the page, not a panel laid over it. Matches FormField's recipe.
     backgroundColor: 'transparent',
     borderRadius: RADIUS.lg,
     borderWidth: 1.5,

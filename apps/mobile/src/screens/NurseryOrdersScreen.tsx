@@ -44,9 +44,9 @@ const STATUS_COLOR: Record<NurseryOrderStatus, string> = {
   cancelled: COLORS.coral,
 };
 
-// A dropdown sheet rather than a horizontally-scrolling chip row — 9 statuses made for a long
+// A dropdown sheet rather than a horizontally-scrolling chip row – 9 statuses made for a long
 // scroll, and a separate fulfillment-type row duplicated concepts already visible per-order
-// (each row already tags itself Pickup/Delivery) — one combined filter control instead.
+// (each row already tags itself Pickup/Delivery) – one combined filter control instead.
 const STATUS_TABS: { key: NurseryOrderStatus | 'all'; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'confirmed', label: 'New' },

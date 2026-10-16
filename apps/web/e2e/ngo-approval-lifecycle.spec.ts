@@ -55,7 +55,7 @@ test.describe('NGO approval lifecycle', () => {
   test('rejected NGO sees the rejection reason and can resubmit back to pending', async ({ page }) => {
     await loginAsNgo(page, PENDING_NGO)
     // Regex, not a literal apostrophe: the component renders a typographic
-    // "'" (&rsquo;), not the ASCII "'" — a straight-apostrophe string never
+    // "'" (&rsquo;), not the ASCII "'" – a straight-apostrophe string never
     // matches no matter how long you wait for it.
     await expect(page.getByText(/This one didn.t go through/)).toBeVisible()
     await expect(page.getByText('Missing required organizational details.', { exact: false })).toBeVisible()
@@ -81,7 +81,7 @@ test.describe('NGO approval lifecycle', () => {
     await expect(page.getByText('Your application is with our team.', { exact: false })).toHaveCount(0)
     await expect(page.getByText('Your account has been suspended.', { exact: false })).toHaveCount(0)
 
-    // .first() — with zero items yet, the empty-state CTA duplicates the
+    // .first() – with zero items yet, the empty-state CTA duplicates the
     // header button's accessible name; both are driven by the same
     // isApproved-gated disabled state, so either instance proves the point.
     await page.goto('/ngo/dashboard/drives')

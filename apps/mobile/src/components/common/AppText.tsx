@@ -26,14 +26,14 @@ import { ms } from '../../utils/responsive';
  *    Bricolage Grotesque display styles (`FONTS.display`) keep their rounded face, and how a nested `<Text>` span
  *    can opt into inheriting its parent's face.
  *  - `fontWeight` is cleared whenever a face is applied. A named face already encodes its weight,
- *    and Android honours one or the other rather than combining them — pairing
+ *    and Android honours one or the other rather than combining them – pairing
  *    `Figtree_700Bold` with `fontWeight: '700'` can actually render *lighter* than the face
  *    alone.
  */
 
 /**
  * Flattening happens once here and is reused for both the font-face lookup and the responsive
- * scale pass below — every `fontSize`/`lineHeight` in the app (whether from a `TYPOGRAPHY.*`
+ * scale pass below – every `fontSize`/`lineHeight` in the app (whether from a `TYPOGRAPHY.*`
  * entry or a one-off screen style) is authored as a fixed dp number, so this is the single choke
  * point that makes all of them scale with screen width without touching each call site.
  */
@@ -53,7 +53,7 @@ function resolve(style: unknown): { style: any; face: string | null } {
 }
 
 // The ref is typed loosely on purpose: `React.ComponentRef<typeof RNText>` trips over this
-// workspace's duplicate @types/react resolution. Prop types — the part call sites rely on — are
+// workspace's duplicate @types/react resolution. Prop types – the part call sites rely on – are
 // still fully checked through TextProps/TextInputProps.
 export const Text = React.forwardRef<any, TextProps>(
   ({ style, ...rest }, ref) => {

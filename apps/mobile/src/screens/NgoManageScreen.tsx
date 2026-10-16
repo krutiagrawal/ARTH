@@ -32,7 +32,7 @@ export function NgoManageScreen({
   navigation: any;
   initialSegment?: Segment;
   /** Present only when React Navigation renders this directly as a pushed Stack.Screen (e.g.
-   * deep-linked from Reports) rather than as the Manage tab's embedded content — used purely to
+   * deep-linked from Reports) rather than as the Manage tab's embedded content – used purely to
    * decide whether a back button belongs in the header, since this screen otherwise has no way
    * back on its own. */
   route?: { params?: { initialSegment?: Segment } };

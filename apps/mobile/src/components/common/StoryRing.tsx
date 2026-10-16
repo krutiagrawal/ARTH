@@ -22,7 +22,7 @@ interface StoryRingProps {
 }
 
 /**
- * Wraps an avatar with a colored ring when its author has an active story — sage green for an
+ * Wraps an avatar with a colored ring when its author has an active story – sage green for an
  * unseen one, a faded brown once every active story from them has been viewed (kept translucent
  * so it stays clearly distinct from the solid unseen ring). Renders children unchanged (no extra
  * sizing) when there's no active story, so most avatars are unaffected.

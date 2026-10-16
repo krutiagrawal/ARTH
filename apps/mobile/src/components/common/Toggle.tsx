@@ -28,7 +28,7 @@ interface ToggleProps {
 /**
  * Custom animated toggle, replacing the stock RN `Switch`. Stock `Switch` already had a solid
  * white `thumbColor` prop set everywhere it was used, so there was no remaining JS-level color
- * bug to fix — the two-tone thumb artifact traced to platform-level native drawable rendering
+ * bug to fix – the two-tone thumb artifact traced to platform-level native drawable rendering
  * (Android's Switch thumb elevation/shadow against a light track color), which isn't reachable
  * from RN props. Drawing the whole thing ourselves guarantees identical rendering on iOS/Android,
  * matching how GlassCard/AnimatedButton already replace other stock components in this app.

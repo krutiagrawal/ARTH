@@ -88,7 +88,7 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // Editing an existing partner's name/phone — separate from the create form above, since it
+  // Editing an existing partner's name/phone – separate from the create form above, since it
   // pre-fills from a partner that's already registered (running the create form's "is this phone
   // already taken" check against its own current number would always false-flag it as taken).
   const [editingPartner, setEditingPartner] = useState<ApiDeliveryPartner | null>(null);
@@ -125,7 +125,7 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
   const handleCreate = async () => {
     setError(null);
     if (!name.trim() || !handle.trim() || !email.value.trim() || !phone.value || password.length < 8) {
-      setError('Fill in every field — the temp password needs at least 8 characters.');
+      setError('Fill in every field – the temp password needs at least 8 characters.');
       return;
     }
     if (!email.valid) {
@@ -244,7 +244,7 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
           <FormField label="Temporary password" value={password} onChangeText={setPassword} placeholder="eg - At least 8 characters" secureTextEntry />
           {error && <Text style={styles.errorText}>{error}</Text>}
           <Text style={styles.hint}>
-            Share this password with your delivery partner directly — they can log in on their own phone with this email and password.
+            Share this password with your delivery partner directly – they can log in on their own phone with this email and password.
           </Text>
           <AnimatedButton
             label={createMutation.isPending ? 'Adding…' : 'Add delivery partner'}

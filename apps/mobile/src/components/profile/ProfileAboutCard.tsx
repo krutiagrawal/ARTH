@@ -151,7 +151,7 @@ export function ProfileAboutCard({
                     {treesThisYear} of {plantingGoal} {plantingGoal === 1 ? 'tree' : 'trees'} planted
                   </Text>
                   <Text style={styles.goalHint}>
-                    {treesThisYear! >= plantingGoal! ? 'Goal reached — amazing!' : `${plantingGoal! - treesThisYear!} to go`}
+                    {treesThisYear! >= plantingGoal! ? 'Goal reached – amazing!' : `${plantingGoal! - treesThisYear!} to go`}
                   </Text>
                 </View>
               </View>

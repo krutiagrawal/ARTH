@@ -17,7 +17,7 @@ interface GameScreenShellProps {
   loading?: boolean;
   error?: boolean;
   onRetry?: () => void;
-  /** Lay children out over the full remaining height (no scrolling) — for board games like Grove Word. */
+  /** Lay children out over the full remaining height (no scrolling) – for board games like Grove Word. */
   fill?: boolean;
   children?: React.ReactNode;
 }

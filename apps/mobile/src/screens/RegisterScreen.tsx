@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     marginBottom: SPACING.sm,
   },
-  // Matches the glass chrome of `input` above — PhoneField renders through the shared
+  // Matches the glass chrome of `input` above – PhoneField renders through the shared
   // FormFieldShell, which is transparent with a marginTop by default, so it needs this override
   // to look like the rest of the fields on this screen instead of NGO/Nursery's bordered-only look.
   phoneFieldBox: {

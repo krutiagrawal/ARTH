@@ -30,7 +30,7 @@ const REASON_LABEL = {
   other: 'Something else',
 }
 
-/** Reports I've filed — shared by every role's dashboard, hitting GET /api/reports/mine
+/** Reports I've filed – shared by every role's dashboard, hitting GET /api/reports/mine
  * scoped to whichever session's `proxy` is passed in. */
 export default function MyReportsClient({ proxy }) {
   const { items: reports, loading, loadingMore, hasMore, loadMore } = useTotalPagedList(proxy, '/reports/mine', {}, {

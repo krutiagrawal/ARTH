@@ -4,7 +4,7 @@ import { ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 // Rendered instead of any dashboard shell/content the moment the backend
-// reports ACCOUNT_BLOCKED — no navigation back into the app, sign-out only.
+// reports ACCOUNT_BLOCKED – no navigation back into the app, sign-out only.
 export default function AccountBlockedScreen({ reason, onSignOut }) {
   return (
     <div className="flex min-h-screen flex-1 flex-col items-center justify-center gap-4 bg-background px-6 py-24 text-center">

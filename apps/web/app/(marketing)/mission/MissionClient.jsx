@@ -65,8 +65,8 @@ export default function MissionClient({ plantersCount = 0, avatarEmojis = [] }) 
         </defs>
       </svg>
 
-      {/* Hero — cream. isolate: keeps the oversized, positioned hero photo from
-          painting above the next section's content (a CSS stacking quirk —
+      {/* Hero – cream. isolate: keeps the oversized, positioned hero photo from
+          painting above the next section's content (a CSS stacking quirk –
           positioned elements otherwise layer above later static siblings
           regardless of DOM order). */}
       <section className="pt-24 md:pt-28 pb-32 md:pb-44 px-5 md:px-10 isolate">
@@ -112,7 +112,7 @@ export default function MissionClient({ plantersCount = 0, avatarEmojis = [] }) 
         </div>
       </section>
 
-      {/* How we plant — pastel sage band, brown accent */}
+      {/* How we plant – pastel sage band, brown accent */}
       <section className="py-24 md:py-32 px-5 md:px-10 bg-primary">
         <div className="grid grid-cols-12 gap-10 md:gap-14">
           <div className="col-span-12 md:col-span-4">
@@ -144,7 +144,7 @@ export default function MissionClient({ plantersCount = 0, avatarEmojis = [] }) 
         </div>
       </section>
 
-      {/* Our values — cream */}
+      {/* Our values – cream */}
       <section id="values" className="py-24 md:py-32 px-5 md:px-10">
         <div className="grid grid-cols-12 gap-14 items-center">
           <div className="col-span-12 md:col-span-6">
@@ -169,7 +169,7 @@ export default function MissionClient({ plantersCount = 0, avatarEmojis = [] }) 
         </div>
       </section>
 
-      {/* About ARTH + Mission/Vision/Belief — bold earth-brown band */}
+      {/* About ARTH + Mission/Vision/Belief – bold earth-brown band */}
       <section className="py-24 md:py-32 px-5 md:px-10 bg-accent text-accent-foreground">
         <div className="grid grid-cols-12 gap-10 md:gap-14">
           <div className="col-span-12 md:col-span-5">
@@ -192,7 +192,7 @@ export default function MissionClient({ plantersCount = 0, avatarEmojis = [] }) 
         </div>
       </section>
 
-      {/* Founder's story — cream */}
+      {/* Founder's story – cream */}
       <section className="py-24 md:py-32 px-5 md:px-10 bg-secondary/40">
         <div className="grid grid-cols-12 gap-10 items-center">
           <Reveal className="col-span-12 md:col-span-4">

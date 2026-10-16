@@ -22,7 +22,7 @@ export function NgoProfileProvider({ children }) {
       setBlocked(false)
       return data
     } catch (err) {
-      // Only a real 401 means "you're not signed in" — anything else (the
+      // Only a real 401 means "you're not signed in" – anything else (the
       // API being unreachable, a 5xx, a network blip) must NOT bounce the
       // user to the login page, since that reads as "you got logged out"
       // when the actual problem is transient and has nothing to do with

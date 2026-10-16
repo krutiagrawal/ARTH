@@ -12,7 +12,7 @@ interface ChipListFieldProps {
   values: string[];
   onChange: (values: string[]) => void;
   max?: number;
-  /** e.g. isValidWebsite for link fields — an invalid entry is still added but flagged inline. */
+  /** e.g. isValidWebsite for link fields – an invalid entry is still added but flagged inline. */
   validate?: (value: string) => boolean;
   validationHint?: string;
   keyboardType?: 'default' | 'url';
@@ -21,8 +21,8 @@ interface ChipListFieldProps {
 
 /**
  * Type-a-value-tap-Add-chip-appears list editor. One component covers every "add several of
- * these" field in the NGO wizard — operating cities/states, social links, and every link array in
- * the proof-of-work section — since they all share the same interaction, just different content.
+ * these" field in the NGO wizard – operating cities/states, social links, and every link array in
+ * the proof-of-work section – since they all share the same interaction, just different content.
  */
 export function ChipListField({
   label,

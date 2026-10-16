@@ -2,7 +2,7 @@ import React from 'react';
 import Svg, { Ellipse, Circle, Path, Rect } from 'react-native-svg';
 import type { DecorationShapeProps } from './CanopyShapes';
 
-/** A symmetric fern frond — central stem with paired leaflets fanning outward. */
+/** A symmetric fern frond – central stem with paired leaflets fanning outward. */
 export function FernShape({ color, size }: DecorationShapeProps) {
   const pairs = [12, 20, 28, 36];
   return (

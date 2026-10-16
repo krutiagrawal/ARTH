@@ -20,7 +20,7 @@ export function LocationActions({
   address: string | null | undefined;
   /** Adds a "Call" chip as the first action, in the same row as Maps/Uber/Ola. */
   phone?: string | null;
-  /** Skip the label + "📍 address" line — for pages that already show the address elsewhere
+  /** Skip the label + "📍 address" line – for pages that already show the address elsewhere
    * (e.g. right under the name), so it isn't repeated. The address is still used to build the
    * Maps/Uber/Ola links either way. */
   hideAddressLine?: boolean;

@@ -14,7 +14,7 @@ import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 import { resolveMediaUrl } from '@/lib/media'
 
 /**
- * Browse other NGOs/nurseries and follow/report them — shared by every org-role dashboard
+ * Browse other NGOs/nurseries and follow/report them – shared by every org-role dashboard
  * (NGO, Nursery, Group) that has no other way to discover and follow other orgs today.
  * Takes that role's own session `proxy` so the follow/report actions post as that role's
  * account, not the individual/member session (see ReportDialog's own `proxy` prop for why).
@@ -168,7 +168,7 @@ export default function OrgBrowseClient({ proxy }) {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{row.city || '—'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{row.city || '–'}</p>
                   </div>
                 </div>
                 {row.description && <p className="mt-3 text-xs text-muted-foreground line-clamp-2">{row.description}</p>}

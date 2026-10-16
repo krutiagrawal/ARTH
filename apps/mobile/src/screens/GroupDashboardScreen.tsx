@@ -235,7 +235,7 @@ export function GroupDashboardScreen({ navigation, onNavigateTab }: GroupDashboa
 
         <Text style={[styles.sectionTitle, { color: seamText.primary }]}>Quick Actions</Text>
 
-        {/* Manage/Activity/Settings already have their own bottom-nav tab — only the things
+        {/* Manage/Activity/Settings already have their own bottom-nav tab – only the things
             that don't live in the tab bar get a Quick Action here. */}
         <QuickAction
           theme={theme}

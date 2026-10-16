@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test'
 
-// services/api (port 4000) must be running separately — the NGO dashboard
+// services/api (port 4000) must be running separately – the NGO dashboard
 // has no data of its own, everything comes from the backend via the
 // /api/ngo/proxy route. `reuseExistingServer` lets this run against a dev
 // server you already have open instead of always spawning a fresh one.

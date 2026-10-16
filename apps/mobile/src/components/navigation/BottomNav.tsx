@@ -25,7 +25,7 @@ const { width: SW } = Dimensions.get('window');
  * excluding the bottom safe-area inset it also pads itself by. Keep in sync with `styles.container`
  * paddingVertical (8+8) + `styles.tabContent` paddingVertical (4+4) + icon height (36) + label
  * line height/margin (~16) below. Screens under the floating nav should size their scroll-content
- * bottom padding off `useBottomNavClearance()` instead of guessing their own magic number — three
+ * bottom padding off `useBottomNavClearance()` instead of guessing their own magic number – three
  * screens previously each hardcoded a different guess and content ended up hidden behind the nav. */
 export const BOTTOM_NAV_CONTENT_HEIGHT = 76;
 
@@ -34,7 +34,7 @@ export const BOTTOM_NAV_CONTENT_HEIGHT = 76;
  * that if a screen wants more spacing. */
 export function useBottomNavClearance(extra = 16) {
   const insets = useSafeAreaInsets();
-  // Mirror the bar's own `paddingBottom: Math.max(insets.bottom, 8)` below — reserving
+  // Mirror the bar's own `paddingBottom: Math.max(insets.bottom, 8)` below – reserving
   // only `insets.bottom` under-counts by 8px wherever the inset is 0 (Android 3-button
   // nav), which ate most of the intended gap and let the bar sit on the last card.
   return BOTTOM_NAV_CONTENT_HEIGHT + Math.max(insets.bottom, 8) + extra;
@@ -59,7 +59,7 @@ export const USER_TABS: TabItem[] = [
   { name: 'Community', icon: '👥', label: 'Community' },
 ];
 
-/** An explicit background for callers whose screen isn't driven by the time-of-day theme — the
+/** An explicit background for callers whose screen isn't driven by the time-of-day theme – the
  * admin console, whose chrome is a fixed dark panel. Pass the same color the screen paints its
  * page with, so the floating bar reads as part of that page rather than a cream slab on top. */
 export interface NavSurface {
@@ -73,7 +73,7 @@ interface BottomNavProps {
   tabs: TabItem[];
   activeTab: TabName;
   onTabPress: (tab: TabName) => void;
-  /** Passed while a time-themed screen (user Home, NGO dashboard) is the active tab — retints the
+  /** Passed while a time-themed screen (user Home, NGO dashboard) is the active tab – retints the
    * nav to match that screen's current time-of-day period. Leave undefined for a static
    * beige/green bar. Ignored when `surface` is also given. */
   theme?: TimeTheme | null;
@@ -94,7 +94,7 @@ interface NavPalette {
 }
 
 function paletteFromTheme(theme: TimeTheme): NavPalette {
-  // The bar floats over the *page*, not over a card — so it has to take the seam color the screen
+  // The bar floats over the *page*, not over a card – so it has to take the seam color the screen
   // actually paints itself with. `theme.cardBackground` (what this used to use) diverges from it
   // at afternoon, morning, dawn and night, which is what made the bar look like a foreign object
   // on exactly those periods.
@@ -107,14 +107,14 @@ function paletteFromTheme(theme: TimeTheme): NavPalette {
   return {
     background,
     border: theme.cardBorder,
-    // Follow the seam's luminance, not `cardTint` — Night keeps light-tinted cards while its seam
+    // Follow the seam's luminance, not `cardTint` – Night keeps light-tinted cards while its seam
     // is a deep indigo, and a light blur over that muddies into grey.
     tint: relativeLuminance(background) < 0.4 ? 'dark' : 'light',
     labelInactive: text.secondary,
     labelActive: accent,
     indicator: accent,
     iconPill: theme.accentColorSoft,
-    // `accentColorSoft` is a ~15% alpha wash — useless as a gradient stop on a solid FAB, so
+    // `accentColorSoft` is a ~15% alpha wash – useless as a gradient stop on a solid FAB, so
     // lighten the accent itself for the top stop to keep the button's sheen.
     fabColors: [mixHex(theme.accentColor, '#FFFFFF', 0.35), theme.accentColor],
   };
@@ -184,7 +184,7 @@ function TabButton({
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            {/* A vector plus instead of the '➕' glyph — some Android/Expo Go emoji fonts have no
+            {/* A vector plus instead of the '➕' glyph – some Android/Expo Go emoji fonts have no
                 color presentation for it and fall back to a black tofu box that reads as a cross. */}
             <Animated.View style={[styles.plusIconWrap, iconStyle]}>
               <View style={styles.plusBarH} />

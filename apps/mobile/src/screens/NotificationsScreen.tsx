@@ -43,7 +43,7 @@ function describe(n: ApiNotification): string {
     case 'tree_observation_logged':
       return 'added an observation on your tree';
     case 'tree_update_received':
-      return 'sent an update on your tree — review it';
+      return 'sent an update on your tree – review it';
     case 'tree_update_decided':
       return (n.data as any)?.decision === 'accepted' ? 'accepted your tree update' : 'reviewed your tree update';
     case 'new_post_from_followed':
@@ -79,13 +79,13 @@ function describe(n: ApiNotification): string {
     case 'order_out_for_delivery':
       return 'Your order is on its way';
     case 'order_delivered':
-      return 'Your order has arrived — view your planting guide 🌱';
+      return 'Your order has arrived – view your planting guide 🌱';
     case 'order_cancelled':
       return 'Your order was cancelled and refunded';
     case 'order_ready_for_pickup':
       return 'Your order is ready for pickup';
     case 'order_picked_up':
-      return 'Your order is ready — view your planting guide 🌱';
+      return 'Your order is ready – view your planting guide 🌱';
     case 'order_plantation_verified':
       return "This order's saplings are now verified ARTH Trees 🌳";
     case 'order_fulfillment_today':
@@ -224,7 +224,7 @@ function iconFor(n: ApiNotification): string {
   }
 }
 
-/** "Today" / "Yesterday" / "12 March" — the section headings. */
+/** "Today" / "Yesterday" / "12 March" – the section headings. */
 function dayLabel(iso: string): string {
   const date = new Date(iso);
   const today = new Date();
@@ -363,7 +363,7 @@ export function NotificationsScreen({ navigation }: any) {
         return;
       }
       // Nurseries are the only recipients of a request notification; individual planters are the
-      // only recipients of a fulfilled/declined one — the type alone is enough to route correctly.
+      // only recipients of a fulfilled/declined one – the type alone is enough to route correctly.
       if (n.type === 'reservation_requested') {
         navigation.navigate('NurseryReservations');
         return;

@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 /**
  * Reduce Motion is layered: the OS-level "Reduce Motion" accessibility setting is the
  * default, and a local in-app Settings toggle can force it on regardless of the OS setting
- * (but never forces it back off if the OS has it on — the OS preference always wins when set).
+ * (but never forces it back off if the OS has it on – the OS preference always wins when set).
  * This is a pure client-side preference, deliberately not routed through the backend
  * ApiUserSettings schema (mirrors the local-persistence pattern SoundContext.tsx uses for mute).
  */

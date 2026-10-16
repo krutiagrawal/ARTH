@@ -18,7 +18,7 @@ interface GlassCardProps {
 
 /**
  * Which text tokens (primary/secondary/muted) read legibly on a given `GlassCard` variant.
- * `dark` is the only variant dark enough to need light text — the rest (`light`/`sage`/
+ * `dark` is the only variant dark enough to need light text – the rest (`light`/`sage`/
  * `golden`/`warm`) are all pale/cream-ish washes that need the app's normal dark text. Screens
  * should pull text color from this instead of independently guessing `COLORS.white` vs.
  * `textPrimary` next to a `variant=` prop, which is how several headers ended up white-on-cream.
@@ -59,7 +59,7 @@ export function GlassCard({
     },
     // Borderless by design. The old 1px `rgba(168,128,90,0.35)` outline drew a hard brown box
     // around every card, which is the single biggest thing separating these from the frosted,
-    // edge-free cards in the reference mockup — depth comes from the shadow instead. The fill is
+    // edge-free cards in the reference mockup – depth comes from the shadow instead. The fill is
     // also lighter and slightly more translucent so it reads as glass over the page rather than
     // an opaque cream slab sitting on top of it.
     warm: {
@@ -111,7 +111,7 @@ export function BlurCard({
 }
 
 const styles = StyleSheet.create({
-  // No `borderWidth` here — each variant declares its own, so `warm` can opt out entirely.
+  // No `borderWidth` here – each variant declares its own, so `warm` can opt out entirely.
   card: {
     overflow: 'hidden',
   },

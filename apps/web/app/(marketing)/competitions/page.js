@@ -1,6 +1,6 @@
 // TODO(post-launch): re-enable competitions. Disabled before launch because a
 // competition with a handful of seeded/fake entries looks worse than no
-// competition at all — bring this back once there's a real base of active
+// competition at all – bring this back once there's a real base of active
 // planters who can actually enter and vote. To restore: delete the stub
 // below and uncomment the original implementation.
 
@@ -23,14 +23,14 @@ export default function Page() {
   )
 }
 
-/* ORIGINAL IMPLEMENTATION — restore after launch:
+/* ORIGINAL IMPLEMENTATION – restore after launch:
 
 import { prisma } from '@/lib/prisma'
 import CompetitionsClient from './CompetitionsClient'
 
 export const metadata = {
   title: 'Competitions',
-  description: 'Join ARTH competitions and challenges — plant, document and compete for the movement.',
+  description: 'Join ARTH competitions and challenges – plant, document and compete for the movement.',
 }
 
 export default async function Page() {

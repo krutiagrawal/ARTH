@@ -1,4 +1,4 @@
-/** Levenshtein edit distance — single-row DP, O(n*m) time and O(min(n,m)) space. */
+/** Levenshtein edit distance – single-row DP, O(n*m) time and O(min(n,m)) space. */
 function levenshtein(a, b) {
   if (a === b) return 0
   if (a.length === 0) return b.length
@@ -18,7 +18,7 @@ function levenshtein(a, b) {
   return prevRow[b.length]
 }
 
-/** 1 = identical, 0 = completely different — normalized so short and long names are comparable. */
+/** 1 = identical, 0 = completely different – normalized so short and long names are comparable. */
 function similarity(a, b) {
   const maxLen = Math.max(a.length, b.length, 1)
   return 1 - levenshtein(a, b) / maxLen
@@ -28,7 +28,7 @@ const FUZZY_THRESHOLD = 0.5
 
 /**
  * Ranks a catalog of named items against a free-text query, catching both partial typing
- * ("ros" -> "Rose") and typos/misspellings ("roze" -> "Rose", "gulmohr" -> "Gulmohar") — the
+ * ("ros" -> "Rose") and typos/misspellings ("roze" -> "Rose", "gulmohr" -> "Gulmohar") – the
  * latter is what a plain substring filter misses, which is what leads someone to add a
  * near-duplicate catalog entry instead of finding the one that already exists.
  */

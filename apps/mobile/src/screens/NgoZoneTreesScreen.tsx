@@ -31,7 +31,7 @@ const STATUS_FILTERS: (TreeHealthStatus | 'all')[] = ['all', 'not_checked', 'hea
 export function NgoZoneTreesScreen({ navigation, route }: any) {
   const { zoneId, zoneName, driveId } = route.params as { zoneId: string | null; zoneName: string; driveId: string | null };
   const insets = useSafeAreaInsets();
-  // A null driveId is the "Independent Plantings" pseudo-plantation — those trees have no zone either
+  // A null driveId is the "Independent Plantings" pseudo-plantation – those trees have no zone either
   // (zones only exist under a real drive), so there's no zoneId to filter by there.
   const listQuery = usePlantedTrees(driveId ? { driveId, zoneId: zoneId ?? 'unzoned' } : { driveId: 'none' });
   const { data, isLoading, refetch } = listQuery;
@@ -87,7 +87,7 @@ export function NgoZoneTreesScreen({ navigation, route }: any) {
         <View style={styles.addButton} />
       </View>
 
-      {/* Explicit height (not just contentContainerStyle) — a horizontal ScrollView here was
+      {/* Explicit height (not just contentContainerStyle) – a horizontal ScrollView here was
           measuring its own viewport shorter than the pills actually render, silently clipping
           the bottom of every pill at the same boundary regardless of the pills' own padding. */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
@@ -177,14 +177,14 @@ const styles = StyleSheet.create({
   filterScroll: { flexGrow: 0, height: 52 },
   filterRow: { alignItems: 'center', paddingHorizontal: 20, gap: 8, paddingBottom: 10 },
   // flexShrink: 0 keeps every chip at its own natural content width inside the horizontally
-  // scrolling row — without it, two-word labels like "Not Checked" could get squeezed narrower
+  // scrolling row – without it, two-word labels like "Not Checked" could get squeezed narrower
   // than their siblings and wrap the label onto a second line, which combined with the pill's
   // huge borderRadius turned that one chip into a tall vertical capsule instead of a pill.
   filterChip: { flexShrink: 0, paddingVertical: 8, paddingHorizontal: 12, borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.warmBrown, backgroundColor: 'transparent' },
   filterChipActive: { backgroundColor: COLORS.sage, borderColor: COLORS.sage },
   // Explicit lineHeight (rather than leaving it to the font's own metrics) is the fix for
   // descenders on labels like "Healthy"/"Struggling" getting visually clipped at the pill's
-  // bottom edge — a bare fontSize gave the text just barely enough box to fit the cap-height,
+  // bottom edge – a bare fontSize gave the text just barely enough box to fit the cap-height,
   // not the 'g'/'y' tails below the baseline.
   filterChipText: { fontSize: 12, lineHeight: 16, color: COLORS.textSecondary, fontWeight: '600' },
   filterChipTextActive: { color: COLORS.white },

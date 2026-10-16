@@ -21,7 +21,7 @@ export function AuthProvider({ children }) {
       const res = await fetch('/api/member/proxy/auth/me')
       if (!res.ok) {
         // A blocked account keeps its session (don't bounce to "logged out")
-        // — it just gets a dedicated blocked screen instead of dashboard content.
+        // – it just gets a dedicated blocked screen instead of dashboard content.
         const data = await res.json().catch(() => null)
         if (data?.error === 'ACCOUNT_BLOCKED') {
           setBlocked(true)

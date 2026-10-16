@@ -83,7 +83,7 @@ function TreeRow({ tree, onPress }: { tree: ApiTree; onPress: () => void }) {
   );
 }
 
-// Display order for the counts row — healthy first (the reassuring headline number), then
+// Display order for the counts row – healthy first (the reassuring headline number), then
 // anything that needs attention, "not checked" last since it's an absence-of-signal state.
 const COUNT_ORDER: TreeHealthStatus[] = ['healthy', 'struggling', 'dead', 'removed', 'not_checked'];
 
@@ -271,7 +271,7 @@ export function MyTreesScreen({ navigation, route }: any) {
               <Text style={styles.attentionEmoji}>{counts.struggling > 0 ? '🥀' : '🩺'}</Text>
               <Text style={styles.attentionText}>
                 {counts.struggling > 0
-                  ? `${counts.struggling} ${counts.struggling === 1 ? 'tree is' : 'trees are'} struggling — tap to review`
+                  ? `${counts.struggling} ${counts.struggling === 1 ? 'tree is' : 'trees are'} struggling – tap to review`
                   : `${counts.not_checked} ${counts.not_checked === 1 ? 'tree hasn’t' : 'trees haven’t'} had a health check`}
               </Text>
               <Text style={styles.attentionChevron}>›</Text>

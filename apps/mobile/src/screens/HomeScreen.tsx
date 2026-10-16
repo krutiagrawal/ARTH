@@ -47,19 +47,19 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 import { TEXT } from '../constants/typography';
 const { width: SW, height: SH } = Dimensions.get('window');
-/** How tall the illustrated hero section is — sky/hills/lake (or the real illustration image)
+/** How tall the illustrated hero section is – sky/hills/lake (or the real illustration image)
  * plus the header text and stat row that sit on top of it. A normal-flow block, not a fixed
  * backdrop, so it scrolls away with the rest of the page.
  *
  * NOTE: with `resizeMode="cover"`, the container's aspect ratio is always well under the
  * illustrations' 1.5:1 landscape aspect, so the image's full vertical range (sky through
- * hills/lake) is never cropped out regardless of this value — only the sides get cropped. This
+ * hills/lake) is never cropped out regardless of this value – only the sides get cropped. This
  * was briefly dropped to 0.45 to try to close up perceived "too much space" below the hero, but
  * that space was actually between the *cards themselves* (mascot/XP/missions/etc.), not inside
- * the hero — so 0.54 is restored here and `scrollContent`'s gap is what got tightened instead. */
+ * the hero – so 0.54 is restored here and `scrollContent`'s gap is what got tightened instead. */
 const HERO_HEIGHT = SH * 0.54;
 
-/** Forces text to full/partial white during 'night'/'lateNight' — HomeScreen only. Does NOT touch
+/** Forces text to full/partial white during 'night'/'lateNight' – HomeScreen only. Does NOT touch
  * useTimeTheme.ts's per-period values, since that hook is shared by Forest/NGO/Corporate/Group
  * dashboards too and this ask was scoped to Home. A plain function (not a hook) so it can be
  * called from HomeScreen's child components that read their own `theme` locally (MissionCard,
@@ -85,9 +85,9 @@ function weatherEmoji(condition: string): string {
 }
 
 
-/** The entire illustrated top section — header text, stat row, hero illustration (a real image
+/** The entire illustrated top section – header text, stat row, hero illustration (a real image
  * when the current period has one, else the Skia-drawn ForestHeroCanvas fallback), and the
- * Trees/CO2/Forest stats pill — as ONE normal-flow block. It's the first child of the page's
+ * Trees/CO2/Forest stats pill – as ONE normal-flow block. It's the first child of the page's
  * ScrollView, so it scrolls away with everything else instead of staying fixed while the rest of
  * the page scrolls on top of it. */
 function HeroSection({
@@ -137,11 +137,11 @@ function HeroSection({
       )}
 
       {/* Softens the seam into the flat page background below regardless of the illustration's
-          own exact bottom-edge color — matters most for real images, whose ground tone won't
+          own exact bottom-edge color – matters most for real images, whose ground tone won't
           pixel-match theme.cardBackground the way the Skia fallback's colors do. Proportional to
           HERO_HEIGHT (not a fixed px) so it's tall enough to fully resolve to the target color
           before the section ends, even when the illustration's ground is strongly saturated
-          (e.g. Blue Hour's purple-blue) — too short a fade leaves a hard visible edge right at
+          (e.g. Blue Hour's purple-blue) – too short a fade leaves a hard visible edge right at
           the hero/page boundary instead of a gradual blend. */}
       <LinearGradient
         colors={['rgba(0,0,0,0)', getHeroSeamColor(theme)]}
@@ -151,7 +151,7 @@ function HeroSection({
 
       {/* Header text, normal flow at the top of this block. Color follows theme.textOnSky so it
           stays legible on both dark skies (white) and pale skies like Morning/Afternoon (dark
-          green) — the shadow flips to a soft light glow for dark text instead of a dark shadow,
+          green) – the shadow flips to a soft light glow for dark text instead of a dark shadow,
           which would be invisible/wrong the other way round. */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View>
@@ -232,7 +232,7 @@ function HeroSection({
         </View>
       </View>
 
-      {/* Forest stats pill — anchored near the bottom edge of this section, at the hills/ground
+      {/* Forest stats pill – anchored near the bottom edge of this section, at the hills/ground
           seam, but part of this block's normal flow so it scrolls with everything else. Real
           glassmorphism: BlurView + a theme-tinted (not hardcoded white) translucent overlay, so
           the illustration behind it hints through and the color matches the current period. */}
@@ -483,7 +483,7 @@ function EcoFactCard({ fact, blurTarget, previewPeriod }: { fact: string; blurTa
   );
 }
 
-/** The primary "take action" entry point — the single most important tap target on Home. Sits
+/** The primary "take action" entry point – the single most important tap target on Home. Sits
  * right below the hero, ahead of the XP card and quests, so the real-world mission always
  * outranks the gamification below it. Opens GrowActionSheet's four contribution paths. */
 function HomeGrowCTA({ theme, onPress }: { theme: TimeTheme; onPress: () => void }) {
@@ -546,7 +546,7 @@ const GROW_ACTION_ROUTES: Record<Exclude<GrowAction['key'], 'plant'>, string> = 
   donate: 'Campaigns',
 };
 
-/** The four contribution paths behind HomeGrowCTA — all real, backend-connected flows. Renders
+/** The four contribution paths behind HomeGrowCTA – all real, backend-connected flows. Renders
  * through the shared `Sheet`, which is always the light/cream chrome regardless of time of day,
  * so its text stays the fixed light-mode colors (no `homeTextColor` here, unlike the hero cards
  * below which sit on the actual illustrated sky and do need to follow it). */
@@ -602,7 +602,7 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
   const sceneryMode = getSceneryMode(weather);
   const [growSheetVisible, setGrowSheetVisible] = useState(false);
   // blurMethod is intentionally omitted (Android "dimezisBlurView*" crashes the RenderThread on
-  // Android 16 here, since blurTarget is an ancestor of the BlurViews sampling it) — cards fake
+  // Android 16 here, since blurTarget is an ancestor of the BlurViews sampling it) – cards fake
   // glass depth with a diagonal sheen instead; blurTargetRef stays wired up as a harmless no-op.
   const blurTargetRef = useRef<View>(null);
 
@@ -625,11 +625,11 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomNavClearance }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
-        {/* Illustrated hero — header, stat row, scenery, and stats pill all scroll together as
+        {/* Illustrated hero – header, stat row, scenery, and stats pill all scroll together as
             one normal-flow block instead of a fixed backdrop the rest of the page scrolls over. */}
         <HeroSection theme={theme} user={user} navigation={navigation} onNavigateTab={onNavigateTab} weather={weather} coords={coords} blurTarget={blurTargetRef} />
 
-        {/* Primary "take action" entry point — outranks quests/XP below it in hierarchy */}
+        {/* Primary "take action" entry point – outranks quests/XP below it in hierarchy */}
         <View style={styles.growCtaSection}>
           <HomeGrowCTA theme={theme} onPress={() => setGrowSheetVisible(true)} />
         </View>
@@ -722,7 +722,7 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
         </TouchableOpacity>
       )}
 
-      {/* Ambient scenery — rendered last so it drifts on top of everything, a constant animation.
+      {/* Ambient scenery – rendered last so it drifts on top of everything, a constant animation.
           Reacts to real detected weather: rain when rainy, a windy breeze when cold, leaves otherwise. */}
       <View style={styles.ambientLayer} pointerEvents="none">
         <AmbientCreatures period={theme.period} fireflyAreaHeight={SH * 0.55} />
@@ -829,7 +829,7 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
-  /** Overrides the dark drop-shadow above with a soft light glow instead — used when
+  /** Overrides the dark drop-shadow above with a soft light glow instead – used when
    * `theme.textOnSky` is a dark color (Morning/Afternoon), since a dark shadow behind dark text
    * would be invisible at best and muddy at worst. */
   textGlow: {
@@ -922,7 +922,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.md,
   },
   /** A blur alone reads as barely-there against a busy, similarly-toned illustration (e.g. pink
-   * hills at Sunset) — this flat semi-opaque layer underneath gives the pill a visible surface
+   * hills at Sunset) – this flat semi-opaque layer underneath gives the pill a visible surface
    * regardless of what's behind it. */
   forestStatsOverlay: {
     ...{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 } as const,

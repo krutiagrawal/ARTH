@@ -44,7 +44,7 @@ function ResponseRow({ r }: { r: ApiMyBulkResponse }) {
   );
 }
 
-/** Nursery-only — every offer this nursery has ever made to an NGO's bulk requirement, regardless
+/** Nursery-only – every offer this nursery has ever made to an NGO's bulk requirement, regardless
  * of status, unlike NurseryBulkRequirementsScreen which only shows still-open requirements. */
 export function MyBulkResponsesScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();

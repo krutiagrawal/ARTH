@@ -1,6 +1,6 @@
 import type { AdminCatalogModel } from '../api/admin';
 
-// Mirrors apps/web/lib/adminCatalogModels.js — field config for the six
+// Mirrors apps/web/lib/adminCatalogModels.js – field config for the six
 // catalog models exposed at /api/admin/catalog/:model.
 export interface CatalogField {
   name: string;

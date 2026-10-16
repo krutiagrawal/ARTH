@@ -240,7 +240,7 @@ export function EcoInsightsScreen({ navigation }: any) {
                 </GlassCard>
               ))
             ) : (
-              <Text style={styles.emptyText}>Fresh facts are on their way — check back soon.</Text>
+              <Text style={styles.emptyText}>Fresh facts are on their way – check back soon.</Text>
             )
           )}
         </Animated.View>

@@ -20,7 +20,7 @@ import { infiniteScrollProps } from '../hooks/useInfiniteList';
 type Mode = 'requests' | 'squad';
 
 /**
- * The "See all" destination for both Friend Requests and Your Squad on the Community page —
+ * The "See all" destination for both Friend Requests and Your Squad on the Community page –
  * one screen parameterized by `mode` since both are the same shape (search + a grouped list of
  * the same row components used in the Community preview).
  */

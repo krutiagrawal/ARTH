@@ -6,7 +6,7 @@ type FieldKind = 'email' | 'phone' | 'handle';
 const DEBOUNCE_MS = 500;
 
 /**
- * Debounced "is this already taken" check for a single registration field — fires ~500ms after
+ * Debounced "is this already taken" check for a single registration field – fires ~500ms after
  * the value settles, and only while `enabled` (pass the field's own format validity, so a
  * half-typed email/phone never triggers a request). Ignores stale responses if the value changes
  * again before a request resolves, same request-id-ref pattern as AddressSearchField's search.

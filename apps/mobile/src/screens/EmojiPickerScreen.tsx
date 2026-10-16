@@ -14,7 +14,7 @@ const COLUMNS = 6;
 const TILE = (SW - SPACING.md * 2 - (COLUMNS - 1) * 8) / COLUMNS;
 
 /**
- * A curated grid of the app's own emoji, in place of the OS/library emoji keyboard — tapping a
+ * A curated grid of the app's own emoji, in place of the OS/library emoji keyboard – tapping a
  * tile reports the choice back to whichever screen navigated here (via `route.params.onSelect`)
  * and pops back immediately, no separate confirm step.
  */

@@ -14,7 +14,7 @@ export async function fetchTodayMissions(): Promise<ApiDailyMission[]> {
   return apiFetch<ApiDailyMission[]>('/api/missions/today');
 }
 
-/** Reports a completed share to the "Share Your Forest" quest — the only quest the server can't see happen. */
+/** Reports a completed share to the "Share Your Forest" quest – the only quest the server can't see happen. */
 export async function reportShareMission() {
   return apiFetch('/api/missions/share', { method: 'POST' });
 }

@@ -19,7 +19,7 @@ interface DocumentPickerFieldProps {
 const ACCEPTED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic'];
 
 /**
- * Row-style picker for certificate/registration documents — unlike PhotoPickerField's big
+ * Row-style picker for certificate/registration documents – unlike PhotoPickerField's big
  * drop-zone (built for a single photo per step), this is compact since a wizard step here shows
  * several of these back to back (one per registration type). Accepts a PDF or a photo of the
  * document, since scanned certificates arrive as either.

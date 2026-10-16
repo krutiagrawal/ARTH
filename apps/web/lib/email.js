@@ -13,7 +13,7 @@ export async function sendEmail({ to, subject, html }) {
   const from = process.env.EMAIL_FROM || 'ARTH <hello@arth.example.org>'
 
   if (!resend) {
-    console.warn(`[email] RESEND_API_KEY not set — skipping send. Would have sent "${subject}" to ${to}.\n${html}`)
+    console.warn(`[email] RESEND_API_KEY not set – skipping send. Would have sent "${subject}" to ${to}.\n${html}`)
     return { skipped: true }
   }
 

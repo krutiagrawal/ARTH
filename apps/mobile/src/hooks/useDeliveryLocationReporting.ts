@@ -8,9 +8,9 @@ const REPORT_INTERVAL_MS = 12_000;
 
 /**
  * Foreground-only GPS reporting for the delivery partner's active queue. Background tracking is
- * explicitly out of scope for this pass (no background-location permission/infra) — reporting
+ * explicitly out of scope for this pass (no background-location permission/infra) – reporting
  * runs only while the app is in the foreground and the partner has at least one order they've
- * actually tapped "Start delivery" on (an assigned-but-not-started order stays silent — see
+ * actually tapped "Start delivery" on (an assigned-but-not-started order stays silent – see
  * deliveryPartner.service.ts's reportLocation), and stops the moment either condition stops
  * holding. Mount once at the top of DeliveryPartnerMainApp so it survives the partner switching
  * between the Queue/Profile tabs.
@@ -32,7 +32,7 @@ export function useDeliveryLocationReporting() {
         const loc = await getCurrentPositionWithTimeout({ accuracy: Location.Accuracy.Balanced });
         await reportMutation.mutateAsync({ lat: loc.coords.latitude, lng: loc.coords.longitude });
       } catch {
-        // A single missed report is fine — the next interval tick tries again.
+        // A single missed report is fine – the next interval tick tries again.
       }
     };
 

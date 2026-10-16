@@ -58,7 +58,7 @@ export default function Navbar() {
   const [hasPhotoHero, setHasPhotoHero] = useState(false)
   useEffect(() => {
     // Pages with a full-bleed photo directly under the navbar mark their hero
-    // section with [data-navbar-hero] — those get transparent-nav-with-white-text;
+    // section with [data-navbar-hero] – those get transparent-nav-with-white-text;
     // everywhere else the nav just uses normal dark text over the page's own
     // light background.
     const hero = document.querySelector('[data-navbar-hero]')

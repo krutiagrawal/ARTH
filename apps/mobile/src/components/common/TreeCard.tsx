@@ -15,7 +15,7 @@ const GROWTH_STAGE_EMOJI = ['🌱', '🌿', '🌳', '🌲', '🎋'];
 const GROWTH_STAGE_LABEL = ['Seedling', 'Sprouting', 'Growing', 'Maturing', 'Flourishing'];
 
 /**
- * Shared tree-summary card — same TREE NAME → species → status/health → location hierarchy
+ * Shared tree-summary card – same TREE NAME → species → status/health → location hierarchy
  * everywhere a tree gets shown (Home's recent trees, Map's selected-tree card). `size="chip"` is
  * a compact horizontal-scroll card; `size="card"` is a larger standalone card (e.g. a map bottom
  * sheet). Accepts an optional time-of-day `theme` so it can retint on Home; falls back to a
@@ -28,9 +28,9 @@ interface TreeCardProps {
   onPress?: () => void;
   theme?: TimeTheme | null;
   style?: StyleProp<ViewStyle>;
-  /** Ref to the screen's `BlurTargetView` — required on Android for this to actually blur. */
+  /** Ref to the screen's `BlurTargetView` – required on Android for this to actually blur. */
   blurTarget?: RefObject<View | null>;
-  /** Default-hidden — only My Trees currently opts in, so every other call site (Home, Map)
+  /** Default-hidden – only My Trees currently opts in, so every other call site (Home, Map)
    * renders exactly as before. */
   showHealthStatus?: boolean;
 }
@@ -62,7 +62,7 @@ export function TreeCard({ tree, size = 'chip', onPress, theme, style, blurTarge
         ]}
       >
         <View style={[StyleSheet.absoluteFill, { backgroundColor: bgTint }]} />
-        {/* Fake glass sheen — Android has no real live blur here, see HomeScreen.tsx. */}
+        {/* Fake glass sheen – Android has no real live blur here, see HomeScreen.tsx. */}
         <LinearGradient
           colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
           start={{ x: 0, y: 0 }}

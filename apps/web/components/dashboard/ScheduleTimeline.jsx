@@ -6,7 +6,7 @@ const TONE_ICON = {
 }
 
 /**
- * Vertical timeline list — pairs with ScheduleCalendar. `events`:
+ * Vertical timeline list – pairs with ScheduleCalendar. `events`:
  * [{ time, title, subtitle, icon, color: 'primary' | 'sand' }]
  */
 export default function ScheduleTimeline({ events }) {

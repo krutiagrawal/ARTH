@@ -41,7 +41,7 @@ const DEFAULT_SETTINGS: ApiUserSettings = {
 };
 
 const { width: SW } = Dimensions.get('window');
-/** Sourced from app.json#expo.version via expo-constants — never hand-typed, so it can't drift. */
+/** Sourced from app.json#expo.version via expo-constants – never hand-typed, so it can't drift. */
 const appVersionLabel = Constants.expoConfig?.version ? `ARTH v${Constants.expoConfig.version}` : 'ARTH';
 
 interface ToggleItem {
@@ -325,7 +325,7 @@ export function SettingsScreen({ navigation }: any) {
             onPress={() => navigation.navigate('Sessions')}
           />
           {/* These consumer-side activities (buying, adopting, donating, sponsoring) are specific
-              to individual users — this same screen is also reached by NGO's gear icon, so an NGO
+              to individual users – this same screen is also reached by NGO's gear icon, so an NGO
               account must not see rows that don't apply to it (see the "My Activity"/"Browse"
               sections below for what NGO does get). */}
           {user?.role === 'user' && (
@@ -398,7 +398,7 @@ export function SettingsScreen({ navigation }: any) {
           )}
         </BorderCard>
 
-        {/* My Activity — same shape for every role: who I follow, what I've liked/saved/reported. */}
+        {/* My Activity – same shape for every role: who I follow, what I've liked/saved/reported. */}
         <SettingsSectionHeader title="My Activity" />
         <BorderCard noPadding>
           <SettingsRow variant="light"
@@ -432,7 +432,7 @@ export function SettingsScreen({ navigation }: any) {
           />
         </BorderCard>
 
-        {/* Browse — NGO reaches this screen via its gear icon and (unlike individual users) has
+        {/* Browse – NGO reaches this screen via its gear icon and (unlike individual users) has
             no Map/Community-based discovery of other orgs, so it needs an explicit entry point. */}
         {user?.role === 'ngo' && (
           <>

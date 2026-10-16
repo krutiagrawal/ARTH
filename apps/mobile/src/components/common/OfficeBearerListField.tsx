@@ -23,7 +23,7 @@ const EMPTY_BEARER: OfficeBearer = { name: '', designation: '', phone: '', email
 
 /**
  * 0-N repeatable office-bearer cards, capped at `max` (3, per NGO Darpan's own convention of
- * capturing multiple key functionaries). Entirely optional — an NGO with just a primary contact
+ * capturing multiple key functionaries). Entirely optional – an NGO with just a primary contact
  * can leave this empty.
  */
 export function OfficeBearerListField({ bearers, onChange, max = 3 }: OfficeBearerListFieldProps) {
@@ -52,7 +52,7 @@ export function OfficeBearerListField({ bearers, onChange, max = 3 }: OfficeBear
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>Office bearers</Text>
-      <Text style={styles.hint}>Optional — 2-3 key trustees/board members strengthens your application.</Text>
+      <Text style={styles.hint}>Optional – 2-3 key trustees/board members strengthens your application.</Text>
 
       {bearers.map((bearer, index) => (
         <View key={index} style={styles.card}>

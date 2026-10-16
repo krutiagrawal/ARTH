@@ -16,7 +16,7 @@ import { ApiError } from '../api/client';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 import { TEXT } from '../constants/typography';
-// Loaded only once a donation is actually in flight — see PaymentSheetRunner's own comment for
+// Loaded only once a donation is actually in flight – see PaymentSheetRunner's own comment for
 // why this keeps `@stripe/stripe-react-native` out of this screen's own module-scope imports.
 const LazyPaymentSheetRunner = React.lazy(() => import('../components/payments/PaymentSheetRunner'));
 
@@ -51,7 +51,7 @@ export function CampaignDetailScreen({ navigation, route }: any) {
   const [message, setMessage] = useState('');
   const [pan, setPan] = useState('');
   const [paidCents, setPaidCents] = useState(0);
-  // Non-null only while a real payment sheet is in flight — mounts LazyPaymentSheetRunner below.
+  // Non-null only while a real payment sheet is in flight – mounts LazyPaymentSheetRunner below.
   const [activeClientSecret, setActiveClientSecret] = useState<string | null>(null);
 
   // Donations can't push the total past the NGO's goal: cap at what's still needed (whole rupees).
@@ -91,7 +91,7 @@ export function CampaignDetailScreen({ navigation, route }: any) {
       });
       setPaidCents(amountCents);
 
-      // No Stripe key configured on the backend (local/dev only) — the donation already came
+      // No Stripe key configured on the backend (local/dev only) – the donation already came
       // back succeeded, so there's no payment sheet to present. Skip straight to success.
       if (intent.clientSecret) {
         setActiveClientSecret(intent.clientSecret);
@@ -102,7 +102,7 @@ export function CampaignDetailScreen({ navigation, route }: any) {
       setDonated(true);
       queryClient.invalidateQueries({ queryKey: ['campaigns'] });
       // The Campaigns tab on an NGO's public profile embeds its own campaign snapshots inside
-      // this separate query — never invalidated otherwise, so it kept showing the pre-donation total.
+      // this separate query – never invalidated otherwise, so it kept showing the pre-donation total.
       queryClient.invalidateQueries({ queryKey: ['ngos', 'public'] });
       setPaying(false);
     } catch (e) {
@@ -299,7 +299,7 @@ export function CampaignDetailScreen({ navigation, route }: any) {
 
               {capRupees != null && (
                 <Text style={[styles.capHint, capNotice && styles.capHintActive]}>
-                  {capNotice ? `Maximum is ${formatRupees(capRupees * 100)} — that's all this campaign still needs.` : `This campaign needs ${formatRupees(remainingCents!)} more. You can donate up to ${formatRupees(capRupees * 100)}.`}
+                  {capNotice ? `Maximum is ${formatRupees(capRupees * 100)} – that's all this campaign still needs.` : `This campaign needs ${formatRupees(remainingCents!)} more. You can donate up to ${formatRupees(capRupees * 100)}.`}
                 </Text>
               )}
 

@@ -24,11 +24,11 @@ const TONE_STYLES = {
 /**
  * A single stat card for dashboard Overview grids.
  * `sparklineData`: optional array of `{ value }` points, shown inline next
- * to the value rather than in a separate footer row — keeps the card short.
- * `tone`: 'primary' | 'sand' — alternates card accent color across a grid.
- * `href`: optional — renders a small circular arrow-link button next to
+ * to the value rather than in a separate footer row – keeps the card short.
+ * `tone`: 'primary' | 'sand' – alternates card accent color across a grid.
+ * `href`: optional – renders a small circular arrow-link button next to
  * `description`.
- * `breakdown`: optional array of `{ label, value, href? }` — when present,
+ * `breakdown`: optional array of `{ label, value, href? }` – when present,
  * takes over from `href` and renders a popover with the sub-counts that make
  * up this card's total, each linking through to its own filtered list.
  */

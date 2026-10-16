@@ -19,7 +19,7 @@ interface Props {
 
 /**
  * Stories-sized (9:16) "my impact" poster: one hero number (CO₂), two supporting figures, and a
- * quiet footer. Deliberately sparse — it's captured as an image, so it has to read at a glance.
+ * quiet footer. Deliberately sparse – it's captured as an image, so it has to read at a glance.
  */
 export function ImpactShareCard({ name, co2, treesPlanted, streak }: Props) {
   const flights = Math.max(0, co2 / AVG_FLIGHT_CO2_KG);

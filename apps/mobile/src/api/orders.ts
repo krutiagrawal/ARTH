@@ -74,7 +74,7 @@ export interface ApiOrder {
   scheduledFor: string | null;
   pickupWindowLabel: string | null;
   customerNote: string | null;
-  // Shown to whoever hands off the saplings (rider or nursery staff) — one shared code for both
+  // Shown to whoever hands off the saplings (rider or nursery staff) – one shared code for both
   // the pickup and delivery branches. Replaces the old delivery-only `deliveryOtp`.
   handoffCode: string | null;
   createdAt: string;
@@ -88,7 +88,7 @@ export interface ApiOrder {
   cancelledAt: string | null;
   items: ApiOrderItem[];
   saplingUnits: ApiSaplingUnit[];
-  // Null for pickup orders — there's nothing to deliver to.
+  // Null for pickup orders – there's nothing to deliver to.
   address: ApiAddress | null;
   nursery: { id: string; nurseryName: string; logoUrl: string | null; contactPhone: string | null };
   tracking: ApiOrderTracking | null;
@@ -103,8 +103,8 @@ export async function fetchMyOrder(id: string): Promise<ApiOrder> {
   return apiFetch<ApiOrder>(`/api/orders/${id}`);
 }
 
-// clientSecret is null when the backend has no Stripe key configured (local/dev only — see
-// order.service.ts's checkout()) — the order comes back already confirmed and there's no payment
+// clientSecret is null when the backend has no Stripe key configured (local/dev only – see
+// order.service.ts's checkout()) – the order comes back already confirmed and there's no payment
 // sheet to present.
 export async function checkout(
   addressId: string,

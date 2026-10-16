@@ -63,7 +63,7 @@ export function LogCommunityObservationScreen({ navigation, route }: any) {
       if (!capturedPhoto) return;
       setStage('submitting');
 
-      // Always a fresh fix right now, same convention as PlantTreeScreen's submit-time read —
+      // Always a fresh fix right now, same convention as PlantTreeScreen's submit-time read –
       // whatever ambient location the nearby list used to sort by is never reused here.
       let freshPosition;
       try {
@@ -126,7 +126,7 @@ export function LogCommunityObservationScreen({ navigation, route }: any) {
             <Text style={styles.confirmSpecies}>{speciesEmoji ? `${speciesEmoji} ` : ''}{species ?? 'ARTH tree'}</Text>
             {publicId ? <Text style={styles.confirmPublicId}>ARTH #{publicId}</Text> : null}
             <TouchableOpacity style={styles.primaryButton} onPress={handleConfirm}>
-              <Text style={styles.primaryButtonText}>Yes, this is it — take a photo</Text>
+              <Text style={styles.primaryButtonText}>Yes, this is it – take a photo</Text>
             </TouchableOpacity>
           </>
         ) : null}

@@ -7,7 +7,7 @@ import { useAvailabilityCheck } from './useAvailabilityCheck'
  * Bundles the repeated email-field validation pattern used across every signup form: format
  * validation, "touched" gating so errors don't flash before the user finishes typing, and a
  * debounced real-time "already registered" check once the format is valid. Mirrors
- * apps/mobile/src/hooks/useEmailField.ts, but doesn't own the field's value/setter — callers here
+ * apps/mobile/src/hooks/useEmailField.ts, but doesn't own the field's value/setter – callers here
  * already keep a single `form` state object, so this just derives status from it.
  *
  * Pass `checkAvailability: false` for fields that edit an existing account's contact info rather

@@ -16,7 +16,7 @@ import { useTotalPagedList } from '@/hooks/useTotalPagedList'
 import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
 // 'accounts' is a shorthand the backend expands to targetType in (user, ngo,
-// nursery, corporate) — this is the queue's default tab, since account
+// nursery, corporate) – this is the queue's default tab, since account
 // reports are what admin needs to see first/on priority.
 const TABS = [
   { value: 'accounts', label: 'Accounts' },

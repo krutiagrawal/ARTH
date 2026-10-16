@@ -85,7 +85,7 @@ export function CitrusShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** A bunch of grapes — clustered berries with a leaf and stem. */
+/** A bunch of grapes – clustered berries with a leaf and stem. */
 export function GrapesShape({ color, size }: DecorationShapeProps) {
   const grapes = [
     { x: 30, y: 26 }, { x: 24, y: 32 }, { x: 36, y: 32 },

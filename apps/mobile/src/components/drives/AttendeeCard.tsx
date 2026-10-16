@@ -7,7 +7,7 @@ import type { ApiDriveAttendee } from '../../api/drives';
 
 interface Props {
   attendee: ApiDriveAttendee;
-  /** NGO-provided transport — shows where this volunteer boards. */
+  /** NGO-provided transport – shows where this volunteer boards. */
   showBoarding: boolean;
   /** Completed drive: show the "showed up" checkbox. */
   checkable: boolean;

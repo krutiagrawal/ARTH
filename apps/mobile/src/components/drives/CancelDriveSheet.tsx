@@ -19,7 +19,7 @@ interface Props {
 
 const MIN_LENGTH = 5;
 
-/** The organiser must say why — it's shown to every RSVP'd volunteer in their notification. */
+/** The organiser must say why – it's shown to every RSVP'd volunteer in their notification. */
 export function CancelDriveSheet({ visible, driveTitle, confirmedCount, submitting, error, onClose, onSubmit }: Props) {
   const keyboardHeight = useKeyboardHeight();
   const [reason, setReason] = useState('');

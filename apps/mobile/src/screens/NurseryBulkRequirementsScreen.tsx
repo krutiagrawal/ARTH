@@ -25,12 +25,12 @@ const TABS: { key: FilterTab; label: string }[] = [
   { key: 'completed', label: 'Completed' },
 ];
 
-/** "Responded"/"Accepted"/"Completed" aren't BulkRequirement.status values on their own — they're
+/** "Responded"/"Accepted"/"Completed" aren't BulkRequirement.status values on their own – they're
  * derived from a combination of the requirement's status and this nursery's own response status,
  * per the product spec's simplified filter set. */
 function matchesTab(req: ApiBulkRequirement, tab: FilterTab): boolean {
   const responseStatus = req.myResponse?.status;
-  // A withdrawn/declined response is a dead end, not an active claim on this requirement — if the
+  // A withdrawn/declined response is a dead end, not an active claim on this requirement – if the
   // requirement itself is still open, the nursery can respond again, so it belongs back in "Open"
   // rather than disappearing (matches respondToRequirement's own open/partially_fulfilled gate).
   const hasNoActiveResponse = !responseStatus || responseStatus === 'withdrawn' || responseStatus === 'declined';
@@ -131,10 +131,10 @@ export function NurseryBulkRequirementsScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   // A horizontal ScrollView doesn't reliably self-size its height to content (especially on
-  // Android) — flexGrow: 0 pins it to its content height rather than letting it fill whatever
+  // Android) – flexGrow: 0 pins it to its content height rather than letting it fill whatever
   // space this flex-column screen gives it. See NurseryOrdersScreen.tsx's tabsScroll comment.
   tabsScroll: { flexGrow: 0 },
-  // alignItems: 'center' is load-bearing — see NurseryOrdersScreen.tsx's tabsRow comment: without
+  // alignItems: 'center' is load-bearing – see NurseryOrdersScreen.tsx's tabsRow comment: without
   // it a horizontal ScrollView's chips stretch to fill the row's cross-axis height instead of
   // sizing to their own text.
   tabsRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, gap: 8, paddingVertical: 10 },

@@ -102,7 +102,7 @@ export async function updateNurseryProfile(input: UpdateNurseryProfileInput): Pr
   if (input.followPolicy !== undefined) form.append('followPolicy', input.followPolicy);
   if (input.offersPickup !== undefined) form.append('offersPickup', String(input.offersPickup));
   // The multipart schema (updateNurseryProfileSchema) coerces every string through
-  // z.coerce.number(), so an empty string would coerce to 0 rather than clearing the field —
+  // z.coerce.number(), so an empty string would coerce to 0 rather than clearing the field –
   // there's no wire-level way to distinguish "0 cents" from "cleared" over multipart. Omitting
   // the field entirely (leave-unchanged) is the only non-destructive option from this client.
   if (input.deliveryFeeCents !== undefined && input.deliveryFeeCents !== null) form.append('deliveryFeeCents', String(input.deliveryFeeCents));
@@ -267,7 +267,7 @@ export interface SaplingStockInput {
   isFree?: boolean;
   priceCents?: number;
   photo?: { uri: string; name: string; type: string };
-  // Link to the shared species catalog (preferred) — OR supply an inline species definition below.
+  // Link to the shared species catalog (preferred) – OR supply an inline species definition below.
   speciesId?: string;
   speciesDetails?: InlineSpeciesInput;
   ageLabel?: string;
@@ -316,7 +316,7 @@ function stockToForm(input: Partial<SaplingStockInput>): FormData {
 }
 
 /** JSON body variant (no photo): the inline species definition, unlike the multipart path, is
- * sent as a real nested object here — the wire contract only requires stringifying it for
+ * sent as a real nested object here – the wire contract only requires stringifying it for
  * multipart, where every field has to be a string part. */
 function stockToJsonBody(input: Partial<SaplingStockInput>): Record<string, unknown> {
   const { photo, speciesDetails, ...rest } = input;
@@ -448,7 +448,7 @@ export interface ApiNurseryOrder {
   subtotalCents: number;
   deliveryFeeCents: number;
   totalCents: number;
-  /** Renamed from the old `deliveryOtp` — same handoff code, used for both pickup and delivery
+  /** Renamed from the old `deliveryOtp` – same handoff code, used for both pickup and delivery
    * confirmation now. */
   handoffCode: string | null;
   fulfillmentType: 'pickup' | 'delivery';
@@ -460,16 +460,16 @@ export interface ApiNurseryOrder {
   plantationVerifiedAt: string | null;
   createdAt: string;
   /** `saplingUnits` is only populated on the item when this came from the order-detail endpoint
-   * (`GET /api/nursery/orders/:id`) — the list endpoint doesn't include it. */
+   * (`GET /api/nursery/orders/:id`) – the list endpoint doesn't include it. */
   items: { species: string; quantity: number; unitPriceCents: number; saplingUnits?: ApiSaplingUnit[] }[];
-  /** Null for a pickup order — a pickup never has a delivery address. */
+  /** Null for a pickup order – a pickup never has a delivery address. */
   address: { line1: string; line2: string | null; landmark: string | null; city: string; pincode: string } | null;
   user: { id: string; name: string; handle: string };
-  /** Only populated on the order-detail endpoint (`GET /api/nursery/orders/:id`) — the list
+  /** Only populated on the order-detail endpoint (`GET /api/nursery/orders/:id`) – the list
    * endpoint doesn't include it, and a pickup order never gets a DeliveryTracking row.
    * `riderName`/`riderPhone` are null until the nursery dispatches to a delivery partner. Once
    * assigned, confirming delivery with the customer's handoff code happens in the partner's own
-   * app — this is read-only here so the nursery can see who they assigned. */
+   * app – this is read-only here so the nursery can see who they assigned. */
   tracking?: { deliveryPartnerId: string | null; riderName: string | null; riderPhone: string | null } | null;
 }
 
@@ -497,7 +497,7 @@ export async function dispatchOrder(id: string, deliveryPartnerId: string): Prom
   return apiFetch<ApiNurseryOrder>(`/api/nursery/orders/${id}/dispatch`, { method: 'POST', body: { deliveryPartnerId } });
 }
 
-/** Swaps the assigned delivery partner while the order is still `out_for_delivery` — i.e. before
+/** Swaps the assigned delivery partner while the order is still `out_for_delivery` – i.e. before
  * the rider has completed delivery. Unlike `dispatchOrder`, this doesn't change the order status. */
 export async function reassignDeliveryPartner(id: string, deliveryPartnerId: string): Promise<ApiNurseryOrder> {
   return apiFetch<ApiNurseryOrder>(`/api/nursery/orders/${id}/reassign-delivery-partner`, { method: 'POST', body: { deliveryPartnerId } });
@@ -553,7 +553,7 @@ export interface ApiBulkResponse {
   canPickup: boolean;
   message: string | null;
   status: BulkResponseStatus;
-  // Only populated once handed off — share this with the NGO in person so they can confirm
+  // Only populated once handed off – share this with the NGO in person so they can confirm
   // receipt; never trust "fulfilled" on this response until they do (see confirmResponseReceived
   // in bulkRequirement.service.ts).
   handoffCode: string | null;
@@ -578,13 +578,13 @@ export interface ApiBulkRequirement {
   species: { commonName: string } | null;
   distanceKm: number | null;
   myResponse: ApiBulkResponse | null;
-  /** Nursery's total SaplingStock quantity for this requirement's species — null means the
+  /** Nursery's total SaplingStock quantity for this requirement's species – null means the
    * requirement has no specific species (nothing to check against), not that stock is unchecked. */
   myStockQuantity: number | null;
 }
 
 /** No status filter returns only `open`/`partially_fulfilled` requirements server-side (see
- * bulkRequirement.service.ts's `listRelevantForNursery`) — there's no dedicated "everything"
+ * bulkRequirement.service.ts's `listRelevantForNursery`) – there's no dedicated "everything"
  * mode, so a `fulfilled` requirement only shows up when explicitly requested with that status. */
 export async function fetchNurseryBulkRequirements(status?: BulkRequirementStatus, cursor?: string): Promise<Page<ApiBulkRequirement>> {
   return apiFetch<Page<ApiBulkRequirement>>(pagedPath('/api/nursery/bulk-requirements', cursor, { status }));
@@ -618,13 +618,13 @@ export interface ApiMyBulkResponse {
   species: string;
 }
 
-/** The nursery's full response history across every requirement status — the activity-hub view,
+/** The nursery's full response history across every requirement status – the activity-hub view,
  * unlike fetchNurseryBulkRequirements which only returns still-open requirements. */
 export async function fetchMyBulkResponses(cursor?: string): Promise<Page<ApiMyBulkResponse>> {
   return apiFetch<Page<ApiMyBulkResponse>>(pagedPath('/api/nursery/bulk-requirements/responses/mine', cursor));
 }
 
-/** Nursery declares the physical handoff happened — not yet "fulfilled" on its own; the NGO must
+/** Nursery declares the physical handoff happened – not yet "fulfilled" on its own; the NGO must
  * confirm receipt with the returned handoffCode (see confirmNgoBulkResponseReceived) before this
  * mints traceable sapling units or counts toward the nursery's reputation. */
 export async function markBulkResponseHandedOff(responseId: string): Promise<ApiBulkResponse> {

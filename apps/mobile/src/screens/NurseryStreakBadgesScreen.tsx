@@ -63,7 +63,7 @@ export function NurseryStreakBadgesScreen({ navigation }: any) {
 
         <Text style={styles.title}>Growth & Trust</Text>
         <Text style={styles.subtitle}>
-          Built from real ARTH activity — orders fulfilled, inventory kept fresh, and NGO partnerships — not a daily check-in.
+          Built from real ARTH activity – orders fulfilled, inventory kept fresh, and NGO partnerships – not a daily check-in.
         </Text>
 
         <BorderCard style={styles.card}>
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, gap: 16 },
   header: { flexDirection: 'row' },
-  // The one real "button" on this page — sage green fill, matching the requested palette
+  // The one real "button" on this page – sage green fill, matching the requested palette
   // (beige page, sage buttons, brown used sparingly for card borders/accents).
   dismissButton: {
     flexDirection: 'row',

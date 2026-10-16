@@ -13,12 +13,12 @@ interface AddressSearchFieldProps {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
-  /** Fired when the user taps a suggestion — use this to also capture lat/lng/city rather than
+  /** Fired when the user taps a suggestion – use this to also capture lat/lng/city rather than
    * just the free-text label. */
   onSelectSuggestion?: (suggestion: ApiAddressSuggestion) => void;
   placeholder?: string;
   /** Wraps the value across multiple lines instead of clipping/horizontally-scrolling a single
-   * line — on, by default, since a resolved address is usually too long for one line. */
+   * line – on, by default, since a resolved address is usually too long for one line. */
   multiline?: boolean;
   dark?: boolean;
   /** Renders suggestions in normal flow (pushing content down) instead of floating over it. Use
@@ -34,7 +34,7 @@ interface AddressSearchFieldProps {
  * A `FormField`-styled address input with Nominatim (OpenStreetMap) search-as-you-type
  * suggestions, so typing a real address doesn't require typing every line correctly by hand.
  * Search runs through our own backend (`/api/geocode/search`), which holds the required
- * Nominatim User-Agent header and request throttling — this component never calls Nominatim
+ * Nominatim User-Agent header and request throttling – this component never calls Nominatim
  * directly.
  */
 export function AddressSearchField({
@@ -54,7 +54,7 @@ export function AddressSearchField({
   const [focused, setFocused] = useState(false);
   const requestIdRef = useRef(0);
   const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
-  // Selecting a suggestion changes `value` programmatically — without this guard, the effect
+  // Selecting a suggestion changes `value` programmatically – without this guard, the effect
   // below (which treats any `value` change while focused as a fresh search query) would
   // immediately re-search for the address text itself and reopen the dropdown right under it.
   const justSelectedRef = useRef(false);
@@ -94,7 +94,7 @@ export function AddressSearchField({
     onChangeText(suggestion.label);
     onSelectSuggestion?.(suggestion);
     // The TextInput is still focused at this point (the tap landed before the delayed blur
-    // below runs) — on Android, a controlled TextInput that still holds native focus can ignore
+    // below runs) – on Android, a controlled TextInput that still holds native focus can ignore
     // a programmatic `value` update entirely, silently keeping whatever the user last typed on
     // screen. Blurring it releases native ownership of the text so the new `value` actually
     // renders.
@@ -120,7 +120,7 @@ export function AddressSearchField({
             setFocused(true);
             onFocus?.();
           }}
-          // A tap on a suggestion fires after this blur — delay hiding the list long enough for
+          // A tap on a suggestion fires after this blur – delay hiding the list long enough for
           // that press to land, or the list would vanish out from under the tap first.
           onBlur={() => setTimeout(() => setFocused(false), 150)}
         />
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     marginTop: 4,
-    // Opaque, unlike FormField's own transparent box — this floats over whatever's below it on
+    // Opaque, unlike FormField's own transparent box – this floats over whatever's below it on
     // the page (other fields, text), so it needs a real fill or that content shows through.
     backgroundColor: COLORS.beigeLight,
     borderRadius: RADIUS.md,

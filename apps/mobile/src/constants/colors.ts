@@ -50,7 +50,7 @@ export const COLORS = {
   textPrimary: '#2D2A25',
   // Darkened from #6B5E4A / #9E8E78. Both were light enough that body copy and field labels read
   // as washed-out grey on the cream surfaces they almost always sit on. Still the same warm-brown
-  // family (so nothing turns cold or generic-grey), just with real contrast — and the
+  // family (so nothing turns cold or generic-grey), just with real contrast – and the
   // secondary/muted distinction survives, so call sites don't need to change.
   textSecondary: '#4A4034',
   textMuted: '#6E6355',
@@ -81,7 +81,7 @@ export const COLORS = {
 };
 
 // Semantic text-on-surface tokens. Prefer these over reaching for `COLORS.white`/`textPrimary`
-// directly next to a background color pick — several screens picked the wrong one because a raw
+// directly next to a background color pick – several screens picked the wrong one because a raw
 // palette gives no signal about which surface a color is meant to sit on (e.g. text styles named
 // "...Dark" ended up meaning "dark text" in one file and "text for a dark surface" in another,
 // and the latter sometimes landed on a light background by mistake). Pick the surface this text

@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process'
 
 const apiDir = path.resolve(__dirname, '../../../services/api')
 
-// The app's DELETE endpoints only soft-cancel/soft-close (by design — NGOs
+// The app's DELETE endpoints only soft-cancel/soft-close (by design – NGOs
 // need an audit trail), so cleanup via the API leaves rows behind forever.
 // Tests that seed disposable rows directly via page.request (not through
 // real user-facing CRUD) hard-delete them here instead, straight from the

@@ -58,8 +58,8 @@ interface GroupActivityScreenProps {
 /**
  * Merges auto-generated member activity (tree planted, streak milestone, achievement
  * unlocked, challenge joined/completed) with manually posted photo/status updates into one
- * timeline. Works for both the group's own login (no groupId — owner-facing endpoint) and a
- * regular member viewing a group they belong to (groupId param — member-facing endpoint).
+ * timeline. Works for both the group's own login (no groupId – owner-facing endpoint) and a
+ * regular member viewing a group they belong to (groupId param – member-facing endpoint).
  */
 export function GroupActivityScreen({ navigation, route }: GroupActivityScreenProps) {
   const insets = useSafeAreaInsets();

@@ -1,4 +1,4 @@
-// Mirrors backend/prisma/seed.ts `forest_level_tiers` — presentation-only display labels for a user's numeric level.
+// Mirrors backend/prisma/seed.ts `forest_level_tiers` – presentation-only display labels for a user's numeric level.
 const FOREST_LEVEL_TIERS: { minLevel: number; name: string }[] = [
   { minLevel: 1, name: 'Sprout' },
   { minLevel: 2, name: 'Sapling' },

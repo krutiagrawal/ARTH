@@ -6,7 +6,7 @@ export interface DecorationShapeProps {
   size: number;
 }
 
-/** A puffy overlapping-canopy cluster on a short trunk stub — the general-purpose "extra tree
+/** A puffy overlapping-canopy cluster on a short trunk stub – the general-purpose "extra tree
  * accent" shape, reused across most Canopy catalog options via color variation. */
 export function ClusterCanopyShape({ color, size }: DecorationShapeProps) {
   return (
@@ -20,7 +20,7 @@ export function ClusterCanopyShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** Drooping vine/willow style canopy — a canopy mass up top with several curved hanging tendrils. */
+/** Drooping vine/willow style canopy – a canopy mass up top with several curved hanging tendrils. */
 export function DrapeCanopyShape({ color, size }: DecorationShapeProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 60 60">

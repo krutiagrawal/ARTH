@@ -24,7 +24,7 @@ export default function SettingsClient() {
   const [phoneTouched, setPhoneTouched] = useState(false)
   const [responsiblePhoneTouched, setResponsiblePhoneTouched] = useState(false)
 
-  // Format validation only, no real-time duplicate check — this edits NurseryProfile.contactPhone
+  // Format validation only, no real-time duplicate check – this edits NurseryProfile.contactPhone
   // (a business contact number), not the User.phone identity field.
   const phoneField = usePhoneField(form?.contactPhone ?? '', phoneTouched, { checkAvailability: false })
   const responsiblePhoneField = usePhoneField(form?.responsiblePersonPhone ?? '', responsiblePhoneTouched, { checkAvailability: false })

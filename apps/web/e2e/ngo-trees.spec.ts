@@ -30,8 +30,8 @@ test.describe('NGO Adoptable Trees CRUD', () => {
     await page.getByRole('button', { name: 'Save changes' }).click()
     await expect(page.getByText(updatedNickname)).toBeVisible({ timeout: 10_000 })
 
-    // "Remove" sets status to `removed` — same audit-trail design as
-    // drives/campaigns — it does not delete the row, so it stays visible
+    // "Remove" sets status to `removed` – same audit-trail design as
+    // drives/campaigns – it does not delete the row, so it stays visible
     // with an updated status badge rather than disappearing.
     const updatedRow = page.getByRole('row', { name: updatedNickname })
     await updatedRow.getByRole('button').last().click()
@@ -49,7 +49,7 @@ test.describe('NGO Adoptable Trees CRUD', () => {
 
   test('releasing an adopted tree with a reason returns it to available', async ({ page }) => {
     await page.goto('/ngo/dashboard/trees')
-    // Search first — a growing trees list (from other CRUD runs) can push
+    // Search first – a growing trees list (from other CRUD runs) can push
     // this older, seeded row off the default first page.
     await page.getByPlaceholder('Search trees…').fill('E2E Seed')
     await expect(page.getByText('E2E Seed Tree')).toBeVisible({ timeout: 10_000 })
@@ -63,7 +63,7 @@ test.describe('NGO Adoptable Trees CRUD', () => {
     await page.getByRole('alertdialog').getByRole('button', { name: 'Release adoption' }).click()
     await expect(row.getByText('available')).toBeVisible({ timeout: 10_000 })
     // Fixture healing (re-adopting this row) happens in seed_e2e.ts on the
-    // next run's global-setup — not restored here, so this stays the only
+    // next run's global-setup – not restored here, so this stays the only
     // test in the suite allowed to mutate the seeded tree's adoption state.
   })
 

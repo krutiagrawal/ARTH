@@ -104,7 +104,7 @@ export function AddressBookScreen({ navigation }: any) {
           ? {
               ok: false,
               text: pincodeCheck.actual
-                ? `Pincode doesn’t match this address — the location is in ${pincodeCheck.actual}`
+                ? `Pincode doesn’t match this address – the location is in ${pincodeCheck.actual}`
                 : 'Pincode doesn’t match this address',
             }
           : pincodeCheck.status === 'unverified'
@@ -125,9 +125,9 @@ export function AddressBookScreen({ navigation }: any) {
         const found = await reverseGeocode(lat, lng).catch(() => null);
         if (found) {
           setLine1(found.label);
-          setLocationNotice({ ok: true, text: '✓ Matched from GPS — check the address above is correct' });
+          setLocationNotice({ ok: true, text: '✓ Matched from GPS – check the address above is correct' });
         } else {
-          setLocationNotice({ ok: false, text: "Pin captured, but we couldn't find an address for it — please type it above" });
+          setLocationNotice({ ok: false, text: "Pin captured, but we couldn't find an address for it – please type it above" });
         }
       } else {
         setError('Location permission is needed so deliveries can be tracked to this address.');
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   deleteText: { color: COLORS.dangerDark },
   card: { marginBottom: 8 },
   input: {
-    // No fill — an outline on the page, not a panel laid over it. Matches FormField's recipe.
+    // No fill – an outline on the page, not a panel laid over it. Matches FormField's recipe.
     backgroundColor: 'transparent',
     borderRadius: RADIUS.lg,
     borderWidth: 1.5,

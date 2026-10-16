@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { proxy } from '../proxy'
 
-// Tenure + lifetime-impact tiers — independent of ARTH Trust Score. Mirrors
+// Tenure + lifetime-impact tiers – independent of ARTH Trust Score. Mirrors
 // apps/mobile/src/screens/NgoStreakBadgesScreen.tsx's NGO_GROWTH_LEVEL_META (same tiers,
 // separate platform-native copy, same convention nursery's ReputationClient.jsx follows).
 export const GROWTH_LEVEL_META = {

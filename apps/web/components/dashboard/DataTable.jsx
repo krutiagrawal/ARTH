@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils'
  * instead of slicing client-side. Sort/search still apply within the loaded page.
  *
  * `enableRowSelection` + `onSelectionChange`: opt-in checkbox column (first
- * NGO Survival/Impact's bulk health-check action needs this) — everything
+ * NGO Survival/Impact's bulk health-check action needs this) – everything
  * else omits the prop and gets the exact same table as before.
  */
 export default function DataTable({

@@ -35,7 +35,7 @@ function App() {
   const [submitting, setSubmitting] = useState(false)
   const emailField = useEmailField(email, emailTouched)
   // NGO gets a separate, admin-reviewed doorway; Group is also its own doorway
-  // (its own registration form/fields) but self-serve — no approval wait.
+  // (its own registration form/fields) but self-serve – no approval wait.
   const needsNgoDoorway = accountType === 'ngo'
   const needsGroupDoorway = accountType === 'group'
   const needsDoorway = needsNgoDoorway || needsGroupDoorway

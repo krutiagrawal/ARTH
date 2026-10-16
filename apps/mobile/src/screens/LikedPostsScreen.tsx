@@ -10,7 +10,7 @@ import { useLikedPosts } from '../hooks/useSocialQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 import { TEXT } from '../constants/typography';
-/** Available to every role's account — posts I've liked, regardless of what I'm logged in as. */
+/** Available to every role's account – posts I've liked, regardless of what I'm logged in as. */
 export function LikedPostsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { data, isLoading, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useLikedPosts();

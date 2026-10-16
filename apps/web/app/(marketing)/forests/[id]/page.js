@@ -39,17 +39,17 @@ export default async function App({ params }) {
         </Link>
 
         <div className="grid grid-cols-12 gap-8 md:gap-14">
-          {/* Image — left, large, stays put while the story scrolls beside it.
+          {/* Image – left, large, stays put while the story scrolls beside it.
               data-navbar-hero: the fixed, normally-transparent Navbar watches for
               this marker to switch to light, shadowed text while a photo (not the
-              page's own light background) is behind it — see Navbar.jsx. */}
+              page's own light background) is behind it – see Navbar.jsx. */}
           <div data-navbar-hero className="col-span-12 md:col-span-6 md:sticky md:top-28 md:self-start">
             <div className="relative aspect-[4/5] md:aspect-[3/4] overflow-hidden rounded-3xl soft-shadow">
               <img src={forest.imageUrl} alt={forest.name} className="h-full w-full object-cover" />
             </div>
           </div>
 
-          {/* Story — right, newspaper-feature styling */}
+          {/* Story – right, newspaper-feature styling */}
           <div className="col-span-12 md:col-span-6">
             <p className="eyebrow flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{forest.location} · Field dispatch</p>
             <h1 className="font-serif text-5xl md:text-6xl leading-[1.02] mt-3">{forest.name}</h1>
@@ -81,7 +81,7 @@ export default async function App({ params }) {
           </div>
         </div>
 
-        {/* Gallery — a row of square frames once the big portrait image ends,
+        {/* Gallery – a row of square frames once the big portrait image ends,
             more from the ground rather than one single hero shot. Past 6 photos
             it scrolls horizontally instead of wrapping into more rows. */}
         {gallery.length > 0 && (

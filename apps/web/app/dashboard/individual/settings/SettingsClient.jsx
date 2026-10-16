@@ -185,7 +185,7 @@ function SecuritySection() {
       await proxy('/users/me/change-password', { method: 'POST', body: { currentPassword, newPassword } })
       toast.success('Password changed. Please sign in again.')
       // Changing the password revokes every session on the backend, including
-      // this one's refresh token — sign out locally to match reality instead
+      // this one's refresh token – sign out locally to match reality instead
       // of leaving the UI pointing at a session the server just killed.
       await logout()
       router.push('/login')

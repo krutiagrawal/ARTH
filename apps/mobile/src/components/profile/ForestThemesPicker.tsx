@@ -6,7 +6,7 @@ import { COLORS } from '../../constants/colors';
 import type { ApiForestTheme } from '../../api/themes';
 
 import { TEXT } from '../../constants/typography';
-/** Shared by User and Group profiles — the only two roles with a forest-theme customization.
+/** Shared by User and Group profiles – the only two roles with a forest-theme customization.
  * Three themes per row; each card states plainly whether it is locked or unlocked. */
 export function ForestThemesPicker({
   themes,

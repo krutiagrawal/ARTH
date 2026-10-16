@@ -1,5 +1,5 @@
 /**
- * Decorative, hand-composed inline SVG scene for the NGO sidebar — muted
+ * Decorative, hand-composed inline SVG scene for the NGO sidebar – muted
  * mountains, a stylized tree, a sun, a couple of birds, faint dotted
  * texture. No external image asset (none exists in the repo). Fades into
  * the sidebar background via a bottom mask so it blends rather than

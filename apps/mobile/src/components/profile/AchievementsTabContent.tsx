@@ -14,21 +14,21 @@ import type { StreakWeek } from '../../api/streaks';
 
 import { TEXT } from '../../constants/typography';
 /**
- * Everything that used to live directly on the profile dashboard — level/XP, streak, badges,
- * and the permanent story archive — now grouped into one tab instead of a long scroll.
+ * Everything that used to live directly on the profile dashboard – level/XP, streak, badges,
+ * and the permanent story archive – now grouped into one tab instead of a long scroll.
  */
 export function AchievementsTabContent({
   achievements,
   xp,
   streak,
-  /** Renders instead of the day-grid StreakCalendar — for NGO's weekly-cadence NgoStreakRow,
+  /** Renders instead of the day-grid StreakCalendar – for NGO's weekly-cadence NgoStreakRow,
    * whose 1D week shape doesn't fit StreakCalendar's 2D week-of-days grid. */
   customStreak,
-  /** ForestGallery only supports "my own" stories today — omit when viewing someone else. */
+  /** ForestGallery only supports "my own" stories today – omit when viewing someone else. */
   showForestGallery = false,
 }: {
   achievements: ApiAchievement[];
-  /** User-role only — NGO/Nursery/Group have no XP/level concept. */
+  /** User-role only – NGO/Nursery/Group have no XP/level concept. */
   xp?: { xp: number; level: number } | null;
   streak?: { streakCurrent: number; weeks: StreakWeek[] } | null;
   customStreak?: React.ReactNode;

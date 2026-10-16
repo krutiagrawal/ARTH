@@ -26,7 +26,7 @@ const SECTIONS: { icon: string; title: string; body: (n: { every: number; cap: n
   {
     icon: '⚡',
     title: 'Spending XP',
-    body: ({ xpCost }) => `No freezes left? ${xpCost} XP does the same job — to protect today, or to revive a missed day.`,
+    body: ({ xpCost }) => `No freezes left? ${xpCost} XP does the same job – to protect today, or to revive a missed day.`,
   },
   {
     icon: '💔',
@@ -50,7 +50,7 @@ function Stat({ value, label }: { value: string; label: string }) {
   );
 }
 
-/** "How streaks work" — live freeze/XP numbers on top, plain-language rules below. */
+/** "How streaks work" – live freeze/XP numbers on top, plain-language rules below. */
 export function StreakInfoSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { data: status, isLoading } = useStreakStatus();
 

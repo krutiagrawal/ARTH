@@ -13,7 +13,7 @@ export interface ApiPublicFollowersPage {
   followers: ApiPublicFollower[];
 }
 
-/** Read-only accepted-followers list, visible to any visitor — not the owner-only inbox. */
+/** Read-only accepted-followers list, visible to any visitor – not the owner-only inbox. */
 export async function fetchNgoPublicFollowers(ngoId: string, page = 1): Promise<ApiPublicFollowersPage> {
   return apiFetch<ApiPublicFollowersPage>(`/api/ngos/${ngoId}/followers?page=${page}&take=30`);
 }

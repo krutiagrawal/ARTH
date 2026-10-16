@@ -13,7 +13,7 @@ interface OptionCardProps {
 }
 
 /**
- * A big, full-width tappable answer card for quiz-style one-question-per-screen flows — the
+ * A big, full-width tappable answer card for quiz-style one-question-per-screen flows – the
  * translucent-card look of AccountTypeScreen's AccountTypeCard, plus a selected state (mint
  * border/fill + checkmark), so it reads as an answerable question option rather than a nav link.
  */

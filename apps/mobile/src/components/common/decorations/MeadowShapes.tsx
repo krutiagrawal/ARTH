@@ -57,7 +57,7 @@ export function TallGrassShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** A soft glowing swarm of fireflies — small circles with radial-gradient glow halos. */
+/** A soft glowing swarm of fireflies – small circles with radial-gradient glow halos. */
 export function FireflySwarmShape({ color, size }: DecorationShapeProps) {
   const flies = [
     { x: 16, y: 32 }, { x: 30, y: 18 }, { x: 44, y: 30 },

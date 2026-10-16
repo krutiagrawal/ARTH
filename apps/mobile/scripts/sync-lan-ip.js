@@ -9,7 +9,7 @@ const API_PORT = 4000;
 const ENV_PATH = path.join(__dirname, '..', '.env');
 const ENV_EXAMPLE_PATH = path.join(__dirname, '..', '.env.example');
 
-// Adapter names that are virtual/VPN/tunnel interfaces rather than a real wifi/ethernet link —
+// Adapter names that are virtual/VPN/tunnel interfaces rather than a real wifi/ethernet link –
 // their IPs won't be reachable from a phone on the same physical network.
 const IGNORE_NAME_PATTERN = /vmware|virtualbox|hyper-v|vethernet|loopback|tailscale|wsl|vpn|bluetooth|npcap/i;
 
@@ -36,7 +36,7 @@ function main() {
   const { chosen, candidates } = findLanIp();
 
   if (!chosen) {
-    console.warn('[sync-lan-ip] No LAN IPv4 address found — leaving .env untouched. Are you connected to a network?');
+    console.warn('[sync-lan-ip] No LAN IPv4 address found – leaving .env untouched. Are you connected to a network?');
     return;
   }
 

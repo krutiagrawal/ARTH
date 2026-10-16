@@ -9,7 +9,7 @@ export function hexToRgba(hex: string, alpha: number): string {
 }
 
 /** Perceived brightness of a '#RRGGBB' color, 0 (black) to 1 (white). WCAG relative luminance,
- * so the sRGB channels are linearised first — a plain (r+g+b)/3 average badly misjudges greens
+ * so the sRGB channels are linearised first – a plain (r+g+b)/3 average badly misjudges greens
  * and blues, which is exactly the range the time-of-day themes live in. */
 export function relativeLuminance(hex: string): number {
   const channel = (v: number) => {

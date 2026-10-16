@@ -173,7 +173,7 @@ const GROUP_TABS: TabItem[] = [
 ];
 
 // Settings moved off the tab bar and into the nursery's own profile screen (gear icon, next to
-// the "Edit profile" button) — the same place individual users reach Settings from, rather than
+// the "Edit profile" button) – the same place individual users reach Settings from, rather than
 // a dedicated tab. Orders takes the freed-up slot since it's a daily-use action.
 export type NurseryTabName = 'Home' | 'Stock' | 'Orders';
 
@@ -183,7 +183,7 @@ const NURSERY_TABS: TabItem[] = [
   { name: 'Orders', icon: '🚚', label: 'Orders' },
 ];
 
-// Deliberately tiny — this role's whole feature surface is "see my assigned deliveries" and
+// Deliberately tiny – this role's whole feature surface is "see my assigned deliveries" and
 // "see my own account/log out", unlike every other role's multi-tab dashboard.
 export type DeliveryPartnerTabName = 'Queue' | 'Profile';
 
@@ -193,7 +193,7 @@ const DELIVERY_PARTNER_TABS: TabItem[] = [
 ];
 
 // Both of this role's screens paint the same fixed cream→beigeLight gradient regardless of time
-// of day (unlike Home/Nursery, which are driven by useTimeTheme) — so the nav needs an explicit
+// of day (unlike Home/Nursery, which are driven by useTimeTheme) – so the nav needs an explicit
 // `surface`, not `theme`, or it retints itself to a time-of-day palette that doesn't match what's
 // actually behind it (e.g. a dark "night" bar floating over a still-bright cream page).
 const DELIVERY_PARTNER_NAV_SURFACE: NavSurface = { background: COLORS.beigeLight, tint: 'light' };
@@ -208,7 +208,7 @@ const CORPORATE_TABS: TabItem[] = [
 
 // No "More" tab: every item that used to live there is already reachable from the dashboard's
 // Quick Actions dock (or, for Followers, from the Community tab), so a fifth catch-all tab was
-// pure duplication. Post keeps the raised centre FAB, matching User/Nursery/Admin/Group/Corporate —
+// pure duplication. Post keeps the raised centre FAB, matching User/Nursery/Admin/Group/Corporate –
 // its onPress is special-cased in NgoMainApp to push the NgoPostUpdate stack screen rather than
 // switch tabs, since PostComposerScreen calls navigation.goBack() on submit/back, which would pop
 // NgoMain itself off the stack if 'Post' were ever a real activeTab value.
@@ -221,7 +221,7 @@ const NGO_TABS: TabItem[] = [
 ];
 
 // NGO approvals is the action admins repeat most (AdminHomeScreen's own mascot line nags about
-// pending count), so it takes the raised centre slot — same treatment as Post/Plant above.
+// pending count), so it takes the raised centre slot – same treatment as Post/Plant above.
 const ADMIN_TABS: TabItem[] = [
   { name: 'Overview', icon: '📊', label: 'Overview' },
   { name: 'NGOs', icon: '🏢', label: 'NGOs', raised: true },
@@ -232,7 +232,7 @@ const ADMIN_TABS: TabItem[] = [
 
 // The Suspense fallback shown while a lazily-imported screen's chunk (and any native-module
 // shim it drags in, e.g. @stripe/stripe-react-native) is still loading. Without a spinner here
-// this gap renders as a plain empty white view — easy to mistake for the app hanging.
+// this gap renders as a plain empty white view – easy to mistake for the app hanging.
 function LazyFallback() {
   return (
     <View style={[styles.mainContainer, styles.lazyFallback]}>
@@ -257,7 +257,7 @@ class MapErrorBoundary extends React.Component<
     return { hasError: true, message: error instanceof Error ? error.message : String(error) };
   }
   componentDidCatch(error: unknown) {
-    // Any render/load error in the Map lands here, not just Expo Go's missing native module —
+    // Any render/load error in the Map lands here, not just Expo Go's missing native module –
     // log it so a real bug isn't hidden behind the generic message below.
     console.error('[MapErrorBoundary]', error);
   }
@@ -300,7 +300,7 @@ class DonateErrorBoundary extends React.Component<
   }
 }
 
-/** NGO's own Map tab — 'ngo' mode hides the nurseries layer and keeps drives/planted trees front
+/** NGO's own Map tab – 'ngo' mode hides the nurseries layer and keeps drives/planted trees front
  * and centre. Wrapped in the same lazy + boundary pair as every other Map usage, since
  * react-native-maps has no Expo Go module. */
 function NgoMapScreen({ navigation }: any) {
@@ -314,7 +314,7 @@ function NgoMapScreen({ navigation }: any) {
 }
 
 /** Pushable Map for a nursery to see how it shows up alongside every other nursery on the same
- * map planters browse — the default ('user') mode, not 'ngo' mode, since 'ngo' mode hides the
+ * map planters browse – the default ('user') mode, not 'ngo' mode, since 'ngo' mode hides the
  * nurseries layer entirely. A nursery had no way to reach this screen at all before this route
  * existed; there was no "Map" tab on its own bottom nav the way the regular User role has. */
 function NurseryMapScreen({ navigation, route }: any) {
@@ -327,7 +327,7 @@ function NurseryMapScreen({ navigation, route }: any) {
   );
 }
 
-/** Pushable Map scoped to one NGO — reached from NgoProfileScreen's "View on map" button
+/** Pushable Map scoped to one NGO – reached from NgoProfileScreen's "View on map" button
  * ({ ngoId, ngoName } route params). Same default ('user') mode as NurseryMapScreen; MapScreen
  * itself reads route.params.ngoId to filter drives/adoptable-trees and show planting-map pins. */
 function NgoScopedMapScreen({ navigation, route }: any) {
@@ -340,7 +340,7 @@ function NgoScopedMapScreen({ navigation, route }: any) {
   );
 }
 
-// CheckoutScreen also uses @stripe/stripe-react-native (marketplace checkout) — same fix.
+// CheckoutScreen also uses @stripe/stripe-react-native (marketplace checkout) – same fix.
 const LazyCheckoutScreen = React.lazy(() =>
   import('../screens/CheckoutScreen').then((m) => ({ default: m.CheckoutScreen }))
 );
@@ -467,7 +467,7 @@ export type RootStackParamList = {
   NgoCreateCampaign: undefined;
   NgoReports: undefined;
   /** Deep-link into the Manage tab's drives/campaigns/trees segments from outside the bottom-tab
-   * flow (e.g. Reports' stat tiles) — the tab-embedded usage renders NgoManageScreen directly
+   * flow (e.g. Reports' stat tiles) – the tab-embedded usage renders NgoManageScreen directly
    * instead of through this route. */
   NgoManage: { initialSegment?: 'drives' | 'campaigns' | 'trees' } | undefined;
   NgoDonations: undefined;
@@ -519,7 +519,7 @@ export type RootStackParamList = {
 const Stack = createStackNavigator<RootStackParamList>();
 
 /**
- * Resets the stack back to Login whenever `logout()` actually finishes — nothing else does. The
+ * Resets the stack back to Login whenever `logout()` actually finishes – nothing else does. The
  * Splash screen only ever picks a starting route once, on the app's first mount; once a role's
  * `Main` stack (User/NGO/Admin) is showing, clearing `user` in AuthContext doesn't by itself pop
  * back to any screen, so "Sign out" looked like a dead button while the user was actually already
@@ -539,7 +539,7 @@ function useLogoutRedirect() {
 }
 
 /**
- * Redirects to the AccountBlocked screen the instant isBlocked flips true —
+ * Redirects to the AccountBlocked screen the instant isBlocked flips true –
  * same shape as useLogoutRedirect above, fired from AuthContext's
  * onAccountBlocked handler (see api/client.ts) rather than a nav-time check,
  * so a block that happens mid-session (not just at cold launch) still takes
@@ -557,7 +557,7 @@ function useBlockedRedirect() {
 
 function MainApp({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<TabName>('Home');
-  // Always called (Rules of Hooks) — only actually handed to BottomNav while Home is active, so
+  // Always called (Rules of Hooks) – only actually handed to BottomNav while Home is active, so
   // every other tab keeps the static beige/green look untouched.
   // Reads the same pinned-theme setting HomeScreen reads, so a permanently-pinned theme colors
   // the nav bar too instead of it silently following the live clock.
@@ -597,7 +597,7 @@ function MainApp({ navigation }: any) {
 
 function NgoMainApp({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<NgoTabName>('Home');
-  // Which segment the Manage tab opens on — set alongside activeTab when the dashboard's Your
+  // Which segment the Manage tab opens on – set alongside activeTab when the dashboard's Your
   // Impact tiles (Drives/Trees/Campaigns) jump straight to their own data instead of always
   // landing on Manage's default Drives segment.
   const [manageSegment, setManageSegment] = useState<'drives' | 'campaigns' | 'trees'>('drives');
@@ -613,7 +613,7 @@ function NgoMainApp({ navigation }: any) {
     setActiveTab(tab);
   }, []);
 
-  // 'Post' is a raised FAB, not a real tab — see the NGO_TABS comment on why it pushes the stack
+  // 'Post' is a raised FAB, not a real tab – see the NGO_TABS comment on why it pushes the stack
   // screen instead of ever becoming `activeTab`.
   const handleTabPress = useCallback((tab: TabName) => {
     if (tab === 'Post') {
@@ -790,7 +790,7 @@ function CorporateMainApp({ navigation }: any) {
   );
 }
 
-/** Admin chrome is deliberately outside the time-of-day system — Overview paints a fixed dark
+/** Admin chrome is deliberately outside the time-of-day system – Overview paints a fixed dark
  * panel, the other two lay a `nightSky` gradient over the page. The floating nav takes whichever
  * tone its tab actually ends on so it reads as part of the page rather than a cream slab. */
 const ADMIN_NAV_SURFACE: Record<AdminTabName, NavSurface> = {
@@ -836,13 +836,13 @@ function AdminMainApp({ navigation }: any) {
 }
 
 export function AppNavigator() {
-  // Registers this device for push once signed in. A silent no-op in Expo Go — see the hook.
+  // Registers this device for push once signed in. A silent no-op in Expo Go – see the hook.
   usePushRegistration();
   useLogoutRedirect();
   useBlockedRedirect();
 
   // This app's screens are all designed phone-first (fixed-width headers, edge-to-edge gradients,
-  // etc.) — stretching that across a ~800-1000dp tablet canvas would distort every layout. Rather
+  // etc.) – stretching that across a ~800-1000dp tablet canvas would distort every layout. Rather
   // than a bespoke tablet redesign, cap each screen's card to a comfortable phone-like width and
   // center it; the app-shell backdrop fills the rest so it doesn't read as a bug.
   return (

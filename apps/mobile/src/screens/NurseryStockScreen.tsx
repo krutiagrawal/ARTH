@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   addCard: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 8 },
   formLabel: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted, marginBottom: 6 },
   searchInput: {
-    // No fill — an outline on the page, not a panel laid over it. Matches FormField's recipe.
+    // No fill – an outline on the page, not a panel laid over it. Matches FormField's recipe.
     backgroundColor: 'transparent',
     borderRadius: RADIUS.md,
     borderWidth: 1.5,

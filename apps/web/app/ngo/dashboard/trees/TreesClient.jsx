@@ -31,7 +31,7 @@ export default function TreesClient() {
     pageSize: 30,
   })
   const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
-  // Deep-linked from Reports ("Trees available"/"Trees adopted" stat tiles) — filters the list to
+  // Deep-linked from Reports ("Trees available"/"Trees adopted" stat tiles) – filters the list to
   // just that status instead of landing on everything mixed together.
   const statusFilter = useSearchParams().get('status')
   const visibleItems = statusFilter ? items.filter((t) => t.status === statusFilter) : items

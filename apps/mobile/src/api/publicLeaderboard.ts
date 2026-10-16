@@ -22,7 +22,7 @@ interface PublicLeaderboardPage<T> {
   hasMore: boolean;
 }
 
-/** Public, visible-to-anyone ranking — distinct from `fetchNgoLeaderboard`, which requires an NGO login and returns only "my rank". */
+/** Public, visible-to-anyone ranking – distinct from `fetchNgoLeaderboard`, which requires an NGO login and returns only "my rank". */
 export async function fetchPublicNgoLeaderboard(limit = 20, offset = 0): Promise<PublicLeaderboardPage<PublicNgoLeaderboardEntry>> {
   return apiFetch(`/api/ngos/leaderboard?limit=${limit}&offset=${offset}`);
 }

@@ -13,7 +13,7 @@ export const ROLE_ROUTES: Record<ApiUser['role'], string> = {
 
 /**
  * Same as ROLE_ROUTES, but an Individual who hasn't finished (or skipped) the post-signup
- * personalization quiz gets routed back into it instead of Main — so closing/reopening the app,
+ * personalization quiz gets routed back into it instead of Main – so closing/reopening the app,
  * or logging in again elsewhere, can't be used to bypass it.
  */
 export function resolvePostAuthRoute(user: Pick<ApiUser, 'role' | 'personalizationCompletedAt'>): string {

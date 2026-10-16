@@ -21,22 +21,22 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import type { ApiPost } from '../api/posts';
 
 // Rough average PostCard height, used only to seed getItemLayout before a row has actually been
-// measured — real heights (captions/media vary a lot) are recorded via onLayout as rows render,
+// measured – real heights (captions/media vary a lot) are recorded via onLayout as rows render,
 // so this estimate only matters for rows the list hasn't reached yet.
 const ESTIMATED_ITEM_HEIGHT = 480;
 
-// 'liked' isn't an author — it's the signed-in user's liked-posts list, which mixes authors.
+// 'liked' isn't an author – it's the signed-in user's liked-posts list, which mixes authors.
 export type ProfilePostFeedAuthorKind = 'user' | 'ngo' | 'nursery' | 'group' | 'liked';
 
 /**
- * Opened by tapping a tile in any profile's post grid (user, NGO, nursery, or group) — lands on
+ * Opened by tapping a tile in any profile's post grid (user, NGO, nursery, or group) – lands on
  * that exact post, full width, and lets you keep scrolling up/down through the rest of that
  * author's posts in grid order, the way tapping into an Instagram grid does. Backed by the same
  * per-author-kind post query the grid itself uses, so it opens with zero network wait and
  * paginates the same way.
  *
  * Same reduced action set as the old grid modal it replaces: Like, plus Delete on your own posts
- * or Report on someone else's — no comments/save/share/author-nav, since every post here already
+ * or Report on someone else's – no comments/save/share/author-nav, since every post here already
  * shares one author.
  */
 export function ProfilePostFeedScreen({ navigation, route }: any) {
@@ -79,7 +79,7 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
 
   const listRef = useRef<FlatList<ApiPost>>(null);
   const hasAppliedInitialScroll = useRef(false);
-  // Real per-post heights, filled in as rows lay out — keyed by post id so pagination growing
+  // Real per-post heights, filled in as rows lay out – keyed by post id so pagination growing
   // `posts` doesn't invalidate anything already measured.
   const itemHeights = useRef<Map<string, number>>(new Map());
 
@@ -89,7 +89,7 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
     return i >= 0 ? i : 0;
   }, [posts, initialPostId]);
 
-  // Without this, FlatList has no way to compute the scroll offset for a not-yet-rendered index —
+  // Without this, FlatList has no way to compute the scroll offset for a not-yet-rendered index –
   // on mount, zero rows have measured heights, so it silently resolves the jump to ~0 and the
   // list opens on the first post instead of the tapped one. With it, every index (measured or
   // not) has a length/offset estimate, so `initialScrollIndex` and `scrollToIndex` both work.
@@ -105,7 +105,7 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
   }, []);
 
   // Once real heights above the target row are known (they measure in as the list renders), the
-  // estimate-based jump above may be slightly off — nudge it into place for real.
+  // estimate-based jump above may be slightly off – nudge it into place for real.
   useEffect(() => {
     if (hasAppliedInitialScroll.current || posts.length === 0 || initialIndex === 0) return;
     hasAppliedInitialScroll.current = true;

@@ -1,5 +1,5 @@
 /**
- * MascotInteraction — plays the Ollie + Roots Lottie animation during onboarding.
+ * MascotInteraction – plays the Ollie + Roots Lottie animation during onboarding.
  *
  * Responsibilities
  * ────────────────
@@ -88,7 +88,7 @@ export function MascotInteraction({ pageIndex, visible = true }: MascotInteracti
   }, []);
 
   // ── Reveal a line ──────────────────────────────────────────────────────────
-  // Shows the full line right away — a per-character setInterval here previously
+  // Shows the full line right away – a per-character setInterval here previously
   // read as lag rather than a clean typewriter effect, since each keystroke was
   // its own state update competing with the Lottie/Reanimated work on the JS
   // thread. The line is still held on screen for a duration proportional to its

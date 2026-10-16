@@ -61,7 +61,7 @@ export function StoryViewer({
     setIndex((i) => Math.max(0, i - 1));
   };
 
-  // Record the view as the story comes on screen. Deliberately not awaited — the 5s timer must
+  // Record the view as the story comes on screen. Deliberately not awaited – the 5s timer must
   // not depend on a network round trip.
   useEffect(() => {
     if (visible && current) onView?.(current.id);
@@ -184,7 +184,7 @@ export function StoryViewer({
 }
 
 const styles = StyleSheet.create({
-  // Full-bleed media viewer, not a cream Sheet surface — an immersive near-black backdrop is
+  // Full-bleed media viewer, not a cream Sheet surface – an immersive near-black backdrop is
   // intentional here (mirrors Instagram/WhatsApp-style story viewers) rather than a bug to fix,
   // but it's now COLORS.nightDeep (the app's darkest night token) instead of a bare '#000' literal.
   container: {

@@ -9,7 +9,7 @@ import { useSlideUp } from '../../hooks/useAnimations';
 
 import { TEXT } from '../../constants/typography';
 // Approximate one-way NY↔LA flight emissions per passenger, used only to give the CO₂ number a
-// relatable frame of reference — not a precise figure.
+// relatable frame of reference – not a precise figure.
 const AVG_FLIGHT_CO2_KG = 180;
 
 export interface ImpactStat {
@@ -29,7 +29,7 @@ export function ImpactStatsCard({
   daysActive: number;
   /** Overrides the default "🌍 Your Total Impact" heading. */
   title?: string;
-  /** Overrides the fixed CO₂/trees/days row — for roles (NGO, Nursery, Group) with different
+  /** Overrides the fixed CO₂/trees/days row – for roles (NGO, Nursery, Group) with different
    * stat sets. The flights-equivalent footer only makes sense for the default CO₂ row, so it's
    * skipped whenever this is set. */
   stats?: ImpactStat[];

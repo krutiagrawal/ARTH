@@ -1,5 +1,5 @@
 // Shared field configs for the Adoptable Trees / Campaigns create-edit
-// drawers — same shape ResourceFormSheet expects
+// drawers – same shape ResourceFormSheet expects
 // (name/label/type/required/apiName/toApi/fromApi/section). Drives now use
 // the bespoke DriveFormSheet instead (conditional sections + dynamic lists
 // don't fit this flat field-config shape).

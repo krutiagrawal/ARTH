@@ -128,7 +128,7 @@ export function UserProfileScreen({ route, navigation }: any) {
   const avatarEmoji = isOwn ? user?.avatarEmoji : publicProfile.data?.avatarEmoji;
   const level = isOwn ? user?.level ?? 1 : publicProfile.data?.level ?? 1;
   const xp = isOwn ? user?.xp ?? 0 : 0;
-  // Another person's stats come back null when they've hidden them — shown as "–", not 0.
+  // Another person's stats come back null when they've hidden them – shown as "–", not 0.
   const treesPlantedOrNull = isOwn ? user?.treesPlantedCount ?? 0 : publicProfile.data?.treesPlantedCount ?? null;
   const streakCurrentOrNull = isOwn ? user?.streakCurrent ?? 0 : publicProfile.data?.streakCurrent ?? null;
   const badgesOrNull = isOwn ? user?.badgesCount ?? 0 : publicProfile.data?.badgesCount ?? null;
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    // Floats over the vine photo now (topBar is an absolute overlay, not its own banner) — needs
+    // Floats over the vine photo now (topBar is an absolute overlay, not its own banner) – needs
     // a real backdrop to stay legible against green leaves.
     backgroundColor: 'rgba(255,255,255,0.55)',
   },

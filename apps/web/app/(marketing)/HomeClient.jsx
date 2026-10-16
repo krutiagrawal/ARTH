@@ -10,13 +10,13 @@ if (typeof window !== 'undefined') {
 }
 
 /* ==================================================================================
-   ARTH — The Life of a Tree
+   ARTH – The Life of a Tree
    ------------------------------------------------------------------------------
    ONE continuous cinematic shot, driven by a single GSAP master timeline.
    Scroll = playback scrubber: the background is a pre-extracted sequence of still
    frames drawn to a <canvas>, with the current frame selected by scroll position
    (forward on scroll down, backward on scroll up). This replaces an earlier
-   <video>.currentTime-scrubbing approach — video seeking has a hard latency floor
+   <video>.currentTime-scrubbing approach – video seeking has a hard latency floor
    for rapid bidirectional scrubbing (decode-chain-per-seek); drawing a preloaded
    still image is instant, so this is the smooth version.
 
@@ -30,7 +30,7 @@ const ASSET = (name) => `/assets/homepage/${name}`
 // that need real reading+clicking time, not just a poetic line to glance at. Raising
 // this scales every chapter's real scroll-distance uniformly without touching any of
 // the 0-1000 axis numbers below, so all existing effect/transition timing (tuned to
-// the underlying film content) stays exactly in sync — only the pacing changes.
+// the underlying film content) stays exactly in sync – only the pacing changes.
 const SCROLL_VH = 4200
 
 /* -------------------- FRAME SEQUENCE -------------------- */
@@ -41,7 +41,7 @@ const FRAME_URL = (i) => ASSET(`frames/frame-${String(i + FRAME_FIRST).padStart(
 // A decoded 1920x1080 frame is ~7.9MB in memory, ~2.1x the previous 720p frame
 // (~3.7MB). Decode happens off the main thread now (see the worker path below),
 // so a wider window/prefetch no longer costs scroll responsiveness the way it
-// would have on the old main-thread-decode path — these are tuned as generously
+// would have on the old main-thread-decode path – these are tuned as generously
 // as the memory budget allows, not capped for CPU-contention reasons.
 const FRAME_WINDOW = 28 // frames kept decoded/resident on each side of the current position (main-thread fallback path)
 const PREFETCH_BEHIND = 6 // frames prefetched behind the scroll direction per seek
@@ -51,12 +51,12 @@ const CROP_TOP_BIAS = 0 // keep the full top of the frame; all vertical crop is 
 /* -------------------- WORKER + OFFSCREENCANVAS PIPELINE --------------------
    Decode/draw happens off the main thread (a dedicated Worker owns an
    OffscreenCanvas) so GSAP/ScrollTrigger's own scroll-handling on the main
-   thread never competes with image decode work — see lib/workers/hero-frame-worker.js.
+   thread never competes with image decode work – see lib/workers/hero-frame-worker.js.
    Falls back to today's main-thread <canvas> path (setupMainThreadPath below)
    when OffscreenCanvas 2D-in-worker isn't supported. -------------------- */
 
 // canvas.transferControlToOffscreen() can only ever be called once per canvas
-// element — this registry lets React Strict Mode's dev-only mount/cleanup/mount
+// element – this registry lets React Strict Mode's dev-only mount/cleanup/mount
 // reuse the same worker on the phantom remount instead of re-transferring.
 const workerRegistry = new WeakMap() // HTMLCanvasElement -> Worker
 
@@ -65,7 +65,7 @@ function detectOffscreenSupport() {
   if (!('OffscreenCanvas' in window)) return false
   if (typeof HTMLCanvasElement.prototype.transferControlToOffscreen !== 'function') return false
   try {
-    // throwaway probe canvas — catches browsers that expose OffscreenCanvas for
+    // throwaway probe canvas – catches browsers that expose OffscreenCanvas for
     // WebGL/bitmaprenderer only, not 2d. Never touches the real hero canvas.
     return !!new OffscreenCanvas(1, 1).getContext('2d')
   } catch {
@@ -153,7 +153,7 @@ function setupMainThreadPath(canvas) {
       sy = (img.naturalHeight - sh) * CROP_TOP_BIAS
     }
     // drawImage's destination rect (0,0,cw,ch) always covers the full canvas,
-    // so there's nothing left uncovered — clearRect before it is wasted work.
+    // so there's nothing left uncovered – clearRect before it is wasted work.
     ctx.drawImage(img, sx, sy, sw, sh, 0, 0, cw, ch)
   }
 
@@ -199,7 +199,7 @@ function setupMainThreadPath(canvas) {
 }
 
 /* -------------------- AMBIENT / MICRO-LIFE ACCENTS -------------------- */
-/* Small, subtle, decorative motion layers only — never a substitute for the
+/* Small, subtle, decorative motion layers only – never a substitute for the
    real artwork. Counts kept modest for 60fps performance. */
 
 function Dust({ count = 16 }) {
@@ -306,7 +306,7 @@ function LifeAccents({ innerRef }) {
 
    "Real glass" per the reference: a light, even frost (enough blur to keep text
    legible over busy footage) with high transparency and a bright 1px rim that
-   reads like light catching an edge — short of the heavy, milky "frosted shower
+   reads like light catching an edge – short of the heavy, milky "frosted shower
    door" look of a large blur radius plus a dense tint. */
 
 const INK = '#2b1f14' // dark ink – for text sitting on bright footage
@@ -316,7 +316,7 @@ const GLASS_LIGHT = 'bg-white/22 backdrop-blur-[11px] border border-white/55 sha
 // bg-black opacity bumped up from an earlier /34: over saturated green canopy
 // footage, backdrop-blur was letting enough of that green through the tint
 // that the plate (and the cream text sitting on it) read as dark green instead
-// of a neutral charcoal — this opacity is what actually neutralizes the hue.
+// of a neutral charcoal – this opacity is what actually neutralizes the hue.
 const GLASS_DARK = 'bg-black/55 backdrop-blur-[11px] border border-white/22 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_8px_30px_-8px_rgba(0,0,0,0.55)]'
 
 function glassTokens(variant) {
@@ -334,8 +334,8 @@ function glassTokens(variant) {
 
 /* -------------------- CAPTION -------------------- */
 /* Headline text is bold, not italic, and colored with a fixed hex per `tone`
-   (see the color tokens above) plus a soft directional drop-shadow — a dark
-   halo behind cream text, a light halo behind ink text — so it stays readable
+   (see the color tokens above) plus a soft directional drop-shadow – a dark
+   halo behind cream text, a light halo behind ink text – so it stays readable
    even where the footage brightness varies within a chapter's scroll window. */
 
 function Caption({ innerRef, tone = 'dark', align = 'left', className = '', extra, scrim = false, children }) {
@@ -345,7 +345,7 @@ function Caption({ innerRef, tone = 'dark', align = 'left', className = '', extr
   const alignCls = align === 'center' ? 'left-1/2 -translate-x-1/2 text-center' : align === 'right' ? 'right-6 md:right-16 text-right' : 'left-6 md:left-16'
   // Bold text is wider per character than the regular weight this was first
   // tuned against, so the same ch-based width now wraps to more lines than
-  // intended — widened to compensate.
+  // intended – widened to compensate.
   const widthCls = extra ? 'max-w-[30ch] md:max-w-[46ch]' : 'max-w-[15ch] md:max-w-[17ch]'
   // pointer-events-none by default: neighboring chapters' caption boxes can
   // geometrically overlap (they're not scroll-gated by visibility, only by
@@ -353,12 +353,12 @@ function Caption({ innerRef, tone = 'dark', align = 'left', className = '', extr
   // from an active one sitting nearby. The GSAP timeline flips this element's
   // pointerEvents to 'auto' for exactly its own visible window (see the
   // tl.set(...pointerEvents...) calls alongside each chapter's fadeInOut call)
-  // — an inline style, so it cleanly overrides this class while active.
+  // – an inline style, so it cleanly overrides this class while active.
   return (
     <div ref={innerRef} className={`absolute ${alignCls} ${widthCls} opacity-0 pointer-events-none ${className}`} style={{ transform: 'translateY(16px)' }}>
       {scrim ? (
         // Some chapters (Mature tree, Birds) pin over footage that swings from
-        // bright sky to dark canopy within the same visible window — no single
+        // bright sky to dark canopy within the same visible window – no single
         // flat text color stays readable across that range. A small dark plate
         // behind the headline guarantees contrast regardless of what's behind it.
         <p className={`inline-block -mx-4 rounded-2xl px-4 py-2 font-serif font-bold not-italic text-3xl md:text-5xl leading-[1.15] tracking-tight ${GLASS_DARK}`} style={{ color: CREAM }}>{children}</p>
@@ -371,7 +371,7 @@ function Caption({ innerRef, tone = 'dark', align = 'left', className = '', extr
 }
 
 /* -------------------- SUPPORTING TEXT / LINKS -------------------- */
-/* A small real-glass pill instead of bare underlined text — reads as a tappable
+/* A small real-glass pill instead of bare underlined text – reads as a tappable
    control rather than a stray line of copy, and (like the option rows) carries
    its own background so it stays legible independent of the footage behind it. */
 
@@ -408,7 +408,7 @@ function SupportLine({ text, href, label, tone = 'dark' }) {
 
 /* -------------------- GLASS OPTION LIST --------------------
    Real-glass list rows (icon + bold label + description + chevron), always
-   fully visible — no hover-to-reveal needed, so behavior is identical on
+   fully visible – no hover-to-reveal needed, so behavior is identical on
    mouse and touch. Each row is a plain Link; tapping/clicking just navigates. */
 
 function OptionList({ items, glass = 'light', centered = false, linked = true }) {
@@ -450,7 +450,7 @@ function ExampleCard({ name, quote, glass = 'light' }) {
 
 /* -------------------- GLASS SEGMENTED CHOICE --------------------
    A tab-like real-glass control (Individual / Group / Organisation). Click to
-   switch on both mouse and touch — no hover dependency. First item is
+   switch on both mouse and touch – no hover dependency. First item is
    preselected so its description/links are visible without any interaction. */
 
 function SegmentedChoice({ items, glass = 'light', align = 'left' }) {
@@ -492,7 +492,7 @@ function SegmentedChoice({ items, glass = 'light', align = 'left' }) {
 
 /* -------------------- REAL (OR ILLUSTRATIVE) GROWTH STATUS --------------------
    If this visitor is logged in and has already registered a tree via /plant,
-   show its real elapsed-time status (computed from the server timestamp — not
+   show its real elapsed-time status (computed from the server timestamp – not
    invented) by bolding the matching step in the trail. Otherwise show the same
    trail clearly labeled as an example instead of pretending a stage belongs
    to them. */
@@ -570,7 +570,7 @@ export default function HomeClient({ namingExample }) {
   const wrapRef = useRef(null)
   const stageRef = useRef(null)
 
-  // background — scroll-scrubbed frame sequence drawn to canvas (replaces <video> scrubbing)
+  // background – scroll-scrubbed frame sequence drawn to canvas (replaces <video> scrubbing)
   const canvasRef = useRef(null)
 
   // mood/particles
@@ -620,7 +620,7 @@ export default function HomeClient({ namingExample }) {
       // this element's visible window and back to 'none' after, as an inline
       // style (overrides the pointer-events-none default class while active).
       // Needed because caption boxes aren't full-viewport but can still
-      // geometrically overlap a neighboring chapter's box — without this, an
+      // geometrically overlap a neighboring chapter's box – without this, an
       // invisible-but-still-in-the-DOM caption could intercept hover/clicks
       // meant for a different, currently-visible one nearby.
       const fadeInOut = (tl, el, inS, inE, outS, outE, interactive = false) => {
@@ -629,7 +629,7 @@ export default function HomeClient({ namingExample }) {
         if (interactive) {
           // Buffer beyond the visual fade window: the timeline is scrubbed with
           // a 0.35s lag (see scrub below), so the playhead can still be short of
-          // inS/past outE right when a click resolves — a bare pointerEvents flip
+          // inS/past outE right when a click resolves – a bare pointerEvents flip
           // exactly at the fade edges intermittently swallows clicks near them.
           const POINTER_BUFFER = 8
           tl.set(el, { pointerEvents: 'auto' }, Math.max(0, inS - POINTER_BUFFER))
@@ -644,7 +644,7 @@ export default function HomeClient({ namingExample }) {
           start: 'top top',
           end: 'bottom bottom',
           // scrub delay was the real source of the "lag" complaint across every prior
-          // rendering approach (video, then canvas) — a low value keeps a touch of
+          // rendering approach (video, then canvas) – a low value keeps a touch of
           // smoothing without the frame visibly trailing the scroll position.
           scrub: 0.35,
           pin: stageRef.current,
@@ -664,51 +664,51 @@ export default function HomeClient({ namingExample }) {
         },
       }, 0)
 
-      /* ===================== CHAPTER 1 — THE SEED (0–110) ===================== */
+      /* ===================== CHAPTER 1 – THE SEED (0–110) ===================== */
       fadeInOut(tl, g(titleRef), 5, 40, 55, 78)
       tl.to(g(scrollCueRef), { opacity: 0, duration: 15 }, 40)
       tl.to(g(dustRef), { opacity: 0, duration: 20 }, 90)
 
-      /* ===================== CHAPTER 2 — BELOW THE EARTH (150–230) ===================== */
+      /* ===================== CHAPTER 2 – BELOW THE EARTH (150–230) ===================== */
       fadeInOut(tl, g(cap2Ref), 165, 190, 208, 228, true)
 
-      /* ===================== CHAPTER 3 — FIRST LIFE (300–380) ===================== */
+      /* ===================== CHAPTER 3 – FIRST LIFE (300–380) ===================== */
       tl.to(g(lightRayRef), { opacity: 1, duration: 40 }, 300)
       fadeInOut(tl, g(cap3Ref), 312, 338, 352, 372, true)
       tl.to(g(lightRayRef), { opacity: 0, duration: 30 }, 385)
 
-      /* ===================== CHAPTER 4 — GROWTH / STORM ROLLS IN (380–500) ===================== */
+      /* ===================== CHAPTER 4 – GROWTH / STORM ROLLS IN (380–500) ===================== */
       tl.to(g(moodRef), { opacity: 1, backgroundColor: 'rgba(58,70,80,0.28)', duration: 45 }, 380)
       tl.to(g(rainOverlayRef), { opacity: 1, duration: 45 }, 395)
       tl.to(g(leafOverlayRef), { opacity: 1, duration: 40 }, 410)
       fadeInOut(tl, g(cap4Ref), 442, 466, 480, 498, true)
 
-      /* transition D: a leap through time — the sapling becomes the tree */
+      /* transition D: a leap through time – the sapling becomes the tree */
       tl.to([g(rainOverlayRef), g(leafOverlayRef)], { opacity: 0, duration: 35 }, 500)
       tl.to(g(moodRef), { opacity: 0, duration: 45 }, 505)
       tl.to(g(lightRayRef), { opacity: 0.55, duration: 35 }, 545)
 
-      /* ===================== CHAPTER 5 — THE ECOSYSTEM (560–630) ===================== */
+      /* ===================== CHAPTER 5 – THE ECOSYSTEM (560–630) ===================== */
       tl.to(g(accentsRef), { opacity: 1, duration: 40 }, 560)
       fadeInOut(tl, g(cap5Ref), 572, 598, 612, 630, true)
 
-      /* transition E: the same tree blossoms — a gentle bloom, not a cut */
+      /* transition E: the same tree blossoms – a gentle bloom, not a cut */
       tl.to(g(petalRef), { opacity: 1, duration: 35 }, 636)
 
-      /* ===================== CHAPTER 6 — THE COMMUNITY BLOOMS (670–745) ===================== */
+      /* ===================== CHAPTER 6 – THE COMMUNITY BLOOMS (670–745) ===================== */
       fadeInOut(tl, g(cap6Ref), 682, 708, 722, 742, true)
 
       /* transition F: the camera pushes into the canopy, toward the nest */
       tl.to(g(petalRef), { opacity: 0, duration: 30 }, 750)
 
-      /* ===================== CHAPTER 7 — LIFE RETURNS (800–865) ===================== */
+      /* ===================== CHAPTER 7 – LIFE RETURNS (800–865) ===================== */
       fadeInOut(tl, g(cap7Ref), 812, 838, 850, 868, true)
 
       /* transition G: the camera pulls back and rises above the canopy */
       tl.to(g(accentsRef), { opacity: 0, duration: 35 }, 870)
       tl.to(g(lightRayRef), { opacity: 0.7, duration: 55 }, 900)
 
-      /* ===================== CHAPTER 8 — THE FOREST (928–1000) ===================== */
+      /* ===================== CHAPTER 8 – THE FOREST (928–1000) ===================== */
       tl.to(g(ctaWrapRef), { opacity: 1, y: 0, duration: 40, ease: 'power2.out' }, 950)
       // See the comment on ctaWrapRef's JSX: gate its always-bottom-left interactive
       // content to this chapter's own window, same POINTER_BUFFER cushion as captions.
@@ -725,7 +725,7 @@ export default function HomeClient({ namingExample }) {
 
     // Fonts are loaded via a Google Fonts @import with font-display:swap (see
     // globals.css), so Fraunces/Inter can finish downloading and swap in well
-    // after `load` fires — on a cold cache that reflows the Navbar/headline
+    // after `load` fires – on a cold cache that reflows the Navbar/headline
     // text, shifting where wrapRef actually sits in the document. If that
     // shift happens after ScrollTrigger already cached its pin start/end, the
     // pin-spacer is left the wrong size and the pinned stage overlaps the
@@ -752,7 +752,7 @@ export default function HomeClient({ namingExample }) {
       // Worker termination is deferred: transferControlToOffscreen() can only
       // happen once per canvas, so React Strict Mode's dev-only synchronous
       // mount->cleanup->mount must not tear the worker down on the phantom
-      // remount — only on a real unmount (canvas actually leaves the DOM).
+      // remount – only on a real unmount (canvas actually leaves the DOM).
       const worker = workerRegistry.get(canvas)
       if (worker) {
         requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -769,7 +769,7 @@ export default function HomeClient({ namingExample }) {
   // of vh scrolled) leaves the browser scrolled far down when React unmounts
   // this component: the cleanup effect above reverts the GSAP context, which
   // un-pins and collapses the SCROLL_VH-tall spacer immediately, before the
-  // new route has a chance to reset scroll — so the collapsed page's Footer
+  // new route has a chance to reset scroll – so the collapsed page's Footer
   // (rendered right after this component in layout.js) flashes into view for
   // a frame. Jumping to the top *before* the click reaches the Link closes
   // that race. Uses the legacy 2-arg form, which is always instant regardless
@@ -782,7 +782,7 @@ export default function HomeClient({ namingExample }) {
     // Deferred to the next frame, not called synchronously in this handler:
     // Next's <Link> onClick (which runs right after this capture-phase handler,
     // in the same dispatch) reads/stores the current scroll position as part of
-    // starting the transition — scrolling synchronously here raced it and made
+    // starting the transition – scrolling synchronously here raced it and made
     // the navigation silently no-op. One rAF is still well before the GSAP
     // cleanup effect's un-pin (which only runs once React actually commits the
     // unmount, after the transition resolves), so the flash is still closed.
@@ -794,7 +794,7 @@ export default function HomeClient({ namingExample }) {
       <div ref={wrapRef} id="cinematic-hero" className="relative" style={{ height: `${SCROLL_VH}vh` }} onClickCapture={handleHeroLinkClick}>
         <div ref={stageRef} className="relative h-screen w-full overflow-hidden">
 
-          {/* single cinematic background — scroll-scrubbed frame sequence drawn to canvas.
+          {/* single cinematic background – scroll-scrubbed frame sequence drawn to canvas.
               Full-bleed, including behind the navbar (see Navbar.jsx for the legibility
               treatment that keeps nav text readable against any frame). */}
           <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
@@ -836,7 +836,7 @@ export default function HomeClient({ namingExample }) {
           </Caption>
 
           {/* Real footage here is dark soil/roots (confirmed by screenshot), same as
-              chapters 4 and 5 below — tone="light" + dark glass, not the reference
+              chapters 4 and 5 below – tone="light" + dark glass, not the reference
               mockup's brighter assumption. Nudged down + right (top 9%→22%, left
               50%→57%) so it sits over the soil itself instead of straddling the
               lighter sky/soil boundary at the very top of the frame. */}
@@ -861,7 +861,7 @@ export default function HomeClient({ namingExample }) {
           </Caption>
 
           {/* Chapter 5 (rain) is also genuinely dark/stormy at the point the caption
-              sits — same reasoning as chapter 4. */}
+              sits – same reasoning as chapter 4. */}
           <Caption innerRef={cap5Ref} tone="light" align="left" className="top-[26%]"
             extra={
               <div className="space-y-3">
@@ -874,10 +874,10 @@ export default function HomeClient({ namingExample }) {
           </Caption>
 
           {/* Real footage here pans from bright sky to a large dark tree canopy
-              within this chapter's visible scroll window (confirmed by screenshot —
+              within this chapter's visible scroll window (confirmed by screenshot –
               ink text on it read fine early, then nearly vanished later), so the
               headline uses `scrim` for guaranteed contrast. Moved to the bottom
-              left (was top-left) — bottom-right sits under the heaviest depth-of-
+              left (was top-left) – bottom-right sits under the heaviest depth-of-
               field blur in this shot, so bottom-left instead: clear of the trunk
               and off the blurriest part of the frame. */}
           <Caption innerRef={cap6Ref} tone="light" align="left" className="bottom-[8%] md:bottom-[12%]" scrim
@@ -916,7 +916,7 @@ export default function HomeClient({ namingExample }) {
               while invisible (opacity is animated, not display), which would otherwise
               block hover/click on every earlier chapter's interactive pills underneath
               it in DOM order. Its interactive content used to opt back in unconditionally
-              via a static pointer-events-auto class below — but this block sits bottom-
+              via a static pointer-events-auto class below – but this block sits bottom-
               left for the entire scroll (only its opacity animates), so that static class
               let it silently intercept clicks on any earlier caption whose own content
               happened to lay out over the same screen region (confirmed: chapter 4's
@@ -927,7 +927,7 @@ export default function HomeClient({ namingExample }) {
               begins, and the (now unconditional) child pointer-events inherit from it.
               This whole block previously used theme tokens (text-foreground, bg-foreground,
               text-primary) instead of the fixed ink/cream palette every other chapter
-              uses — those flip with light/dark site theme, independent of what the video
+              uses – those flip with light/dark site theme, independent of what the video
               frame actually looks like, which is what made this section unreadable. */}
           <div ref={ctaWrapRef} className="absolute inset-0 z-20 flex flex-col items-start justify-end pb-16 md:pb-24 pl-6 md:pl-16 pr-6 pointer-events-none">
             <p className={`inline-block -mx-3 mb-4 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.28em] ${GLASS_DARK}`} style={{ color: CREAM }}>The Forest</p>

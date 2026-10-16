@@ -108,7 +108,7 @@ export default function DeliveryPartnersClient() {
         id: 'rating',
         header: 'Rating',
         cell: ({ row }) => (
-          <span className="text-sm">{row.original.avgRating != null ? `★ ${Number(row.original.avgRating).toFixed(1)}` : '—'}</span>
+          <span className="text-sm">{row.original.avgRating != null ? `★ ${Number(row.original.avgRating).toFixed(1)}` : '–'}</span>
         ),
       },
       {
@@ -154,7 +154,7 @@ export default function DeliveryPartnersClient() {
         <div>
           <p className="eyebrow text-primary">Delivery Partners</p>
           <h1 className="font-serif text-3xl md:text-4xl mt-2">Your riders</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Riders who deliver your orders — add one to assign deliveries and let customers track them live.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Riders who deliver your orders – add one to assign deliveries and let customers track them live.</p>
         </div>
         <Button onClick={guard(openCreate)} className="rounded-full shrink-0">
           <Plus className="h-4 w-4" /> Add delivery partner
@@ -186,7 +186,7 @@ export default function DeliveryPartnersClient() {
         description={
           editing
             ? 'Update their name or phone number.'
-            : 'They can log in on their own phone with this email and password — share it with them directly.'
+            : 'They can log in on their own phone with this email and password – share it with them directly.'
         }
         icon={Truck}
         eyebrow="Nursery Dashboard"

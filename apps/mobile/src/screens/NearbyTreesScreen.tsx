@@ -17,7 +17,7 @@ import type { ApiNearbyTree } from '../api/trees';
 import { TEXT } from '../constants/typography';
 const GRID_GAP = 12;
 
-// Flat outlined tile (no fill / glass) — same brown-outline language as My Trees.
+// Flat outlined tile (no fill / glass) – same brown-outline language as My Trees.
 function NearbyTreeTile({ tree, closest, onPress }: { tree: ApiNearbyTree; closest: boolean; onPress: () => void }) {
   const health = STATUS_META[tree.healthStatus] ?? STATUS_META.not_checked;
   return (
@@ -72,7 +72,7 @@ export function NearbyTreesScreen({ navigation }: any) {
       {locationLoading || isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
       ) : !trees || trees.length === 0 ? (
-        <EmptyState icon="🌳" title="No ARTH trees nearby" body="Move around the city and check back — new trees are being planted all the time." />
+        <EmptyState icon="🌳" title="No ARTH trees nearby" body="Move around the city and check back – new trees are being planted all the time." />
       ) : (
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}

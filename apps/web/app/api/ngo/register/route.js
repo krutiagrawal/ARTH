@@ -3,7 +3,7 @@ import { apiRequest, ApiError } from '@/lib/apiClient'
 import { setAuthCookies } from '@/lib/apiProxy'
 
 // Unlike nursery (which still has to support an older JSON-only web form with no photo), the NGO
-// wizard was rebuilt fresh as part of this feature with no legacy client to preserve — it always
+// wizard was rebuilt fresh as part of this feature with no legacy client to preserve – it always
 // submits multipart/form-data, since the mandatory authorization-proof upload can't travel over a
 // plain JSON body anyway. Only the handful of always-required fields are checked here; every
 // other field's validation lives in the backend's registerNgoSchema, the single source of truth,

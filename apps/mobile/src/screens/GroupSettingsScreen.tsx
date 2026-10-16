@@ -54,7 +54,7 @@ const DEFAULT_SETTINGS: ApiUserSettings = {
   pinnedTimeTheme: null,
 };
 
-/** Sourced from app.json#expo.version via expo-constants — never hand-typed, so it can't drift. */
+/** Sourced from app.json#expo.version via expo-constants – never hand-typed, so it can't drift. */
 const appVersionLabel = Constants.expoConfig?.version ? `ARTH v${Constants.expoConfig.version}` : 'ARTH';
 
 export function GroupSettingsScreen({ navigation }: any) {
@@ -63,7 +63,7 @@ export function GroupSettingsScreen({ navigation }: any) {
   const updateMutation = useUpdateGroupProfile();
   const regenerateMutation = useRegenerateGroupInviteCode();
   // The group account's own login (email, logout, delete-account) is a regular User row (role
-  // 'group') — these settings/session endpoints are already generic to any authenticated user,
+  // 'group') – these settings/session endpoints are already generic to any authenticated user,
   // so this screen reuses the exact same hooks the individual user's SettingsScreen does.
   const { user, logout } = useAuth();
   const { data: fetchedSettings, refetch: refetchSettings } = useSettings();

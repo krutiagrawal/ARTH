@@ -4,7 +4,7 @@ import { sanitizePhoneDigits } from '@/lib/validation'
 import { cn } from '@/lib/utils'
 
 /**
- * A `+91`-prefixed, digits-only phone input capped at 10 characters — the country code is a fixed
+ * A `+91`-prefixed, digits-only phone input capped at 10 characters – the country code is a fixed
  * visual prefix, never part of the stored value, so every phone field in the app produces the
  * same bare-10-digit shape regardless of what the user types. Mirrors
  * apps/mobile/src/components/common/PhoneField.tsx. `value`/`onChange` carry just the digits.

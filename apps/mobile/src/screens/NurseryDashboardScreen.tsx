@@ -103,7 +103,7 @@ interface DockActionSpec {
   onPress: () => void;
 }
 
-// An icon shortcut, not another boxed card — the earlier full-width list and then a 2-column
+// An icon shortcut, not another boxed card – the earlier full-width list and then a 2-column
 // card grid both still read as "stacked cards" once there were several. This sits directly on
 // the page instead, like a payments-app quick-actions row.
 function DockItem({
@@ -188,7 +188,7 @@ function DockRow({
   );
 }
 
-// Sits in the header next to MuteButton (bare) and the avatar — deliberately no circular
+// Sits in the header next to MuteButton (bare) and the avatar – deliberately no circular
 // background (a blurred-circle wrapper here previously clipped the unread badge, since the badge
 // overhangs the circle's edge and the circle needed `overflow: hidden` to stay round).
 // `useUnreadNotificationCount` already existed (built for a badge like this) but no screen had
@@ -296,10 +296,10 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
   };
 
   // Orders now has its own bottom tab and Edit Profile lives on the nursery's own profile screen
-  // (tap the avatar above — same place individual users reach their profile, with Settings
-  // alongside it) — neither needs a dock slot too. 12 remaining actions, 3 per row, 4 rows.
+  // (tap the avatar above – same place individual users reach their profile, with Settings
+  // alongside it) – neither needs a dock slot too. 12 remaining actions, 3 per row, 4 rows.
   // Circle colors picked to contrast with each emoji's own dominant color, not just to look
-  // varied — 📦's tan/brown box on a golden circle, and 🔥's orange/red on the streakFire-orange
+  // varied – 📦's tan/brown box on a golden circle, and 🔥's orange/red on the streakFire-orange
   // circle, both camouflaged the icon against its own background.
   const dockActions: DockActionSpec[] = [
     { key: 'stock', emoji: '📦', color: COLORS.xpBlue, title: 'Manage inventory', onPress: () => navigation.navigate('NurseryStock') },
@@ -323,7 +323,7 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
     { key: 'impact', emoji: '🌳', color: COLORS.sage, title: 'Nursery Impact', onPress: () => navigation.navigate('NurseryImpact') },
   ];
 
-  // Every dock item now actually renders — the grid used to hardcode `.slice(0, 3)` /
+  // Every dock item now actually renders – the grid used to hardcode `.slice(0, 3)` /
   // `.slice(3, 6)`, silently dropping anything past the 6th entry as the dock grew. Chunking the
   // full array into rows of 3 keeps the same equal-width-column layout for however many items
   // exist, old or new.
@@ -421,7 +421,7 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
             </View>
           </View>
 
-          {/* Today's orders pill — anchored near the bottom edge of the hero, at the hills/ground
+          {/* Today's orders pill – anchored near the bottom edge of the hero, at the hills/ground
               seam, mirroring Home's "Forest stats" pill (same real glassmorphism recipe: BlurView
               + a theme-tinted, not hardcoded, translucent overlay) instead of the plain 4-card
               grid this used to be further down the page. */}
@@ -508,7 +508,7 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
               <EcoWidget
                 {...tileProps}
                 icon="🤝"
-                value={stats.trustScore != null ? String(stats.trustScore) : '—'}
+                value={stats.trustScore != null ? String(stats.trustScore) : '–'}
                 label="ARTH Trust Score"
                 delay={180}
                 onPress={() => navigation.navigate('NurseryStreakBadges')}
@@ -524,7 +524,7 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
               <EcoWidget
                 {...tileProps}
                 icon="💰"
-                value={today ? formatRupees(today.revenueViaArthCents) : '—'}
+                value={today ? formatRupees(today.revenueViaArthCents) : '–'}
                 label="Revenue via ARTH"
                 delay={300}
               />
@@ -575,7 +575,7 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 22 },
   statsRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', paddingHorizontal: 20, marginTop: 4, marginBottom: 20 },
   statsRight: { flex: 1, flexDirection: 'row', gap: 8 },
-  // Today's orders pill, anchored at the hero's bottom edge — same recipe as Home's "Forest
+  // Today's orders pill, anchored at the hero's bottom edge – same recipe as Home's "Forest
   // stats" pill (see HomeScreen.tsx `forestStats*`), just with 4 columns instead of 3.
   todayStats: {
     position: 'absolute',
@@ -589,7 +589,7 @@ const styles = StyleSheet.create({
   },
   // `TouchableOpacity` (styles.todayStats above) carries the absolute positioning so it anchors
   // to the hero itself; this is deliberately un-flexed and left to size from its own content
-  // (matching how the un-wrapped BlurView sized itself before this touchable existed) — putting
+  // (matching how the un-wrapped BlurView sized itself before this touchable existed) – putting
   // `flex: 1` here would ask it to fill a parent whose own height is itself derived from this
   // child's content, an undefined cross-reference that risks collapsing back to zero height,
   // which is exactly the "pill lands under the stats row" bug this replaces.
@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
   gridRow: { flexDirection: 'row', alignItems: 'stretch', gap: 10, marginBottom: 10 },
   gridTile: { flex: 1 },
   sectionTitle: { ...TEXT.heading, marginTop: 20 },
-  // A 2-row, 3-column icon grid — icons sit directly on the page (no per-item card), like a
+  // A 2-row, 3-column icon grid – icons sit directly on the page (no per-item card), like a
   // payments-app quick-actions row, rather than another stack of boxed cards.
   dockGrid: { marginTop: 4 },
   dockGridRow: { flexDirection: 'row' },
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
   activityList: { gap: 8, marginTop: 4 },
   activityRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
   activityIcon: { fontSize: 18 },
-  // Colors applied inline via seamText (theme-aware) at the call site, not here — see dockLabel.
+  // Colors applied inline via seamText (theme-aware) at the call site, not here – see dockLabel.
   activityText: { fontSize: 13, fontWeight: '600' },
   activityTime: { fontSize: 11, marginTop: 2 },
 });

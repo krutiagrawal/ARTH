@@ -18,7 +18,7 @@ import {
 } from '../hooks/useSocialQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
-/** A single post on its own screen — where a notification or a deep link lands. */
+/** A single post on its own screen – where a notification or a deep link lands. */
 export function PostDetailScreen({ navigation, route }: any) {
   const postId: string | undefined = route?.params?.postId;
   const { data: post, isLoading, isError, refetch } = usePost(postId);

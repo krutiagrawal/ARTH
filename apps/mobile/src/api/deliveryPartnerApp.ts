@@ -17,7 +17,7 @@ export interface ApiDeliveryPartnerProfile {
 export interface ApiDeliveryQueueItem {
   orderId: string;
   outForDeliveryAt: string | null;
-  /** Set once the rider taps "Start delivery" for this order — null means assigned but not yet
+  /** Set once the rider taps "Start delivery" for this order – null means assigned but not yet
    * begun. Location reporting (see reportMyLocation) only fans out to started orders. */
   startedAt: string | null;
   itemCount: number;

@@ -1,4 +1,4 @@
-// Page-chrome / decorative images — not content records, so these stay as a
+// Page-chrome / decorative images – not content records, so these stay as a
 // constants file rather than Postgres rows.
 export const SITE_IMAGES = {
   heroA: 'https://images.pexels.com/photos/3231691/pexels-photo-3231691.jpeg',

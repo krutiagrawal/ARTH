@@ -8,7 +8,7 @@ import { RADIUS, SPACING } from '../../constants/theme';
 import { useCities } from '../../hooks/useApiQueries';
 
 /**
- * City picker — the product only launches in Pune right now, so every city
+ * City picker – the product only launches in Pune right now, so every city
  * is listed (not hidden) but only Pune is tappable, same idea as CitySelect
  * on web. `variant="dark"` matches the translucent-white input chrome used
  * on the night-gradient register screens (Nursery/Corporate), where the
@@ -44,7 +44,7 @@ export function CityPickerField({
         )}
       </TouchableOpacity>
 
-      {/* Always the light/cream sheet — beige background, green selected text, brown borders —
+      {/* Always the light/cream sheet – beige background, green selected text, brown borders –
           regardless of the trigger's own chrome, since that's the app's actual dropdown look. */}
       <Sheet visible={open} onClose={() => setOpen(false)} title="Select city" variant="slideUp" scrollable>
         <ScrollView>

@@ -20,7 +20,7 @@ const { width: SW } = Dimensions.get('window');
 /**
  * Shared ambient-creature layer: birds by day, fireflies at night. Both Home and Forest render
  * this so the "morning uses birds, night uses fireflies" rule stays consistent across screens
- * instead of each screen reimplementing its own swap logic. Reduce-motion aware — settles to a
+ * instead of each screen reimplementing its own swap logic. Reduce-motion aware – settles to a
  * calm static frame instead of looping when the user has motion reduced.
  */
 

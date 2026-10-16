@@ -23,7 +23,7 @@ import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import { proxy } from '../proxy'
 import { cn } from '@/lib/utils'
 
-// Only the nursery-flow types actually appear here in practice — the backend targets each
+// Only the nursery-flow types actually appear here in practice – the backend targets each
 // notify() call at a specific userId, so a nursery only ever receives the rows below (plus the
 // generic post/follow ones any account with a public profile can get). See the mobile app's
 // NotificationsScreen for the sibling implementation this copy is kept in sync with.
@@ -85,7 +85,7 @@ export default function NotificationsClient() {
     try {
       await proxy('/notifications/read', { method: 'POST', body: { ids: [id] } })
     } catch {
-      // best-effort — local state already flipped
+      // best-effort – local state already flipped
     }
   }
 

@@ -7,7 +7,7 @@ import { RADIUS, SPACING } from '../../constants/theme';
 export interface SelectOption {
   value: string;
   label: string;
-  /** Emoji shown before the label — makes a row of chips scannable at a glance. */
+  /** Emoji shown before the label – makes a row of chips scannable at a glance. */
   icon?: string;
 }
 
@@ -32,7 +32,7 @@ interface MultiSelectProps extends BaseProps {
 }
 
 /**
- * Tappable chip grid for single- or multi-select choices — no sheet, no typing. Built for signup
+ * Tappable chip grid for single- or multi-select choices – no sheet, no typing. Built for signup
  * wizards where every extra tap-to-open-a-modal step is one more chance for someone to give up
  * mid-form; a whole category picker fits and resolves in one glance/tap here.
  */

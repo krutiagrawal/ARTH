@@ -3,7 +3,7 @@ import { apiFetch, resolveMediaUrl, toFormFile } from './client';
 export interface ApiStory {
   id: string;
   authorType: 'user' | 'ngo' | 'group' | 'nursery';
-  /** Null on org-authored stories — the org/group owns them, not the operator's account. */
+  /** Null on org-authored stories – the org/group owns them, not the operator's account. */
   userId: string | null;
   ngoId: string | null;
   groupId: string | null;
@@ -80,7 +80,7 @@ export async function postStory(input: {
   });
 }
 
-/** Posts a camera/gallery photo as a story — how NGOs/Groups/nurseries post, vs. the base64 forest snapshot. */
+/** Posts a camera/gallery photo as a story – how NGOs/Groups/nurseries post, vs. the base64 forest snapshot. */
 export async function postPhotoStory(input: {
   photo: { uri: string; name: string; type: string };
   caption?: string;
@@ -97,7 +97,7 @@ export async function postPhotoStory(input: {
   return apiFetch<ApiStory>('/api/stories', { method: 'POST', body: form, isForm: true });
 }
 
-/** Records a view so the tray ring dims. Fire-and-forget — never block the viewer on it. */
+/** Records a view so the tray ring dims. Fire-and-forget – never block the viewer on it. */
 export async function markStoryViewed(id: string): Promise<void> {
   await apiFetch<void>(`/api/stories/${id}/view`, { method: 'POST' });
 }

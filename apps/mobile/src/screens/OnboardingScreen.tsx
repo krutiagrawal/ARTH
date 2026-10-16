@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     height: SH,
     alignItems: 'center',
     justifyContent: 'flex-start',
-    // A small nudge down from the top edge — the heading and the icon-in-circle below it share
+    // A small nudge down from the top edge – the heading and the icon-in-circle below it share
     // this one offset, since both sit in this block's normal flow one after another.
     paddingTop: SH * 0.09 + 18,
     paddingHorizontal: 32,

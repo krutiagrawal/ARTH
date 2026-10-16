@@ -69,7 +69,7 @@ export function FieldLabel({ required, children }) {
 
 /**
  * Single elevated panel that holds every section of a read-only detail
- * sheet — sections are divided by hairlines instead of each being its own
+ * sheet – sections are divided by hairlines instead of each being its own
  * bordered/shadowed card, so a multi-section drawer reads as one coherent
  * document rather than a stack of boxes.
  */
@@ -77,7 +77,7 @@ export function DetailPanel({ children }) {
   return <div className="divide-y divide-border/60 rounded-xl border border-border/60 bg-background shadow-sm">{children}</div>
 }
 
-/** One section inside a DetailPanel — label + content, no border of its own. */
+/** One section inside a DetailPanel – label + content, no border of its own. */
 export function DetailSection({ label, children }) {
   return (
     <div className="p-4">
@@ -87,7 +87,7 @@ export function DetailSection({ label, children }) {
   )
 }
 
-/** Read-only label/value row for detail (non-form) sheets — pairs with DetailSection. */
+/** Read-only label/value row for detail (non-form) sheets – pairs with DetailSection. */
 export function DetailRow({ label, children, full = false }) {
   if (children == null || children === '') return null
   return (
@@ -98,12 +98,12 @@ export function DetailRow({ label, children, full = false }) {
   )
 }
 
-/** Grid wrapper for a set of DetailRows within a DetailSection — 2 columns on wider drawers. */
+/** Grid wrapper for a set of DetailRows within a DetailSection – 2 columns on wider drawers. */
 export function DetailGrid({ children }) {
   return <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">{children}</div>
 }
 
-/** Flat, divided list for detail sheets (attendees, donors, pickup points…) —
+/** Flat, divided list for detail sheets (attendees, donors, pickup points…) –
  * replaces one-bordered-box-per-row with subtle dividers so a list of many
  * items doesn't read as a stack of nested cards. */
 export function DetailList({ children }) {
@@ -111,7 +111,7 @@ export function DetailList({ children }) {
 }
 
 // Explicit small radius, not the theme's `rounded-lg`/`rounded-md` (those
-// resolve off `--radius: 1.1rem`, tuned for cards/pill buttons — on a 36px
+// resolve off `--radius: 1.1rem`, tuned for cards/pill buttons – on a 36px
 // input that reads as a stadium/pill shape, not a compact modern form field).
 export const fieldInputClassName =
   'mt-1 h-8 w-full rounded-[8px] border border-border/70 bg-background px-2.5 text-[13px] outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/15'

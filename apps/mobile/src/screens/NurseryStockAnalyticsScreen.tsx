@@ -21,7 +21,7 @@ const REASON_LABEL: Record<ApiStockLedgerEntry['reason'], string> = {
   manual_remove: 'Removed stock',
   reservation_fulfilled: 'Given to a planter',
   order_placed: 'Sold via order',
-  order_cancelled: 'Order cancelled — restocked',
+  order_cancelled: 'Order cancelled – restocked',
   bulk_requirement_fulfilled: 'Fulfilled a bulk requirement',
 };
 

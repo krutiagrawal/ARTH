@@ -1,4 +1,4 @@
-/** Answer choices for the "personalize your experience" questions — shared by the signup step and
+/** Answer choices for the "personalize your experience" questions – shared by the signup step and
  * by Edit Profile / the profile About card, so a value always reads the same everywhere. */
 export interface PersonalizeOption {
   value: string;

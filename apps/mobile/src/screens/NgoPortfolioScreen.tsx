@@ -87,7 +87,7 @@ function EntryCard({
 }
 
 /**
- * "Past work" — drives and projects an NGO ran before joining the platform.
+ * "Past work" – drives and projects an NGO ran before joining the platform.
  *
  * Deliberately separate from Manage → Drives: nothing here can be RSVP'd to or attended, and its
  * numbers are self-reported rather than backed by tree health checks.

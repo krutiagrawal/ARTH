@@ -22,7 +22,7 @@ export function DecorationPickerSheet({
   visible: boolean;
   onClose: () => void;
   /** Called instead of instant-placement when the user taps a "draw it yourself" tool card
-   * (e.g. "Draw a River") — the caller hands off to a freehand drawing gesture. */
+   * (e.g. "Draw a River") – the caller hands off to a freehand drawing gesture. */
   onDraw: (type: ApiDecorationType) => void;
 }) {
   const { data: allTypes = [] } = useDecorationTypes();
@@ -38,7 +38,7 @@ export function DecorationPickerSheet({
       return;
     }
     // Drop new items near the centre of the visible forest with a little jitter, then let the
-    // user freely move / resize / rotate them — no per-zone placement constraints.
+    // user freely move / resize / rotate them – no per-zone placement constraints.
     const positionX = 0.5 + (Math.random() - 0.5) * 0.2;
     const positionY = 0.4 + (Math.random() - 0.5) * 0.16;
     createMutation.mutate({ decorationTypeId: type.id, positionX, positionY, scale: 1, rotation: 0 });

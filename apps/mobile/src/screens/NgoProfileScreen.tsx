@@ -53,10 +53,10 @@ function formatPastWorkDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 }
 
-/** A "past work" entry as shown on an NGO's profile — same fields as the NGO's own private
+/** A "past work" entry as shown on an NGO's profile – same fields as the NGO's own private
  * management card (NgoPortfolioScreen's EntryCard). A visitor gets Like/Report, matching how a
  * regular Post can be liked and reported; the NGO viewing its own profile gets neither (liking or
- * reporting your own content doesn't make sense — same self-dealing rule other content follows),
+ * reporting your own content doesn't make sense – same self-dealing rule other content follows),
  * just the plain card, with editing left to the dedicated Past Work screen. */
 function PastWorkCard({
   entry,
@@ -120,7 +120,7 @@ function PastWorkCard({
   );
 }
 
-/** A weekly-cadence streak strip — one pill per week rather than the user app's 7-day-per-week
+/** A weekly-cadence streak strip – one pill per week rather than the user app's 7-day-per-week
  * grid, since an NGO's streak counts consecutive WEEKS with an update posted, not days. Kept
  * local to this screen rather than force-fit into the shared `StreakCalendar` (day-grid) component,
  * whose 2D week-of-days shape doesn't match this 1D week-only data. */
@@ -164,7 +164,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Gated on `isOwn` — these hit NGO-owner-only endpoints, so an individual (or another NGO)
+  // Gated on `isOwn` – these hit NGO-owner-only endpoints, so an individual (or another NGO)
   // viewing someone else's profile must never fire them: they'd only ever fail, and doing so
   // anyway burns connection slots the real publicProfile/campaign/drive fetches are waiting on.
   const ownProfile = useNgoProfile(isOwn);
@@ -216,7 +216,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
     [navigation, effectiveNgoId],
   );
 
-  // A suspended/removed NGO's public profile 404s — without this, `isLoading` (derived from
+  // A suspended/removed NGO's public profile 404s – without this, `isLoading` (derived from
   // `!data`) would stay true forever once the query settles on an error, leaving the screen
   // spinning indefinitely instead of telling the visitor the NGO is gone.
   const isError = isOwn ? ownProfile.isError : publicProfile.isError;
@@ -235,7 +235,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
   const isFollowingOrPending = followStatus === 'accepted' || followStatus === 'pending';
   const followersCount = isOwn ? undefined : publicProfile.data?.followersCount ?? 0;
 
-  // Full `ApiDrive` shape now (same as `useDrive` returns), not a trimmed summary — lets
+  // Full `ApiDrive` shape now (same as `useDrive` returns), not a trimmed summary – lets
   // onPressDrive below seed the drive-detail cache instead of forcing a re-fetch on tap.
   const drives: ApiDrive[] = isOwn
     ? ownDrives.data ?? []
@@ -243,7 +243,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
         (a: ApiDrive, b: ApiDrive) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime(),
       );
 
-  // NGOs manage these via their own dashboard, not this profile screen — nothing to show here yet.
+  // NGOs manage these via their own dashboard, not this profile screen – nothing to show here yet.
   const campaigns: ApiCampaign[] = isOwn ? [] : publicProfile.data?.campaigns ?? [];
   const adoptableTrees: ApiAdoptableTree[] = isOwn ? [] : publicProfile.data?.adoptableTrees ?? [];
 
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    // Floats over the vine photo now (topBar is an absolute overlay, not its own banner) — needs
+    // Floats over the vine photo now (topBar is an absolute overlay, not its own banner) – needs
     // a real backdrop to stay legible against green leaves.
     backgroundColor: 'rgba(255,255,255,0.55)',
   },

@@ -13,7 +13,7 @@ const IMAGES = {
     'https://images.pexels.com/photos/27815694/pexels-photo-27815694.jpeg',
     'https://images.pexels.com/photos/37735974/pexels-photo-37735974.jpeg',
     // Appended (not reordered) so existing rows' `img` indices below keep pointing
-    // at the same photo — this batch only adds variety for new rows and the
+    // at the same photo – this batch only adds variety for new rows and the
     // detail page's "more from the ground" gallery strip.
     'https://images.pexels.com/photos/775201/pexels-photo-775201.jpeg',
     'https://images.pexels.com/photos/707915/pexels-photo-707915.jpeg',
@@ -59,7 +59,7 @@ const FORESTS = [
   { id: 'red-earth-woods', name: 'Red Earth Woods', location: 'Bandhavgarh, India', state: 'Madhya Pradesh', trees: 33940, volunteers: 512, species: 92, established: '2021', img: 4, story: 'Sal and mahua woodland regeneration adjoining a tiger reserve buffer zone.' },
   { id: 'monsoon-canopy', name: 'Monsoon Canopy', location: 'Meghalaya, India', state: 'Meghalaya', trees: 47510, volunteers: 720, species: 168, established: '2016', img: 5, story: 'One of the wettest places on earth – a living cathedral of ferns, moss and living root bridges.' },
 
-  // Smaller, newer plantation drives — grown to bring every state and union
+  // Smaller, newer plantation drives – grown to bring every state and union
   // territory onto the map, not just the six flagship forests above.
   { id: 'tidal-shade-nursery', name: 'Tidal Shade Nursery', location: 'Port Blair, India', state: 'Andaman & Nicobar Island', trees: 3200, volunteers: 64, species: 18, established: '2021', img: 0, story: 'A shoreline mangrove nursery replanting the tidal buffer that cyclones and old jetties wore away.' },
   { id: 'godavari-greenline', name: 'Godavari Greenline', location: 'Rajahmundry, India', state: 'Andhra Pradesh', trees: 15400, volunteers: 310, species: 41, established: '2020', img: 1, story: 'A riverbank plantation along the Godavari, holding the soil where the water used to take it.' },
@@ -91,7 +91,7 @@ const FORESTS = [
   { id: 'dzukou-approach-line', name: 'Dzukou Approach Line', location: 'Kohima, India', state: 'Nagaland', trees: 3900, volunteers: 78, species: 33, established: '2020', img: 3, story: 'A trailside planting on the approach to the Dzukou valley, grown by the villages that guide the trekkers through it.' },
   { id: 'yamuna-biodiversity-strip', name: 'Yamuna Biodiversity Strip', location: 'New Delhi, India', state: 'NCT of Delhi', trees: 6200, volunteers: 190, species: 25, established: '2021', img: 4, story: 'A native-species strip along the Yamuna floodplain, planted to outcompete the invasive weed that used to own it.' },
 
-  // Second wave — a further planting in almost every state/UT above, so most
+  // Second wave – a further planting in almost every state/UT above, so most
   // places on the map now have more than one forest to show.
   { id: 'thar-edge-nursery', name: 'Thar Edge Nursery', location: 'Jodhpur, India', state: 'Rajasthan', trees: 9200, volunteers: 175, species: 21, established: '2022', img: 6, story: 'A desert-edge nursery of khejri and rohida trees, holding the line where the Thar sands keep advancing.' },
   { id: 'periyar-buffer-line', name: 'Periyar Buffer Line', location: 'Thekkady, India', state: 'Kerala', trees: 7600, volunteers: 160, species: 55, established: '2021', img: 7, story: 'A buffer planting around Periyar\'s reserve edge, widening the forest\'s margin for the elephants that already cross it.' },
@@ -130,7 +130,7 @@ const FORESTS = [
   { id: 'aravalli-biodiversity-park', name: 'Aravalli Biodiversity Park', location: 'New Delhi, India', state: 'NCT of Delhi', trees: 4800, volunteers: 140, species: 33, established: '2020', img: 8, story: 'A reclaimed mining pit turned biodiversity park, replanted with everything that used to grow there.' },
 
   // Maharashtra: seven smaller drives across the state, kept distinct on purpose
-  // — this is the one state where "Show all" on the map actually has something to show.
+  // – this is the one state where "Show all" on the map actually has something to show.
   { id: 'sahyadri-rain-grove', name: 'Sahyadri Rain Grove', location: 'Pune, India', state: 'Maharashtra', trees: 8800, volunteers: 190, species: 45, established: '2019', img: 5, story: 'A monsoon-fed grove on the Sahyadri slopes above Pune, planted faster than the erosion could undo it.' },
   { id: 'godavari-headwater-line', name: 'Godavari Headwater Line', location: 'Nashik, India', state: 'Maharashtra', trees: 6100, volunteers: 130, species: 30, established: '2020', img: 0, story: 'A planting at the Godavari\'s source, so the river has somewhere green to start from.' },
   { id: 'vidarbha-shade-belt', name: 'Vidarbha Shade Belt', location: 'Nagpur, India', state: 'Maharashtra', trees: 9400, volunteers: 205, species: 24, established: '2018', img: 1, story: 'A farm-boundary shade belt across drought-prone Vidarbha, planted with the farmers, not for them.' },
@@ -263,7 +263,7 @@ const TIMELINE = [
 
 async function main() {
   // NOTE: prisma.competition.deleteMany() below cascades onto real CompetitionEntry/
-  // CompetitionEntryVote rows submitted by real users (see packages/db/prisma/schema.prisma) —
+  // CompetitionEntryVote rows submitted by real users (see packages/db/prisma/schema.prisma) –
   // this wipe-and-reseed script is meant for fresh/dev databases, not a populated one.
   await prisma.stat.deleteMany()
   await prisma.timelineEntry.deleteMany()

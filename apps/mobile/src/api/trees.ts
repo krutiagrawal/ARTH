@@ -67,7 +67,7 @@ export async function plantTree(input: PlantTreeInput): Promise<ApiTree> {
   form.append('lng', String(input.lng));
   if (input.locationLabel) form.append('locationLabel', input.locationLabel);
   if (input.caption?.trim()) form.append('caption', input.caption.trim());
-  // Both required server-side now (see trees.schema.ts) — always send them. A device that can't
+  // Both required server-side now (see trees.schema.ts) – always send them. A device that can't
   // report accuracy sends a deliberately bad value instead of omitting the field, so the request
   // fails with a clear "move to an open area" error rather than a generic invalid-input one.
   form.append('accuracy', String(input.accuracy ?? 9999));

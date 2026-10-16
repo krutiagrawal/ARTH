@@ -17,17 +17,17 @@ interface StoryAvatarProps {
   size: number;
   borderRadius?: number;
   children: React.ReactNode;
-  /** The screen's normal avatar-tap behavior (e.g. navigate to profile) — used whenever there's
+  /** The screen's normal avatar-tap behavior (e.g. navigate to profile) – used whenever there's
    * no story to open. */
   onPress?: () => void;
   disabled?: boolean;
-  /** False keeps tap-to-open-story but skips drawing the ring — for avatars that already wear
+  /** False keeps tap-to-open-story but skips drawing the ring – for avatars that already wear
    * another ring (e.g. the XP ring on your own profile) and can't take the extra width. */
   showRing?: boolean;
 }
 
 /**
- * Drop-in replacement for wrapping an avatar in `<StoryRing>` — same ring, but tapping it opens
+ * Drop-in replacement for wrapping an avatar in `<StoryRing>` – same ring, but tapping it opens
  * that author's active story (any page, any list) instead of only running `onPress`. Falls back
  * to `onPress` when there's nothing to show (no story, or not a user avatar), so every existing
  * call site's original tap behavior (open profile, etc.) still works once the story's been seen
@@ -49,7 +49,7 @@ export function StoryAvatar({
   const [open, setOpen] = useState(false);
   const canOpenStory = (authorKind === 'user' || authorKind === 'ngo') && !!status?.hasStory;
 
-  // Only fetches once actually tapped open — not on mount — so a screen full of avatars doesn't
+  // Only fetches once actually tapped open – not on mount – so a screen full of avatars doesn't
   // fire a story request per row. Both hooks are always called (Rules of Hooks); each is gated by
   // its own `enabled` so only the one matching this avatar's kind actually fires.
   const { data: userStories = [] } = useUserStories(authorKind === 'user' && open ? authorId : null);

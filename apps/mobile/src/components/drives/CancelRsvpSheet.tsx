@@ -26,7 +26,7 @@ interface Props {
   onSubmit: (input: { reason: RsvpCancelReason; note?: string }) => void;
 }
 
-/** Short "why are you cancelling?" form — the organiser is told the reason so they can plan around it. */
+/** Short "why are you cancelling?" form – the organiser is told the reason so they can plan around it. */
 export function CancelRsvpSheet({ visible, driveTitle, submitting, error, onClose, onSubmit }: Props) {
   const keyboardHeight = useKeyboardHeight();
   const [reason, setReason] = useState<RsvpCancelReason | null>(null);

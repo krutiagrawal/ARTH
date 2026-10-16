@@ -42,7 +42,7 @@ test.describe('NGO registration', () => {
     await fillRegisterForm(page, ngo)
     await page.getByLabel('Organization name').fill('')
     await page.getByRole('button', { name: /submit for review/i }).click()
-    // Native HTML5 required validation blocks the fetch entirely — no confirmation, no navigation.
+    // Native HTML5 required validation blocks the fetch entirely – no confirmation, no navigation.
     await expect(page.getByRole('button', { name: /submit for review/i })).toBeVisible()
     await expect(page.getByText('Thank you,', { exact: false })).toHaveCount(0)
   })

@@ -24,9 +24,9 @@ const GOAL_TYPES: { value: 'trees_planted_count' | 'cities_count' | 'streak_days
 ];
 
 function DateField({ label, value, onChange }: { label: string; value: Date; onChange: (d: Date) => void }) {
-  // Android has no real combined "datetime" mode — the library fakes it by chaining a date
+  // Android has no real combined "datetime" mode – the library fakes it by chaining a date
   // dialog into a time dialog internally, and unmounting the picker as soon as the first
-  // (date) callback fires — which we used to do via `setShowPicker(false)` — tears down that
+  // (date) callback fires – which we used to do via `setShowPicker(false)` – tears down that
   // chain mid-flight and crashes with "Cannot read property 'dismiss' of undefined". Driving
   // the date→time sequence ourselves keeps the component mounted across both native dialogs.
   const [step, setStep] = useState<'date' | 'time' | null>(null);

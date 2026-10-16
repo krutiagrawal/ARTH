@@ -80,7 +80,7 @@ function RejectedPanel({ profile, onResubmitted }) {
   const [phoneTouched, setPhoneTouched] = useState(false)
   const [responsiblePhoneTouched, setResponsiblePhoneTouched] = useState(false)
 
-  // Format validation only — resubmits NurseryProfile.contactPhone (a business contact number),
+  // Format validation only – resubmits NurseryProfile.contactPhone (a business contact number),
   // not the User.phone identity field, so no real-time duplicate check here.
   const phoneField = usePhoneField(form.contactPhone, phoneTouched, { checkAvailability: false })
   const responsiblePhoneField = usePhoneField(form.responsiblePersonPhone, responsiblePhoneTouched, { checkAvailability: false })

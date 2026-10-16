@@ -16,7 +16,7 @@ import type { ApiAchievement } from '../api/achievements';
 import type { NgoGrowthLevel, NgoTrustScoreFactors } from '../api/ngoReputation';
 
 import { TEXT } from '../constants/typography';
-// Tenure + lifetime-impact tiers — independent of ARTH Trust Score. Same tier set as nursery's
+// Tenure + lifetime-impact tiers – independent of ARTH Trust Score. Same tier set as nursery's
 // GROWTH_LEVEL_META, kept as its own local copy since it's typed against NgoGrowthLevel and this
 // screen is the only NGO consumer (not worth a shared cross-role component for one usage each).
 const NGO_GROWTH_LEVEL_META: Record<NgoGrowthLevel, { emoji: string; label: string; color: string }> = {
@@ -116,7 +116,7 @@ export function NgoStreakBadgesScreen({ navigation }: any) {
 
         <Text style={styles.title}>Growth & Trust</Text>
         <Text style={styles.subtitle}>
-          Built from real ARTH activity — drives run, updates posted, and impact logged.
+          Built from real ARTH activity – drives run, updates posted, and impact logged.
         </Text>
 
         <BorderCard style={styles.card}>

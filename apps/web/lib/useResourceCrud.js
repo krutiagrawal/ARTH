@@ -4,14 +4,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 // Shared create/list/update/delete/action logic for any dashboard resource that's
-// structurally identical CRUD — originally lived in apps/web/app/ngo/dashboard/useResourceCrud.js
+// structurally identical CRUD – originally lived in apps/web/app/ngo/dashboard/useResourceCrud.js
 // (Drives, Adoptable Trees, Campaigns, Staff, Updates) and was hoisted here, unchanged, so the
 // Nursery dashboard (Inventory, Reviews, Followers, …) can reuse it too. It carries no NGO- or
 // nursery-specific logic: the caller passes in its own role-scoped `proxy` function (NGO's hits
 // `/api/ngo/proxy`, Nursery's hits `/api/nursery/proxy`, etc.), so this stays role-agnostic.
 //
 // `listPath` defaults to `${basePath}/mine` (Drives/Trees/Campaigns' convention, which share a
-// prefix with a public listing) — pass it explicitly for resources like Staff/Updates/Inventory
+// prefix with a public listing) – pass it explicitly for resources like Staff/Updates/Inventory
 // whose "list mine" endpoint is just the bare basePath (no public counterpart to disambiguate from).
 //
 // `options.pageSize` opts a resource into "load more" paging. Two list shapes are understood:

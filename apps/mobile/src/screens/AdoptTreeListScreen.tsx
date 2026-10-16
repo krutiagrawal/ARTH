@@ -140,7 +140,7 @@ export function AdoptTreeListScreen({ navigation }: any) {
           )}
         </View>
 
-        {/* Filters — no outline until selected */}
+        {/* Filters – no outline until selected */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
           <OutlineChip label="Available only" active={availableOnly} onPress={() => setAvailableOnly((v) => !v)} />
           {hasDistances && <OutlineChip label={`📍 Within ${NEAR_ME_KM} km`} active={nearMe} onPress={() => setNearMe((v) => !v)} />}

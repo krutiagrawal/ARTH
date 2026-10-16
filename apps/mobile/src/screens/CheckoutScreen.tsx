@@ -29,7 +29,7 @@ import { useConfirm } from '../context/ConfirmDialogContext';
 import { TEXT } from '../constants/typography';
 
 // Stripe's native module doesn't exist in Expo Go, so merely importing it throws. Loaded only once
-// a payment is actually in flight — see PaymentSheetRunner's own comment.
+// a payment is actually in flight – see PaymentSheetRunner's own comment.
 const LazyPaymentSheetRunner = React.lazy(() => import('../components/payments/PaymentSheetRunner'));
 
 function formatRupees(cents: number) {
@@ -96,7 +96,7 @@ export function CheckoutScreen({ navigation }: any) {
   const [actionError, setActionError] = useState('');
   const [paying, setPaying] = useState(false);
   const [note, setNote] = useState('');
-  // Non-null only while a real payment sheet is in flight — mounts LazyPaymentSheetRunner below.
+  // Non-null only while a real payment sheet is in flight – mounts LazyPaymentSheetRunner below.
   const [activeClientSecret, setActiveClientSecret] = useState<string | null>(null);
   const [locationNotice, setLocationNotice] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -129,7 +129,7 @@ export function CheckoutScreen({ navigation }: any) {
           ? {
               ok: false,
               text: pincodeCheck.actual
-                ? `Pincode doesn’t match this address — the location is in ${pincodeCheck.actual}`
+                ? `Pincode doesn’t match this address – the location is in ${pincodeCheck.actual}`
                 : 'Pincode doesn’t match this address',
             }
           : pincodeCheck.status === 'unverified'
@@ -140,7 +140,7 @@ export function CheckoutScreen({ navigation }: any) {
   const currentAddressId = selectedAddressId ?? activeAddresses.find((a) => a.isDefault)?.id ?? activeAddresses[0]?.id ?? null;
 
   const deliveryFeeCents = cart && cart.subtotalCents >= 49900 ? 0 : 4900;
-  // Flat ARTH platform fee, charged on every order — matches order.service.ts's PLATFORM_FEE_CENTS.
+  // Flat ARTH platform fee, charged on every order – matches order.service.ts's PLATFORM_FEE_CENTS.
   // This is a display-only preview; the authoritative total is computed server-side at checkout.
   const platformFeeCents = 100;
   const totalCents = (cart?.subtotalCents ?? 0) + deliveryFeeCents + platformFeeCents;
@@ -159,9 +159,9 @@ export function CheckoutScreen({ navigation }: any) {
         const found = await reverseGeocode(lat, lng).catch(() => null);
         if (found) {
           setLine1(found.label);
-          setLocationNotice({ ok: true, text: '✓ Matched from GPS — check the address above is correct' });
+          setLocationNotice({ ok: true, text: '✓ Matched from GPS – check the address above is correct' });
         } else {
-          setLocationNotice({ ok: false, text: "Pin captured, but we couldn't find an address for it — please type it above" });
+          setLocationNotice({ ok: false, text: "Pin captured, but we couldn't find an address for it – please type it above" });
         }
       } else {
         setActionError('Location permission is needed so deliveries can be tracked to this address.');
@@ -253,7 +253,7 @@ export function CheckoutScreen({ navigation }: any) {
         customerNote: note.trim() || undefined,
       });
 
-      // No Stripe key configured on the backend (local/dev only) — the order already came back
+      // No Stripe key configured on the backend (local/dev only) – the order already came back
       // confirmed, so there's no payment sheet to present. Skip straight to success.
       if (clientSecret) {
         // The runner reports back through the three handlers below; `paying` stays true until then.
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
   addAddressText: { fontSize: 14, fontWeight: '700', color: COLORS.forest },
   card: { marginBottom: 8 },
   input: {
-    // No fill — an outline on the page, not a panel laid over it. Matches FormField's recipe.
+    // No fill – an outline on the page, not a panel laid over it. Matches FormField's recipe.
     backgroundColor: 'transparent',
     borderRadius: RADIUS.lg,
     borderWidth: 1.5,

@@ -59,9 +59,9 @@ function MonthlyBarRow({
   color: string;
   data: MonthlyDatum[];
   delay?: number;
-  /** Fired when the row's header is tapped — a "view all" fallback. */
+  /** Fired when the row's header is tapped – a "view all" fallback. */
   onPress?: () => void;
-  /** Fired when a single month's bar is tapped, with that bar's own datum — lets each bar drill
+  /** Fired when a single month's bar is tapped, with that bar's own datum – lets each bar drill
    * into just that month instead of every bar bouncing to the same general list. */
   onBarPress?: (datum: MonthlyDatum) => void;
 }) {

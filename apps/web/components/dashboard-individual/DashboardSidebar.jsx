@@ -71,7 +71,7 @@ function NavRow({ item, pathname, onNavigate }) {
 }
 
 // Sage-green surface, deliberately distinct from the marketing site's cream
-// palette and from the NGO/Group dashboards' sand-colored sidebar — this is
+// palette and from the NGO/Group dashboards' sand-colored sidebar – this is
 // its own hardcoded brand accent (like the Impact panel's forest-deep), not
 // wired to the shared --sidebar-* tokens, so it doesn't shift with light/dark
 // mode or affect any other dashboard.
@@ -87,7 +87,7 @@ export default function DashboardSidebar() {
 
   return (
     <>
-      {/* Desktop: sage column filling the fixed-height app shell — never scrolls with the page */}
+      {/* Desktop: sage column filling the fixed-height app shell – never scrolls with the page */}
       <aside
         className={cn(
           SAGE_BG,

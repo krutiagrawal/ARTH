@@ -1,7 +1,7 @@
 'use client'
 import PartnerMark from './PartnerMark'
 
-// A logo wall, not a carousel: no cards, no borders, no motion — just marks
+// A logo wall, not a carousel: no cards, no borders, no motion – just marks
 // with generous air between them. Real logos (once set via /admin/content)
 // render as images; everything else gets a generated icon mark (see
 // PartnerMark) since these are seed/demo orgs with no real logo to fetch.

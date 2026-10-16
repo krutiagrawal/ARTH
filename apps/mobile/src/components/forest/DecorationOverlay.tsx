@@ -223,10 +223,10 @@ function DraggableDecoration({
 }
 
 /** Renders every placed forest decoration as a draggable/resizable/rotatable sprite layered on top
- * of the Skia canvas — same technique as the existing FloatingLeaf/BirdAnimation overlay, since Skia
+ * of the Skia canvas – same technique as the existing FloatingLeaf/BirdAnimation overlay, since Skia
  * canvas nodes don't have convenient per-shape touch/drag support. `editable` toggles whether
  * decorations can be moved/pinched/rotated/deleted (decorate mode) or just sit there (normal viewing).
- * Elements are placed freely anywhere on the canvas — no per-zone constraints. Hand-drawn river/stream
+ * Elements are placed freely anywhere on the canvas – no per-zone constraints. Hand-drawn river/stream
  * placements (with a `path`) render their own dynamically-sized SVG instead of a fixed catalog icon,
  * but share all the same move/resize/rotate/delete gesture code. */
 export function DecorationOverlay({

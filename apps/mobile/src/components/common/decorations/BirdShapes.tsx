@@ -30,7 +30,7 @@ export function RobinShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** A bluebird — sleeker body with a lifted tail and a small crest of feathers. */
+/** A bluebird – sleeker body with a lifted tail and a small crest of feathers. */
 export function BluebirdShape({ color, size }: DecorationShapeProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 60 60">
@@ -47,7 +47,7 @@ export function BluebirdShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** A cardinal — bold body with a pointed head crest and a dark face mask. */
+/** A cardinal – bold body with a pointed head crest and a dark face mask. */
 export function CardinalShape({ color, size }: DecorationShapeProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 60 60">
@@ -64,7 +64,7 @@ export function CardinalShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** An owl — upright, round-faced with large eyes and small ear tufts. */
+/** An owl – upright, round-faced with large eyes and small ear tufts. */
 export function OwlShape({ color, size }: DecorationShapeProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 60 60">
@@ -85,7 +85,7 @@ export function OwlShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** A hummingbird — tiny iridescent body, long thin beak and blurred hovering wing. */
+/** A hummingbird – tiny iridescent body, long thin beak and blurred hovering wing. */
 export function HummingbirdShape({ color, size }: DecorationShapeProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 60 60">
@@ -101,7 +101,7 @@ export function HummingbirdShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** A dove — smooth pale body, small rounded head and gently fanned tail. */
+/** A dove – smooth pale body, small rounded head and gently fanned tail. */
 export function DoveShape({ color, size }: DecorationShapeProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 60 60">
@@ -116,7 +116,7 @@ export function DoveShape({ color, size }: DecorationShapeProps) {
   );
 }
 
-/** A crane — tall wading bird with a long neck, long legs and a slender beak. */
+/** A crane – tall wading bird with a long neck, long legs and a slender beak. */
 export function CraneShape({ color, size }: DecorationShapeProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 60 60">

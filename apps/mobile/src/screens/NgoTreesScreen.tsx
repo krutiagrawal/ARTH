@@ -53,7 +53,7 @@ export function NgoTreesScreen({ navigation }: any) {
     confirm(
       'Remove this listing?',
       isAdopted
-        ? `${tree.nickname} is currently adopted — removing it will end that adoption and notify the adopter.`
+        ? `${tree.nickname} is currently adopted – removing it will end that adoption and notify the adopter.`
         : `${tree.nickname} will no longer be visible for adoption.`,
       [
         { text: 'Cancel', style: 'cancel' },

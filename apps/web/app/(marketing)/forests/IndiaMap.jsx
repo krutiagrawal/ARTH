@@ -38,7 +38,7 @@ function shadeFor(name) {
 }
 
 // Mirrors ComposableMap's internal projection (default 800x600 viewBox) so
-// geoPath.centroid() below lands in the same coordinate space it renders in —
+// geoPath.centroid() below lands in the same coordinate space it renders in –
 // that's how a click on a state finds the screen position for its bubbles.
 const projection = geoMercator().center([82.8, 22.5]).scale(1050).translate([MAP_W / 2, MAP_H / 2])
 const pathGen = geoPath(projection)
@@ -123,7 +123,7 @@ export default function IndiaMap({ forestsByState }) {
           </Geographies>
         </ComposableMap>
 
-        {/* hover tooltip — the empty-state message lives here now, right on the
+        {/* hover tooltip – the empty-state message lives here now, right on the
             state itself, instead of a separate section the visitor had to scroll to */}
         {hovered && (
           <div className="pointer-events-none absolute top-2 left-2 rounded-xl bg-foreground text-background px-3 py-1.5 text-xs font-bold shadow-lg max-w-[220px]">
@@ -134,7 +134,7 @@ export default function IndiaMap({ forestsByState }) {
         )}
 
         {/* geotag-style popup bubbles, anchored to the clicked state's centroid.
-            Wraps into rows instead of a single tall stack — a max-width flex-wrap
+            Wraps into rows instead of a single tall stack – a max-width flex-wrap
             block rather than a flex-col. */}
         {selected && stateForests.length > 0 && (
           <div className="absolute z-20" style={{ left: `${selected.xPct}%`, top: `${selected.yPct}%` }}>

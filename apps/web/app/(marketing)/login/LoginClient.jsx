@@ -33,7 +33,7 @@ function LoginForm() {
       }
       await refresh()
       // Organisation-type accounts (ngo/community/nursery/organisation) have their
-      // own dashboard + session at /ngo/login — this form is for individual accounts.
+      // own dashboard + session at /ngo/login – this form is for individual accounts.
       router.push(searchParams.get('next') || '/dashboard/individual')
     } catch {
       setError('Could not reach the server. Please check your connection and try again.')

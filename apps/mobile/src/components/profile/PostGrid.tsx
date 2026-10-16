@@ -41,7 +41,7 @@ function GridTile({ post, onPress }: { post: ApiPost; onPress: () => void }) {
 /**
  * Instagram-style 3-column post grid. A single FlatList (not nested in a ScrollView) so the
  * profile-tabs pattern still virtualizes: `ListHeaderComponent` carries the profile header, tab
- * bar, and — for non-"posts" tabs — that tab's whole content, with `posts` passed as `[]` so the
+ * bar, and – for non-"posts" tabs – that tab's whole content, with `posts` passed as `[]` so the
  * grid area itself renders nothing.
  */
 export function PostGrid({
@@ -63,11 +63,11 @@ export function PostGrid({
   ListHeaderComponent?: React.ReactElement | null;
   emptyTitle?: string;
   emptyBody?: string;
-  /** `posts` is deliberately `[]` on every non-"posts" tab (see class comment above) — pass
+  /** `posts` is deliberately `[]` on every non-"posts" tab (see class comment above) – pass
    * `false` on those tabs so the grid area doesn't show a "No posts yet" message underneath
    * that tab's real content, which has nothing to do with posts. */
   showEmptyState?: boolean;
-  /** Optional pull-to-refresh — omit both to leave the list without one (unchanged default). */
+  /** Optional pull-to-refresh – omit both to leave the list without one (unchanged default). */
   refreshing?: boolean;
   onRefresh?: () => void;
 }) {
@@ -83,7 +83,7 @@ export function PostGrid({
     // with nothing scrollable below it, so the keyboard opening leaves no room for the OS's
     // usual "scroll the focused input into view" to work with. Wrapping in KeyboardAvoidingView
     // shrinks this list's own viewport by the keyboard height instead, which gives that same
-    // auto-scroll behavior the room it needs — same pattern used for the app's forms elsewhere
+    // auto-scroll behavior the room it needs – same pattern used for the app's forms elsewhere
     // (e.g. NgoPortfolioEntryScreen). Android resizes the window natively, so no behavior needed.
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <FlatList

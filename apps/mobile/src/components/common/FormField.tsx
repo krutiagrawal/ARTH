@@ -15,14 +15,14 @@ interface FormFieldProps extends Pick<
   'value' | 'onChangeText' | 'onBlur' | 'placeholder' | 'keyboardType' | 'autoCapitalize' | 'editable' | 'multiline' | 'secureTextEntry' | 'maxLength'
 > {
   label: string;
-  /** Rendered at the right edge of the box — e.g. a dropdown chevron. */
+  /** Rendered at the right edge of the box – e.g. a dropdown chevron. */
   rightAccessory?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   /**
-   * Set true when this field is rendered inside a dark surface — e.g. a `Sheet` currently in its
+   * Set true when this field is rendered inside a dark surface – e.g. a `Sheet` currently in its
    * night-mode chrome. FormField has no way to know its own surroundings (most screens place it
    * on a fixed light cream background regardless of time of day, so it can't just check the
-   * global time-of-day theme itself), so the caller must compute that and pass it down — see
+   * global time-of-day theme itself), so the caller must compute that and pass it down – see
    * Sheet.tsx's own `isNightMode` for the same check callers should reuse.
    */
   dark?: boolean;
@@ -46,7 +46,7 @@ export function FormField({ label, rightAccessory, style, multiline, dark, ...in
 }
 
 /**
- * Same box chrome as `FormField`, but the value area is caller-supplied — for
+ * Same box chrome as `FormField`, but the value area is caller-supplied – for
  * fields that open a picker instead of accepting typed input (dates, selects).
  */
 export function FormFieldShell({
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
     // Fully transparent: the field is an outline on the page, not a panel laid over it. Both a
     // white and an off-white fill still read as a lighter rectangle punched into the cream.
     //
-    // With no fill the border has to carry the whole affordance, so it's firmer than it was — and
+    // With no fill the border has to carry the whole affordance, so it's firmer than it was – and
     // the drop shadow is gone deliberately. A shadow cast by a transparent box has nothing to sit
     // under: it renders as a detached halo on iOS, and Android's `elevation` paints its own opaque
     // rectangle behind the view, which would put the light fill straight back.

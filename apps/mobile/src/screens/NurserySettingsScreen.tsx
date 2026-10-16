@@ -42,16 +42,16 @@ const DEFAULT_SETTINGS: ApiUserSettings = {
   pinnedTimeTheme: null,
 };
 
-/** Sourced from app.json#expo.version via expo-constants — never hand-typed, so it can't drift. */
+/** Sourced from app.json#expo.version via expo-constants – never hand-typed, so it can't drift. */
 const appVersionLabel = Constants.expoConfig?.version ? `ARTH v${Constants.expoConfig.version}` : 'ARTH';
 
 export function NurserySettingsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const { data: profile, isLoading, refetch } = useNurseryProfile();
   // The nursery account's own login (email, logout, delete-account) is a regular User row (role
-  // 'nursery') — these settings/session endpoints are already generic to any authenticated user,
+  // 'nursery') – these settings/session endpoints are already generic to any authenticated user,
   // so this screen reuses the exact same hooks the individual user's SettingsScreen does. Profile
-  // identity (logo/name/description/city/phone/location) lives on its own NurseryProfileScreen —
+  // identity (logo/name/description/city/phone/location) lives on its own NurseryProfileScreen –
   // this screen is preferences and account only.
   const { user, logout } = useAuth();
   const { data: fetchedSettings } = useSettings();
@@ -115,7 +115,7 @@ export function NurserySettingsScreen({ navigation }: any) {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
-          {/* Profile card — a shortcut, not the profile itself */}
+          {/* Profile card – a shortcut, not the profile itself */}
           <Animated.View style={fadeStyle}>
             <LinearGradient colors={[COLORS.forest, COLORS.sageDark]} style={styles.profileCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
               <View style={styles.profileCardAvatar}>

@@ -71,7 +71,7 @@ export function NgoDrivesScreen({ navigation }: any) {
           const startsAt = new Date(drive.startsAt);
           const photoUrl = resolveMediaUrl(drive.photoUri);
           // The server leaves status as 'upcoming' until someone marks the drive complete, so a
-          // drive past its date would still wear the Upcoming pill — show it as Ended instead.
+          // drive past its date would still wear the Upcoming pill – show it as Ended instead.
           const displayStatus = drive.status === 'upcoming' && drive.hasEnded ? 'ended' : drive.status;
           return (
             <FadeInRow key={drive.id} delay={i * 60}>
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
 
   card: { marginBottom: 16, borderRadius: 20 },
   cardInner: { flexDirection: 'row', gap: 14, padding: 12 },
-  // Tall portrait thumbnail down the left edge, matching the reference proportions — the old
+  // Tall portrait thumbnail down the left edge, matching the reference proportions – the old
   // 68x68 square left the card looking half-empty next to four rows of text.
   thumb: { width: 84, height: 168, borderRadius: 14 },
   thumbPlaceholder: {

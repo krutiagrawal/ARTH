@@ -15,7 +15,7 @@ import { LEAF_COLORS } from '../../hooks/useParticles';
 import type { ApiWeather } from '../../api/weather';
 
 /**
- * Weather-reactive ambient scenery — rain/wind particle layers, plus the `getSceneryMode`
+ * Weather-reactive ambient scenery – rain/wind particle layers, plus the `getSceneryMode`
  * classifier that picks between them and the plain floating-leaves fallback. Extracted from
  * `HomeScreen.tsx` (where it originated) so NGO/Admin dashboards can render the same
  * weather-driven scenery on top of their own hero illustration.

@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
 
   // Every query key in this app (friends, requests, feed, notifications, ...) is keyed by
-  // resource, not by user id, so react-query's cache — and its 30s staleTime — otherwise survives
+  // resource, not by user id, so react-query's cache – and its 30s staleTime – otherwise survives
   // a logout/login on the same device: the next account mounts the same screens, sees the
   // previous account's still-"fresh" cached data, and doesn't refetch. Wiping the cache on every
   // auth transition is what makes account switching show the right account's data immediately.
@@ -92,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const me = await authApi.fetchMe();
           if (mountedRef.current) setUser(me);
         } catch (err) {
-          // A blocked account keeps its tokens — handleAccountBlocked already
+          // A blocked account keeps its tokens – handleAccountBlocked already
           // fired from the ACCOUNT_BLOCKED response and flipped isBlocked, so
           // this cold-launch path must not also clear the session out from
           // under it (that's the "logged out" path, a different case).

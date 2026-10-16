@@ -8,10 +8,10 @@ import { useAvailabilityCheck } from './useAvailabilityCheck'
  * PhoneInput's own digit-sanitizing), "touched" gating, and a debounced real-time "already
  * registered" check once 10 digits have been entered. Mirrors
  * apps/mobile/src/hooks/usePhoneField.ts. `required` only changes what `error` says about an
- * empty value — the field itself is always optional at the type level.
+ * empty value – the field itself is always optional at the type level.
  *
  * Pass `checkAvailability: false` for fields that edit an existing NgoProfile/NurseryProfile
- * business-contact number rather than the User.phone identity field (settings/staff forms) —
+ * business-contact number rather than the User.phone identity field (settings/staff forms) –
  * duplicate-phone enforcement only applies at registration time.
  */
 export function usePhoneField(value, touched, { required = false, checkAvailability = true } = {}) {

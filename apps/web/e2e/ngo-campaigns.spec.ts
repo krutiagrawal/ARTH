@@ -63,7 +63,7 @@ test.describe('NGO Campaigns CRUD', () => {
 
   test('donors sheet shows real donors and CSV export contains the seeded donation', async ({ page }) => {
     await page.goto('/ngo/dashboard/campaigns')
-    // Search first — a growing campaigns list (from other CRUD runs) can
+    // Search first – a growing campaigns list (from other CRUD runs) can
     // push this older, seeded row off the default first page.
     await page.getByPlaceholder('Search campaigns…').fill('E2E Seed')
     await expect(page.getByText('E2E Seed Campaign')).toBeVisible({ timeout: 10_000 })

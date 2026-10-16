@@ -67,7 +67,7 @@ const INITIAL_ANSWERS: Answers = {
   dob: null,
 };
 
-// Sunlight only makes sense if at least one selected space is an actual fixed personal spot —
+// Sunlight only makes sense if at least one selected space is an actual fixed personal spot –
 // skip it if everything picked is "no space", or open/public land with no one spot to describe.
 const PERSONAL_SPOT_VALUES = ['balcony', 'terrace', 'garden', 'farmland'];
 function visibleSteps(answers: Answers): StepDef[] {
@@ -202,7 +202,7 @@ export function PersonalizeOnboardingScreen({ navigation }: any) {
 
   const goBack = () => setStepIndex((i) => Math.max(0, i - 1));
   const skip = () => goNext();
-  // Every question type needs the same "pick, then tap Continue" rhythm — a single-select that
+  // Every question type needs the same "pick, then tap Continue" rhythm – a single-select that
   // auto-advanced on tap while everything else waited for Continue read as an inconsistent UI.
   const selectSingle = (value: string) => setAnswers((a) => ({ ...a, [step.key]: value }));
   const toggleMulti = (value: string) => {

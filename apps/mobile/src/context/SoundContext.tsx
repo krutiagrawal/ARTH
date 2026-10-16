@@ -112,7 +112,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
       birdsRef.current = makeLoop(SRC_BIRDS, VOL.birds_sunny, muted);
       pianoRef.current = makeLoop(SRC_PIANO, VOL.piano, muted);
 
-      // Weather check in background — adds rain if needed
+      // Weather check in background – adds rain if needed
       getWeatherScene().then(async (scene) => {
         if (!mounted) return;
         sceneRef.current = scene;

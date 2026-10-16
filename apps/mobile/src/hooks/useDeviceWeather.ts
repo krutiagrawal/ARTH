@@ -14,7 +14,7 @@ export function useDeviceWeather() {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          console.warn('[useDeviceWeather] location permission denied — weather-based scenery (e.g. rain) cannot be detected');
+          console.warn('[useDeviceWeather] location permission denied – weather-based scenery (e.g. rain) cannot be detected');
           if (mounted) setPermissionDenied(true);
           return;
         }
@@ -49,7 +49,7 @@ export function useDeviceWeather() {
     queryKey: ['weather', coords?.lat, coords?.lng],
     queryFn: () => fetchWeather(coords!.lat, coords!.lng),
     enabled: !!coords,
-    // Conditions (especially rain) can change within minutes — keep this short-lived rather than
+    // Conditions (especially rain) can change within minutes – keep this short-lived rather than
     // sticking with a stale "sunny" reading for a long time after it starts raining.
     staleTime: 2 * 60 * 1000,
     refetchOnMount: 'always',
@@ -57,7 +57,7 @@ export function useDeviceWeather() {
   });
 
   if (query.isError) {
-    console.warn('[useDeviceWeather] weather fetch failed — falling back to default scenery:', query.error);
+    console.warn('[useDeviceWeather] weather fetch failed – falling back to default scenery:', query.error);
   }
 
   const weather: ApiWeather | null = query.data

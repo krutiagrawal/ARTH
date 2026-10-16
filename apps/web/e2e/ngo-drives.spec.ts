@@ -50,7 +50,7 @@ test.describe('NGO Drives CRUD', () => {
     await expect(page.getByText('No RSVPs yet.')).toBeVisible()
     await page.keyboard.press('Escape')
 
-    // Cancel it (cleanup — sets status, doesn't delete the row).
+    // Cancel it (cleanup – sets status, doesn't delete the row).
     await updatedRow.getByRole('button').last().click()
     await page.getByRole('menuitem', { name: 'Cancel drive' }).click()
     await page.getByRole('alertdialog').getByRole('button', { name: 'Cancel drive' }).click()
@@ -67,7 +67,7 @@ test.describe('NGO Drives CRUD', () => {
 
   test('search filters the drives list by title', async ({ page }) => {
     await page.goto('/ngo/dashboard/drives')
-    // Search first — a growing drives list (cancelled drives are never
+    // Search first – a growing drives list (cancelled drives are never
     // removed) can push this older, seeded row off the default first page.
     await page.getByPlaceholder('Search drives…').fill('E2E Seed')
     await expect(page.getByText('E2E Seed Drive')).toBeVisible({ timeout: 10_000 })
@@ -89,7 +89,7 @@ test.describe('NGO Drives CRUD', () => {
       }
 
       await page.goto('/ngo/dashboard/drives')
-      // Search by the run-unique stamp, not a shared "Sort " prefix — cancelled
+      // Search by the run-unique stamp, not a shared "Sort " prefix – cancelled
       // drives are never removed, so earlier runs' Sort Early/Late rows stick
       // around forever and would otherwise pollute this comparison.
       await page.getByPlaceholder('Search drives…').fill(String(stamp))
@@ -108,7 +108,7 @@ test.describe('NGO Drives CRUD', () => {
       await expect(descRows.first()).toContainText(lateTitle)
       await expect(descRows.last()).toContainText(earlyTitle)
     } finally {
-      // Hard-delete, not the soft-cancel DELETE endpoint — these are pure
+      // Hard-delete, not the soft-cancel DELETE endpoint – these are pure
       // test scaffolding (no real-user-journey meaning), and soft-cancelled
       // rows stick around forever, which would otherwise skew default sort
       // order for every later run.

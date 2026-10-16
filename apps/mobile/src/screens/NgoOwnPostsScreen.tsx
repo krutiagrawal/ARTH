@@ -16,7 +16,7 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
  * Everything this NGO has published, with its own engagement visible.
  *
  * Uses the same PostCard as the public feed rather than a bespoke grid so an NGO sees its posts
- * exactly as supporters do — including how the caption truncates and how the carousel reads.
+ * exactly as supporters do – including how the caption truncates and how the carousel reads.
  */
 export function NgoOwnPostsScreen({ navigation }: any) {
   const clearance = useBottomNavClearance();

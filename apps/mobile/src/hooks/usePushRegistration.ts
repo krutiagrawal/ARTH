@@ -7,11 +7,11 @@ import { navigationRef } from '../navigation/navigationRef';
 
 /**
  * Routes a tapped push notification to the same screen its in-app notification-centre row would
- * open — mirroring NotificationsScreen's `openTarget`, but limited to what the push `data` payload
+ * open – mirroring NotificationsScreen's `openTarget`, but limited to what the push `data` payload
  * actually carries (`type` and `postId`; see notification.service.ts). Cases that need actor info
  * (e.g. friend_request_accepted) fall back to the notification centre itself.
  */
-/** Polls briefly for the nav container to mount — needed for the cold-start path below, which can
+/** Polls briefly for the nav container to mount – needed for the cold-start path below, which can
  *  run before NavigationContainer has finished its first render. */
 async function waitForNavigationReady(attempts = 20): Promise<boolean> {
   for (let i = 0; i < attempts; i++) {
@@ -56,7 +56,7 @@ function routeForPushData(data: Record<string, unknown> | undefined) {
  * Registers this device for Expo push notifications, once per signed-in session.
  *
  * Deliberately silent about every failure. Push is a bonus on top of the in-app notification
- * centre, which works everywhere — so a missing module, a denied permission, or an offline
+ * centre, which works everywhere – so a missing module, a denied permission, or an offline
  * device must never surface an error or block the app.
  *
  * Notably a no-op in Expo Go: Expo removed remote push from the Go client on iOS in SDK 53, and
@@ -71,7 +71,7 @@ export function usePushRegistration() {
   // Guards the handler/channel setup below, which is independent of auth.
   const configured = useRef(false);
 
-  // By default expo-notifications shows nothing at all while the app is in the foreground — a
+  // By default expo-notifications shows nothing at all while the app is in the foreground – a
   // push received mid-session only ever reaches the in-app notification centre. This opts back
   // into the OS heads-up banner so a foreground push looks the same as a backgrounded one.
   useEffect(() => {
@@ -91,7 +91,7 @@ export function usePushRegistration() {
         }),
       });
 
-      // Android only shows a heads-up banner for a HIGH/MAX-importance channel — the default
+      // Android only shows a heads-up banner for a HIGH/MAX-importance channel – the default
       // channel expo-notifications creates otherwise is DEFAULT importance, which just drops the
       // notification into the tray silently.
       if (Platform.OS === 'android') {
@@ -102,7 +102,7 @@ export function usePushRegistration() {
         });
       }
 
-      // Tapping a notification while the app is backgrounded only ever fires this listener — it
+      // Tapping a notification while the app is backgrounded only ever fires this listener – it
       // does not go through NotificationsScreen's in-app `openTarget` at all, so without this the
       // tap just cold-opens to whatever the default landing screen is and silently drops the
       // notification's target (e.g. an abandoned-cart push landed on an empty default screen
@@ -112,7 +112,7 @@ export function usePushRegistration() {
       });
 
       // Covers the cold-start case: the app was fully killed and the tap is what launched it, so
-      // the listener above — registered only once JS is running — never sees that first response.
+      // the listener above – registered only once JS is running – never sees that first response.
       const lastResponse = await Notifications.getLastNotificationResponseAsync();
       if (lastResponse) {
         await waitForNavigationReady();
@@ -129,14 +129,14 @@ export function usePushRegistration() {
     (async () => {
       try {
         if (Constants.appOwnership === 'expo') {
-          // Expo Go: no remote push. Bail out before even importing expo-notifications —
+          // Expo Go: no remote push. Bail out before even importing expo-notifications –
           // just loading the module in Expo Go on SDK 53+ prints a red ERROR log (Expo's own
           // deprecation notice), even though nothing here would call its APIs anyway.
           return;
         }
 
         // Required imports are resolved lazily so the bundle still runs in Expo Go, where the
-        // native module is absent — a top-level import would throw at startup.
+        // native module is absent – a top-level import would throw at startup.
         const Notifications = await import('expo-notifications').catch(() => null);
         if (!Notifications || cancelled) return;
 

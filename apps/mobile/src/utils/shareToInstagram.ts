@@ -1,10 +1,10 @@
 // `react-native-share` isn't one of Expo Go's precompiled native modules (it's a third-party
-// library needing a real native build) — its own package resolves its native binding eagerly at
+// library needing a real native build) – its own package resolves its native binding eagerly at
 // import time, so a top-level `import` here would crash the WHOLE app the instant this module is
 // first required (which happens at startup, since this is reachable from AchievementGrid, used
 // on nearly every screen). Deferred to a lazy require() inside each function instead, so it only
 // throws (caught below, degrading to a no-op) when a share button is actually pressed under Expo
-// Go — the rest of the app keeps working. Under a real dev-client/production build this resolves
+// Go – the rest of the app keeps working. Under a real dev-client/production build this resolves
 // and behaves identically to a normal top-level import.
 function loadShareModule(): typeof import('react-native-share') | null {
   try {
@@ -21,14 +21,14 @@ function loadShareModule(): typeof import('react-native-share') | null {
  */
 export async function shareImageToInstagramStory(imageUri: string, caption?: string): Promise<boolean> {
   const mod = loadShareModule();
-  if (!mod) return false; // Sharing isn't available in this runtime (e.g. Expo Go) — silently no-op.
+  if (!mod) return false; // Sharing isn't available in this runtime (e.g. Expo Go) – silently no-op.
   const { default: Share, Social } = mod as any;
 
   try {
     const result = await Share.shareSingle({
       social: Social.InstagramStories,
       backgroundImage: imageUri,
-      // Optional — only enables the "back to app" attribution link on the story. Sharing still
+      // Optional – only enables the "back to app" attribution link on the story. Sharing still
       // works fine without a Facebook App ID configured.
       appId: process.env.EXPO_PUBLIC_FACEBOOK_APP_ID ?? '',
     });
@@ -39,7 +39,7 @@ export async function shareImageToInstagramStory(imageUri: string, caption?: str
   }
 }
 
-/** Generic OS share sheet — lets the user pick any app (WhatsApp, Instagram feed post, etc). */
+/** Generic OS share sheet – lets the user pick any app (WhatsApp, Instagram feed post, etc). */
 /** Resolves true only if the user actually completed a share (not dismissed the sheet). */
 export async function shareImageGeneric(imageUri: string, caption?: string): Promise<boolean> {
   const mod = loadShareModule();

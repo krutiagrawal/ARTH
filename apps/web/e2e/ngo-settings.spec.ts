@@ -24,7 +24,7 @@ test.describe('NGO Settings', () => {
     await expect(page.getByLabel('Organization name', { exact: false })).toHaveValue(updatedName)
     await expect(page.getByLabel('Phone (optional)', { exact: false })).toHaveValue('+91 9876543210')
 
-    // Revert — this is the shared approved test NGO reused across the suite.
+    // Revert – this is the shared approved test NGO reused across the suite.
     await page.getByLabel('Organization name', { exact: false }).fill(original.orgName)
     await page.getByRole('button', { name: /save changes/i }).click()
     await expect(page.getByText('Organization details saved.')).toBeVisible({ timeout: 10_000 })

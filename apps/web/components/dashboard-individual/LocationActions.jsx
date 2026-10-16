@@ -19,7 +19,7 @@ export default function LocationActions({ label, address }) {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
-      // Clipboard API can be unavailable (insecure context, permissions) — no-op.
+      // Clipboard API can be unavailable (insecure context, permissions) – no-op.
     }
   }
 

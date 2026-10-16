@@ -54,7 +54,7 @@ export interface TimeTheme {
   cardBackgroundAlt: string;
   /** Alpha for the translucent `cardBackground` wash painted over each card's BlurView. Card
    * text color is chosen assuming the card reads as a fully opaque `cardBackground` swatch, but
-   * the wash is composited over whatever's behind it — a 40% wash of a light tint over a dark sky
+   * the wash is composited over whatever's behind it – a 40% wash of a light tint over a dark sky
    * backdrop blends dark, silently breaking that assumption (this happened at Night: the light
    * lavender card washed to a muddy dark tone, leaving textPrimaryOnCard's dark navy nearly
    * invisible). Periods with a dark backdrop behind a light-tinted card need a higher alpha so the
@@ -70,7 +70,7 @@ export interface TimeTheme {
   lakeColors: [string, string];
   lakeHighlight: string;
   treeSilhouetteColor: string;
-  /** A real hand-illustrated background for this period, when one exists — takes priority over
+  /** A real hand-illustrated background for this period, when one exists – takes priority over
    * the Skia-drawn ForestHeroCanvas fallback. `null` until an image is provided for that period. */
   heroImage: ImageSourcePropType | null;
 }
@@ -241,7 +241,7 @@ function getThemeForHour(hour: number): TimeTheme {
       cardTint: 'light',
       statusBarStyle: 'light',
       warmth: 1.0,
-      // Softened from '#FFE7D6'/'#FFD1B5' — the original card tones were more saturated than
+      // Softened from '#FFE7D6'/'#FFD1B5' – the original card tones were more saturated than
       // every other period's, which combined with the low-opacity secondary text below to read as
       // visually heavy/tiring. Paler now; still warm, just less intense.
       cardBackground: '#FFF3EA',
@@ -249,7 +249,7 @@ function getThemeForHour(hour: number): TimeTheme {
       cardOverlayAlpha: 0.4,
       cardBorder: 'rgba(255,142,110,0.28)',
       textPrimaryOnCard: '#7A3520',
-      // Raised from 0.65 — was the weakest-reading secondary text relative to how saturated this
+      // Raised from 0.65 – was the weakest-reading secondary text relative to how saturated this
       // period's card used to be; strengthened so mission/eco-fact body copy doesn't feel thin.
       textSecondaryOnCard: 'rgba(122,53,32,0.82)',
       accentColor: '#FF8E6E',
@@ -269,7 +269,7 @@ function getThemeForHour(hour: number): TimeTheme {
       label: 'Sunset',
       greeting: 'Good evening',
       emoji: '🌅',
-      // Pink/coral is the dominant family here — purple (E2D0FF/C8B6FF/A78BFA/B583F5) is only a
+      // Pink/coral is the dominant family here – purple (E2D0FF/C8B6FF/A78BFA/B583F5) is only a
       // faint hint at the very top of the sky, echoing the hand-off to Blue Hour just after. It
       // must not dominate hills/lake/cards/accent the way Blue Hour's purple does, or the two
       // periods become visually indistinguishable (the bug this replaced).
@@ -337,7 +337,7 @@ function getThemeForHour(hour: number): TimeTheme {
       particleOpacity: 0.6,
       mascotOutfit: 'windingUp',
       // Corrected against the reference mockup: Blue Hour's cards/header text are dark-on-light
-      // (pale lavender cards, dark purple text), same family as Afternoon/Morning — NOT the
+      // (pale lavender cards, dark purple text), same family as Afternoon/Morning – NOT the
       // white-on-dark treatment Night/Late Night use. Only the illustration itself (sky/hills) is
       // richly saturated purple-blue; the UI chrome sitting on top of/below it stays light.
       textOnSky: '#3D3163',
@@ -346,8 +346,8 @@ function getThemeForHour(hour: number): TimeTheme {
       warmth: 0.25,
       cardBackground: '#E6D6FF',
       cardBackgroundAlt: '#D8B4FE',
-      // Blue Hour's sky/hills are a moderately dark saturated blue-purple — not as dark as
-      // Night's, but darker than the pastel-sky periods above — so a plain 0.4 wash risks the
+      // Blue Hour's sky/hills are a moderately dark saturated blue-purple – not as dark as
+      // Night's, but darker than the pastel-sky periods above – so a plain 0.4 wash risks the
       // same (if milder) dark-on-light-card-text erosion Night had. Bumped as a safety margin.
       cardOverlayAlpha: 0.55,
       cardBorder: 'rgba(108,124,231,0.28)',
@@ -394,7 +394,7 @@ function getThemeForHour(hour: number): TimeTheme {
       warmth: 0.1,
       cardBackground: '#A8B4FF',
       cardBackgroundAlt: '#8E7CF6',
-      // Night's sky/ground is dark navy — a 0.4 wash of the light lavender cardBackground blends
+      // Night's sky/ground is dark navy – a 0.4 wash of the light lavender cardBackground blends
       // dark against it, which is what made textPrimaryOnCard's dark navy nearly invisible on
       // Home/Forest cards at night. Raised so the lavender tint actually dominates the backdrop.
       cardOverlayAlpha: 0.85,
@@ -489,14 +489,14 @@ function computeTheme(pinnedPeriod?: TimePeriod | null): TimeTheme {
   const liveTheme = getThemeForHour(computeHour());
   if (!pinnedPeriod) return liveTheme;
   // Visuals come from the pinned period; the greeting/emoji always reflect the real clock, even
-  // when the rest of the look is pinned — so "Good morning" never shows over a Night sky.
+  // when the rest of the look is pinned – so "Good morning" never shows over a Night sky.
   return { ...getThemeForHour(PERIOD_HOUR[pinnedPeriod]), greeting: liveTheme.greeting, emoji: liveTheme.emoji };
 }
 
 /** @param pinnedPeriod When set, the visual theme (sky/hills/hero image/mascot/card colors) stays
- * fixed to that period instead of following the real clock — used for the homepage's "keep a
+ * fixed to that period instead of following the real clock – used for the homepage's "keep a
  * consistent look" setting. Omit (or pass `null`) for the normal, fully time-of-day-driven
- * behavior — every existing call site with no argument is unaffected. */
+ * behavior – every existing call site with no argument is unaffected. */
 export function useTimeTheme(pinnedPeriod?: TimePeriod | null): TimeTheme {
   const [theme, setTheme] = useState<TimeTheme>(() => computeTheme(pinnedPeriod));
 
@@ -512,7 +512,7 @@ export function useTimeTheme(pinnedPeriod?: TimePeriod | null): TimeTheme {
 
 export { getThemeForHour };
 
-/** Shared predicate for "should this generic (non-illustrated) surface go dark right now" —
+/** Shared predicate for "should this generic (non-illustrated) surface go dark right now" –
  * used by components like Sheet/MascotBubble that render across the whole app, not just the
  * time-of-day illustrated screens, so they don't each duplicate this check. */
 export function isNightlikePeriod(period: TimePeriod): boolean {

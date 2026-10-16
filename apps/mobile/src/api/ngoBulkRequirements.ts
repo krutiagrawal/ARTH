@@ -2,7 +2,7 @@ import { apiFetch } from './client';
 import { pagedPath, type Page } from '../hooks/useInfiniteList';
 import type { BulkRequirementStatus, BulkResponseStatus } from './nursery';
 
-// NGO-side counterpart to api/nursery.ts's bulk-requirement endpoints — same underlying
+// NGO-side counterpart to api/nursery.ts's bulk-requirement endpoints – same underlying
 // BulkRequirement/BulkRequirementResponse records, viewed/managed from the NGO role instead.
 
 export interface ApiNgoBulkResponse {
@@ -66,7 +66,7 @@ export async function cancelNgoBulkRequirement(id: string): Promise<ApiNgoBulkRe
   return apiFetch<ApiNgoBulkRequirement>(`/api/ngo/bulk-requirements/${id}/cancel`, { method: 'POST' });
 }
 
-/** Only valid once a requirement has auto-expired (its deadline passed unfulfilled) — reopens it
+/** Only valid once a requirement has auto-expired (its deadline passed unfulfilled) – reopens it
  * to nurseries with a new neededByDate. */
 export async function rescheduleNgoBulkRequirement(id: string, neededByDate: string): Promise<ApiNgoBulkRequirement> {
   return apiFetch<ApiNgoBulkRequirement>(`/api/ngo/bulk-requirements/${id}/reschedule`, {
@@ -83,7 +83,7 @@ export async function declineNgoBulkResponse(responseId: string): Promise<ApiNgo
   return apiFetch<ApiNgoBulkResponse>(`/api/ngo/bulk-requirements/responses/${responseId}/decline`, { method: 'POST' });
 }
 
-/** Confirms the NGO actually received the handed-off saplings — the code is the one the nursery
+/** Confirms the NGO actually received the handed-off saplings – the code is the one the nursery
  * shared in person. Only this call (not the nursery's own handoff) mints traceable sapling units
  * and updates the nursery's reputation, so fulfilment is never nursery-self-attested alone. */
 export async function confirmNgoBulkResponseReceived(responseId: string, code: string): Promise<ApiNgoBulkResponse> {

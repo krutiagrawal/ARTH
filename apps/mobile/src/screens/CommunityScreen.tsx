@@ -47,7 +47,7 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 const { width: SW } = Dimensions.get('window');
 // 'feed' is the social feed of posts; 'activity' is the older gamification stream
 // (tree_planted / achievement_unlocked / ...), whose "cheer" reaction stays separate from
-// post likes — they count different things.
+// post likes – they count different things.
 type Tab = 'feed' | 'friends' | 'activity' | 'challenges' | 'leaderboard';
 
 const TAB_LABELS: Record<Tab, string> = {

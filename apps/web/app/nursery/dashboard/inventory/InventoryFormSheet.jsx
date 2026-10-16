@@ -54,7 +54,7 @@ function emptyForm(item) {
 }
 
 /**
- * Bespoke create/edit drawer for Inventory — species picker (link an existing
+ * Bespoke create/edit drawer for Inventory – species picker (link an existing
  * TreeSpecies catalog entry, or author a new one inline) plus quantity/price as
  * the fast path, with age/height/pot-size/environments/notes/threshold tucked
  * behind a collapsed "More details" section, per the brief.

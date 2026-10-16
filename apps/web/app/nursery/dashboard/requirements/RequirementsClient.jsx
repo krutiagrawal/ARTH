@@ -28,7 +28,7 @@ const TABS = [
 ]
 
 function tabOf(req) {
-  // A withdrawn/declined response is a dead end, not an active claim — the nursery can respond
+  // A withdrawn/declined response is a dead end, not an active claim – the nursery can respond
   // again while the requirement is still open, so it belongs back under "Open" rather than an
   // 'other' bucket no tab shows.
   if (!req.myResponse || ['withdrawn', 'declined'].includes(req.myResponse.status)) return 'open'
@@ -217,7 +217,7 @@ export default function RequirementsClient() {
           {filtered.map((r) => {
             const badge = r.myResponse ? RESPONSE_BADGE[r.myResponse.status] : null
             // The NGO auto-expire job removes overdue requirements from this list within ~15
-            // minutes, so this only ever matters in that brief window — kept for correctness, not
+            // minutes, so this only ever matters in that brief window – kept for correctness, not
             // because expired ones are expected to show up here regularly.
             const overdue = r.neededByDate && ['open', 'partially_fulfilled'].includes(r.status) && new Date(r.neededByDate) < new Date(new Date().setHours(0, 0, 0, 0))
             return (
@@ -303,7 +303,7 @@ export default function RequirementsClient() {
         open={Boolean(handoffTarget)}
         onOpenChange={(open) => !open && setHandoffTarget(null)}
         title="Mark as handed off?"
-        description="Only confirm once the saplings have actually left your nursery. You'll get a handoff code to share with the NGO — this offer only counts as fulfilled once they confirm receipt with it."
+        description="Only confirm once the saplings have actually left your nursery. You'll get a handoff code to share with the NGO – this offer only counts as fulfilled once they confirm receipt with it."
         confirmLabel="Mark handed off"
         onConfirm={handleHandoff}
       />
@@ -312,7 +312,7 @@ export default function RequirementsClient() {
         open={Boolean(handoffCode)}
         onOpenChange={(open) => !open && setHandoffCode(null)}
         title="Handoff code"
-        description="Share this code with the NGO in person — they need it to confirm receipt."
+        description="Share this code with the NGO in person – they need it to confirm receipt."
         confirmLabel="Done"
         onConfirm={() => setHandoffCode(null)}
       >

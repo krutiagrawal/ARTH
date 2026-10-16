@@ -29,7 +29,7 @@ function FollowerRow({ follower, onPress }: { follower: ApiPublicFollower; onPre
   );
 }
 
-/** Read-only followers list for an NGO or nursery's public profile — reused by both. */
+/** Read-only followers list for an NGO or nursery's public profile – reused by both. */
 export function PublicFollowersScreen({ navigation, route }: any) {
   const kind: 'ngo' | 'nursery' = route?.params?.kind;
   const id: string = route?.params?.id;

@@ -19,7 +19,7 @@ const REASONS = [
 ]
 
 // Generic report-submission dialog for any reportable target (post, story,
-// user, ngo, nursery, corporate) — posts through the caller's session proxy
+// user, ngo, nursery, corporate) – posts through the caller's session proxy
 // (member by default; pass `proxy` to submit as the NGO/Nursery/Group's own
 // session instead) to POST /api/reports (services/api/src/routes/social.routes.ts).
 export default function ReportDialog({ open, onOpenChange, targetType, targetId, targetLabel, proxy = memberProxy }) {

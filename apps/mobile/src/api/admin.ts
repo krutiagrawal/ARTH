@@ -49,7 +49,7 @@ export interface ApiAdminNgoOfficeBearer {
   email?: string;
 }
 
-// Everything the NGO filled in at signup — returned by the detail route, a superset of
+// Everything the NGO filled in at signup – returned by the detail route, a superset of
 // ApiAdminNgo's approvals-table summary shape. Mirrors ApiAdminNurseryDetail.
 export interface ApiAdminNgoDetail extends ApiAdminNgo {
   logoUrl: string | null;
@@ -165,7 +165,7 @@ export interface ApiAdminNursery {
   owner?: { id: string; email: string; name: string; handle: string };
 }
 
-// Everything the nursery filled in at signup — returned by the detail route, a superset of
+// Everything the nursery filled in at signup – returned by the detail route, a superset of
 // ApiAdminNursery's approvals-table summary shape.
 export interface ApiAdminNurseryDetail extends ApiAdminNursery {
   logoUrl: string | null;
@@ -373,7 +373,7 @@ export interface ApiAdminReport {
   reviewedAt: string | null;
   reporter: { id: string; name: string; handle: string } | null;
   reviewedBy: { id: string; name: string } | null;
-  /** Null once the reported post has been deleted — the report row outlives it. */
+  /** Null once the reported post has been deleted – the report row outlives it. */
   post: {
     id: string;
     caption: string | null;

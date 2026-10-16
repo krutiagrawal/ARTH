@@ -10,7 +10,7 @@ interface MuteButtonProps {
   /** Real frosted-glass look, for use over Home's illustrated sky. Everywhere else defaults to a
    * flat, brown-bordered circle instead. */
   glass?: boolean;
-  /** No border, no background — just the bare icon. For surfaces (like SplashScreen) that
+  /** No border, no background – just the bare icon. For surfaces (like SplashScreen) that
    * already have enough visual chrome and don't want another circle drawn on top. */
   bare?: boolean;
 }

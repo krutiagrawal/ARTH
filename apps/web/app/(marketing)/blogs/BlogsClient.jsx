@@ -28,7 +28,7 @@ export default function BlogsClient({ featured, blogs }) {
         </div>
       </section>
 
-      {/* Featured — magazine layout */}
+      {/* Featured – magazine layout */}
       <section className="px-5 md:px-10 py-16 md:py-24">
         <Link href={`/blogs/${featured.id}`} className="group grid grid-cols-12 gap-6 md:gap-10 items-end">
           <div className="col-span-12 md:col-span-8">
@@ -55,7 +55,7 @@ export default function BlogsClient({ featured, blogs }) {
         </div>
       </section>
 
-      {/* Articles — mixed sizes editorial */}
+      {/* Articles – mixed sizes editorial */}
       <section className="px-5 md:px-10 py-16 md:py-24">
         <div className="grid grid-cols-12 gap-6 md:gap-10">
           {filtered.map((b, i) => {

@@ -37,7 +37,7 @@ export function GameResultSheet({ visible, onClose, icon, title, summary, reward
       <View style={styles.content}>
         {reward?.won ? <FloatingParticles type="leaf" count={8} areaHeight={160} speedMultiplier={1.3} /> : null}
         <IconBadge icon={icon} color={COLORS.sage} size={56} round style={styles.icon} />
-        <Text style={styles.title}>{reward?.won ? `${title} — nice one!` : `${title} — done for today`}</Text>
+        <Text style={styles.title}>{reward?.won ? `${title} – nice one!` : `${title} – done for today`}</Text>
         <Text style={styles.summary}>{summary}</Text>
 
         {reward ? (

@@ -4,16 +4,16 @@ import { Dimensions } from 'react-native';
  * Every screen in this app was styled with fixed dp numbers (SPACING, RADIUS, TYPOGRAPHY, and
  * countless one-off `fontSize`/`padding`/`width` values) tuned by eye against a phone in the
  * ~430-450dp-wide class (a OnePlus-11R-class device). A Pixel 6 (~411dp) renders those same fixed
- * numbers with proportionally less breathing room — same padding, same font size, narrower canvas
- * — which is what reads as "congested." A tablet has the opposite problem: linearly scaling every
+ * numbers with proportionally less breathing room – same padding, same font size, narrower canvas
+ * – which is what reads as "congested." A tablet has the opposite problem: linearly scaling every
  * value up to fill a ~800-1000dp canvas would blow fonts and paddings up to absurd sizes instead
  * of just giving the layout more room.
  *
  * `ms()` (moderate scale) is the standard fix for the phone-to-phone case: nudge a value toward
  * its "true" proportional size for the current screen, by a fraction (`factor`) rather than
- * fully — so a narrower phone gets slightly tighter spacing/text and a wider one gets slightly
+ * fully – so a narrower phone gets slightly tighter spacing/text and a wider one gets slightly
  * more, without every value swinging wildly. The scaling *input* width is clamped well below
- * tablet range (`MAX_SCALE_WIDTH`), so this never runs away on a tablet — tablets are handled
+ * tablet range (`MAX_SCALE_WIDTH`), so this never runs away on a tablet – tablets are handled
  * separately by capping content width (`CONTENT_MAX_WIDTH`) rather than by scaling values up.
  */
 
@@ -22,7 +22,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 /** The dp-width this app's fixed values were effectively tuned against. */
 const BASE_WIDTH = 440;
 
-/** Cap the width used for the scale *calculation* — past this, rely on layout (column counts,
+/** Cap the width used for the scale *calculation* – past this, rely on layout (column counts,
  * max-width containers) instead of linearly scaled fonts/spacing. */
 const MAX_SCALE_WIDTH = 500;
 

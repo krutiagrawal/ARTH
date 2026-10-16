@@ -98,15 +98,15 @@ const STEPS = [
 type Step = (typeof STEPS)[number];
 
 const STEP_COPY: Record<Step, { emoji: string; title: string; subtitle: string }> = {
-  orgIdentity: { emoji: '🏢', title: 'Your organisation', subtitle: 'The basics — who you are, legally.' },
+  orgIdentity: { emoji: '🏢', title: 'Your organisation', subtitle: 'The basics – who you are, legally.' },
   addressContact: { emoji: '📍', title: 'Where you work', subtitle: 'Registered address and how people can reach you.' },
-  legalRegistrations: { emoji: '📄', title: 'Registrations you hold', subtitle: "Optional — add whichever apply. Don't worry if you don't have all of these yet." },
+  legalRegistrations: { emoji: '📄', title: 'Registrations you hold', subtitle: "Optional – add whichever apply. Don't worry if you don't have all of these yet." },
   people: { emoji: '👥', title: 'People behind the org', subtitle: 'Who represents this NGO, and proof you’re authorised to.' },
   whatYouDo: { emoji: '🌍', title: 'What you do', subtitle: 'Help us understand your work.' },
   plantationPractices: { emoji: '🌱', title: 'Your plantation practices', subtitle: 'This is where we tell a real plantation org from one that just claims to be.' },
-  proofOfWork: { emoji: '📸', title: 'Show us your work', subtitle: 'Photos and links from past activities — not all mandatory.' },
+  proofOfWork: { emoji: '📸', title: 'Show us your work', subtitle: 'Photos and links from past activities – not all mandatory.' },
   arthGoals: { emoji: '🎯', title: 'Using ARTH', subtitle: 'What would you like to do on ARTH?' },
-  account: { emoji: '🔐', title: 'Create your login', subtitle: "Last step — you're almost in." },
+  account: { emoji: '🔐', title: 'Create your login', subtitle: "Last step – you're almost in." },
 };
 
 function StepDots({ current }: { current: number }) {
@@ -510,7 +510,7 @@ export function NgoRegisterScreen({ navigation }: any) {
                 </>
               )}
 
-              <Text style={styles.helperNote}>None of these are mandatory — add whichever you have to help us approve you faster.</Text>
+              <Text style={styles.helperNote}>None of these are mandatory – add whichever you have to help us approve you faster.</Text>
             </>
           )}
 
@@ -531,7 +531,7 @@ export function NgoRegisterScreen({ navigation }: any) {
               <OfficeBearerListField bearers={officeBearers} onChange={setOfficeBearers} />
               <DocumentPickerField
                 label="Proof you're authorised to represent this NGO"
-                hint="Board resolution, authorisation letter, or similar — PDF or photo"
+                hint="Board resolution, authorisation letter, or similar – PDF or photo"
                 doc={authorizationProof}
                 onChange={setAuthorizationProof}
                 dark
@@ -646,7 +646,7 @@ export function NgoRegisterScreen({ navigation }: any) {
 
           {step === 'proofOfWork' && (
             <>
-              <MultiPhotoPickerField photos={pastWorkPhotos} onChange={setPastWorkPhotos} max={5} label="Photos of previous plantation activities" hint="Optional — up to 5" />
+              <MultiPhotoPickerField photos={pastWorkPhotos} onChange={setPastWorkPhotos} max={5} label="Photos of previous plantation activities" hint="Optional – up to 5" />
               <ChipListField dark label="Plantation drive reports (optional)" placeholder="Paste a link" values={driveReportLinks} onChange={setDriveReportLinks} keyboardType="url" validate={isValidWebsite} validationHint="Doesn't look like a valid link" />
               <ChipListField dark label="Newspaper/media coverage (optional)" placeholder="Paste a link" values={mediaCoverageLinks} onChange={setMediaCoverageLinks} keyboardType="url" validate={isValidWebsite} validationHint="Doesn't look like a valid link" />
               <ChipListField dark label="Website/project pages (optional)" placeholder="Paste a link" values={projectPageLinks} onChange={setProjectPageLinks} keyboardType="url" validate={isValidWebsite} validationHint="Doesn't look like a valid link" />

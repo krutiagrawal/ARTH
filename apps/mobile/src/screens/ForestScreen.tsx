@@ -60,7 +60,7 @@ import { TEXT } from '../constants/typography';
 const { width: SW, height: SH } = Dimensions.get('window');
 const FOREST_HEIGHT = SH;
 const BOTTOM_PANEL_HEIGHT = SH * 0.42;
-/** Only record a new draw point once the finger has moved at least this far — keeps the point
+/** Only record a new draw point once the finger has moved at least this far – keeps the point
  * array small and the resulting curve smooth instead of jittery. */
 const DRAW_POINT_MIN_DISTANCE = 6;
 /** A drawn shape smaller than this (in either dimension) is treated as an accidental tap, not a
@@ -316,8 +316,8 @@ export function ForestScreen({ navigation }: any) {
 
   const breathStyle = useBreathing(0.99, 1.01, 6000);
 
-  // Bottom sheet — open (fully visible, current ~42% height panel) ⇄ fully closed (entirely
-  // off-screen). The forest itself never moves or resizes — it's always full-bleed SW×SH — so
+  // Bottom sheet – open (fully visible, current ~42% height panel) ⇄ fully closed (entirely
+  // off-screen). The forest itself never moves or resizes – it's always full-bleed SW×SH – so
   // there's no gap exposing the bare background in either state.
   const sheetTranslateY = useSharedValue(0);
   const sheetStartY = useSharedValue(0);
@@ -368,7 +368,7 @@ export function ForestScreen({ navigation }: any) {
     });
   };
 
-  // Freehand river/stream drawing — drag a finger across the forest to sketch the path yourself
+  // Freehand river/stream drawing – drag a finger across the forest to sketch the path yourself
   // ("however long and curvy you want"), rather than placing and stretching a fixed icon. A ref
   // mirrors the point list alongside the state used for the live preview render, so `onEnd` always
   // reads the definitive up-to-date points regardless of React's state-update timing.
@@ -437,7 +437,7 @@ export function ForestScreen({ navigation }: any) {
     });
 
   // Snapshot → Story. `makeImageFromView` has a confirmed unresolved Android bug where RN views
-  // (including react-native-svg) overlapping a Skia <Canvas> vanish from the snapshot — works only
+  // (including react-native-svg) overlapping a Skia <Canvas> vanish from the snapshot – works only
   // on iOS (github.com/Shopify/react-native-skia issues #1633, #2555). Fix: capture the Skia
   // background and the RN/SVG overlay SEPARATELY, then composite them in pure Skia (Surface +
   // drawImageRect), which never touches the buggy native view-hierarchy walk for the merge.
@@ -492,12 +492,12 @@ export function ForestScreen({ navigation }: any) {
     <View style={styles.container}>
       <StatusBar style={theme.statusBarStyle} />
 
-      {/* Forest visualization — always full-bleed SW×SH, never moves, so it always occupies the
+      {/* Forest visualization – always full-bleed SW×SH, never moves, so it always occupies the
           entire screen regardless of panel state (no gap exposing the background behind it). */}
       <Animated.View collapsable={false} style={[styles.forestContainer, breathStyle]}>
         <ForestCanvas isNight={isNight} treeCount={user?.treesPlantedCount ?? 0} palette={palette} canvasRef={canvasRef} />
 
-        {/* Everything below is plain RN/SVG (no Skia inside) — captured as one layer by
+        {/* Everything below is plain RN/SVG (no Skia inside) – captured as one layer by
             `captureRef` in handleSnapshot, then composited on top of the Skia background. */}
         {/* Fixed SW×FOREST_HEIGHT (same box as the Skia canvas and DecorationOverlay's coordinate space),
             NOT absoluteFill: the container can be taller than the window on Android (nav bar area), and
@@ -518,7 +518,7 @@ export function ForestScreen({ navigation }: any) {
             <FloatingLeaf key={i} x={x} delay={i * 800} color={palette.accentColor} />
           ))}
 
-          {/* Birds by day, fireflies at night/late-night — same swap rule as Home */}
+          {/* Birds by day, fireflies at night/late-night – same swap rule as Home */}
           <AmbientCreatures
             period={theme.period}
             birdConfigs={[
@@ -580,7 +580,7 @@ export function ForestScreen({ navigation }: any) {
         </BlurView>
       </View>
 
-      {/* Bottom info panel — floats over the full-bleed scenery, drag the handle (or the ✕) to close */}
+      {/* Bottom info panel – floats over the full-bleed scenery, drag the handle (or the ✕) to close */}
       <Animated.View style={[styles.bottomPanelWrap, sheetAnimatedStyle]}>
         <BlurView intensity={isNight ? 60 : 50} tint={isNight ? 'dark' : 'light'} style={styles.bottomPanelBlur}>
           <GestureDetector gesture={sheetGesture}>
@@ -672,7 +672,7 @@ export function ForestScreen({ navigation }: any) {
         </BlurView>
       </Animated.View>
 
-      {/* Reopen pill — shown once the panel is fully closed, so the user can pick their next item */}
+      {/* Reopen pill – shown once the panel is fully closed, so the user can pick their next item */}
       {!panelOpen && (
         <TouchableOpacity
           style={[styles.reopenPill, { bottom: bottomNavClearance }]}

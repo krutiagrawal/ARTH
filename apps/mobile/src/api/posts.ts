@@ -41,7 +41,7 @@ export interface ApiPost {
   isMine: boolean;
   createdAt: string;
 
-  /** Legacy NgoUpdate keys the API still emits — prefer `media` and `author`. */
+  /** Legacy NgoUpdate keys the API still emits – prefer `media` and `author`. */
   ngoId: string | null;
   ngoName?: string;
   ngoLogoUrl?: string | null;
@@ -81,7 +81,7 @@ export async function createPost(input: CreatePostInput): Promise<ApiPost> {
   if (input.groupId) form.append('groupId', input.groupId);
   if (input.asNgo) form.append('asNgo', 'true');
   if (input.asNursery) form.append('asNursery', 'true');
-  // Repeated field name — the API reads every `photos` part in append order as the carousel.
+  // Repeated field name – the API reads every `photos` part in append order as the carousel.
   for (const photo of input.photos) {
     form.append('photos', toFormFile(photo.uri), photo.name);
   }

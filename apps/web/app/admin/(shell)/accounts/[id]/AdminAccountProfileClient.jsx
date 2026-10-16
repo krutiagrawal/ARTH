@@ -27,7 +27,7 @@ const CONFIRM_COPY = {
     destructive: true,
   },
   reinstate: { title: 'Reinstate this account?', confirmLabel: 'Reinstate', body: 'They regain full publishing access.', status: 'approved' },
-  // Groups use GroupStatus (active/suspended only, no approval workflow) — distinct
+  // Groups use GroupStatus (active/suspended only, no approval workflow) – distinct
   // confirm keys since the generic reinstate above sets 'approved', not 'active'.
   'group-suspend': {
     title: 'Suspend this group?',
@@ -65,7 +65,7 @@ function MediaCard({ caption, media, meta }) {
   )
 }
 
-// Shared by every kind that carries an achievements/badges list (ngo/nursery/user/group) —
+// Shared by every kind that carries an achievements/badges list (ngo/nursery/user/group) –
 // same {unlocked, achievement{icon,title}, unlockedAt} shape from the *AchievementUnlock tables.
 function AchievementRow({ unlock }) {
   return (

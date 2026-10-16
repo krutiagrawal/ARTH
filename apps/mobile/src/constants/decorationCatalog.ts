@@ -52,7 +52,7 @@ export const ECOSYSTEM_ZONES: { key: EcosystemZoneKey; name: string; icon: strin
 ];
 
 /** Maps each catalog `variant` key (from the backend `DecorationType` row) to the small SVG
- * component that renders it. The DB only stores which variant + colorway a decoration uses —
+ * component that renders it. The DB only stores which variant + colorway a decoration uses –
  * the actual illustrated shape lives in versioned frontend code, not the database. */
 export const DECORATION_COMPONENTS: Record<string, ComponentType<DecorationShapeProps>> = {
   'cluster-canopy': ClusterCanopyShape,
@@ -81,7 +81,7 @@ export const DECORATION_COMPONENTS: Record<string, ComponentType<DecorationShape
   'rock-stack': RockStackShape,
   // Water additions
   fish: FishShape,
-  // Sky & celestial — no Sun/Moon here: the Skia-rendered landscape already shows a sun/moon
+  // Sky & celestial – no Sun/Moon here: the Skia-rendered landscape already shows a sun/moon
   // automatically based on time of day (see ForestCanvas), a separate placeable one is redundant.
   star: StarShape,
   constellation: ConstellationShape,
@@ -116,17 +116,17 @@ export const DECORATION_COMPONENTS: Record<string, ComponentType<DecorationShape
   'fruit-peach': PeachShape,
 };
 
-// Decorations are placed freely anywhere on the forest canvas (no per-zone spatial bands) — zones
+// Decorations are placed freely anywhere on the forest canvas (no per-zone spatial bands) – zones
 // only categorise the catalog in the picker. Position/size/rotation are stored per placement and
 // clamped to the screen bounds by the drag overlay, not to a zone region.
 
 /** Catalog `variant`s that are "draw it yourself" tools rather than instant-placement icons.
  * Tapping one of these in the picker hands off to a freehand drawing gesture instead of creating a
- * placement immediately — see `DecorationPickerSheet`'s `onDraw` prop and `ForestScreen`'s draw mode. */
+ * placement immediately – see `DecorationPickerSheet`'s `onDraw` prop and `ForestScreen`'s draw mode. */
 export const DRAW_TOOL_VARIANTS = new Set<string>(['hand-drawn-river', 'hand-drawn-stream']);
 
 /** Stroke width (in the shape's own local SVG units) for each hand-drawn water variant, so a drawn
- * river reads as broader/deeper than a drawn stream — matches the pre-made river-bend/stream-curve
+ * river reads as broader/deeper than a drawn stream – matches the pre-made river-bend/stream-curve
  * icons' relative proportions. */
 export const HAND_DRAWN_STROKE_WIDTH: Record<string, number> = {
   'hand-drawn-river': 16,

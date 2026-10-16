@@ -85,7 +85,7 @@ export default function CheckoutClient() {
 
   const useCurrentLocation = () => {
     if (!navigator.geolocation) {
-      setAddAddressError('Your browser doesn’t support location — try a different browser or device.')
+      setAddAddressError('Your browser doesn’t support location – try a different browser or device.')
       return
     }
     setLocating(true)
@@ -136,7 +136,7 @@ export default function CheckoutClient() {
       if (result.clientSecret) {
         setClientSecret(result.clientSecret)
       } else {
-        // No Stripe key configured on the backend (local/dev only) — the order already came
+        // No Stripe key configured on the backend (local/dev only) – the order already came
         // back confirmed, so there's no payment sheet to present. Skip straight to success.
         toast.success('Order placed! We’ll email you a confirmation.')
         router.push('/dashboard/individual/orders')

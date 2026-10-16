@@ -68,7 +68,7 @@ function RequestRow({
 }
 
 /**
- * The follow-request inbox. Only meaningful while the NGO's follow policy is "approval" — when
+ * The follow-request inbox. Only meaningful while the NGO's follow policy is "approval" – when
  * it is "open" there is nothing to approve, so the screen explains how to turn approval on
  * rather than showing a bare empty list.
  */

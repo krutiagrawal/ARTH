@@ -35,7 +35,7 @@ export default function PickupDeliveryClient() {
 
   const useCurrentLocation = () => {
     if (!navigator.geolocation) {
-      setError('Your browser doesn’t support location — try a different browser or device.')
+      setError('Your browser doesn’t support location – try a different browser or device.')
       return
     }
     setLocating(true)
@@ -166,7 +166,7 @@ export default function PickupDeliveryClient() {
             </label>
             <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background px-3 py-2.5">
               <span className="text-sm">
-                {hasLocation ? '📍 Nursery location set' : '📍 No location set — type an address above, or use current location'}
+                {hasLocation ? '📍 Nursery location set' : '📍 No location set – type an address above, or use current location'}
               </span>
               <Button type="button" variant="outline" size="sm" className="rounded-full shrink-0" onClick={useCurrentLocation} disabled={locating}>
                 {locating ? 'Locating…' : hasLocation ? 'Update location' : 'Use current location'}

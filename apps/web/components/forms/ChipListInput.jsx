@@ -1,5 +1,6 @@
 'use client'
 
+import FieldLabel from '@/components/forms/FieldLabel'
 import { useState } from 'react'
 import { X, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -7,7 +8,7 @@ import { cn } from '@/lib/utils'
 /**
  * Type-a-value-hit-Add chip list editor, mirroring
  * apps/mobile/src/components/common/ChipListField.tsx. One component covers every "add several
- * of these" field in the NGO wizard — operating cities/states, social links, and every link array
+ * of these" field in the NGO wizard – operating cities/states, social links, and every link array
  * in the proof-of-work section.
  */
 export default function ChipListInput({ label, hint, placeholder, values, onChange, max = 20, validate, validationHint, type = 'text' }) {
@@ -33,7 +34,7 @@ export default function ChipListInput({ label, hint, placeholder, values, onChan
 
   return (
     <div>
-      {label && <span className="eyebrow">{label}</span>}
+      {label && <FieldLabel>{label}</FieldLabel>}
       {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
 
       {values.length > 0 && (

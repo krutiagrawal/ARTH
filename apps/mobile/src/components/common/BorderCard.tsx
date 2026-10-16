@@ -12,7 +12,7 @@ interface BorderCardProps {
 
 /**
  * Flat, non-glass card used everywhere except Home/Forest/Map (which keep the illustrated-scenery
- * glass look). No fill — just a brown outline over whatever the page's own background is.
+ * glass look). No fill – just a brown outline over whatever the page's own background is.
  */
 export function BorderCard({ children, style, borderRadius = RADIUS.lg, noPadding = false }: BorderCardProps) {
   return (

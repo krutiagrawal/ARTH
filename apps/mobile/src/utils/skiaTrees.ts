@@ -30,7 +30,7 @@ export function drawTreePath(type: ForestTreeShape, x: number, h: number, w: num
     // Slim oval
     path.addOval(Skia.XYWHRect(x - w * 0.35, groundY - trunkH - h * 0.9, w * 0.7, h * 0.85));
   } else {
-    // Fruit tree — rounded with slight droop
+    // Fruit tree – rounded with slight droop
     path.addOval(Skia.XYWHRect(x - w * 0.45, groundY - trunkH - h * 0.85, w * 0.9, h * 0.75));
   }
 

@@ -8,7 +8,7 @@ import { resolveMediaUrl } from '@/lib/media'
 /**
  * Controlled file input + thumbnail preview. No existing NGO form exposes a
  * file input today even though the backend already accepts multipart photo
- * uploads on create — this closes that gap.
+ * uploads on create – this closes that gap.
  */
 export default function PhotoUploadField({ label = 'Photo', value, onChange, currentUrl }) {
   const inputRef = useRef(null)

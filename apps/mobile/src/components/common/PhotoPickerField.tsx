@@ -72,7 +72,7 @@ export function usePhotoPreviewUri(photo: PickedPhoto | null): string | undefine
 
 /**
  * Shared photo-capture control used across NGO screens. `mode="camera"` shows
- * only the device camera (no gallery affordance anywhere) — used for the
+ * only the device camera (no gallery affordance anywhere) – used for the
  * real-time Update posting flow, which deliberately does not allow picking
  * from the gallery. `mode="gallery"`/`"both"` are for cover-photo-style
  * pickers where a curated gallery image is appropriate.
@@ -110,7 +110,7 @@ export function PhotoPickerField({ photo, onChange, mode = 'gallery', label, hin
   const onLongPress = mode === 'both' ? captureFromCamera : undefined;
 
   // A picked photo renders as a plain View holding the Image, with a transparent touchable
-  // overlaid on top (rather than the Image nested inside the TouchableOpacity itself) — on some
+  // overlaid on top (rather than the Image nested inside the TouchableOpacity itself) – on some
   // devices an Image nested directly inside this TouchableOpacity never draws at all, even with a
   // guaranteed-valid, small source; the same Image as a sibling of the touchable renders fine.
   if (photo) {

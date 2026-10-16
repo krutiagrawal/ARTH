@@ -1,7 +1,7 @@
-// Declarative field configs for ResourceFormSheet — see app/ngo/dashboard/resourceFields.js for
+// Declarative field configs for ResourceFormSheet – see app/ngo/dashboard/resourceFields.js for
 // the shape (name/label/type/required/section). Delivery partners need two different shapes
 // depending on create vs edit: creating one spins up a real login (handle/email/password), while
-// editing only ever touches their name/phone — same split as the mobile app's
+// editing only ever touches their name/phone – same split as the mobile app's
 // NurseryDeliveryPartnersScreen, which keeps a separate edit form for the same reason (running
 // the create form's phone/email "already taken" checks against a partner's own current values
 // would always false-flag them).

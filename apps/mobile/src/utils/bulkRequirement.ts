@@ -1,4 +1,4 @@
-/** True once a BulkRequirement's deadline has fully passed without being fulfilled — either the
+/** True once a BulkRequirement's deadline has fully passed without being fulfilled – either the
  * backend has already flipped it to 'expired' (the steady-state signal), or the due date's
  * calendar day has passed but the scheduler hasn't ticked yet (≤15 min window). The due date's own
  * day still counts as on-time; overdue begins the day after. */

@@ -20,7 +20,7 @@ interface ReportSheetProps {
 /**
  * Reason picker for reporting content.
  *
- * Always reports success back to the user, including when the API says "already reported" — a
+ * Always reports success back to the user, including when the API says "already reported" – a
  * second report from the same person is a deliberate no-op server-side, and telling them it
  * failed would just invite them to try again.
  */

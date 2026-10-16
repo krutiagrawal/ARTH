@@ -112,7 +112,7 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
     if (!req?.myResponse) return;
     confirm(
       'Mark as handed off?',
-      'Only mark this once the saplings have actually left your nursery. Share the handoff code with the NGO — they need it to confirm receipt before this counts as fulfilled.',
+      'Only mark this once the saplings have actually left your nursery. Share the handoff code with the NGO – they need it to confirm receipt before this counts as fulfilled.',
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Mark handed off', onPress: guard(() => handoffMutation.mutate(req.myResponse!.id)) },
@@ -193,7 +193,7 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Fulfilment</Text>
                   <Text style={styles.summaryValue}>
-                    {[req.myResponse.canPickup && 'Pickup', req.myResponse.canDeliver && 'Delivery'].filter(Boolean).join(' + ') || '—'}
+                    {[req.myResponse.canPickup && 'Pickup', req.myResponse.canDeliver && 'Delivery'].filter(Boolean).join(' + ') || '–'}
                   </Text>
                 </View>
 
@@ -215,7 +215,7 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
                 )}
                 {req.myResponse.status === 'handed_off' && req.myResponse.handoffCode && (
                   <View style={styles.handoffCodeBox}>
-                    <Text style={styles.handoffCodeLabel}>Handoff code — share this with the NGO</Text>
+                    <Text style={styles.handoffCodeLabel}>Handoff code – share this with the NGO</Text>
                     <Text style={styles.handoffCodeValue}>{req.myResponse.handoffCode}</Text>
                     <Text style={styles.handoffCodeHint}>This offer will count as fulfilled once the NGO confirms receipt with this code.</Text>
                   </View>

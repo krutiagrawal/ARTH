@@ -24,7 +24,7 @@ export interface ApiDecorationPlacement {
   positionY: number;
   scale: number;
   rotation: number;
-  /** Present only for freehand-drawn shapes (river/stream) — points normalized as canvas-fraction
+  /** Present only for freehand-drawn shapes (river/stream) – points normalized as canvas-fraction
    * offsets from the placement's own centroid (positionX/positionY). Null for catalog icon shapes. */
   path: DecorationPathPoint[] | null;
   createdAt: string;

@@ -18,7 +18,7 @@ const STATUS_VARIANT = {
   withdrawn: 'outline',
 }
 
-/** Every offer this nursery has ever made to an NGO's bulk requirement, regardless of status —
+/** Every offer this nursery has ever made to an NGO's bulk requirement, regardless of status –
  * unlike RequirementsClient, which only shows still-open requirements. */
 export default function ResponsesClient() {
   const { items: responses, loading, loadingMore, hasMore, loadMore } = usePagedList('/nursery/bulk-requirements/responses/mine', {}, {

@@ -6,7 +6,7 @@ import { useAvailabilityCheck } from './useAvailabilityCheck';
  * Bundles the repeated phone-field pattern: format validation (bare 10-digit, enforced by
  * PhoneField's own input sanitizing), "touched" gating, and a debounced real-time
  * "already registered" check once 10 digits have been entered. `required` only changes what
- * `error` says about an empty value — the field itself is always optional at the type level so a
+ * `error` says about an empty value – the field itself is always optional at the type level so a
  * screen with an optional phone field can reuse this without a false "required" error.
  */
 export function usePhoneField(initial = '', required = false) {

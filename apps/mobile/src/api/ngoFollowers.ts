@@ -19,7 +19,7 @@ export interface ApiFollower {
 
 export interface ApiFollowersPage {
   total: number;
-  /** Always the full pending count, regardless of the `status` filter — drives the tab badge. */
+  /** Always the full pending count, regardless of the `status` filter – drives the tab badge. */
   pendingCount: number;
   followPolicy: FollowPolicy;
   followers: ApiFollower[];

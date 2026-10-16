@@ -10,7 +10,7 @@ const STEPS = ['space', 'experience', 'about']
 const STEP_COPY = {
   space: { emoji: '🌱', title: 'Where will you plant?', subtitle: 'Helps us recommend species that will actually thrive for you.' },
   experience: { emoji: '🌿', title: 'Tell us a bit about you', subtitle: 'So we can tailor tips and content to your level.' },
-  about: { emoji: '🎯', title: 'Set a planting goal', subtitle: "Entirely optional — you can always fill this in later from Settings." },
+  about: { emoji: '🎯', title: 'Set a planting goal', subtitle: "Entirely optional – you can always fill this in later from Settings." },
 }
 
 const SPACE_OPTIONS = [

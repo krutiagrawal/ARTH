@@ -19,7 +19,7 @@ function formatRupees(cents) {
 
 // The public nursery-detail endpoint returns raw SaplingStock rows (quantity,
 // lowStockThreshold, ageLabel, heightLabel, potSize, …) without a derived
-// availability status the way the nursery's own /nursery/stock list does —
+// availability status the way the nursery's own /nursery/stock list does –
 // mirrored here client-side, presentation-only, no backend change needed.
 function availabilityOf(item) {
   if (item.quantity <= 0) return 'out_of_stock'

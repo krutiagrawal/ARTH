@@ -1,5 +1,6 @@
 'use client'
 
+import FieldLabel from '@/components/forms/FieldLabel'
 import { LimitMessage } from '@/components/ui/input'
 import PhoneInput from '@/components/dashboard/PhoneInput'
 
@@ -17,8 +18,8 @@ export default function OfficeBearerRepeater({ bearers, onChange, max = 3 }) {
 
   return (
     <div>
-      <span className="eyebrow">Office bearers</span>
-      <p className="mt-1 text-xs text-muted-foreground">Optional — 2-3 key trustees/board members strengthens your application.</p>
+      <FieldLabel>Office bearers</FieldLabel>
+      <p className="mt-1 text-xs text-muted-foreground">Optional – 2-3 key trustees/board members strengthens your application.</p>
 
       <div className="mt-3 space-y-3">
         {bearers.map((bearer, index) => (

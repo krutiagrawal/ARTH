@@ -19,7 +19,7 @@ interface MultiPhotoPickerFieldProps {
   hint?: string;
 }
 
-/** Renders one thumbnail's small resized preview via `usePhotoPreviewUri` — a hook, so it needs
+/** Renders one thumbnail's small resized preview via `usePhotoPreviewUri` – a hook, so it needs
  * its own component rather than being inlined in the `.map` below. */
 function Thumb({ photo }: { photo: PickedPhoto }) {
   const previewUri = usePhotoPreviewUri(photo);
@@ -29,7 +29,7 @@ function Thumb({ photo }: { photo: PickedPhoto }) {
 /**
  * Ordered multi-photo picker for posts and past-work entries.
  *
- * Order is the carousel order, so each thumbnail carries its position plus arrows to shuffle it —
+ * Order is the carousel order, so each thumbnail carries its position plus arrows to shuffle it –
  * drag-to-reorder needs a gesture-handler list, and for six items arrows are less fiddly on a
  * phone anyway.
  */

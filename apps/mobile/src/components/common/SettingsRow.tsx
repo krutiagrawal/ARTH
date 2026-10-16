@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   sectionHeaderDark: {
     fontSize: 13,
     fontWeight: '700',
-    // Sits directly on the page's cream gradient background, NOT inside a GlassCard — must use
+    // Sits directly on the page's cream gradient background, NOT inside a GlassCard – must use
     // dark text (was COLORS.white, invisible on cream).
     color: COLORS.textSecondary,
     textTransform: 'uppercase',

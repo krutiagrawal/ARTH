@@ -11,7 +11,7 @@ import { formatMeters, haversineMeters, type LatLng } from '../utils/geo';
 import { buildLeafletHtml } from '../utils/leafletMapHtml';
 
 import { TEXT } from '../constants/typography';
-// Mirrors the server's strict observation radius (plantingLocation.service.ts) — the "Send
+// Mirrors the server's strict observation radius (plantingLocation.service.ts) – the "Send
 // update" button only appears once the user is this close; the server re-checks it regardless.
 const ARRIVED_RADIUS_M = 15;
 // Re-route once the user has moved this far from where the current route started.
@@ -42,7 +42,7 @@ export function TreeNavigationScreen({ navigation, route }: any) {
   };
   const insets = useSafeAreaInsets();
   const webviewRef = useRef<WebView>(null);
-  // Leaflet/OSM in a WebView, like DeliveryTrackingMap — a native map library (MapLibre) is not in
+  // Leaflet/OSM in a WebView, like DeliveryTrackingMap – a native map library (MapLibre) is not in
   // every installed binary and crashes boot when missing. Built once; updates go via injectJavaScript.
   const [html] = useState(() =>
     buildLeafletHtml(`

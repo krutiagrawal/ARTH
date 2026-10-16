@@ -3,7 +3,7 @@
  * streak (consecutive posted weeks counting back from the most recent) is
  * derived client-side rather than adding a dedicated backend field.
  *
- * Note the unit is **weeks**, not days — `/api/ngo/streaks/calendar` returns one
+ * Note the unit is **weeks**, not days – `/api/ngo/streaks/calendar` returns one
  * entry per week. Label it as weeks wherever it's shown.
  */
 export function currentStreakFromWeeks(weeks: { posted: boolean }[]): number {
@@ -16,7 +16,7 @@ export function currentStreakFromWeeks(weeks: { posted: boolean }[]): number {
 }
 
 /**
- * Longest run of consecutive posted weeks within the fetched window — there's no server-side
+ * Longest run of consecutive posted weeks within the fetched window – there's no server-side
  * all-time max for NGOs (unlike nursery's `fulfilmentStreakMax`), so this is only as long as the
  * window requested from `fetchNgoStreakCalendar`.
  */

@@ -64,7 +64,7 @@ import { markStoryViewed } from '../api/stories';
 
 /**
  * Query keys for the social layer. Kept in one place because a like has to reach every cached
- * list the post appears in — feed, saved, the author's grid and the post detail — and guessing
+ * list the post appears in – feed, saved, the author's grid and the post detail – and guessing
  * those key shapes at each call site is how caches drift out of sync.
  */
 export const socialKeys = {
@@ -293,7 +293,7 @@ export function useToggleLike() {
     },
 
     onSuccess: (result, { id }) => {
-      // The server's count is authoritative — it accounts for likes from other devices.
+      // The server's count is authoritative – it accounts for likes from other devices.
       patchPostEverywhere(queryClient, id, (p) => ({
         ...p,
         likedByMe: result.liked,
@@ -302,7 +302,7 @@ export function useToggleLike() {
       queryClient.invalidateQueries({ queryKey: socialKeys.likers(id) });
       // Liking someone's post completes the "Cheer a Friend" quest server-side.
       queryClient.invalidateQueries({ queryKey: ['missions', 'today'] });
-      // Membership in the Liked Posts list itself (not just the flag) only changes on the server —
+      // Membership in the Liked Posts list itself (not just the flag) only changes on the server –
       // refetch so an unlike actually drops the post from that list.
       queryClient.invalidateQueries({ queryKey: socialKeys.liked });
     },
@@ -455,7 +455,7 @@ export function useUnreadNotificationCount() {
     queryKey: socialKeys.unreadCount,
     queryFn: fetchUnreadCount,
     enabled: isAuthenticated,
-    // The badge is ambient — poll rather than leaving it stale until the next screen change.
+    // The badge is ambient – poll rather than leaving it stale until the next screen change.
     refetchInterval: 60_000,
   });
 }
@@ -570,7 +570,7 @@ export function useMarkStoryViewed() {
     mutationFn: (id: string) => markStoryViewed(id).catch(() => undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stories', 'feed'] });
-      // Prefix match — covers every screen's ring-status query, not just the one the tap
+      // Prefix match – covers every screen's ring-status query, not just the one the tap
       // happened on, so a ring dims everywhere that author's avatar appears, not just here.
       queryClient.invalidateQueries({ queryKey: ['stories', 'ring-status'] });
     },

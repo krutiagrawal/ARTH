@@ -42,7 +42,7 @@ function ReportRow({ report }: { report: ApiMyReport }) {
   );
 }
 
-/** Available to every role's account — content/accounts I've reported and what came of them. */
+/** Available to every role's account – content/accounts I've reported and what came of them. */
 export function MyReportsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const listQuery = useMyReports();

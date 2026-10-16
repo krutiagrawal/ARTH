@@ -24,7 +24,7 @@ interface MenuItem {
 }
 
 // Secondary admin sections that don't fit on the 4-slot bottom tab bar
-// (Overview/NGOs/Reports/AuditLog) — same "More hub" pattern as NgoMoreScreen.
+// (Overview/NGOs/Reports/AuditLog) – same "More hub" pattern as NgoMoreScreen.
 const ITEMS: MenuItem[] = [
   { emoji: '🔎', title: 'Accounts', body: 'Search and block/unblock any user, NGO, nursery, or corporate', route: 'AdminAccountSearch', color: COLORS.coral },
   { emoji: '🌱', title: 'Nursery Approvals', body: 'Review pending nursery applications', route: 'AdminNurseryApprovals', color: COLORS.sage },

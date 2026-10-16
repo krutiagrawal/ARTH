@@ -25,7 +25,7 @@ const REQ_BADGE = {
   expired: { label: 'Expired', variant: 'destructive' },
 }
 
-// The due date's own day still counts as on-time; overdue begins the day after — matches the
+// The due date's own day still counts as on-time; overdue begins the day after – matches the
 // mobile app's isBulkRequirementOverdue (apps/mobile/src/utils/bulkRequirement.ts).
 function isOverdue(r) {
   if (r.status === 'expired') return true
@@ -37,8 +37,8 @@ function isOverdue(r) {
 
 const RESPONSE_BADGE = {
   proposed: { label: 'Offered', variant: 'secondary' },
-  accepted: { label: 'Accepted — awaiting handoff', variant: 'default' },
-  handed_off: { label: 'Handed off — confirm receipt', variant: 'default' },
+  accepted: { label: 'Accepted – awaiting handoff', variant: 'default' },
+  handed_off: { label: 'Handed off – confirm receipt', variant: 'default' },
   declined: { label: 'Declined', variant: 'outline' },
   fulfilled: { label: 'Fulfilled', variant: 'default' },
   withdrawn: { label: 'Withdrawn', variant: 'outline' },
@@ -96,7 +96,7 @@ function CreateSheet({ open, onOpenChange, submitting, onSubmit }) {
   }
 
   // Linking to a catalog species (not just the free-text note below) is what lets nurseries'
-  // stock get checked when they respond — see bulkRequirement.service.ts's respondToRequirement,
+  // stock get checked when they respond – see bulkRequirement.service.ts's respondToRequirement,
   // which only gates on quantity when requirement.speciesId is set. Fuzzy (not just substring) so
   // a typo or near-miss spelling ("roze", "gulmohr") still surfaces the existing entry instead of
   // nudging the NGO toward adding a near-duplicate.
@@ -180,7 +180,7 @@ function CreateSheet({ open, onOpenChange, submitting, onSubmit }) {
               {addingSpecies && (
                 <div className="mt-2 space-y-2 rounded-xl border border-border/60 bg-secondary/20 p-3">
                   <p className="text-[11px] text-muted-foreground">
-                    Adding &ldquo;{speciesQuery.trim() || '…'}&rdquo; — edit the name in the search box above.
+                    Adding &ldquo;{speciesQuery.trim() || '…'}&rdquo; – edit the name in the search box above.
                   </p>
                   <label className="block">
                     <span className="text-[11px] font-medium text-muted-foreground">Emoji</span>
@@ -202,7 +202,7 @@ function CreateSheet({ open, onOpenChange, submitting, onSubmit }) {
             </div>
           )}
           <p className="mt-1 text-[11px] text-muted-foreground">
-            Matching a catalog species lets nurseries&rsquo; existing stock be checked when they respond — leave blank for open-ended asks like &ldquo;any native species&rdquo;.
+            Matching a catalog species lets nurseries&rsquo; existing stock be checked when they respond – leave blank for open-ended asks like &ldquo;any native species&rdquo;.
           </p>
         </div>
         <label className="block">
@@ -416,7 +416,7 @@ export default function RequirementsClient() {
                               {resp.priceCents != null
                                 ? ` · ₹${(resp.priceCents / 100).toLocaleString('en-IN')} each · ₹${((resp.priceCents * resp.quantityOffered) / 100).toLocaleString('en-IN')} total`
                                 : ' · Free'}
-                              {' · '}{[resp.canPickup && 'Pickup', resp.canDeliver && 'Delivery'].filter(Boolean).join(' + ') || '—'}
+                              {' · '}{[resp.canPickup && 'Pickup', resp.canDeliver && 'Delivery'].filter(Boolean).join(' + ') || '–'}
                             </p>
                             {resp.message && <p className="mt-1 text-xs italic text-muted-foreground">{resp.message}</p>}
                           </div>
@@ -487,7 +487,7 @@ export default function RequirementsClient() {
         open={Boolean(confirmTarget)}
         onOpenChange={(open) => !open && setConfirmTarget(null)}
         title="Confirm receipt"
-        description="Ask the nursery for their handoff code, then enter it below. This is what actually marks the offer fulfilled — never confirm without checking the saplings arrived."
+        description="Ask the nursery for their handoff code, then enter it below. This is what actually marks the offer fulfilled – never confirm without checking the saplings arrived."
         confirmLabel="Confirm receipt"
         loading={confirmSubmitting}
         onConfirm={handleConfirmReceived}

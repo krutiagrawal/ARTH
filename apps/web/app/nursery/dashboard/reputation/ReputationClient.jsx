@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { proxy } from '../proxy'
 
-// Tenure + lifetime-volume tiers — independent of ARTH Trust Score. Mirrors
+// Tenure + lifetime-volume tiers – independent of ARTH Trust Score. Mirrors
 // apps/mobile/src/components/common/GrowthLevelBadge.tsx's GROWTH_LEVEL_META (same tiers,
 // separate platform-native copy, same convention as this app's other client-mirrored constants).
 export const GROWTH_LEVEL_META = {
@@ -78,7 +78,7 @@ export default function ReputationClient() {
         <p className="eyebrow text-primary">Growth & Trust</p>
         <h1 className="font-serif text-3xl md:text-4xl mt-2">Built from real ARTH activity</h1>
         <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
-          Orders fulfilled, inventory kept fresh, and NGO partnerships — not a daily check-in.
+          Orders fulfilled, inventory kept fresh, and NGO partnerships – not a daily check-in.
         </p>
       </div>
 

@@ -23,7 +23,7 @@ import {
 import type { ApiSaplingStock } from '../../api/nursery';
 
 import { TEXT } from '../../constants/typography';
-/** The nursery owner uploading a new photo for one of their own listings — uploads immediately
+/** The nursery owner uploading a new photo for one of their own listings – uploads immediately
  * on pick, no separate save step. */
 function OwnThumb({ item }: { item: ApiSaplingStock }) {
   const updateMutation = useUpdateSaplingStock();
@@ -66,7 +66,7 @@ function CartControls({ item }: { item: ApiSaplingStock }) {
   const soldOut = item.quantity < 1;
   const busy = addMutation.isPending || updateMutation.isPending || removeMutation.isPending;
 
-  // Looks disabled but stays tappable so it can explain itself — a silently dead button reads as a bug.
+  // Looks disabled but stays tappable so it can explain itself – a silently dead button reads as a bug.
   if (soldOut) {
     return (
       <TouchableOpacity
@@ -79,7 +79,7 @@ function CartControls({ item }: { item: ApiSaplingStock }) {
     );
   }
 
-  // Free saplings can't go in the cart (the API refuses them) — they're requested from the nursery
+  // Free saplings can't go in the cart (the API refuses them) – they're requested from the nursery
   // through the reservation flow instead.
   if (item.isFree) {
     return (
@@ -188,7 +188,7 @@ function SaplingRow({ item, isOwn }: { item: ApiSaplingStock; isOwn: boolean }) 
 }
 
 /**
- * Replaces the generic "Drives" tab on a nursery's profile — nurseries don't run drives, but
+ * Replaces the generic "Drives" tab on a nursery's profile – nurseries don't run drives, but
  * this is exactly where a visitor expects to browse (and buy) what's in stock, and where the
  * owner expects to manage it. Own-profile rows let the nursery tap the photo to upload a new one
  * immediately (no separate edit screen); visitor rows get an inline add-to-cart/quantity stepper
@@ -204,10 +204,10 @@ export function NurserySaplingsTabContent({
   isOwn: boolean;
   stock: ApiSaplingStock[];
   isLoading?: boolean;
-  /** Own profile only — full add/edit/delete still lives on the dedicated inventory screen. */
+  /** Own profile only – full add/edit/delete still lives on the dedicated inventory screen. */
   onManageInventory?: () => void;
   /** Called with this section's Y offset inside the parent ScrollView the moment the search
-   * field gets focus, so the parent can explicitly scroll it near the top of the screen —
+   * field gets focus, so the parent can explicitly scroll it near the top of the screen –
    * deliberately not relying on the OS to auto-scroll a focused input into view, since that
    * didn't reliably happen here. */
   onSearchFocusScroll?: (y: number) => void;

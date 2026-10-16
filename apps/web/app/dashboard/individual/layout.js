@@ -9,7 +9,7 @@ export const metadata = {
 
 // App-shell layout, not a scrolling marketing page: the sidebar must always
 // stay fully visible, so the outer frame is pinned to the viewport height and
-// only <main> scrolls internally. No site Footer here on purpose — it belongs
+// only <main> scrolls internally. No site Footer here on purpose – it belongs
 // to the marketing pages, not an authenticated app view.
 export default function IndividualDashboardLayout({ children }) {
   return (

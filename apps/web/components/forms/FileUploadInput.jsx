@@ -1,5 +1,6 @@
 'use client'
 
+import FieldLabel from '@/components/forms/FieldLabel'
 import { useRef } from 'react'
 import { X, FileText, Image as ImageIcon, Paperclip } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -7,7 +8,7 @@ import { cn } from '@/lib/utils'
 const ACCEPT = 'application/pdf,image/jpeg,image/png,image/webp,image/heic'
 
 /**
- * Single certificate/document upload — accepts a PDF or a photo of the document, since scanned
+ * Single certificate/document upload – accepts a PDF or a photo of the document, since scanned
  * registration/tax certificates arrive as either. Mirrors
  * apps/mobile/src/components/common/DocumentPickerField.tsx.
  */
@@ -18,7 +19,7 @@ export default function FileUploadInput({ label, hint, file, onChange }) {
 
   return (
     <div>
-      {label && <span className="eyebrow">{label}</span>}
+      {label && <FieldLabel>{label}</FieldLabel>}
       <button
         type="button"
         onClick={() => inputRef.current?.click()}

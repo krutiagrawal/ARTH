@@ -4,7 +4,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { useCities } from '@/hooks/useCities'
 
 /**
- * City is currently launched in Pune only — every other city is listed (not
+ * City is currently launched in Pune only – every other city is listed (not
  * hidden) but disabled, so people can see where's coming next.
  */
 export default function CitySelect({ value, onChange, className }) {

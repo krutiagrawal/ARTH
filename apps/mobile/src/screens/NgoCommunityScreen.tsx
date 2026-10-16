@@ -65,7 +65,7 @@ export function NgoCommunityScreen({ navigation }: any) {
         </View>
       </View>
 
-      {/* Posting lost its own bottom-tab FAB when Post was folded into this screen — this is now
+      {/* Posting lost its own bottom-tab FAB when Post was folded into this screen – this is now
           the only entry point for composing an update once an NGO already has at least one post
           (the empty-state CTA on NgoOwnPostsScreen only covers the zero-posts case). */}
       {segment === 'posts' && (
@@ -95,7 +95,7 @@ export function NgoCommunityScreen({ navigation }: any) {
                   style={[
                     styles.badge,
                     isActive && styles.badgeActive,
-                    // Pending requests are an action item, not a stat — they get the alert colour.
+                    // Pending requests are an action item, not a stat – they get the alert colour.
                     s.key === 'requests' && styles.badgeAlert,
                   ]}
                 >
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   headerText: { flex: 1 },
   headerTitle: { ...TEXT.title, color: COLORS.textPrimary },
-  // The family has to be repeated on the nested span — AppText resolves each <Text> on its own,
+  // The family has to be repeated on the nested span – AppText resolves each <Text> on its own,
   // so a child that only sets a colour drops back to the body face mid-word.
   headerTitleAccent: { fontFamily: FONTS.displayBold, color: COLORS.forest },
   headerSubtitle: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },

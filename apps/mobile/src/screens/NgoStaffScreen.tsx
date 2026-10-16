@@ -153,7 +153,7 @@ export function NgoStaffScreen({ navigation }: any) {
             {editingId && editingMember?.photoUrl && !photo && (
               <View style={styles.currentPhotoRow}>
                 <Image source={{ uri: resolveMediaUrl(editingMember.photoUrl) }} style={styles.currentPhoto} />
-                <Text style={styles.currentPhotoText}>Current photo — pick a new one below to replace it</Text>
+                <Text style={styles.currentPhotoText}>Current photo – pick a new one below to replace it</Text>
               </View>
             )}
             <PhotoPickerField

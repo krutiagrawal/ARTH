@@ -37,7 +37,7 @@ export interface ApiUser {
   selectedForestThemeId: string | null;
   createdAt: string;
   /** null until the Individual signup "personalize your experience" quiz is finished or skipped
-   * — gates whether Splash/Login route to PersonalizeOnboarding instead of Main. */
+   * – gates whether Splash/Login route to PersonalizeOnboarding instead of Main. */
   personalizationCompletedAt: string | null;
 }
 
@@ -107,7 +107,7 @@ export interface RegisterNgoInput {
   contactPhone?: string;
   socialMediaLinks?: string[];
 
-  // Registration & legal — none of these are mandatory.
+  // Registration & legal – none of these are mandatory.
   registrationNumber?: string;
   registrationAuthority?: string;
   registrationCertificate?: PickedPhoto;
@@ -150,7 +150,7 @@ export interface RegisterNgoInput {
   plantationVerificationMethod?: string;
   previousProjectLinks?: string[];
 
-  // Proof of previous work — photos upload, everything else is a link.
+  // Proof of previous work – photos upload, everything else is a link.
   pastWorkPhotos?: PickedPhoto[];
   driveReportLinks?: string[];
   mediaCoverageLinks?: string[];
@@ -297,7 +297,7 @@ export interface RegisterNurseryInput {
   tradeLicenseNumber?: string;
   ngoRegistrationNumber?: string;
   governmentNurseryId?: string;
-  /** Mandatory real-time camera capture of the nursery's name board — see NurseryRegisterScreen. */
+  /** Mandatory real-time camera capture of the nursery's name board – see NurseryRegisterScreen. */
   verificationPhoto: PickedPhoto;
 }
 
@@ -369,7 +369,7 @@ export async function logout(): Promise<void> {
     try {
       await apiFetch('/api/auth/logout', { method: 'POST', body: { refreshToken }, auth: false });
     } catch {
-      // ignore network errors on logout — clear local tokens regardless
+      // ignore network errors on logout – clear local tokens regardless
     }
   }
   await clearTokens();

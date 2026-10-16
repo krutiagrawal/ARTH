@@ -55,7 +55,7 @@ const DELETE_ZONE_HEIGHT = 170;
 interface SpeciesChipProps {
   species: { id: string; emoji: string; commonName: string };
   selected: boolean;
-  /** True for species the user added themselves — long-press then drag to the bin to remove. */
+  /** True for species the user added themselves – long-press then drag to the bin to remove. */
   removable: boolean;
   onPress: () => void;
   onDragChange: (dragging: boolean, overDelete: boolean) => void;
@@ -148,10 +148,10 @@ function SpeciesChip({ species, selected, removable, onPress, onDragChange, onDr
 const INITIAL_SPECIES_COUNT = 9;
 
 // The real enforcement lives server-side (tree.service.ts's assertEligiblePlantingLocation call,
-// gated by APPROVED_PLANTING_LOCATION_CHECK_ENABLED in services/api/.env) — this flag only
+// gated by APPROVED_PLANTING_LOCATION_CHECK_ENABLED in services/api/.env) – this flag only
 // controls whether the frontend shows the pre-check/warning before submit instead of letting the
 // user find out from a rejected submission.
-// TEMPORARILY set to false for testing — flip back to true (and the server env var back to
+// TEMPORARILY set to false for testing – flip back to true (and the server env var back to
 // true) before any real deploy.
 const ARTH_APPROVED_LOCATION_CHECK_ENABLED = false;
 
@@ -191,7 +191,7 @@ async function resolveAddressLabel(lat: number, lng: number): Promise<string> {
   return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 }
 
-// Highest, not BestForNavigation — that's meant for continuous watchPosition tracking; a single
+// Highest, not BestForNavigation – that's meant for continuous watchPosition tracking; a single
 // getCurrentPositionAsync read only needs Highest's one-shot best-effort accuracy.
 const PLANTING_LOCATION_ACCURACY = Location.Accuracy.Highest;
 
@@ -479,7 +479,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
   }, []);
   const [submitError, setSubmitError] = useState<string | null>(null);
   // Whether this exact location has been confirmed as an ARTH-approved spot. Coming in via the
-  // map's "Plant where you are" button, it's already been checked — otherwise (direct-tab entry)
+  // map's "Plant where you are" button, it's already been checked – otherwise (direct-tab entry)
   // it starts unknown and gets checked once GPS resolves, in the effect below.
   const [eligible, setEligible] = useState<boolean | null>(isPreVerified ? true : null);
   const [showNotApprovedModal, setShowNotApprovedModal] = useState(false);
@@ -502,7 +502,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
   const visibleSpecies = showAllSpecies ? speciesList : speciesList.slice(0, INITIAL_SPECIES_COUNT);
   const hasMoreSpecies = speciesList.length > INITIAL_SPECIES_COUNT;
 
-  // "Recommended nearby" card — only once GPS has resolved.
+  // "Recommended nearby" card – only once GPS has resolved.
   const { data: nearbyStock = [], refetch: refetchNearbyStock } = useNearbyStock(
     selectedSpeciesId,
     location?.lat ?? null,
@@ -559,7 +559,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
   }, [isPreVerified]);
 
   // Direct-tab entry (no map pre-check): once GPS resolves, verify it against ARTH-approved
-  // locations before letting the user submit — this makes the coordinate check apply no matter
+  // locations before letting the user submit – this makes the coordinate check apply no matter
   // how the user got here, not just via the map's button.
   useEffect(() => {
     if (isPreVerified || !location || !ARTH_APPROVED_LOCATION_CHECK_ENABLED) return;
@@ -603,7 +603,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
   // Fires when the ScanAnimation's own ~3.8s animation finishes. The real verification call
   // started back in beginVerification is usually done well before that; if it's still pending
   // (slow network), this waits for it rather than proceeding blind. A network failure here
-  // fails open (lets the user continue) — the final submit re-verifies server-side regardless.
+  // fails open (lets the user continue) – the final submit re-verifies server-side regardless.
   const handleScanComplete = useCallback(async () => {
     try {
       const result = await verifyPromiseRef.current;
@@ -615,7 +615,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
         return;
       }
     } catch {
-      // Pre-check failed (e.g. offline) — don't block the user on it; final submit re-verifies.
+      // Pre-check failed (e.g. offline) – don't block the user on it; final submit re-verifies.
     }
     setStage('details');
     fetchLocation();
@@ -647,8 +647,8 @@ export function PlantTreeScreen({ navigation, route }: any) {
     if (!selectedSpecies || !imageUri) return;
     setSubmitError(null);
 
-    // Always take a fresh, high-accuracy reading right now — regardless of isPreVerified or
-    // whatever's cached in `location` state — so a coordinate fetched earlier (or before this
+    // Always take a fresh, high-accuracy reading right now – regardless of isPreVerified or
+    // whatever's cached in `location` state – so a coordinate fetched earlier (or before this
     // screen even opened, via MapScreen's "Plant where you are") can never be reused stale at
     // submit time. `location` is still used below, but only for the cosmetic locationLabel.
     let freshPosition;
@@ -788,8 +788,8 @@ export function PlantTreeScreen({ navigation, route }: any) {
     resetFlow();
   }, [navigation, resetFlow]);
 
-  // Back on the celebration card leaves the flow: to wherever the user came from, or — when opened
-  // as the Plant tab, which has nothing behind it — back to a fresh Plant screen.
+  // Back on the celebration card leaves the flow: to wherever the user came from, or – when opened
+  // as the Plant tab, which has nothing behind it – back to a fresh Plant screen.
   const handleLeaveSuccess = useCallback(() => {
     if (navigation.canGoBack()) {
       navigation.goBack();
@@ -829,7 +829,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
-          {/* Camera capture — no gallery option: the planting photo must be taken live so the
+          {/* Camera capture – no gallery option: the planting photo must be taken live so the
               AI verification (and the location it's captured with) reflects the real moment. */}
           <TouchableOpacity
             style={styles.uploadArea}
@@ -963,7 +963,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
                   onPress={() => navigation.navigate('NurseryPublicProfile', { nurseryId: n.nurseryId })}
                 >
                   <Text style={styles.nearbyText}>
-                    {selectedSpecies?.commonName ?? 'This species'} — {n.quantity} available at {n.nurseryName}, {n.distanceKm.toFixed(1)} km away
+                    {selectedSpecies?.commonName ?? 'This species'} – {n.quantity} available at {n.nurseryName}, {n.distanceKm.toFixed(1)} km away
                     {n.isFree ? ' · Free' : n.priceCents != null ? ` · ₹${(n.priceCents / 100).toFixed(0)}` : ''}
                   </Text>
                 </TouchableOpacity>
@@ -1026,7 +1026,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
             style={[styles.nicknameInput, styles.captionInput]}
             value={caption}
             onChangeText={setCaption}
-            placeholder="eg - Say a few words about this planting — this shows up as the caption on your post"
+            placeholder="eg - Say a few words about this planting – this shows up as the caption on your post"
             placeholderTextColor={COLORS.textLight}
             multiline
             maxLength={2200}
@@ -1577,7 +1577,7 @@ const styles = StyleSheet.create({
     color: COLORS.coral,
     textAlign: 'center',
   },
-  // Full-page overlay — covers the header and bottom area entirely.
+  // Full-page overlay – covers the header and bottom area entirely.
   successRoot: {
     ...StyleSheet.absoluteFill as object,
     zIndex: 50,

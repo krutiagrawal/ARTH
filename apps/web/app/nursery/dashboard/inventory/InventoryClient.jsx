@@ -28,7 +28,7 @@ function rupees(cents) {
 
 // Sends JSON when there's no photo (so the inline `species` object/array fields
 // go through as real JSON, not stringified form fields) and multipart only when
-// a photo file is attached — per the brief's create/update contract for /nursery/stock.
+// a photo file is attached – per the brief's create/update contract for /nursery/stock.
 async function submitStock(path, method, payload, photoFile) {
   if (photoFile) {
     const body = new FormData()

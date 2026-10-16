@@ -15,10 +15,10 @@ import { RARITY_COLORS } from '../../constants/achievementRarity';
 import type { ApiAchievement } from '../../api/achievements';
 
 /**
- * Achievement/badge grid + detail modal — extracted from `ProfileScreen.tsx` so it can be reused
+ * Achievement/badge grid + detail modal – extracted from `ProfileScreen.tsx` so it can be reused
  * anywhere a `ApiAchievement[]` list needs the same unlocked/locked-tile treatment (e.g. an NGO's
  * achievement grid, which is the same generic shape: id/title/description/icon/rarity/unlocked/
- * progress/total). Purely presentational, no data fetching — the caller supplies `achievements`
+ * progress/total). Purely presentational, no data fetching – the caller supplies `achievements`
  * and an `onSelect` handler for the detail modal.
  */
 

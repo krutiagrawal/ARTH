@@ -36,7 +36,7 @@ export function NgoVolunteersScreen({ navigation }: any) {
   const handleRemove = (userId: string, name: string) => {
     confirm(
       'Remove this volunteer?',
-      `Cancels ${name}'s RSVP to any of your upcoming drives. Past attendance is kept — if they only volunteered before, they'll still show up here.`,
+      `Cancels ${name}'s RSVP to any of your upcoming drives. Past attendance is kept – if they only volunteered before, they'll still show up here.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Remove', style: 'destructive', onPress: guard(() => removeMutation.mutate(userId)) },

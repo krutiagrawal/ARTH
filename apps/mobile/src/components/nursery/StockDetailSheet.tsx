@@ -41,7 +41,7 @@ interface StockDetailSheetProps {
   onClose: () => void;
 }
 
-/** Tap-to-open detail + edit dialog for one inventory item — shows the full botanical record
+/** Tap-to-open detail + edit dialog for one inventory item – shows the full botanical record
  * (read-only, sourced from the shared species catalog) alongside this nursery's own listing
  * details (editable in place, no separate view/edit mode toggle). */
 export function StockDetailSheet({ item, visible, onClose }: StockDetailSheetProps) {

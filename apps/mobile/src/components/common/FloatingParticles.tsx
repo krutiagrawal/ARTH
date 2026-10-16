@@ -12,7 +12,7 @@ interface FloatingParticlesProps {
   type?: Particle['type'];
   style?: any;
   /** When provided, particles are confined to a band of this height (starting at top:0 of the
-   * container) instead of drifting across the full screen — used for a compact, always-visible
+   * container) instead of drifting across the full screen – used for a compact, always-visible
    * ambient strip rather than the default full-screen effect. */
   areaHeight?: number;
   /** Scales the fall duration (>1 = slower, <1 = faster). Defaults to 1 (unchanged elsewhere). */

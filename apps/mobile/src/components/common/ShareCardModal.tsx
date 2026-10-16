@@ -15,7 +15,7 @@ interface ShareCardModalProps {
   onClose: () => void;
   title?: string;
   caption?: string;
-  /** The branded, moment-specific card content — rendered at a Stories-friendly 9:16 aspect and
+  /** The branded, moment-specific card content – rendered at a Stories-friendly 9:16 aspect and
    * captured as the shared image once it settles on screen. */
   children: React.ReactNode;
   /** Set to false while the card is still loading something async (e.g. a photo) so the capture
@@ -72,7 +72,7 @@ export function ShareCardModal({ visible, onClose, title = 'Share your moment', 
       return;
     }
     if (!ready && !timedOut) return;
-    // Let the card's layout settle before capturing — same reasoning as ForestScreen's
+    // Let the card's layout settle before capturing – same reasoning as ForestScreen's
     // handleSnapshot delay.
     const timer = setTimeout(async () => {
       try {

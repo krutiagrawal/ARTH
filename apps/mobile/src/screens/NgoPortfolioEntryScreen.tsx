@@ -34,7 +34,7 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 /**
  * Create/edit a past-work entry.
  *
- * On edit, photos are only sent when the NGO actually picks new ones — the API replaces the whole
+ * On edit, photos are only sent when the NGO actually picks new ones – the API replaces the whole
  * set when `photos` is present, so submitting an empty array would silently wipe existing images.
  * That's why `photos` starts empty and `replacePhotos` gates the field.
  */
@@ -90,7 +90,7 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
       treesPlanted: treesPlanted ? Number(treesPlanted) : undefined,
       volunteersInvolved: volunteers ? Number(volunteers) : undefined,
       partnerOrgs: partnerOrgs.trim() || undefined,
-      // Only sent when the user chose new images — see the note above.
+      // Only sent when the user chose new images – see the note above.
       ...(replacePhotos && photos.length > 0 ? { photos } : {}),
     };
 

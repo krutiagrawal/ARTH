@@ -14,7 +14,7 @@ export interface ProfileHeaderStat {
   value: string | number;
   label: string;
   onPress?: () => void;
-  /** Escape hatch for non-numeric values (e.g. a tier badge) — see `StatDisplay`. */
+  /** Escape hatch for non-numeric values (e.g. a tier badge) – see `StatDisplay`. */
   valueNode?: React.ReactNode;
 }
 
@@ -28,15 +28,15 @@ export interface ProfileHeaderAction {
 }
 
 interface ProfileHeaderProps {
-  /** NGO/Nursery logo, or a user/group photo — omit to fall back to `avatarEmoji`. */
+  /** NGO/Nursery logo, or a user/group photo – omit to fall back to `avatarEmoji`. */
   avatarUrl?: string | null;
   avatarEmoji?: string;
-  /** 0-1 XP ring progress + level badge, overlaid on the avatar — User profiles only. */
+  /** 0-1 XP ring progress + level badge, overlaid on the avatar – User profiles only. */
   xpProgress?: { progress: number; level: number } | null;
   /** Sage = has an unseen story, brown = seen, omitted = no active story. Mutually exclusive
-   * with `xpProgress` in practice — pass this for other people's profiles, not your own. */
+   * with `xpProgress` in practice – pass this for other people's profiles, not your own. */
   storyRing?: StoryRingStatus | null;
-  /** When set, tapping the avatar opens this author's active story (if `storyRing.hasStory`) —
+  /** When set, tapping the avatar opens this author's active story (if `storyRing.hasStory`) –
    * omit to keep the avatar a plain, non-interactive image. */
   storyAuthor?: {
     kind: 'user' | 'ngo' | 'nursery' | 'group';
@@ -53,7 +53,7 @@ interface ProfileHeaderProps {
   primaryAction?: ProfileHeaderAction | null;
   /** Explanatory line under the action button, e.g. "This NGO approves each follower." */
   hint?: string | null;
-  /** Pass `insets.top` — reserves space above the vine banner so it starts below the status
+  /** Pass `insets.top` – reserves space above the vine banner so it starts below the status
    * bar's clock/battery row instead of behind it. */
   topInset?: number;
 }
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     paddingBottom: 22,
   },
   // Pulled up into the vine image's own lower dead space (mostly transparent past the dense
-  // foliage band) rather than sitting in the plain gap below it — closes the visual gap without
+  // foliage band) rather than sitting in the plain gap below it – closes the visual gap without
   // actually cropping or resizing the vine itself.
   avatarArea: { position: 'relative', alignItems: 'center', justifyContent: 'center', marginTop: -190, marginBottom: 12 },
   // Separate from `avatar` so the shadow isn't clipped by the avatar's own `overflow: hidden`.

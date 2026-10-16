@@ -6,7 +6,7 @@ import Svg, { G, Path } from 'react-native-svg';
  * The botanical branch that sits top-right on the NGO section headers.
  *
  * Replaces a 🌿 emoji rendered at `opacity: 0.07`, which was so faint it read as a smudge. Drawn
- * as SVG so it stays crisp at any size and so the tone is a real colour we control — the
+ * as SVG so it stays crisp at any size and so the tone is a real colour we control – the
  * reference art is a solid sage at roughly 45% opacity, i.e. several times more present than the
  * emoji watermark was.
  */
@@ -20,7 +20,7 @@ const STEMS: string[] = [
 ];
 
 /**
- * [x, y, rotation°, length, halfWidth] per leaf — laid out in pairs down each stem, one leaf to
+ * [x, y, rotation°, length, halfWidth] per leaf – laid out in pairs down each stem, one leaf to
  * either side, shrinking toward the tip. Sizes and spacing matter more than they look: at the
  * first attempt the leaves were fat ellipses packed close together and merged into one shapeless
  * blob, so each is now a pointed lens with visible sky between it and its neighbours.

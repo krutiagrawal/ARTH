@@ -89,13 +89,13 @@ const STEPS = ['identity', 'location', 'person', 'stock', 'verification', 'photo
 type Step = (typeof STEPS)[number];
 
 const STEP_COPY: Record<Step, { emoji: string; title: string; subtitle: string }> = {
-  identity: { emoji: '🏪', title: 'Your nursery', subtitle: 'The basics — who you are and what kind of nursery you run.' },
+  identity: { emoji: '🏪', title: 'Your nursery', subtitle: 'The basics – who you are and what kind of nursery you run.' },
   location: { emoji: '📍', title: 'Where are you', subtitle: 'So planters nearby can find you and get deliveries.' },
   person: { emoji: '👤', title: 'Point of contact', subtitle: "Who should we reach if there's a question about an order?" },
   stock: { emoji: '🌱', title: 'What do you stock', subtitle: 'Helps planters find you when they search for something specific.' },
-  verification: { emoji: '📄', title: 'Verify your business', subtitle: "Optional — whichever of these apply to you speeds up approval." },
+  verification: { emoji: '📄', title: 'Verify your business', subtitle: "Optional – whichever of these apply to you speeds up approval." },
   photo: { emoji: '📸', title: 'Show us your nursery', subtitle: 'One real-time photo of your name board with plants visible behind it.' },
-  account: { emoji: '🔐', title: 'Create your login', subtitle: "Last step — you're almost in." },
+  account: { emoji: '🔐', title: 'Create your login', subtitle: "Last step – you're almost in." },
 };
 
 function StepDots({ current }: { current: number }) {
@@ -179,9 +179,9 @@ export function NurseryRegisterScreen({ navigation }: any) {
       const found = await reverseGeocode(lat, lng).catch(() => null);
       if (found) {
         setLine1(found.label);
-        setLocationNotice({ ok: true, text: '✓ Matched from GPS — check the address above is correct' });
+        setLocationNotice({ ok: true, text: '✓ Matched from GPS – check the address above is correct' });
       } else {
-        setLocationNotice({ ok: false, text: "Pin captured, but we couldn't find an address for it — please type your address above" });
+        setLocationNotice({ ok: false, text: "Pin captured, but we couldn't find an address for it – please type your address above" });
       }
     } catch {
       setError("Couldn't get your location. Please try again.");
@@ -475,7 +475,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
               {visibleVerificationFields.includes('govId') && (
                 <TextInput maxLength={60} style={styles.input} placeholder="Government nursery ID (if applicable)" placeholderTextColor={ON_DARK_SURFACE.muted} value={govId} onChangeText={setGovId} />
               )}
-              <Text style={styles.helperNote}>None of these are mandatory — add whichever you have to help us approve you faster.</Text>
+              <Text style={styles.helperNote}>None of these are mandatory – add whichever you have to help us approve you faster.</Text>
             </>
           )}
 
@@ -488,7 +488,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
                 onChange={setVerificationPhoto}
                 icon="📸"
                 label="Capture your nursery"
-                hint="Name board + plants visible behind it, taken live — no gallery uploads"
+                hint="Name board + plants visible behind it, taken live – no gallery uploads"
                 aspect={[4, 3]}
               />
             </>

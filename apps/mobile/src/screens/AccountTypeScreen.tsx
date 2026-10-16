@@ -58,7 +58,7 @@ function AccountTypeCard({
 
 /**
  * The single hub both first-run onboarding (OnboardingScreen) and returning-user sign-up
- * (LoginScreen's "Sign up" link) funnel into — replaces the old flat text-link chooser at
+ * (LoginScreen's "Sign up" link) funnel into – replaces the old flat text-link chooser at
  * the bottom of Login/Register screens now that there are 5 account types instead of 3.
  */
 export function AccountTypeScreen({ navigation }: any) {

@@ -1,5 +1,5 @@
 /**
- * Mascot — public wrapper around the Ollie + Roots Lottie animation.
+ * Mascot – public wrapper around the Ollie + Roots Lottie animation.
  * Preserves the same prop API used everywhere in the app (size, mood, animate, etc.)
  */
 
@@ -83,11 +83,11 @@ export function Mascot({
   const imageMode = mascotOutfitToImageMode(theme.mascotOutfit);
   const floatStyle = useFloatBounce(animate);
 
-  // The new photo mascots are tall (~2:3) full-body portraits — squeezing them into the same
+  // The new photo mascots are tall (~2:3) full-body portraits – squeezing them into the same
   // square box used for the Lottie animation shrinks them a lot to fit the width. Give image
   // modes a taller box instead so the character stays readably sized. The portraits also have a
   // lot of empty margin baked into the source PNG itself, so 1.5x reserved more vertical scroll
-  // space than the character actually needs — 1.2x keeps it readable without the extra gap.
+  // space than the character actually needs – 1.2x keeps it readable without the extra gap.
   const boxHeight = imageMode ? size * 1.2 : size;
 
   return (
@@ -150,7 +150,7 @@ export function MascotBubble({
 }
 
 const bub = StyleSheet.create({
-  // flex-start (not flex-end) so the box sits level with the top of the mascot's bounding box —
+  // flex-start (not flex-end) so the box sits level with the top of the mascot's bounding box –
   // that's where the head is on the tall portrait images, not the bottom where the sleeping dog is.
   container: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   box: {

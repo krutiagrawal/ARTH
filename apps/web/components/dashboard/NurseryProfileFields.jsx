@@ -36,14 +36,14 @@ function ToggleRow({ label, checked, onChange }) {
 
 /**
  * The nursery-profile "extended" fields (identity, responsible person, stock, business
- * verification) — everything the backend's updateNurseryProfileSchema accepts beyond the
+ * verification) – everything the backend's updateNurseryProfileSchema accepts beyond the
  * original nurseryName/description/city/contactPhone/followPolicy set. Shared between the main
  * Settings page and the rejected-application resubmit panel so the field set/behaviour never
  * drifts between the two.
  *
  * `form`/`setForm` follow the same `setForm((s) => ({ ...s, key: value }))` convention used
  * throughout this codebase's nursery dashboard forms. `responsiblePersonPhone` validation is left
- * to the caller (same pattern as `contactPhone` elsewhere) — pass `responsiblePhoneError` and
+ * to the caller (same pattern as `contactPhone` elsewhere) – pass `responsiblePhoneError` and
  * `onResponsiblePhoneBlur` so the "touched" state lives in the parent alongside its own submit
  * gating.
  */
@@ -232,7 +232,7 @@ export function extendedProfileDefaults(profile) {
   }
 }
 
-/** Builds the PATCH payload slice for the extended fields — omits empty optionals so they don't
+/** Builds the PATCH payload slice for the extended fields – omits empty optionals so they don't
  * clobber existing values with blanks, matching how SettingsClient already treats city/contactPhone. */
 export function extendedProfilePayload(form) {
   return {

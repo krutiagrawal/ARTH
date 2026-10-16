@@ -1,5 +1,5 @@
 // Every native map library this app has tried (react-native-maps, @maplibre/maplibre-react-native)
-// turned out to require a native module Expo Go on this SDK doesn't bundle — see
+// turned out to require a native module Expo Go on this SDK doesn't bundle – see
 // plant_mobile_expo_go_setup project notes. `react-native-webview` IS a genuinely
 // Expo-Go-bundled module (confirmed in node_modules/expo/bundledNativeModules.json), so the
 // delivery-tracking maps render a real Leaflet/OpenStreetMap page inside a WebView instead of
@@ -7,7 +7,7 @@
 
 import { MAP_ICON_BASE64 } from '../assets/mapIconBase64';
 
-// The app's cute plant-pot mascot (references/map_icon.png), no background/circle behind it —
+// The app's cute plant-pot mascot (references/map_icon.png), no background/circle behind it –
 // just the character over the map tiles, matching the reference art's own transparent PNG.
 export const SAPLING_ICON_HTML = (size: number) => `
   <img src="data:image/png;base64,${MAP_ICON_BASE64}" style="width:${size}px;height:${size}px;

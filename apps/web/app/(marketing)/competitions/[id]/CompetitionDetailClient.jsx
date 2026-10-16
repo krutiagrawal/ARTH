@@ -78,7 +78,7 @@ export default function CompetitionDetailClient({ comp, initialEntries, pageSize
       await proxy(`/competitions/entries/${entryId}/vote`, { method: 'POST' })
       setEntries((es) => es.map((e) => (e.id === entryId ? { ...e, votes: e.votes + 1, hasVoted: true } : e)))
     } catch (err) {
-      // Already voted — reflect that state instead of leaving the button stuck.
+      // Already voted – reflect that state instead of leaving the button stuck.
       if (err.status === 409) setEntries((es) => es.map((e) => (e.id === entryId ? { ...e, hasVoted: true } : e)))
     }
   }

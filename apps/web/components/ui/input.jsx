@@ -2,7 +2,7 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-/** Shown under a field once its `maxLength` is reached — the browser silently stops accepting input there. */
+/** Shown under a field once its `maxLength` is reached – the browser silently stops accepting input there. */
 export function LimitMessage({ value, maxLength }) {
   if (!maxLength || String(value ?? "").length < maxLength) return null
   return (

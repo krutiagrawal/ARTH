@@ -2,10 +2,10 @@
 
 // Deterministic placeholder logomark for partners without a real logoUrl.
 // These are seed/demo organizations (Aster Financial, Halcyon Hotels, etc.)
-// that don't exist in the real world, so there is no real logo to source —
+// that don't exist in the real world, so there is no real logo to source –
 // generating a consistent abstract icon + small wordmark reads as an actual
 // logo lockup instead of a name in giant type. Once a real logoUrl is set
-// (via /admin/content), that image is used instead — see PartnerWall.jsx.
+// (via /admin/content), that image is used instead – see PartnerWall.jsx.
 
 const PALETTE = ['#8FAE86', '#8B6F52', '#C08552', '#B99B5B', '#6E9089', '#9C8F7C']
 

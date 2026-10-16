@@ -21,7 +21,7 @@ export function formatRelativeTime(iso: string | null): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-/** A single row in "Your Squad" — shared by the Community tab's preview and the full
+/** A single row in "Your Squad" – shared by the Community tab's preview and the full
  * FriendsListScreen, so both stay visually/behaviorally identical. */
 export function FriendCard({ friend, index, onPress, storyRing }: { friend: ApiFriend; index: number; onPress: () => void; storyRing?: StoryRingStatus | null }) {
   const slideStyle = useSlideUp(index * 80, 20);
@@ -70,7 +70,7 @@ export function FriendCard({ friend, index, onPress, storyRing }: { friend: ApiF
   );
 }
 
-/** A single row in "Friend Requests" — shared the same way as `FriendCard` above. */
+/** A single row in "Friend Requests" – shared the same way as `FriendCard` above. */
 export function FriendRequestRow({
   request,
   onPress,

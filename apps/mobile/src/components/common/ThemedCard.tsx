@@ -7,7 +7,7 @@ import { hexToRgba } from '../../utils/color';
 import type { TimeTheme } from '../../hooks/useTimeTheme';
 
 /**
- * Time-themed glass card used on the Corporate/Group/NGO/Nursery dashboards' non-hero sections —
+ * Time-themed glass card used on the Corporate/Group/NGO/Nursery dashboards' non-hero sections –
  * a real BlurView + gradient wash tinted from the current time-of-day theme, same recipe as
  * `EcoWidget`'s `cardBackground` branch and Home's `EcoFactCard`. Falls back to a flat card if
  * `theme` isn't passed (shouldn't happen at any current call site, but keeps this from crashing).
@@ -53,7 +53,7 @@ export function ThemedCard({
         ]}
         style={StyleSheet.absoluteFill}
       />
-      {/* Fake glass sheen — Android has no real live blur here, see HomeScreen.tsx. */}
+      {/* Fake glass sheen – Android has no real live blur here, see HomeScreen.tsx. */}
       <LinearGradient
         colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
         start={{ x: 0, y: 0 }}

@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server'
 // Every logged-in area of this app (including the old Arth-native
 // plant/adopt/donate/drives/dashboard pages) is now backed by the same
 // services/api account, via one of three role-namespaced cookie pairs
-// (member/ngo/admin — see lib/apiProxy.js). This is only a presence check for
-// UX (skip flashing a guarded page to a logged-out visitor) — the real
+// (member/ngo/admin – see lib/apiProxy.js). This is only a presence check for
+// UX (skip flashing a guarded page to a logged-out visitor) – the real
 // authorization happens on every proxied request, enforced by services/api
 // itself, which is the actual source of truth.
 export async function middleware(request) {
@@ -51,9 +51,9 @@ export async function middleware(request) {
   }
 
   // The old Arth-native adopt/donate/drives/dashboard paths all run on the
-  // member session now. (/app/* used to be a second member-gated area — it's
+  // member session now. (/app/* used to be a second member-gated area – it's
   // retired; next.config.js redirects() sends old /app/* links here. /plant
-  // is a public informational page now — planting itself is mobile-only.)
+  // is a public informational page now – planting itself is mobile-only.)
   const isMemberPath =
     pathname.startsWith('/adopt') ||
     pathname.startsWith('/donate') ||

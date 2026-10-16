@@ -343,7 +343,7 @@ export function useLogOwnObservation() {
   return useMutation({
     mutationFn: ({ treeId, ...input }: { treeId: string } & LogOwnObservationInput) => logOwnObservation(treeId, input),
     onSuccess: () => {
-      // Shares the 'trees' prefix with the list, map, and passport queries — one invalidation
+      // Shares the 'trees' prefix with the list, map, and passport queries – one invalidation
       // covers all of them (healthStatus just changed, and a new timeline entry was added).
       queryClient.invalidateQueries({ queryKey: ['trees'] });
     },
@@ -391,7 +391,7 @@ export function useSpecies() {
   return useQuery({ queryKey: ['species', 'list', user?.id ?? null], queryFn: fetchSpecies });
 }
 
-/** Nursery-scoped tree pins for NurseryImpactScreen's "View on map" — separate from `useTrees`
+/** Nursery-scoped tree pins for NurseryImpactScreen's "View on map" – separate from `useTrees`
  * (the user's own personal-forest list), this hits `/api/trees/map` which supports the global +
  * nurseryId scoping the map screens need. */
 export function useTreesMap(params: { scope?: 'mine' | 'global'; nurseryId?: string } = {}, enabled: boolean = true) {
@@ -403,7 +403,7 @@ export function useTreesMap(params: { scope?: 'mine' | 'global'; nurseryId?: str
   });
 }
 
-/** "Recommended nearby" card on PlantTreeScreen — only enabled once a species + a GPS fix are
+/** "Recommended nearby" card on PlantTreeScreen – only enabled once a species + a GPS fix are
  * both available, so it never fires on a half-picked form. */
 export function useNearbyStock(speciesId: string | null, lat: number | null, lng: number | null) {
   const { isAuthenticated } = useAuth();
@@ -414,7 +414,7 @@ export function useNearbyStock(speciesId: string | null, lat: number | null, lng
   });
 }
 
-/** Adds a species missing from the list — private to the planter who added it. */
+/** Adds a species missing from the list – private to the planter who added it. */
 export function useCreateSpecies() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -589,7 +589,7 @@ export function useUserLeaderboardPage(scope: 'global' | 'friends', page: number
   });
 }
 
-/** Public NGO ranking tab — visible to any logged-in user. `page` is 1-indexed. */
+/** Public NGO ranking tab – visible to any logged-in user. `page` is 1-indexed. */
 export function usePublicNgoLeaderboardPage(page: number) {
   const { isAuthenticated } = useAuth();
   return useQuery({
@@ -745,7 +745,7 @@ export function useLeaveChallenge() {
 }
 
 /** Batch "which of my friends joined this challenge" lookup for a screen's visible challenge
- * cards — same one-request-for-everything shape as useRingStatus, not one request per card. */
+ * cards – same one-request-for-everything shape as useRingStatus, not one request per card. */
 export function useChallengeFriendsJoined(challengeIds: string[]) {
   const { isAuthenticated } = useAuth();
   const sortedIds = [...challengeIds].sort();
@@ -965,7 +965,7 @@ export function useNgoStories(ngoId: string | null) {
 }
 
 /**
- * Batch seen/unseen story-ring lookup for a screen's visible avatars — call once per list with
+ * Batch seen/unseen story-ring lookup for a screen's visible avatars – call once per list with
  * every id on it (profile header, a page of leaderboard rows, a followers list, ...) rather than
  * one request per avatar. Pass stable arrays (e.g. `useMemo`'d) to avoid refetching every render.
  */
@@ -1046,7 +1046,7 @@ export function useDrive(id: string | null) {
   });
 }
 
-/** For the NGO that owns a drive, viewing who has RSVP'd — gate `enabled` to that ownership check. */
+/** For the NGO that owns a drive, viewing who has RSVP'd – gate `enabled` to that ownership check. */
 export function useDriveAttendees(id: string | null, enabled: boolean) {
   const { isAuthenticated } = useAuth();
   return useQuery({
@@ -1056,7 +1056,7 @@ export function useDriveAttendees(id: string | null, enabled: boolean) {
   });
 }
 
-/** For the NGO that owns a drive, viewing who sponsored which plant — shown instead of a
+/** For the NGO that owns a drive, viewing who sponsored which plant – shown instead of a
  * "Sponsor" button, since the NGO can't sponsor its own drive. */
 export function useDriveSponsors(id: string | null, enabled: boolean) {
   const { isAuthenticated } = useAuth();
@@ -1088,7 +1088,7 @@ export function useJoinDrive() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['drives'] });
       // The Drives tab on an NGO's public profile embeds its own drive snapshots inside this
-      // separate query — never invalidated otherwise, so it kept showing the pre-RSVP count.
+      // separate query – never invalidated otherwise, so it kept showing the pre-RSVP count.
       queryClient.invalidateQueries({ queryKey: ['ngos', 'public'] });
     },
   });
@@ -1148,7 +1148,7 @@ export function useAdoptTree() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] });
       // The Adopt tab on an NGO's public profile embeds its own tree snapshots inside this
-      // separate query — never invalidated otherwise, so it kept showing the pre-adoption state.
+      // separate query – never invalidated otherwise, so it kept showing the pre-adoption state.
       queryClient.invalidateQueries({ queryKey: ['ngos', 'public'] });
     },
   });
@@ -2775,7 +2775,7 @@ export function useMyBulkResponses() {
   });
 }
 
-/** There's no `GET /api/nursery/bulk-requirements/:id` route — the nursery side only exposes a
+/** There's no `GET /api/nursery/bulk-requirements/:id` route – the nursery side only exposes a
  * list (see api/nursery.ts's `fetchNurseryBulkRequirements`). This fetches the two status sets
  * that cover every tab the nursery UI shows (the default open/partially_fulfilled set, plus
  * fulfilled) and merges them, so both the list screen and the "detail" screen (which just looks
@@ -3060,7 +3060,7 @@ export function useAddresses() {
 
 // A new/edited/deleted address can change which address is default, and the backend now re-
 // points every in-flight delivery order at whichever address is currently default (see
-// address.service.ts's reassignActiveOrdersToAddress) — so every address mutation must also
+// address.service.ts's reassignActiveOrdersToAddress) – so every address mutation must also
 // invalidate order queries, or an already-fetched order screen keeps showing the stale address.
 function invalidateAddressesAndOrders(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: ['addresses'] });

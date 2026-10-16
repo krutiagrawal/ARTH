@@ -4,7 +4,7 @@ import { Leaf } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 /**
- * Dark "Impact snapshot" panel — the one deliberately different-colored
+ * Dark "Impact snapshot" panel – the one deliberately different-colored
  * surface in the dashboard (uses --forest-deep, not --primary/--card).
  * `metrics`: [{ icon, value, label }]
  * `image`: optional photo bleeding off the bottom-right edge (falls back to

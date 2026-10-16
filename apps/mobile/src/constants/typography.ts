@@ -1,6 +1,6 @@
 /**
  * Type system. Two families:
- *   - Bricolage Grotesque for display/headline text — screen titles, section headings.
+ *   - Bricolage Grotesque for display/headline text – screen titles, section headings.
  *   - Figtree for everything else, including every numeral.
  *
  * Figtree is applied by `<Text>`/`<TextInput>` from src/components/common/AppText, which every
@@ -12,7 +12,7 @@
  * sizes and weights, so the same kind of content looks the same everywhere.
  *
  * IMPORTANT: a named face already encodes its weight. Never pair `fontFamily: FONTS.*Bold` with a
- * `fontWeight` — Android picks one and ignores the other, which reads as the wrong weight rather
+ * `fontWeight` – Android picks one and ignores the other, which reads as the wrong weight rather
  * than as an error. Use the face alone.
  *
  * Display roles keep a ~1.3x line box for tall ascenders/descenders; keep any new display role in
@@ -20,12 +20,12 @@
  */
 
 export const FONTS = {
-  // Display — Bricolage Grotesque
+  // Display – Bricolage Grotesque
   display: 'BricolageGrotesque_600SemiBold',
   displayBold: 'BricolageGrotesque_700Bold',
   displayHeavy: 'BricolageGrotesque_800ExtraBold',
   displayMedium: 'BricolageGrotesque_500Medium',
-  // Body — Figtree
+  // Body – Figtree
   body: 'Figtree_400Regular',
   bodyMedium: 'Figtree_500Medium',
   bodySemiBold: 'Figtree_600SemiBold',
@@ -50,7 +50,7 @@ export const BODY_FACE_BY_WEIGHT: Record<string, string> = {
 };
 
 export const TYPOGRAPHY = {
-  // Display / Hero — Bricolage Grotesque. The jump from `displayXL` down to `h2` is intentionally steep;
+  // Display / Hero – Bricolage Grotesque. The jump from `displayXL` down to `h2` is intentionally steep;
   // a wide gap between the display and body scales is what carries the "two font" feel.
   displayXL: {
     fontSize: 52,
@@ -77,7 +77,7 @@ export const TYPOGRAPHY = {
     letterSpacing: -0.2,
   },
 
-  // Headings — h1/h2 are Bricolage Grotesque, h3/h4 drop to the sans so dense UI stays quiet.
+  // Headings – h1/h2 are Bricolage Grotesque, h3/h4 drop to the sans so dense UI stays quiet.
   h1: {
     fontSize: 23,
     fontFamily: FONTS.display,
@@ -133,7 +133,7 @@ export const TYPOGRAPHY = {
     textTransform: 'uppercase' as const,
   },
   /** Small all-caps kicker that sits directly above a Bricolage heading. Stays in the sans on purpose
-   * — the contrast between a wide-tracked sans kicker and a tight rounded display line is what
+   * – the contrast between a wide-tracked sans kicker and a tight rounded display line is what
    * makes the pairing look deliberate. Mirrors the web site's `.eyebrow`. */
   kicker: {
     fontSize: 11,
@@ -154,7 +154,7 @@ export const TYPOGRAPHY = {
     lineHeight: 40,
     letterSpacing: -1,
   },
-  // Numerals stay in the sans throughout — Bricolage is reserved for headings, and mixing a rounded
+  // Numerals stay in the sans throughout – Bricolage is reserved for headings, and mixing a rounded
   // display figure into a row of sans ones (StatDisplay's sizes sit side by side) reads as a
   // mistake. This is also what keeps the admin console looking like a console.
   numberTiny: {
@@ -173,7 +173,7 @@ export const TYPOGRAPHY = {
 };
 
 /**
- * Semantic text roles — the ONLY styles screens should reach for. Each role fixes the face
+ * Semantic text roles – the ONLY styles screens should reach for. Each role fixes the face
  * (display vs body), size, weight and line height, so the same kind of content looks the same on
  * every screen, and changing a font later means editing only FONTS above.
  * Spread one into a style and add only layout/colour: `{ ...TEXT.heading, color }`.
@@ -189,7 +189,7 @@ export const TYPOGRAPHY = {
  *   stat        Big numeric figures (counts, scores, %)     body extrabold, 28
  *   statSmall   Inline numeric figures in cards             body bold, 20
  *
- * Display roles keep a ~1.3x line box (see the Bricolage note above) — keep any new display role in
+ * Display roles keep a ~1.3x line box (see the Bricolage note above) – keep any new display role in
  * that band. Glyph/emoji text (←, ×, 🌱) is not typography and should keep its own plain style.
  */
 export const TEXT = {

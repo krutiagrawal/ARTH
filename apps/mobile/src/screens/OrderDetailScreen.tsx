@@ -20,7 +20,7 @@ import { SUNLIGHT_LABEL, WATER_LABEL } from '../constants/plantingGuide';
 import { TEXT } from '../constants/typography';
 import { useConfirm } from '../context/ConfirmDialogContext';
 // This screen must never import react-native-maps directly (or anything re-exported from it,
-// like AnimatedRegion) — Metro evaluates the whole package on import, including its native
+// like AnimatedRegion) – Metro evaluates the whole package on import, including its native
 // MapView binding, which has no native module in Expo Go on Android. React.lazy() defers that
 // import until this component actually mounts, and MapErrorBoundary (below) catches it failing.
 const LazyDeliveryTrackingMap = React.lazy(() =>
@@ -32,7 +32,7 @@ function formatRupees(cents: number) {
 }
 
 // Both branches converge on plantation_verified once the saplings are actually planted and
-// AI/GPS-verified — that's the true end of the order lifecycle, not delivered/picked_up.
+// AI/GPS-verified – that's the true end of the order lifecycle, not delivered/picked_up.
 const DELIVERY_STAGES: { key: OrderStatus; label: string }[] = [
   { key: 'confirmed', label: 'Confirmed' },
   { key: 'packed', label: 'Packed' },
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
   star: { fontSize: 32, color: COLORS.sand },
   starActive: { color: COLORS.amber },
   input: {
-    // No fill — an outline on the page, not a panel laid over it. Matches FormField's recipe.
+    // No fill – an outline on the page, not a panel laid over it. Matches FormField's recipe.
     backgroundColor: 'transparent',
     borderRadius: RADIUS.lg,
     borderWidth: 1.5,

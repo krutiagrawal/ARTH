@@ -8,11 +8,11 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/site/AuthProvider'
 import { proxy } from '@/lib/memberProxy'
 
-// Serves group/ngo/nursery/corporate only — 'individual' now lives at the
+// Serves group/ngo/nursery/corporate only – 'individual' now lives at the
 // static apps/web/app/dashboard/individual/* route tree, which Next.js
 // shadows ahead of this dynamic segment (see [type]/page.js VALID_TYPES).
 // Of these, only 'corporate' is actually linked anywhere today
-// (app/(marketing)/HomeClient.jsx) — group/ngo have their own dedicated
+// (app/(marketing)/HomeClient.jsx) – group/ngo have their own dedicated
 // dashboards at /group/dashboard, /ngo/dashboard.
 const ROLE_LABEL = {
   group: 'Group',

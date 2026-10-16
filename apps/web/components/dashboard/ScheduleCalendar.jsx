@@ -5,15 +5,15 @@ import { Calendar } from '@/components/ui/calendar'
 /**
  * Thin wrapper around the existing (previously unused) shadcn Calendar
  * primitive. `selected={today}` alone gets the mockup's filled-circle
- * "today" treatment for free — the primitive's DayButton already maps
+ * "today" treatment for free – the primitive's DayButton already maps
  * `data-selected-single` to bg-primary/text-primary-foreground.
- * `eventDates`: Date[] — days that get a small dot marker (upcoming drives).
+ * `eventDates`: Date[] – days that get a small dot marker (upcoming drives).
  */
 export default function ScheduleCalendar({ eventDates = [] }) {
   const today = new Date()
 
   return (
-    // Centering wrapper, not a classNames override on the primitive itself —
+    // Centering wrapper, not a classNames override on the primitive itself –
     // Calendar's internal classNames prop *replaces* whole default class
     // strings per-key rather than merging them, so overriding e.g. `root`/
     // `month` there risks dropping react-day-picker's own structural classes.

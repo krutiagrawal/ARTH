@@ -37,13 +37,13 @@ const HERO_HEIGHT = SH * 0.54;
 /** How many recent weeks the streak card shows as leaf glyphs. */
 const STREAK_WEEKS_SHOWN = 5;
 
-/** Periods dark/saturated enough that the streak leaves need to switch off green — see StreakLeafIcon. */
+/** Periods dark/saturated enough that the streak leaves need to switch off green – see StreakLeafIcon. */
 const EVENING_PERIODS = new Set(['sunset', 'blueHour', 'night', 'lateNight']);
 
 /**
  * One streak-day leaf, drawn as a vector path instead of the 🌿 emoji it replaces.
  *
- * The emoji is a fixed-palette glyph, so it can't be recolored — it stayed green (and low-opacity
+ * The emoji is a fixed-palette glyph, so it can't be recolored – it stayed green (and low-opacity
  * green when empty) even once the card itself went dark at evening/night, where green-on-indigo is
  * nearly invisible. A plain fill color lets the leaf switch to gold/white on those periods.
  */
@@ -127,7 +127,7 @@ interface DockActionSpec {
   onPress: () => void;
 }
 
-// Circular icon shortcut, matching nursery's dashboard dock — a payments-app-style quick-actions
+// Circular icon shortcut, matching nursery's dashboard dock – a payments-app-style quick-actions
 // row instead of another stack of full-width cards.
 function DockItem({
   seamText,
@@ -224,10 +224,10 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
   const blurTargetRef = useRef<View>(null);
 
   // The page below the hero follows the illustration's ground tone, exactly as the user-facing
-  // Home screen does — a fixed cream page made every period look identical below the fold.
+  // Home screen does – a fixed cream page made every period look identical below the fold.
   const pageBackground = getHeroSeamColor(theme);
   // Headings sit directly on that flat page background (not inside a card), so they need its
-  // text colours — not `theme.textOnSky` (for the sky illustration above, white at Golden
+  // text colours – not `theme.textOnSky` (for the sky illustration above, white at Golden
   // Hour/Sunset i.e. invisible here) and not `theme.textPrimaryOnCard` (calibrated for text
   // inside a tinted glass card, not the page itself).
   const seamText = getHeroSeamTextColors(theme);
@@ -257,7 +257,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
   };
 
   // Drives/Campaigns/Trees creation stays on the Manage tab, which already has its own bottom-tab
-  // entry — same reasoning nursery uses to keep Orders/Edit Profile out of its dock. Post an
+  // entry – same reasoning nursery uses to keep Orders/Edit Profile out of its dock. Post an
   // update, Followers and View on Map are likewise left out: Post/Followers already live under
   // the Community tab, and Map now has its own bottom-tab entry.
   const dockActions: DockActionSpec[] = [
@@ -377,7 +377,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
             <Text style={[styles.sectionSubtitle, { color: seamText.secondary }]}>
               This is what you have achieved so far
             </Text>
-            {/* 2x2 grid of `flex: 1` tiles — two explicit rows rather than a wrapping container,
+            {/* 2x2 grid of `flex: 1` tiles – two explicit rows rather than a wrapping container,
                 same reasoning as the hero row: guarantees four equal-size cards regardless of
                 label length. Every tile is tappable through to where its underlying data lives. */}
             <Animated.View style={statsAnim}>
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
   statsRight: { flex: 1, flexDirection: 'row', gap: 8 },
   loader: { marginTop: 20, marginBottom: 8 },
 
-  // `alignItems: 'stretch'` is what equalises tile heights — without it the shortest label sets
+  // `alignItems: 'stretch'` is what equalises tile heights – without it the shortest label sets
   // its own card's height and the row looks ragged.
   gridRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8, marginBottom: 10 },
   gridTile: { flex: 1 },

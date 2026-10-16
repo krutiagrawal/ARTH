@@ -24,7 +24,7 @@ import { ActionSheet, type ActionSheetOption } from './ActionSheet';
 import { useHaptics } from '../../hooks/useHaptics';
 import { useConfirm } from '../../context/ConfirmDialogContext';
 
-/** "3h", "2d", "12 Mar" — compact enough for the author row. */
+/** "3h", "2d", "12 Mar" – compact enough for the author row. */
 function relativeTime(iso: string): string {
   const then = new Date(iso).getTime();
   const mins = Math.floor((Date.now() - then) / 60000);
@@ -49,9 +49,9 @@ interface PostCardProps {
   onReport?: (post: ApiPost) => void;
   onBlock?: (post: ApiPost) => void;
   onDelete?: (post: ApiPost) => void;
-  /** True while a like toggle for this exact post is in flight — see LikeButton. */
+  /** True while a like toggle for this exact post is in flight – see LikeButton. */
   isTogglingLike?: boolean;
-  /** Set false to hide the Share menu option — e.g. the reduced-actions grid post detail view. */
+  /** Set false to hide the Share menu option – e.g. the reduced-actions grid post detail view. */
   enableShare?: boolean;
   /** Sage = author has an unseen story, brown = seen, omitted = no active story. */
   storyRing?: StoryRingStatus | null;
@@ -78,7 +78,7 @@ export function PostCard({
 
   const avatarUri = useMemo(() => resolveMediaUrl(post.author.imageUrl), [post.author.imageUrl]);
 
-  // The big centred burst on double-tap — separate from LikeButton's own small ring flourish.
+  // The big centred burst on double-tap – separate from LikeButton's own small ring flourish.
   const burstScale = useSharedValue(0.3);
   const burstOpacity = useSharedValue(0);
   const burstStyle = useAnimatedStyle(() => ({
@@ -98,7 +98,7 @@ export function PostCard({
           burstOpacity.value = withSequence(withTiming(1, { duration: 90 }), withDelay(350, withTiming(0, { duration: 250 })));
           burstScale.value = withSequence(withTiming(1.15, { duration: 180 }), withTiming(1, { duration: 120 }));
           // Reversible stays reversible: a double-tap only ever likes, exactly like the heart
-          // button's own first tap — it never undoes an existing like, so it can't fight a
+          // button's own first tap – it never undoes an existing like, so it can't fight a
           // deliberate single tap on the heart to unlike.
           if (!likedByMe) {
             runOnJS(light)();
@@ -226,7 +226,7 @@ export function PostCard({
         </TouchableOpacity>
       </View>
 
-      {/* Only the author ever sees this — everyone else's query filters hidden posts out. */}
+      {/* Only the author ever sees this – everyone else's query filters hidden posts out. */}
       {post.isHidden && (
         <View style={styles.reviewBanner}>
           <Text style={styles.reviewText}>
@@ -241,7 +241,7 @@ export function PostCard({
             <MediaCarousel media={post.media} />
             <View style={styles.burstOverlay} pointerEvents="none">
               <Animated.View style={[styles.burstStack, burstStyle]}>
-                {/* A drawn flat heart, not the ❤️ emoji — the emoji's glossy highlight/shine
+                {/* A drawn flat heart, not the ❤️ emoji – the emoji's glossy highlight/shine
                     (and its glyph occasionally painting outside its reported metrics, cropping the
                     top-right lobe at this size) isn't something we can control across devices. */}
                 <Svg width={90} height={90} viewBox="0 0 24 24" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}>
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
   },
   burstStack: { width: 90, height: 90, alignItems: 'center', justifyContent: 'center' },
   // The heart path's belly (its widest open space, below the two-lobe notch) sits a little past
-  // dead centre of its viewBox — nudging the sapling down from the box's exact centre puts it
+  // dead centre of its viewBox – nudging the sapling down from the box's exact centre puts it
   // there instead of straddling the notch. Plain emoji text, not AppText: this needs the system's
   // default color-emoji rendering, which a forced custom font family can break.
   burstSapling: { position: 'absolute', fontSize: 30, marginTop: 6 },

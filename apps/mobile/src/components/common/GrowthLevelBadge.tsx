@@ -5,7 +5,7 @@ import { COLORS, ON_DARK_SURFACE, ON_LIGHT_SURFACE } from '../../constants/color
 import { RADIUS } from '../../constants/theme';
 import type { NurseryGrowthLevel } from '../../api/nursery';
 
-// Tenure + lifetime-volume tiers — independent of ARTH Trust Score (see TrustScoreGauge). A
+// Tenure + lifetime-volume tiers – independent of ARTH Trust Score (see TrustScoreGauge). A
 // highly reliable but new/low-volume nursery can be "Growing" even with a high trust score.
 export const GROWTH_LEVEL_META: Record<NurseryGrowthLevel, { emoji: string; label: string; color: string }> = {
   seedling: { emoji: '🌱', label: 'Seedling', color: COLORS.sageLight },
