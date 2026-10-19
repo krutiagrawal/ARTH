@@ -1,6 +1,7 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import { Home, Boxes, PackageSearch, Truck, ClipboardList, Leaf, Settings as SettingsIcon, LogOut, ChevronDown, Star, Users, WifiOff, Sprout, ShieldCheck, BarChart3, Bell, Bike, Compass, Handshake, Flag, ShieldOff } from 'lucide-react'
 import AppSidebar from '@/components/dashboard/AppSidebar'
 import SidebarScenery from '@/components/dashboard/SidebarScenery'
@@ -35,6 +36,21 @@ const SECTIONS = [
 function NurseryShell({ children }) {
   const router = useRouter()
   const { profile, loading, error, blocked, blockReason, refresh } = useNurseryProfile()
+  const pathname = usePathname()
+
+  // Until an admin approves the account the only reachable pages are Overview (which shows the
+  // review status / resubmit form) and Settings. Anything else is bounced back to Overview.
+  const restricted = !!profile && profile.status !== 'approved'
+  const allowed = pathname === '/nursery/dashboard' || pathname.startsWith('/nursery/dashboard/settings')
+  useEffect(() => {
+    if (restricted && !allowed) router.replace('/nursery/dashboard')
+  }, [restricted, allowed, router])
+  const sections = restricted
+    ? SECTIONS.map((section) => ({
+        ...section,
+        items: section.items.filter((item) => item.href === '/nursery/dashboard' || item.href === '/nursery/dashboard/settings'),
+      }))
+    : SECTIONS
 
   const logout = async () => {
     await fetch('/api/nursery/logout', { method: 'POST' })
@@ -48,7 +64,7 @@ function NurseryShell({ children }) {
 
   return (
     <AppSidebar
-      sections={SECTIONS}
+      sections={sections}
       mobileTitle="Nursery Dashboard"
       scenery={<SidebarScenery />}
       header={
@@ -97,7 +113,7 @@ function NurseryShell({ children }) {
             Try again
           </Button>
         </div>
-      ) : (
+      ) : loading || (restricted && !allowed) ? null : (
         children
       )}
     </AppSidebar>

@@ -42,8 +42,8 @@ function StatusBanner({ profile, onResubmitted }) {
         <p className="font-serif text-xl">Your application is with our team.</p>
         <p className="mt-2 text-sm text-muted-foreground">
           Thank you for your patience, {profile.orgName} – we&rsquo;re reviewing your details carefully. We&rsquo;ll
-          email you the moment there&rsquo;s a decision. You can still see everything below, you just can&rsquo;t
-          publish new drives, trees, or campaigns until you&rsquo;re approved.
+          email you the moment there&rsquo;s a decision. Everything in your dashboard unlocks the moment
+          you&rsquo;re approved.
         </p>
       </div>
     )
@@ -57,8 +57,7 @@ function StatusBanner({ profile, onResubmitted }) {
           {profile.rejectionReason
             ? `Our team noted: "${profile.rejectionReason}"`
             : 'Publishing is paused for this account.'}{' '}
-          Your existing drives, trees, and campaigns are still visible below, but you can&rsquo;t create or edit
-          anything while suspended. Contact the ARTH team if you have questions.
+          Everything is paused while your account is suspended. Contact the ARTH team if you have questions.
         </p>
       </div>
     )
@@ -122,8 +121,7 @@ function RejectedPanel({ profile, onResubmitted }) {
         {profile.rejectionReason
           ? `Our team noted: "${profile.rejectionReason}"`
           : "Our team wasn't able to approve this application this time."}{' '}
-        Update your details below whenever you&rsquo;re ready, and send it our way again. Your existing drives,
-        trees, and campaigns stay visible below in the meantime.
+        Update your details below whenever you&rsquo;re ready, and send it our way again.
       </p>
 
       <form onSubmit={resubmit} className="mt-6 space-y-3 max-w-lg">
@@ -275,7 +273,10 @@ export default function OverviewClient() {
   const [statsLoading, setStatsLoading] = useState(true)
   const [drives, setDrives] = useState([])
 
+  const approved = profile?.status === 'approved'
+
   useEffect(() => {
+    if (!approved) return
     proxy('/ngo/stats')
       .then(setStats)
       .catch(() => setStats(null))
@@ -284,7 +285,7 @@ export default function OverviewClient() {
     proxy('/drives/mine')
       .then((data) => setDrives(data.filter((d) => d.status === 'upcoming')))
       .catch(() => setDrives([]))
-  }, [])
+  }, [approved])
 
   if (profileLoading || !profile) {
     return (
@@ -295,6 +296,15 @@ export default function OverviewClient() {
             <StatTile key={i} loading />
           ))}
         </div>
+      </DashboardPageShell>
+    )
+  }
+
+  if (profile.status !== 'approved') {
+    // Nothing else in the dashboard is available until an admin approves the account.
+    return (
+      <DashboardPageShell className="space-y-6">
+        <StatusBanner profile={profile} onResubmitted={setProfile} />
       </DashboardPageShell>
     )
   }
@@ -319,8 +329,6 @@ export default function OverviewClient() {
           <QuickActionChip key={action.href} action={action} />
         ))}
       </div>
-
-      {profile.status !== 'approved' && <StatusBanner profile={profile} onResubmitted={setProfile} />}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         <StatTile

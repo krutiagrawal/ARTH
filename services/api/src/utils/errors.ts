@@ -47,6 +47,13 @@ export class AccountBlockedError extends AppError {
   }
 }
 
+/** NGO / nursery account that an admin has not (or no longer) approved. `details.status` is pending | rejected | suspended. */
+export class AccountNotApprovedError extends AppError {
+  constructor(status: string, rejectionReason?: string | null) {
+    super(403, 'ACCOUNT_NOT_APPROVED', 'Your account is not approved yet.', { status, rejectionReason: rejectionReason ?? null });
+  }
+}
+
 export class ServiceUnavailableError extends AppError {
   constructor(message = 'Service unavailable') {
     super(503, 'SERVICE_UNAVAILABLE', message);

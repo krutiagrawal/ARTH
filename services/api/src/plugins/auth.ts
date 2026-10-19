@@ -2,7 +2,24 @@ import fp from 'fastify-plugin';
 import { UserRole } from '@arth/db';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { verifyAccessToken } from '../utils/jwt';
-import { AccountBlockedError, ForbiddenError, UnauthorizedError } from '../utils/errors';
+import { AccountBlockedError, AccountNotApprovedError, ForbiddenError, UnauthorizedError } from '../utils/errors';
+
+// NGO / nursery accounts must be admin-approved before they can use anything. These are the only
+// routes an unapproved one may still hit: read its own profile, (when rejected) fix and resubmit,
+// plus account basics. Matched against the route pattern (prefix included), not the raw URL.
+const UNAPPROVED_ALLOWED: { method: string; test: (url: string) => boolean }[] = [
+  { method: 'GET', test: (u) => u === '/api/ngo/profile' || u === '/api/nursery/profile' },
+  { method: 'PATCH', test: (u) => u === '/api/ngo/profile' || u === '/api/nursery/profile' },
+  { method: 'POST', test: (u) => u === '/api/ngo/resubmit' || u === '/api/nursery/resubmit' },
+  { method: '*', test: (u) => u.startsWith('/api/auth/') },
+  { method: '*', test: (u) => u === '/api/users/me' || u.startsWith('/api/users/me/') },
+  { method: '*', test: (u) => u === '/api/notifications' || u.startsWith('/api/notifications/') },
+  { method: '*', test: (u) => u === '/api/push-tokens' || u.startsWith('/api/push-tokens/') },
+];
+
+function isAllowedWhenUnapproved(method: string, url: string): boolean {
+  return UNAPPROVED_ALLOWED.some((r) => (r.method === '*' || r.method === method) && r.test(url));
+}
 
 export default fp(async function authPlugin(fastify: FastifyInstance) {
   fastify.decorate('authenticate', async function (request: FastifyRequest, _reply: FastifyReply) {
@@ -28,6 +45,24 @@ export default fp(async function authPlugin(fastify: FastifyInstance) {
     });
     if (!user || user.isDeleted) throw new UnauthorizedError('Invalid or expired token');
     if (user.isBlocked) throw new AccountBlockedError();
+
+    // Approval gate for NGO / nursery accounts. Status is read fresh from the DB (like isBlocked) so an
+    // admin approve / reject / suspend takes effect on the very next request.
+    if (payload.role === 'ngo' || payload.role === 'nursery') {
+      const url = request.routeOptions?.url ?? request.url.split('?')[0];
+      const profile = payload.role === 'ngo'
+        ? await fastify.prisma.ngoProfile.findUnique({ where: { userId: payload.sub }, select: { status: true, rejectionReason: true } })
+        : await fastify.prisma.nurseryProfile.findUnique({ where: { userId: payload.sub }, select: { status: true, rejectionReason: true } });
+      if (profile && profile.status !== 'approved') {
+        // A suspended account may look but not edit or resubmit.
+        const editing = request.method === 'PATCH' || request.method === 'POST';
+        const ownProfileEdit = /^\/api\/(ngo|nursery)\/(profile|resubmit)$/.test(url);
+        const blockedBySuspension = profile.status === 'suspended' && editing && ownProfileEdit;
+        if (blockedBySuspension || !isAllowedWhenUnapproved(request.method, url)) {
+          throw new AccountNotApprovedError(profile.status, profile.rejectionReason);
+        }
+      }
+    }
 
     // `lastActiveAt` otherwise only moves on login (auth.service.ts), so a user who stays
     // logged in for weeks would look permanently "inactive" to re-engagement jobs. Refreshed

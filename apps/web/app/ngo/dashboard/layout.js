@@ -1,6 +1,7 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import { Home, CalendarDays, TreePine, HeartHandshake, Settings as SettingsIcon, LogOut, Leaf, ChevronDown, BarChart3, HandCoins, Users, UserPlus, Trophy, WifiOff, Sprout, Newspaper, ClipboardList, Compass, Flag, ShieldOff } from 'lucide-react'
 import AppSidebar from '@/components/dashboard/AppSidebar'
 import SidebarScenery from '@/components/dashboard/SidebarScenery'
@@ -35,6 +36,21 @@ const SECTIONS = [
 function NgoShell({ children }) {
   const router = useRouter()
   const { profile, loading, error, blocked, blockReason, refresh } = useNgoProfile()
+  const pathname = usePathname()
+
+  // Until an admin approves the account the only reachable pages are Overview (which shows the
+  // review status / resubmit form) and Settings. Anything else is bounced back to Overview.
+  const restricted = !!profile && profile.status !== 'approved'
+  const allowed = pathname === '/ngo/dashboard' || pathname.startsWith('/ngo/dashboard/settings')
+  useEffect(() => {
+    if (restricted && !allowed) router.replace('/ngo/dashboard')
+  }, [restricted, allowed, router])
+  const sections = restricted
+    ? SECTIONS.map((section) => ({
+        ...section,
+        items: section.items.filter((item) => item.href === '/ngo/dashboard' || item.href === '/ngo/dashboard/settings'),
+      }))
+    : SECTIONS
 
   const logout = async () => {
     await fetch('/api/ngo/logout', { method: 'POST' })
@@ -48,7 +64,7 @@ function NgoShell({ children }) {
 
   return (
     <AppSidebar
-      sections={SECTIONS}
+      sections={sections}
       mobileTitle="NGO Dashboard"
       scenery={<SidebarScenery />}
       header={
@@ -97,7 +113,7 @@ function NgoShell({ children }) {
             Try again
           </Button>
         </div>
-      ) : (
+      ) : loading || (restricted && !allowed) ? null : (
         children
       )}
     </AppSidebar>

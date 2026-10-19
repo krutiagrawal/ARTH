@@ -38,8 +38,8 @@ function StatusBanner({ profile, onResubmitted }) {
         <p className="font-serif text-xl">Your application is with our team.</p>
         <p className="mt-2 text-sm text-muted-foreground">
           Thank you for your patience, {profile.nurseryName} – we&rsquo;re reviewing your details carefully.
-          We&rsquo;ll email you the moment there&rsquo;s a decision. You can still see everything below, you just
-          can&rsquo;t take orders or respond to bulk requirements until you&rsquo;re approved.
+          We&rsquo;ll email you the moment there&rsquo;s a decision. Everything in your dashboard unlocks the moment
+          you&rsquo;re approved.
         </p>
       </div>
     )
@@ -53,8 +53,7 @@ function StatusBanner({ profile, onResubmitted }) {
           {profile.rejectionReason
             ? `Our team noted: "${profile.rejectionReason}"`
             : 'Publishing is paused for this account.'}{' '}
-          Your existing inventory and orders are still visible below, but you can&rsquo;t create or edit anything
-          while suspended. Contact the ARTH team if you have questions.
+          Everything is paused while your account is suspended. Contact the ARTH team if you have questions.
         </p>
       </div>
     )
@@ -275,12 +274,15 @@ export default function OverviewClient() {
   const [stats, setStats] = useState(null)
   const [statsLoading, setStatsLoading] = useState(true)
 
+  const approved = profile?.status === 'approved'
+
   useEffect(() => {
+    if (!approved) return
     proxy('/nursery/dashboard/today')
       .then(setStats)
       .catch(() => setStats(null))
       .finally(() => setStatsLoading(false))
-  }, [])
+  }, [approved])
 
   if (profileLoading || !profile) {
     return (
@@ -295,6 +297,15 @@ export default function OverviewClient() {
     )
   }
 
+  if (profile.status !== 'approved') {
+    // Nothing else in the dashboard is available until an admin approves the account.
+    return (
+      <DashboardPageShell className="space-y-6">
+        <StatusBanner profile={profile} onResubmitted={setProfile} />
+      </DashboardPageShell>
+    )
+  }
+
   return (
     <DashboardPageShell className="space-y-6">
       <OverviewHero nurseryName={profile.nurseryName} />
@@ -305,8 +316,6 @@ export default function OverviewClient() {
           <QuickActionChip key={action.href} action={action} />
         ))}
       </div>
-
-      {profile.status !== 'approved' && <StatusBanner profile={profile} onResubmitted={setProfile} />}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         <StatTile label="Orders today" value={stats?.ordersToday ?? 0} description="Placed today" icon={PackageSearch} tone="primary" href="/nursery/dashboard/orders" loading={statsLoading} />

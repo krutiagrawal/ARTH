@@ -5,6 +5,9 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { navigationRef } from './navigationRef';
 import { useAuth } from '../context/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
+import { setAccountNotApprovedHandler } from '../api/client';
+import { NgoApprovalGate, NurseryApprovalGate } from '../components/common/ApprovalGate';
 import { COLORS } from '../constants/colors';
 import { IS_TABLET, CONTENT_MAX_WIDTH } from '../utils/responsive';
 
@@ -555,6 +558,42 @@ function useBlockedRedirect() {
   }, [isBlocked]);
 }
 
+// Routes an unapproved NGO / nursery may still open. The gate screen inside NgoMain / NurseryMain
+// links to these; everything else (push-notification taps, deep links) is bounced back to the gate.
+const UNAPPROVED_ALLOWED_ROUTES = new Set([
+  'NgoMain', 'NurseryMain', 'NgoProfile', 'NgoSettings', 'NurseryProfile', 'EditNurseryProfile',
+  'NurserySettings', 'Settings', 'ChangePassword', 'Notifications',
+]);
+
+/**
+ * Keeps NGO / nursery accounts that an admin hasn't approved inside the approval gate: on every
+ * navigation, if the cached profile status isn't 'approved' and the route isn't allow-listed, reset
+ * to the role's main screen (which renders the gate). The API enforces this too (ACCOUNT_NOT_APPROVED).
+ */
+function useApprovalRedirect() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const role = user?.role;
+
+  useEffect(() => {
+    if (role !== 'ngo' && role !== 'nursery') return;
+    const mainRoute = role === 'ngo' ? 'NgoMain' : 'NurseryMain';
+    setAccountNotApprovedHandler(() => queryClient.invalidateQueries({ queryKey: [role, 'profile'] }));
+    const unsubscribe = navigationRef.addListener('state', () => {
+      const current = navigationRef.getCurrentRoute()?.name;
+      if (!current || UNAPPROVED_ALLOWED_ROUTES.has(current)) return;
+      const profile = queryClient.getQueryData<{ status?: string }>([role, 'profile']);
+      if (profile?.status && profile.status !== 'approved') {
+        navigationRef.reset({ index: 0, routes: [{ name: mainRoute }] });
+      }
+    });
+    return () => {
+      unsubscribe();
+      setAccountNotApprovedHandler(null);
+    };
+  }, [role, queryClient]);
+}
+
 function MainApp({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<TabName>('Home');
   // Always called (Rules of Hooks) – only actually handed to BottomNav while Home is active, so
@@ -639,15 +678,17 @@ function NgoMainApp({ navigation }: any) {
   }, [activeTab, navigation, manageSegment, navigateTab]);
 
   return (
-    <View style={styles.mainContainer}>
-      {renderScreen()}
-      <BottomNav
-        tabs={NGO_TABS}
-        activeTab={activeTab}
-        onTabPress={handleTabPress}
-        theme={activeTab === 'Home' ? dashboardTheme : null}
-      />
-    </View>
+    <NgoApprovalGate navigation={navigation}>
+      <View style={styles.mainContainer}>
+        {renderScreen()}
+        <BottomNav
+          tabs={NGO_TABS}
+          activeTab={activeTab}
+          onTabPress={handleTabPress}
+          theme={activeTab === 'Home' ? dashboardTheme : null}
+        />
+      </View>
+    </NgoApprovalGate>
   );
 }
 
@@ -718,15 +759,17 @@ function NurseryMainApp({ navigation }: any) {
   }, [activeTab, navigation, tabBackNavigation]);
 
   return (
-    <View style={styles.mainContainer}>
-      {renderScreen()}
-      <BottomNav
-        tabs={NURSERY_TABS}
-        activeTab={activeTab}
-        onTabPress={setActiveTab as (t: TabName) => void}
-        theme={activeTab === 'Home' ? dashboardTheme : null}
-      />
-    </View>
+    <NurseryApprovalGate navigation={navigation}>
+      <View style={styles.mainContainer}>
+        {renderScreen()}
+        <BottomNav
+          tabs={NURSERY_TABS}
+          activeTab={activeTab}
+          onTabPress={setActiveTab as (t: TabName) => void}
+          theme={activeTab === 'Home' ? dashboardTheme : null}
+        />
+      </View>
+    </NurseryApprovalGate>
   );
 }
 
@@ -840,6 +883,7 @@ export function AppNavigator() {
   usePushRegistration();
   useLogoutRedirect();
   useBlockedRedirect();
+  useApprovalRedirect();
 
   // This app's screens are all designed phone-first (fixed-width headers, edge-to-edge gradients,
   // etc.) – stretching that across a ~800-1000dp tablet canvas would distort every layout. Rather
