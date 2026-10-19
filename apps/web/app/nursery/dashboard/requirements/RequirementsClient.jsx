@@ -16,6 +16,9 @@ import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
 import DrawerFormShell, { fieldButtonClassName } from '@/components/dashboard/DrawerFormShell'
 import { resolveMediaUrl } from '@/lib/media'
 import { proxy } from '../proxy'
+import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
+import { useApprovalGate } from '@/components/dashboard/useApprovalGate'
+import { useNurseryProfile } from '../NurseryProfileContext'
 import { usePagedList } from '@/hooks/usePagedList'
 import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
@@ -126,6 +129,8 @@ function RespondSheet({ open, onOpenChange, requirement, submitting, onSubmit, o
 }
 
 export default function RequirementsClient() {
+  const { profile } = useNurseryProfile()
+  const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
   const router = useRouter()
   const [tab, setTab] = useState('all')
   const [respondFor, setRespondFor] = useState(null)
@@ -264,7 +269,7 @@ export default function RequirementsClient() {
 
                 <div className="mt-4 flex gap-2">
                   {(!r.myResponse || ['withdrawn', 'declined'].includes(r.myResponse.status)) && (
-                    <Button size="sm" className="rounded-full" onClick={() => setRespondFor(r)}>Respond</Button>
+                    <Button size="sm" className="rounded-full" onClick={guard(() => setRespondFor(r))}>Respond</Button>
                   )}
                   {r.myResponse?.status === 'proposed' && (
                     <Button size="sm" variant="outline" className="rounded-full" onClick={() => setWithdrawTarget(r)}>Withdraw</Button>
@@ -280,6 +285,7 @@ export default function RequirementsClient() {
         </div>
       )}
 
+      <ApprovalGateDialog open={gateOpen} onOpenChange={setGateOpen} status={profile?.status} rejectionReason={profile?.rejectionReason} entityLabel="nursery" />
       <RespondSheet
         open={Boolean(respondFor)}
         onOpenChange={(open) => !open && setRespondFor(null)}

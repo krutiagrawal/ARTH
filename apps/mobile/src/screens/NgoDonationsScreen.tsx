@@ -20,6 +20,7 @@ import { useSlideUp } from '../hooks/useAnimations';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PageFooter } from '../components/common/PageFooter';
 import { infiniteScrollProps } from '../hooks/useInfiniteList';
+import { useRequireApproval } from '../hooks/useRequireApproval';
 
 const STATUS_BADGE: Record<string, { icon: string; color: string }> = {
   succeeded: { icon: '💰', color: COLORS.sage },
@@ -42,6 +43,7 @@ const STATUS_FILTERS: { key: DonationsFilter['status'] | 'all'; label: string }[
 ];
 
 export function NgoDonationsScreen({ navigation }: any) {
+  const guard = useRequireApproval();
   const insets = useSafeAreaInsets();
   const [statusFilter, setStatusFilter] = useState<DonationsFilter['status'] | 'all'>('all');
   const listQuery = useNgoDonations(statusFilter === 'all' ? {} : { status: statusFilter });
@@ -100,7 +102,7 @@ export function NgoDonationsScreen({ navigation }: any) {
             />
             <AnimatedButton
               label="♥  Accept Donations"
-              onPress={() => navigation.navigate('NgoCreateCampaign')}
+              onPress={guard(() => navigation.navigate('NgoCreateCampaign'))}
               fullWidth
               gradientColors={[COLORS.forest, COLORS.forestDeep]}
               style={styles.emptyCta}

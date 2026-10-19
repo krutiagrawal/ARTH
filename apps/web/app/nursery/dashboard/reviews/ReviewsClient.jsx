@@ -9,6 +9,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import EmptyState from '@/components/dashboard/EmptyState'
 import { proxy } from '../proxy'
+import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
+import { useApprovalGate } from '@/components/dashboard/useApprovalGate'
+import { useNurseryProfile } from '../NurseryProfileContext'
 import { usePagedList } from '@/hooks/usePagedList'
 import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
@@ -24,6 +27,8 @@ function RatingStars({ rating }) {
 }
 
 function ReviewRow({ review, onRespond }) {
+  const { profile } = useNurseryProfile()
+  const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
   const [responding, setResponding] = useState(false)
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -66,8 +71,9 @@ function ReviewRow({ review, onRespond }) {
           </div>
         </div>
       ) : (
-        <Button size="sm" variant="outline" className="mt-3 rounded-full" onClick={() => setResponding(true)}>Respond</Button>
+        <Button size="sm" variant="outline" className="mt-3 rounded-full" onClick={guard(() => setResponding(true))}>Respond</Button>
       )}
+      <ApprovalGateDialog open={gateOpen} onOpenChange={setGateOpen} status={profile?.status} rejectionReason={profile?.rejectionReason} entityLabel="nursery" />
     </div>
   )
 }

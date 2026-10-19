@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { COLORS, GRADIENTS, ON_DARK_SURFACE } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
+import { RejectionHistory } from '../components/admin/RejectionHistory';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { Sheet } from '../components/common/Sheet';
 import { useAdminNursery, useSetAdminNurseryStatus } from '../hooks/useApiQueries';
@@ -126,6 +127,7 @@ export function AdminNurseryApprovalDetailScreen({ navigation, route }: any) {
           <InfoRow label="Owner" value={d.owner ? `${d.owner.name} · ${d.owner.email}` : null} />
           <InfoRow label="Applied" value={new Date(nursery.createdAt).toLocaleDateString()} />
           <InfoRow label="Reason on file" value={d.rejectionReason} />
+          <RejectionHistory status={nursery.status} count={d.rejectionCount} history={d.rejectionHistory} />
 
           {detailQuery.isLoading && !nurseryDetail && <Text style={styles.loadingText}>Loading full application…</Text>}
         </BorderCard>

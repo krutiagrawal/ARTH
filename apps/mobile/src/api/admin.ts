@@ -24,6 +24,10 @@ export interface ApiAdminNgo {
   contactPhone: string | null;
   status: NgoApprovalStatus;
   rejectionReason: string | null;
+  /** Times an admin rejected this application (current + earlier rounds). */
+  rejectionCount?: number;
+  /** Detail route only: every earlier rejection, newest first. */
+  rejectionHistory?: { reason: string | null; rejectedAt: string }[];
   createdAt: string;
   owner?: { id: string; email: string; name: string; handle: string };
 }
@@ -161,6 +165,10 @@ export interface ApiAdminNursery {
   contactPhone: string | null;
   status: NgoApprovalStatus;
   rejectionReason: string | null;
+  /** Times an admin rejected this application (current + earlier rounds). */
+  rejectionCount?: number;
+  /** Detail route only: every earlier rejection, newest first. */
+  rejectionHistory?: { reason: string | null; rejectedAt: string }[];
   createdAt: string;
   owner?: { id: string; email: string; name: string; handle: string };
 }

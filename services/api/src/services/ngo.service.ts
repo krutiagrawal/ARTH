@@ -91,9 +91,57 @@ export async function getOwnProfile(prisma: PrismaClient, userId: string) {
   return profile;
 }
 
+// Details an admin verified at approval. Once the account is approved (or suspended) these are read-only
+// for the NGO - changing them would silently invalidate the review - so they can only be edited while the
+// application is pending or rejected, and otherwise need support. Re-sending an unchanged value is fine
+// (the edit screen submits the whole form).
+const LEGAL_FIELDS = [
+  'orgType',
+  'registrationNumber',
+  'registrationAuthority',
+  'panNumber',
+  'ngoDarpanId',
+  'twelveARegistrationNumber',
+  'eightyGRegistrationNumber',
+  'fcraRegistrationNumber',
+  'csr1RegistrationNumber',
+  'officeBearers',
+] as const;
+
+// Key-order-independent JSON (Postgres jsonb returns keys in its own order, Zod in schema order), with
+// empty strings/undefined treated as "not set", so an unchanged field never looks edited.
+function canonical(value: unknown): string {
+  const norm = (v: unknown): unknown => {
+    if (v === undefined || v === null || v === '') return null;
+    if (Array.isArray(v)) return v.map(norm);
+    if (typeof v === 'object') {
+      return Object.fromEntries(
+        Object.entries(v as Record<string, unknown>)
+          .filter(([, x]) => x !== undefined && x !== null && x !== '')
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([k, x]) => [k, norm(x)]),
+      );
+    }
+    return v;
+  };
+  return JSON.stringify(norm(value));
+}
+
 export async function updateOwnProfile(prisma: PrismaClient, userId: string, input: UpdateProfileInput) {
   const profile = await prisma.ngoProfile.findUnique({ where: { userId } });
   if (!profile) throw new NotFoundError('NGO profile not found');
+
+  if (profile.status === 'approved' || profile.status === 'suspended') {
+    const changed = LEGAL_FIELDS.filter((field) => {
+      const next = (input as Record<string, unknown>)[field];
+      if (next === undefined) return false;
+      const current = (profile as Record<string, unknown>)[field];
+      return canonical(next) !== canonical(current);
+    });
+    if (changed.length > 0) {
+      throw new ForbiddenError('Registration and legal details are locked once your account is approved. Contact support to change them.');
+    }
+  }
 
   const updated = await prisma.ngoProfile.update({ where: { id: profile.id }, data: input as Prisma.NgoProfileUpdateInput });
 

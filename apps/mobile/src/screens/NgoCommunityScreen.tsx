@@ -14,6 +14,7 @@ import { NgoOwnPostsScreen } from './NgoOwnPostsScreen';
 import { NgoFollowersScreen } from './NgoFollowersScreen';
 import { NgoFollowerRequestsScreen } from './NgoFollowerRequestsScreen';
 import { useNgoFollowers } from '../hooks/useSocialQueries';
+import { useRequireApproval } from '../hooks/useRequireApproval';
 
 type Segment = 'posts' | 'followers' | 'requests';
 
@@ -30,6 +31,7 @@ const SEGMENTS: { key: Segment; label: string; subtitle: string }[] = [
  * come from one shared followers query, which React Query dedupes across the segments.
  */
 export function NgoCommunityScreen({ navigation }: any) {
+  const guard = useRequireApproval();
   const insets = useSafeAreaInsets();
   const [segment, setSegment] = useState<Segment>('posts');
   const active = SEGMENTS.find((s) => s.key === segment)!;
@@ -71,7 +73,7 @@ export function NgoCommunityScreen({ navigation }: any) {
       {segment === 'posts' && (
         <AnimatedButton
           label="+ New post"
-          onPress={() => navigation.navigate('NgoPostUpdate')}
+          onPress={guard(() => navigation.navigate('NgoPostUpdate'))}
           size="sm"
           gradientColors={[COLORS.forest, COLORS.forestDeep]}
           style={styles.newPostButton}

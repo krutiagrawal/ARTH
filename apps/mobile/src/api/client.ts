@@ -96,12 +96,17 @@ export function setAccountBlockedHandler(handler: AccountBlockedHandler | null) 
 }
 
 // Fired when the API answers ACCOUNT_NOT_APPROVED (an NGO / nursery whose admin approval is pending,
-// rejected or suspended). The navigator uses it to refetch the profile so the approval gate shows up
-// even if the cached status still says 'approved' (e.g. an admin suspended the account mid-session).
-let onAccountNotApproved: (() => void) | null = null;
+// rejected or suspended - they can browse but not act). The navigator shows the message in a popup and
+// refetches the profile so cached status stays current.
+let onAccountNotApproved: ((message: string) => void) | null = null;
 
-export function setAccountNotApprovedHandler(handler: (() => void) | null) {
+export function setAccountNotApprovedHandler(handler: ((message: string) => void) | null) {
   onAccountNotApproved = handler;
+}
+
+/** Lets client-side guards (tapping a CTA while unapproved) raise the same popup the API rejection does. */
+export function notifyAccountNotApproved(message: string) {
+  onAccountNotApproved?.(message);
 }
 
 let refreshPromise: Promise<boolean> | null = null;
@@ -188,7 +193,7 @@ export async function apiFetch<T = unknown>(path: string, options: RequestOption
     const code = typeof data === 'object' && data && 'error' in data ? String((data as any).error) : undefined;
     const details = typeof data === 'object' && data && 'details' in data ? (data as any).details : undefined;
     if (code === 'ACCOUNT_BLOCKED') onAccountBlocked?.(message);
-    if (code === 'ACCOUNT_NOT_APPROVED') onAccountNotApproved?.();
+    if (code === 'ACCOUNT_NOT_APPROVED') onAccountNotApproved?.(message);
     throw new ApiError(response.status, message, code, details);
   }
 

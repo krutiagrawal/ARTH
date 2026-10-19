@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Home, CalendarDays, TreePine, HeartHandshake, Settings as SettingsIcon, LogOut, Leaf, ChevronDown, BarChart3, HandCoins, Users, UserPlus, Trophy, WifiOff, Sprout, Newspaper, ClipboardList, Compass, Flag, ShieldOff } from 'lucide-react'
 import AppSidebar from '@/components/dashboard/AppSidebar'
 import SidebarScenery from '@/components/dashboard/SidebarScenery'
 import { Button } from '@/components/ui/button'
 import AccountBlockedScreen from '@/components/dashboard/AccountBlockedScreen'
+import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
 import { NgoProfileProvider, useNgoProfile } from './NgoProfileContext'
 
 const SECTIONS = [
@@ -36,21 +37,18 @@ const SECTIONS = [
 function NgoShell({ children }) {
   const router = useRouter()
   const { profile, loading, error, blocked, blockReason, refresh } = useNgoProfile()
-  const pathname = usePathname()
 
-  // Until an admin approves the account the only reachable pages are Overview (which shows the
-  // review status / resubmit form) and Settings. Anything else is bounced back to Overview.
-  const restricted = !!profile && profile.status !== 'approved'
-  const allowed = pathname === '/ngo/dashboard' || pathname.startsWith('/ngo/dashboard/settings')
+  // Until an admin approves the account it's read-only: the API rejects every action with
+  // ACCOUNT_NOT_APPROVED (see proxy.js), which surfaces here as a single friendly popup.
+  const [notApproved, setNotApproved] = useState(null)
   useEffect(() => {
-    if (restricted && !allowed) router.replace('/ngo/dashboard')
-  }, [restricted, allowed, router])
-  const sections = restricted
-    ? SECTIONS.map((section) => ({
-        ...section,
-        items: section.items.filter((item) => item.href === '/ngo/dashboard' || item.href === '/ngo/dashboard/settings'),
-      }))
-    : SECTIONS
+    const onNotApproved = (e) => {
+      setNotApproved(e.detail || {})
+      refresh()
+    }
+    window.addEventListener('arth:not-approved', onNotApproved)
+    return () => window.removeEventListener('arth:not-approved', onNotApproved)
+  }, [refresh])
 
   const logout = async () => {
     await fetch('/api/ngo/logout', { method: 'POST' })
@@ -64,7 +62,7 @@ function NgoShell({ children }) {
 
   return (
     <AppSidebar
-      sections={sections}
+      sections={SECTIONS}
       mobileTitle="NGO Dashboard"
       scenery={<SidebarScenery />}
       header={
@@ -113,9 +111,16 @@ function NgoShell({ children }) {
             Try again
           </Button>
         </div>
-      ) : loading || (restricted && !allowed) ? null : (
+      ) : (
         children
       )}
+      <ApprovalGateDialog
+        open={!!notApproved}
+        onOpenChange={(open) => !open && setNotApproved(null)}
+        status={notApproved?.status || profile?.status}
+        rejectionReason={notApproved?.rejectionReason}
+        entityLabel="NGO"
+      />
     </AppSidebar>
   )
 }

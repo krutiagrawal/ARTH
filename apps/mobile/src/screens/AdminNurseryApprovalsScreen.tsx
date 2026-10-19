@@ -129,6 +129,11 @@ export function AdminNurseryApprovalsScreen({ navigation }: any) {
                   <View style={[styles.statusChip, { borderColor: statusColor(nursery.status) }]}>
                     <Text style={[styles.statusChipText, { color: statusColor(nursery.status) }]}>{nursery.status}</Text>
                   </View>
+                  {nursery.rejectionCount ? (
+                    <View style={[styles.statusChip, { borderColor: COLORS.danger }]}>
+                      <Text style={[styles.statusChipText, { color: COLORS.danger }]}>Rejected {nursery.rejectionCount}×</Text>
+                    </View>
+                  ) : null}
                 </View>
                 {nursery.owner && (
                   <Text style={styles.cardMeta} numberOfLines={1}>

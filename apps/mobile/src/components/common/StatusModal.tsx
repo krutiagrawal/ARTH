@@ -32,7 +32,7 @@ export function StatusModal({
         <IconBadge icon={icon} color={COLORS.sage} size={56} round style={styles.icon} />
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.message}>{message}</Text>
-        <AnimatedButton label={actionLabel} onPress={onClose} variant="primary" size="md" fullWidth style={styles.button} />
+        <AnimatedButton label={actionLabel} onPress={onClose} variant="primary" size="md" fullWidth gradientColors={[COLORS.forest, COLORS.forestDeep]} style={styles.button} />
       </View>
     </Sheet>
   );

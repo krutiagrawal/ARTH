@@ -12,6 +12,8 @@ import { formatKg } from '../utils/impact';
 import { FONTS, TEXT } from '../constants/typography';
 import { SHADOWS } from '../constants/theme';
 import { EcoWidget } from '../components/common/EcoWidget';
+import { NgoStatusBanner } from '../components/ngo/NgoStatusBanner';
+import { MuteButton } from '../components/common/MuteButton';
 import { NotificationBell } from '../components/social/NotificationBell';
 import { ThemedCard } from '../components/common/ThemedCard';
 import { ForestHeroCanvas } from '../components/common/ForestHeroCanvas';
@@ -28,8 +30,9 @@ import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { currentStreakFromWeeks } from '../utils/streak';
 import { getHeroSeamColor, getHeroSeamTextColors } from '../utils/heroSeam';
-import { hexToRgba } from '../utils/color';
+import { hexToRgba, relativeLuminance } from '../utils/color';
 import type { NgoTabName } from '../navigation/AppNavigator';
+import { useRequireApproval } from '../hooks/useRequireApproval';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const HERO_HEIGHT = SH * 0.54;
@@ -207,6 +210,7 @@ function DockRow({
 }
 
 export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }: NgoDashboardScreenProps) {
+  const guard = useRequireApproval();
   const insets = useSafeAreaInsets();
   const bottomClearance = useBottomNavClearance();
   const { data: settings } = useSettings();
@@ -262,7 +266,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
   // the Community tab, and Map now has its own bottom-tab entry.
   const dockActions: DockActionSpec[] = [
     { key: 'survival', emoji: '🩺', color: COLORS.sage, title: 'Survival & impact', onPress: () => navigation.navigate('NgoPlantations') },
-    { key: 'plantedTrees', emoji: '🌳', color: COLORS.forest, title: 'Log planted trees', onPress: () => navigation.navigate('NgoLogPlantedTrees') },
+    { key: 'plantedTrees', emoji: '🌳', color: COLORS.forest, title: 'Log planted trees', onPress: guard(() => navigation.navigate('NgoLogPlantedTrees')) },
     { key: 'bulkRequirements', emoji: '🤝', color: COLORS.amber, title: 'Bulk requirements', onPress: () => navigation.navigate('NgoBulkRequirements') },
     { key: 'streak', emoji: '🔥', color: COLORS.sage, title: 'Growth & Trust', onPress: () => navigation.navigate('NgoStreakBadges') },
     { key: 'volunteers', emoji: '🙋', color: COLORS.coral, title: 'Volunteers', onPress: () => navigation.navigate('NgoVolunteers') },
@@ -311,6 +315,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
               <Text style={[styles.orgName, { color: theme.textOnSky }]}>{profile?.orgName ?? user?.name ?? 'Your NGO'}</Text>
             </View>
             <View style={styles.headerRight}>
+              <MuteButton bare />
               <NotificationBell onPress={() => navigation.navigate('Notifications')} />
               <TouchableOpacity style={styles.avatarButton} onPress={() => navigation.navigate('NgoProfile')}>
                 <LinearGradient colors={[COLORS.sageLight, COLORS.forest]} style={styles.avatar}>
@@ -360,6 +365,14 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
             </View>
           </View>
         </View>
+
+        <NgoStatusBanner
+          status={profile?.status}
+          rejectionReason={profile?.rejectionReason}
+          onEditProfile={() => navigation.navigate('NgoProfile')}
+          textColors={seamText}
+          onLightSurface={relativeLuminance(pageBackground) > 0.4}
+        />
 
         <StreakCard
           theme={theme}

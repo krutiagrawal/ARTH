@@ -11,6 +11,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
 import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
 import { proxy } from '../../proxy'
+import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
+import { useApprovalGate } from '@/components/dashboard/useApprovalGate'
+import { useNurseryProfile } from '../../NurseryProfileContext'
 
 const STATUS_LABEL = {
   pending_payment: 'Pending payment',
@@ -74,6 +77,8 @@ function CodeDialog({ open, onOpenChange, title, description, onSubmit, loading 
 }
 
 export default function OrderDetailClient({ orderId }) {
+  const { profile } = useNurseryProfile()
+  const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState(false)
@@ -195,28 +200,29 @@ export default function OrderDetailClient({ orderId }) {
 
         <div className="mt-6 flex flex-wrap gap-2">
           {order.status === 'confirmed' && (
-            <Button className="rounded-full" disabled={acting} onClick={() => runAction('pack')}>Mark packed</Button>
+            <Button className="rounded-full" disabled={acting} onClick={guard(() => runAction('pack'))}>Mark packed</Button>
           )}
           {order.status === 'packed' && order.fulfillmentType === 'pickup' && (
-            <Button className="rounded-full" disabled={acting} onClick={() => runAction('ready-for-pickup')}>Mark ready for pickup</Button>
+            <Button className="rounded-full" disabled={acting} onClick={guard(() => runAction('ready-for-pickup'))}>Mark ready for pickup</Button>
           )}
           {order.status === 'packed' && order.fulfillmentType === 'delivery' && (
-            <Button className="rounded-full" disabled={acting} onClick={() => setDispatchOpen(true)}>Dispatch</Button>
+            <Button className="rounded-full" disabled={acting} onClick={guard(() => setDispatchOpen(true))}>Dispatch</Button>
           )}
           {order.status === 'ready_for_pickup' && (
-            <Button className="rounded-full" disabled={acting} onClick={() => setPickupCodeOpen(true)}>Confirm picked up</Button>
+            <Button className="rounded-full" disabled={acting} onClick={guard(() => setPickupCodeOpen(true))}>Confirm picked up</Button>
           )}
           {order.status === 'out_for_delivery' && (
-            <Button className="rounded-full" disabled={acting} onClick={() => setDeliverCodeOpen(true)}>Mark delivered</Button>
+            <Button className="rounded-full" disabled={acting} onClick={guard(() => setDeliverCodeOpen(true))}>Mark delivered</Button>
           )}
           {CANCELLABLE.includes(order.status) && (
-            <Button variant="outline" className="rounded-full text-destructive hover:text-destructive" disabled={acting} onClick={() => setCancelOpen(true)}>
+            <Button variant="outline" className="rounded-full text-destructive hover:text-destructive" disabled={acting} onClick={guard(() => setCancelOpen(true))}>
               Cancel order
             </Button>
           )}
         </div>
       </div>
 
+      <ApprovalGateDialog open={gateOpen} onOpenChange={setGateOpen} status={profile?.status} rejectionReason={profile?.rejectionReason} entityLabel="nursery" />
       <DispatchDialog open={dispatchOpen} onOpenChange={setDispatchOpen} loading={acting} onSubmit={(body) => runAction('dispatch', body)} />
       <CodeDialog
         open={pickupCodeOpen}

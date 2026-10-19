@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Home, Boxes, PackageSearch, Truck, ClipboardList, Leaf, Settings as SettingsIcon, LogOut, ChevronDown, Star, Users, WifiOff, Sprout, ShieldCheck, BarChart3, Bell, Bike, Compass, Handshake, Flag, ShieldOff } from 'lucide-react'
 import AppSidebar from '@/components/dashboard/AppSidebar'
 import SidebarScenery from '@/components/dashboard/SidebarScenery'
 import { Button } from '@/components/ui/button'
 import AccountBlockedScreen from '@/components/dashboard/AccountBlockedScreen'
+import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
 import { NurseryProfileProvider, useNurseryProfile } from './NurseryProfileContext'
 
 const SECTIONS = [
@@ -36,21 +37,18 @@ const SECTIONS = [
 function NurseryShell({ children }) {
   const router = useRouter()
   const { profile, loading, error, blocked, blockReason, refresh } = useNurseryProfile()
-  const pathname = usePathname()
 
-  // Until an admin approves the account the only reachable pages are Overview (which shows the
-  // review status / resubmit form) and Settings. Anything else is bounced back to Overview.
-  const restricted = !!profile && profile.status !== 'approved'
-  const allowed = pathname === '/nursery/dashboard' || pathname.startsWith('/nursery/dashboard/settings')
+  // Until an admin approves the account it's read-only: the API rejects every action with
+  // ACCOUNT_NOT_APPROVED (see proxy.js), which surfaces here as a single friendly popup.
+  const [notApproved, setNotApproved] = useState(null)
   useEffect(() => {
-    if (restricted && !allowed) router.replace('/nursery/dashboard')
-  }, [restricted, allowed, router])
-  const sections = restricted
-    ? SECTIONS.map((section) => ({
-        ...section,
-        items: section.items.filter((item) => item.href === '/nursery/dashboard' || item.href === '/nursery/dashboard/settings'),
-      }))
-    : SECTIONS
+    const onNotApproved = (e) => {
+      setNotApproved(e.detail || {})
+      refresh()
+    }
+    window.addEventListener('arth:not-approved', onNotApproved)
+    return () => window.removeEventListener('arth:not-approved', onNotApproved)
+  }, [refresh])
 
   const logout = async () => {
     await fetch('/api/nursery/logout', { method: 'POST' })
@@ -64,7 +62,7 @@ function NurseryShell({ children }) {
 
   return (
     <AppSidebar
-      sections={sections}
+      sections={SECTIONS}
       mobileTitle="Nursery Dashboard"
       scenery={<SidebarScenery />}
       header={
@@ -113,9 +111,16 @@ function NurseryShell({ children }) {
             Try again
           </Button>
         </div>
-      ) : loading || (restricted && !allowed) ? null : (
+      ) : (
         children
       )}
+      <ApprovalGateDialog
+        open={!!notApproved}
+        onOpenChange={(open) => !open && setNotApproved(null)}
+        status={notApproved?.status || profile?.status}
+        rejectionReason={notApproved?.rejectionReason}
+        entityLabel="nursery"
+      />
     </AppSidebar>
   )
 }

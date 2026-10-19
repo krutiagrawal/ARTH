@@ -7,7 +7,8 @@ import { navigationRef } from './navigationRef';
 import { useAuth } from '../context/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { setAccountNotApprovedHandler } from '../api/client';
-import { NgoApprovalGate, NurseryApprovalGate } from '../components/common/ApprovalGate';
+import { StatusModal } from '../components/common/StatusModal';
+import { useRequireApproval } from '../hooks/useRequireApproval';
 import { COLORS } from '../constants/colors';
 import { IS_TABLET, CONTENT_MAX_WIDTH } from '../utils/responsive';
 
@@ -109,6 +110,7 @@ import { NgoCreateDriveScreen } from '../screens/NgoCreateDriveScreen';
 import { NgoCreateAdoptableTreeScreen } from '../screens/NgoCreateAdoptableTreeScreen';
 import { NgoRegisterScreen } from '../screens/NgoRegisterScreen';
 import { NgoSettingsScreen } from '../screens/NgoSettingsScreen';
+import { NgoProfileSectionScreen } from '../screens/NgoProfileSectionScreen';
 import { NgoStaffScreen } from '../screens/NgoStaffScreen';
 import { NgoCreateCampaignScreen } from '../screens/NgoCreateCampaignScreen';
 import { NgoReportsScreen } from '../screens/NgoReportsScreen';
@@ -466,6 +468,7 @@ export type RootStackParamList = {
   NgoCreateAdoptableTree: undefined;
   NgoRegister: undefined;
   NgoSettings: undefined;
+  NgoProfileSection: { section: import('../constants/ngoProfileSections').NgoProfileSectionId };
   NgoStaff: undefined;
   NgoCreateCampaign: undefined;
   NgoReports: undefined;
@@ -558,42 +561,6 @@ function useBlockedRedirect() {
   }, [isBlocked]);
 }
 
-// Routes an unapproved NGO / nursery may still open. The gate screen inside NgoMain / NurseryMain
-// links to these; everything else (push-notification taps, deep links) is bounced back to the gate.
-const UNAPPROVED_ALLOWED_ROUTES = new Set([
-  'NgoMain', 'NurseryMain', 'NgoProfile', 'NgoSettings', 'NurseryProfile', 'EditNurseryProfile',
-  'NurserySettings', 'Settings', 'ChangePassword', 'Notifications',
-]);
-
-/**
- * Keeps NGO / nursery accounts that an admin hasn't approved inside the approval gate: on every
- * navigation, if the cached profile status isn't 'approved' and the route isn't allow-listed, reset
- * to the role's main screen (which renders the gate). The API enforces this too (ACCOUNT_NOT_APPROVED).
- */
-function useApprovalRedirect() {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const role = user?.role;
-
-  useEffect(() => {
-    if (role !== 'ngo' && role !== 'nursery') return;
-    const mainRoute = role === 'ngo' ? 'NgoMain' : 'NurseryMain';
-    setAccountNotApprovedHandler(() => queryClient.invalidateQueries({ queryKey: [role, 'profile'] }));
-    const unsubscribe = navigationRef.addListener('state', () => {
-      const current = navigationRef.getCurrentRoute()?.name;
-      if (!current || UNAPPROVED_ALLOWED_ROUTES.has(current)) return;
-      const profile = queryClient.getQueryData<{ status?: string }>([role, 'profile']);
-      if (profile?.status && profile.status !== 'approved') {
-        navigationRef.reset({ index: 0, routes: [{ name: mainRoute }] });
-      }
-    });
-    return () => {
-      unsubscribe();
-      setAccountNotApprovedHandler(null);
-    };
-  }, [role, queryClient]);
-}
-
 function MainApp({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<TabName>('Home');
   // Always called (Rules of Hooks) – only actually handed to BottomNav while Home is active, so
@@ -635,6 +602,7 @@ function MainApp({ navigation }: any) {
 }
 
 function NgoMainApp({ navigation }: any) {
+  const guard = useRequireApproval();
   const [activeTab, setActiveTab] = useState<NgoTabName>('Home');
   // Which segment the Manage tab opens on – set alongside activeTab when the dashboard's Your
   // Impact tiles (Drives/Trees/Campaigns) jump straight to their own data instead of always
@@ -656,11 +624,11 @@ function NgoMainApp({ navigation }: any) {
   // screen instead of ever becoming `activeTab`.
   const handleTabPress = useCallback((tab: TabName) => {
     if (tab === 'Post') {
-      navigation.navigate('NgoPostUpdate');
+      guard(() => navigation.navigate('NgoPostUpdate'))();
       return;
     }
     setActiveTab(tab as NgoTabName);
-  }, [navigation]);
+  }, [navigation, guard]);
 
   const renderScreen = useCallback(() => {
     switch (activeTab) {
@@ -678,17 +646,15 @@ function NgoMainApp({ navigation }: any) {
   }, [activeTab, navigation, manageSegment, navigateTab]);
 
   return (
-    <NgoApprovalGate navigation={navigation}>
-      <View style={styles.mainContainer}>
-        {renderScreen()}
-        <BottomNav
-          tabs={NGO_TABS}
-          activeTab={activeTab}
-          onTabPress={handleTabPress}
-          theme={activeTab === 'Home' ? dashboardTheme : null}
-        />
-      </View>
-    </NgoApprovalGate>
+    <View style={styles.mainContainer}>
+      {renderScreen()}
+      <BottomNav
+        tabs={NGO_TABS}
+        activeTab={activeTab}
+        onTabPress={handleTabPress}
+        theme={activeTab === 'Home' ? dashboardTheme : null}
+      />
+    </View>
   );
 }
 
@@ -759,17 +725,15 @@ function NurseryMainApp({ navigation }: any) {
   }, [activeTab, navigation, tabBackNavigation]);
 
   return (
-    <NurseryApprovalGate navigation={navigation}>
-      <View style={styles.mainContainer}>
-        {renderScreen()}
-        <BottomNav
-          tabs={NURSERY_TABS}
-          activeTab={activeTab}
-          onTabPress={setActiveTab as (t: TabName) => void}
-          theme={activeTab === 'Home' ? dashboardTheme : null}
-        />
-      </View>
-    </NurseryApprovalGate>
+    <View style={styles.mainContainer}>
+      {renderScreen()}
+      <BottomNav
+        tabs={NURSERY_TABS}
+        activeTab={activeTab}
+        onTabPress={setActiveTab as (t: TabName) => void}
+        theme={activeTab === 'Home' ? dashboardTheme : null}
+      />
+    </View>
   );
 }
 
@@ -878,12 +842,42 @@ function AdminMainApp({ navigation }: any) {
   );
 }
 
+/**
+ * NGO / nursery accounts an admin hasn't approved are read-only: they can browse the whole app, but
+ * the API rejects every action with ACCOUNT_NOT_APPROVED. This turns that rejection into one friendly
+ * popup (instead of a raw error on whichever screen they tapped) and refreshes the cached profile
+ * status so dashboards/banners stay current (e.g. an admin suspended the account mid-session).
+ */
+function useApprovalNotice() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const role = user?.role;
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (role !== 'ngo' && role !== 'nursery') return;
+    setAccountNotApprovedHandler((msg) => {
+      setMessage(msg);
+      queryClient.invalidateQueries({ queryKey: [role, 'profile'] });
+    });
+    return () => setAccountNotApprovedHandler(null);
+  }, [role, queryClient]);
+
+  return {
+    visible: message !== null,
+    onClose: () => setMessage(null),
+    icon: '🕓',
+    title: 'Not available yet',
+    message: message ?? '',
+  };
+}
+
 export function AppNavigator() {
   // Registers this device for push once signed in. A silent no-op in Expo Go – see the hook.
   usePushRegistration();
   useLogoutRedirect();
   useBlockedRedirect();
-  useApprovalRedirect();
+  const approvalNotice = useApprovalNotice();
 
   // This app's screens are all designed phone-first (fixed-width headers, edge-to-edge gradients,
   // etc.) – stretching that across a ~800-1000dp tablet canvas would distort every layout. Rather
@@ -1041,6 +1035,7 @@ export function AppNavigator() {
         <Stack.Screen name="NgoCreateAdoptableTree" component={NgoCreateAdoptableTreeScreen} />
         <Stack.Screen name="NgoRegister" component={NgoRegisterScreen} />
         <Stack.Screen name="NgoSettings" component={NgoSettingsScreen} />
+        <Stack.Screen name="NgoProfileSection" component={NgoProfileSectionScreen} />
         <Stack.Screen name="NgoStaff" component={NgoStaffScreen} />
         <Stack.Screen name="NgoCreateCampaign" component={NgoCreateCampaignScreen} />
         <Stack.Screen name="NgoReports" component={NgoReportsScreen} />
@@ -1133,6 +1128,7 @@ export function AppNavigator() {
         />
         </Stack.Navigator>
       </NavigationContainer>
+      <StatusModal {...approvalNotice} />
     </View>
   );
 }

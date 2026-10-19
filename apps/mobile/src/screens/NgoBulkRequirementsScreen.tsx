@@ -40,6 +40,7 @@ import { SPECIES_EMOJI_OPTIONS } from '../api/species';
 import { fuzzyMatch } from '../utils/fuzzyMatch';
 
 import { TEXT } from '../constants/typography';
+import { useRequireApproval } from '../hooks/useRequireApproval';
 function RequirementCard({ item, onPress }: { item: ApiNgoBulkRequirement; onPress: () => void }) {
   const overdue = isBulkRequirementOverdue(item);
   return (
@@ -67,6 +68,7 @@ function badgeColor(status: string) {
 }
 
 function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
+  const guard = useRequireApproval();
   const { data: req, isLoading } = useNgoBulkRequirement(id);
   const cancelMutation = useCancelNgoBulkRequirement();
   const rescheduleMutation = useRescheduleNgoBulkRequirement();
@@ -157,7 +159,7 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
           {req.status === 'expired' && (
             <View style={styles.rescheduleBox}>
               <Text style={styles.rescheduleHint}>This requirement's deadline passed without being fulfilled. Pick a new date to reopen it to nurseries.</Text>
-              <TouchableOpacity onPress={() => setShowReschedulePicker(true)} activeOpacity={0.7}>
+              <TouchableOpacity onPress={guard(() => setShowReschedulePicker(true))} activeOpacity={0.7}>
                 <Text style={[styles.dateValue, !rescheduleDate && styles.datePlaceholder]}>
                   {rescheduleDate
                     ? rescheduleDate.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
@@ -214,6 +216,7 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
 }
 
 export function NgoBulkRequirementsScreen({ navigation, route }: any) {
+  const guard = useRequireApproval();
   const insets = useSafeAreaInsets();
   const listQuery = useNgoBulkRequirements();
   const { data: requirements = [], isLoading, refetch } = listQuery;
@@ -348,7 +351,7 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
         subtitle="Ask nurseries for saplings at scale"
         onBack={navigation?.canGoBack?.() ? () => navigation.goBack() : undefined}
         right={
-          <TouchableOpacity onPress={() => setShowCreate(true)} style={styles.newButton}>
+          <TouchableOpacity onPress={guard(() => setShowCreate(true))} style={styles.newButton}>
             <Text style={styles.newButtonText}>+ New</Text>
           </TouchableOpacity>
         }

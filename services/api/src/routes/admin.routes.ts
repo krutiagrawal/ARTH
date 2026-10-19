@@ -29,6 +29,8 @@ function serializeNgo(profile: any) {
     contactPhone: profile.contactPhone,
     status: profile.status,
     rejectionReason: profile.rejectionReason,
+    // Times an admin rejected this application before (current + earlier rounds); see admin.service.
+    rejectionCount: profile.rejectionCount ?? 0,
     createdAt: profile.createdAt,
     owner: profile.user
       ? { id: profile.user.id, email: profile.user.email, name: profile.user.name, handle: profile.user.handle }
@@ -42,6 +44,7 @@ function serializeNgo(profile: any) {
 function serializeNgoDetail(profile: any) {
   return {
     ...serializeNgo(profile),
+    rejectionHistory: profile.rejectionHistory ?? [],
     logoUrl: profile.logoUrl,
     foundedYear: profile.foundedYear,
     volunteerCountEstimate: profile.volunteerCountEstimate,
@@ -117,6 +120,7 @@ function serializeNursery(profile: any) {
     contactPhone: profile.contactPhone,
     status: profile.status,
     rejectionReason: profile.rejectionReason,
+    rejectionCount: profile.rejectionCount ?? 0,
     createdAt: profile.createdAt,
     owner: profile.user
       ? { id: profile.user.id, email: profile.user.email, name: profile.user.name, handle: profile.user.handle }
@@ -131,6 +135,7 @@ function serializeNursery(profile: any) {
 function serializeNurseryDetail(profile: any) {
   return {
     ...serializeNursery(profile),
+    rejectionHistory: profile.rejectionHistory ?? [],
     logoUrl: profile.logoUrl,
     coverPhotoUrl: profile.coverPhotoUrl,
     line1: profile.line1,

@@ -10,6 +10,32 @@ import { maybeMarkOrderPlantationVerified } from './order.service';
 import { notify } from './notification.service';
 import { refreshUserCo2 } from './treeImpact.service';
 
+// An NGO/nursery that was rejected can fix its profile and resubmit, which clears the profile's own
+// rejectionReason - so the earlier rejections live only in AdminActionLog (written by
+// setNgoStatus / setNurseryStatus). These read them back so an admin reviewing a resubmission can see
+// how many times it has been rejected before, and why.
+type OrgTargetType = 'NgoProfile' | 'NurseryProfile';
+const REJECT_ACTION: Record<OrgTargetType, string> = { NgoProfile: 'ngo.rejected', NurseryProfile: 'nursery.rejected' };
+
+async function getRejectionCounts(prisma: PrismaClient, targetType: OrgTargetType, ids: string[]) {
+  if (ids.length === 0) return new Map<string, number>();
+  const rows = await prisma.adminActionLog.groupBy({
+    by: ['targetId'],
+    where: { targetType, action: REJECT_ACTION[targetType], targetId: { in: ids } },
+    _count: { _all: true },
+  });
+  return new Map(rows.map((r) => [r.targetId, r._count._all]));
+}
+
+async function getRejectionHistory(prisma: PrismaClient, targetType: OrgTargetType, id: string) {
+  const rows = await prisma.adminActionLog.findMany({
+    where: { targetType, targetId: id, action: REJECT_ACTION[targetType] },
+    orderBy: { createdAt: 'desc' },
+    select: { reason: true, createdAt: true },
+  });
+  return rows.map((r) => ({ reason: r.reason, rejectedAt: r.createdAt }));
+}
+
 interface ListNgosFilter {
   status?: NgoApprovalStatus;
   q?: string;
@@ -37,7 +63,8 @@ export async function listNgos(prisma: PrismaClient, filter: ListNgosFilter = {}
     prisma.ngoProfile.count({ where }),
   ]);
 
-  return { ngos, total };
+  const counts = await getRejectionCounts(prisma, 'NgoProfile', ngos.map((n) => n.id));
+  return { ngos: ngos.map((n) => ({ ...n, rejectionCount: counts.get(n.id) ?? 0 })), total };
 }
 
 interface SetStatusInput {
@@ -106,7 +133,8 @@ export async function getNgoDetail(prisma: PrismaClient, ngoId: string) {
     },
   });
   if (!profile) throw new NotFoundError('NGO not found');
-  return profile;
+  const rejectionHistory = await getRejectionHistory(prisma, 'NgoProfile', ngoId);
+  return { ...profile, rejectionCount: rejectionHistory.length, rejectionHistory };
 }
 
 export async function getNgoSummary(prisma: PrismaClient, ngoId: string) {
@@ -158,7 +186,8 @@ export async function listNurseries(prisma: PrismaClient, filter: ListOrgFilter 
     prisma.nurseryProfile.count({ where }),
   ]);
 
-  return { nurseries, total };
+  const counts = await getRejectionCounts(prisma, 'NurseryProfile', nurseries.map((n) => n.id));
+  return { nurseries: nurseries.map((n) => ({ ...n, rejectionCount: counts.get(n.id) ?? 0 })), total };
 }
 
 // Full row (every signup-time field, not just the approvals-table summary) for the admin
@@ -174,7 +203,8 @@ export async function getNurseryDetail(prisma: PrismaClient, nurseryId: string) 
   // Reputation (Trust Score factor breakdown + Growth Level progress + streaks) so an admin
   // reviewing/verifying a nursery can see its track record without leaving the panel.
   const reputation = await getReputationSummary(prisma, profile.id, 8);
-  return { ...profile, reputation };
+  const rejectionHistory = await getRejectionHistory(prisma, 'NurseryProfile', nurseryId);
+  return { ...profile, reputation, rejectionCount: rejectionHistory.length, rejectionHistory };
 }
 
 export async function setNurseryStatus(prisma: PrismaClient, nurseryId: string, input: SetStatusInput) {

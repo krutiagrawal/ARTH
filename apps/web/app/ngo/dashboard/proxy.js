@@ -19,6 +19,10 @@ export async function proxy(path, opts = {}) {
     err.status = res.status
     err.code = data && data.error
     err.details = data && data.details
+    // Unapproved NGO/nursery accounts are read-only: let the dashboard layout show one friendly popup.
+    if (err.code === 'ACCOUNT_NOT_APPROVED' && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('arth:not-approved', { detail: err.details || {} }))
+    }
     throw err
   }
   return data

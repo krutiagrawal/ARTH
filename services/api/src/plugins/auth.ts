@@ -4,9 +4,10 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { verifyAccessToken } from '../utils/jwt';
 import { AccountBlockedError, AccountNotApprovedError, ForbiddenError, UnauthorizedError } from '../utils/errors';
 
-// NGO / nursery accounts must be admin-approved before they can use anything. These are the only
-// routes an unapproved one may still hit: read its own profile, (when rejected) fix and resubmit,
-// plus account basics. Matched against the route pattern (prefix included), not the raw URL.
+// NGO / nursery accounts must be admin-approved before they can take any action. Until then they
+// are read-only: every GET/HEAD is allowed so they can look around the whole app, and the only
+// writes allowed are the ones below (own profile edit, (when rejected) resubmit, account basics).
+// Matched against the route pattern (prefix included), not the raw URL.
 const UNAPPROVED_ALLOWED: { method: string; test: (url: string) => boolean }[] = [
   { method: 'GET', test: (u) => u === '/api/ngo/profile' || u === '/api/nursery/profile' },
   { method: 'PATCH', test: (u) => u === '/api/ngo/profile' || u === '/api/nursery/profile' },
@@ -18,6 +19,7 @@ const UNAPPROVED_ALLOWED: { method: string; test: (url: string) => boolean }[] =
 ];
 
 function isAllowedWhenUnapproved(method: string, url: string): boolean {
+  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return true;
   return UNAPPROVED_ALLOWED.some((r) => (r.method === '*' || r.method === method) && r.test(url));
 }
 

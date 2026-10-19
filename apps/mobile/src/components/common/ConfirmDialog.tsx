@@ -55,18 +55,34 @@ export function ConfirmDialog({
         <Text style={styles.title}>{title}</Text>
         {message ? <Text style={styles.message}>{message}</Text> : null}
         <View style={styles.buttons}>
-          {buttons.map((button, index) => (
-            <AnimatedButton
-              key={`${button.text}-${index}`}
-              label={button.text}
-              onPress={() => handlePress(button)}
-              variant="ghost"
-              size="md"
-              fullWidth
-              style={styles.button}
-              textStyle={button.style === 'destructive' ? styles.destructiveText : styles.buttonText}
-            />
-          ))}
+          {buttons.map((button, index) => {
+            // The affirmative action (OK / Confirm / Save…) is a filled green button; Cancel stays a
+            // brown outline and destructive actions a red one, so the safe choice is always obvious.
+            const isAffirmative = button.style !== 'cancel' && button.style !== 'destructive';
+            return isAffirmative ? (
+              <AnimatedButton
+                key={`${button.text}-${index}`}
+                label={button.text}
+                onPress={() => handlePress(button)}
+                variant="primary"
+                size="md"
+                fullWidth
+                gradientColors={[COLORS.forest, COLORS.forestDeep]}
+                style={styles.affirmativeButton}
+              />
+            ) : (
+              <AnimatedButton
+                key={`${button.text}-${index}`}
+                label={button.text}
+                onPress={() => handlePress(button)}
+                variant="ghost"
+                size="md"
+                fullWidth
+                style={styles.button}
+                textStyle={button.style === 'destructive' ? styles.destructiveText : styles.buttonText}
+              />
+            );
+          })}
         </View>
       </View>
     </Sheet>
@@ -85,7 +101,8 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   buttons: { width: '100%', marginTop: SPACING.xs },
-  // Outline-only (no fill) so every dialog button is just a brown outline.
+  affirmativeButton: { marginTop: SPACING.sm },
+  // Cancel / destructive stay outline-only (no fill).
   button: { marginTop: SPACING.sm, borderWidth: 1.5, borderColor: COLORS.earth },
   buttonText: { color: COLORS.earthDark },
   destructiveText: { color: COLORS.danger },

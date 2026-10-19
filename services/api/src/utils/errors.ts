@@ -50,7 +50,13 @@ export class AccountBlockedError extends AppError {
 /** NGO / nursery account that an admin has not (or no longer) approved. `details.status` is pending | rejected | suspended. */
 export class AccountNotApprovedError extends AppError {
   constructor(status: string, rejectionReason?: string | null) {
-    super(403, 'ACCOUNT_NOT_APPROVED', 'Your account is not approved yet.', { status, rejectionReason: rejectionReason ?? null });
+    const message =
+      status === 'suspended'
+        ? "Your account is suspended, so you can look around but can't take any actions. Contact support for help."
+        : status === 'rejected'
+          ? "Your application wasn't approved, so you can look around but can't take any actions. Update your profile and resubmit it for review."
+          : "Your application is under review. You can look around, but you can't take any actions until an admin approves it.";
+    super(403, 'ACCOUNT_NOT_APPROVED', message, { status, rejectionReason: rejectionReason ?? null });
   }
 }
 

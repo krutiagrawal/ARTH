@@ -30,6 +30,7 @@ import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { getHeroSeamColor, getHeroSeamTextColors } from '../utils/heroSeam';
 import { hexToRgba } from '../utils/color';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useRequireApproval } from '../hooks/useRequireApproval';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const HERO_HEIGHT = SH * 0.54;
@@ -255,6 +256,7 @@ interface NurseryDashboardScreenProps {
 }
 
 export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDashboardScreenProps) {
+  const guard = useRequireApproval();
   const insets = useSafeAreaInsets();
   const bottomClearance = useBottomNavClearance();
   const { data: settings } = useSettings();
@@ -305,12 +307,12 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
     { key: 'stock', emoji: '📦', color: COLORS.xpBlue, title: 'Manage inventory', onPress: () => navigation.navigate('NurseryStock') },
     { key: 'reservations', emoji: '🤝', color: COLORS.forest, title: 'Reservations', badge: pendingReservations.length, onPress: () => navigation.navigate('NurseryReservations') },
     { key: 'reviews', emoji: '⭐', color: COLORS.coral, title: 'Reviews', onPress: () => navigation.navigate('NurseryReviews') },
-    { key: 'post', emoji: '📝', color: COLORS.sageDark, title: 'Post an update', onPress: () => navigation.navigate('NurseryPostUpdate') },
+    { key: 'post', emoji: '📝', color: COLORS.sageDark, title: 'Post an update', onPress: guard(() => navigation.navigate('NurseryPostUpdate')) },
     { key: 'followers', emoji: '👥', color: COLORS.xpBlue, title: 'Followers', onPress: () => navigation.navigate('NurseryFollowers') },
     { key: 'streak', emoji: '🔥', color: COLORS.sage, title: 'Growth & Trust', onPress: () => navigation.navigate('NurseryStreakBadges') },
     { key: 'analytics', emoji: '📊', color: COLORS.golden, title: 'Stock Analytics', onPress: () => navigation.navigate('NurseryStockAnalytics') },
     { key: 'map', emoji: '🗺️', color: COLORS.coral, title: 'View on Map', onPress: () => navigation.navigate('NurseryMap') },
-    { key: 'pickupDelivery', emoji: '🚴', color: COLORS.xpBlue, title: 'Pickup & Delivery', onPress: () => navigation.navigate('NurseryPickupDeliveryConfig') },
+    { key: 'pickupDelivery', emoji: '🚴', color: COLORS.xpBlue, title: 'Pickup & Delivery', onPress: guard(() => navigation.navigate('NurseryPickupDeliveryConfig')) },
     { key: 'deliveryPartners', emoji: '🛵', color: COLORS.sageDark, title: 'Delivery Partners', onPress: () => navigation.navigate('NurseryDeliveryPartners') },
     {
       key: 'bulkRequirements',

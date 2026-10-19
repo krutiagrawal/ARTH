@@ -129,6 +129,11 @@ export function AdminNgoApprovalsScreen({ navigation }: any) {
                   <View style={[styles.statusChip, { borderColor: statusColor(ngo.status) }]}>
                     <Text style={[styles.statusChipText, { color: statusColor(ngo.status) }]}>{ngo.status}</Text>
                   </View>
+                  {ngo.rejectionCount ? (
+                    <View style={[styles.statusChip, { borderColor: COLORS.danger }]}>
+                      <Text style={[styles.statusChipText, { color: COLORS.danger }]}>Rejected {ngo.rejectionCount}×</Text>
+                    </View>
+                  ) : null}
                 </View>
                 {ngo.owner && (
                   <Text style={styles.cardMeta} numberOfLines={1}>

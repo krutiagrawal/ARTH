@@ -11,6 +11,7 @@ import { useNgoProfile } from '../hooks/useApiQueries';
 import { useDeletePost, useNgoPosts, useToggleLike, useToggleSave } from '../hooks/useSocialQueries';
 import type { ApiPost } from '../api/posts';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useRequireApproval } from '../hooks/useRequireApproval';
 
 /**
  * Everything this NGO has published, with its own engagement visible.
@@ -19,6 +20,7 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
  * exactly as supporters do – including how the caption truncates and how the carousel reads.
  */
 export function NgoOwnPostsScreen({ navigation }: any) {
+  const guard = useRequireApproval();
   const clearance = useBottomNavClearance();
   const { data: profile } = useNgoProfile();
   const {
@@ -95,7 +97,7 @@ export function NgoOwnPostsScreen({ navigation }: any) {
           title="Nothing posted yet"
           body="Share a photo from a drive – your followers see it in their feed, and posting each week keeps your streak alive."
           actionLabel="Create a post"
-          onAction={() => navigation?.navigate('NgoPostUpdate')}
+          onAction={guard(() => navigation?.navigate('NgoPostUpdate'))}
         />
       }
     />

@@ -15,6 +15,7 @@ import type { ApiPortfolioEntry } from '../api/portfolio';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PageFooter } from '../components/common/PageFooter';
+import { useRequireApproval } from '../hooks/useRequireApproval';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
@@ -93,6 +94,7 @@ function EntryCard({
  * numbers are self-reported rather than backed by tree health checks.
  */
 export function NgoPortfolioScreen({ navigation }: any) {
+  const guard = useRequireApproval();
   const listQuery = useMyPortfolio();
   const { data: entries = [], isLoading, refetch } = listQuery;
   const deleteEntry = useDeletePortfolioEntry();
@@ -143,7 +145,7 @@ export function NgoPortfolioScreen({ navigation }: any) {
               )}
               <AnimatedButton
                 label="+ Add past work"
-                onPress={() => navigation.navigate('NgoPortfolioEntry', {})}
+                onPress={guard(() => navigation.navigate('NgoPortfolioEntry', {}))}
                 size="sm"
                 gradientColors={[COLORS.forest, COLORS.forestDeep]}
                 style={styles.addBtn}
@@ -153,7 +155,7 @@ export function NgoPortfolioScreen({ navigation }: any) {
           renderItem={({ item }) => (
             <EntryCard
               entry={item}
-              onEdit={() => navigation.navigate('NgoPortfolioEntry', { entry: item })}
+              onEdit={guard(() => navigation.navigate('NgoPortfolioEntry', { entry: item }))}
               onDelete={() => confirmDelete(item)}
             />
           )}

@@ -1,5 +1,67 @@
-import { apiFetch, toFormFile } from './client';
+import { apiFetch, toFormBlob } from './client';
 import { pagedPath, type Page } from '../hooks/useInfiniteList';
+
+export type NgoOrgTypeValue = 'trust' | 'society' | 'section8_company' | 'registered_nonprofit' | 'other';
+
+export interface NgoOfficeBearerApi {
+  name: string;
+  designation?: string | null;
+  phone?: string | null;
+  email?: string | null;
+}
+
+// Everything an NGO filled in at registration beyond the basics – returned by GET /api/ngo/profile and
+// editable from the NGO profile screen (legal fields lock once approved; see ngo.service.ts).
+export interface NgoRegistrationDetails {
+  orgType?: NgoOrgTypeValue | null;
+  line1?: string | null;
+  operatingCities?: string[];
+  operatingStates?: string[];
+  officialEmail?: string | null;
+  socialMediaLinks?: string[];
+
+  registrationNumber?: string | null;
+  registrationAuthority?: string | null;
+  panNumber?: string | null;
+  ngoDarpanId?: string | null;
+  twelveARegistrationNumber?: string | null;
+  eightyGRegistrationNumber?: string | null;
+  fcraRegistrationNumber?: string | null;
+  csr1RegistrationNumber?: string | null;
+
+  primaryContactName?: string | null;
+  primaryContactDesignation?: string | null;
+  primaryContactPhone?: string | null;
+  primaryContactEmail?: string | null;
+  officeBearers?: NgoOfficeBearerApi[];
+
+  primaryWorkAreas?: string[];
+  drivesConductedHistorical?: number | null;
+  treesPlantedHistorical?: number | null;
+  majorProjectsDescription?: string | null;
+  environmentalWorkSinceYear?: number | null;
+
+  conductsPlantationDrives?: boolean | null;
+  typicalSaplingsPerDrive?: string | null;
+  typicalDriveLocations?: string | null;
+  speciesCommonlyPlanted?: string | null;
+  saplingSourceDescription?: string | null;
+  monitorsSurvivalPostPlanting?: boolean | null;
+  doesPostPlantationMaintenance?: boolean | null;
+  plantationVerificationMethod?: string | null;
+  previousProjectLinks?: string[];
+
+  driveReportLinks?: string[];
+  mediaCoverageLinks?: string[];
+  projectPageLinks?: string[];
+  annualReportLinks?: string[];
+  impactReportLinks?: string[];
+  socialMediaPostLinks?: string[];
+
+  arthUsageGoals?: string[];
+  expectedDrivesPerYear?: number | null;
+  participantTypes?: string[];
+}
 
 export interface Award {
   title: string;
@@ -7,7 +69,7 @@ export interface Award {
   issuer?: string;
 }
 
-export interface ApiNgoProfile {
+export interface ApiNgoProfile extends NgoRegistrationDetails {
   id: string;
   orgName: string;
   description: string;
@@ -25,7 +87,42 @@ export interface ApiNgoProfile {
   createdAt: string;
 }
 
-export interface UpdateNgoProfileInput {
+// Text/list fields the edit screen sends. Lists are always sent when present (an empty list clears it).
+type TextKeys =
+  | 'line1' | 'officialEmail' | 'registrationNumber' | 'registrationAuthority' | 'panNumber' | 'ngoDarpanId'
+  | 'twelveARegistrationNumber' | 'eightyGRegistrationNumber' | 'fcraRegistrationNumber' | 'csr1RegistrationNumber'
+  | 'primaryContactName' | 'primaryContactDesignation' | 'primaryContactPhone' | 'primaryContactEmail'
+  | 'majorProjectsDescription' | 'typicalSaplingsPerDrive' | 'typicalDriveLocations' | 'speciesCommonlyPlanted'
+  | 'saplingSourceDescription' | 'plantationVerificationMethod' | 'orgType';
+type NumberKeys = 'drivesConductedHistorical' | 'treesPlantedHistorical' | 'environmentalWorkSinceYear' | 'expectedDrivesPerYear';
+type BoolKeys = 'conductsPlantationDrives' | 'monitorsSurvivalPostPlanting' | 'doesPostPlantationMaintenance';
+type CommaListKeys = 'operatingCities' | 'operatingStates' | 'primaryWorkAreas' | 'arthUsageGoals' | 'participantTypes';
+type LinkListKeys =
+  | 'socialMediaLinks' | 'previousProjectLinks' | 'driveReportLinks' | 'mediaCoverageLinks' | 'projectPageLinks'
+  | 'annualReportLinks' | 'impactReportLinks' | 'socialMediaPostLinks';
+
+const TEXT_KEYS: TextKeys[] = [
+  'line1', 'officialEmail', 'registrationNumber', 'registrationAuthority', 'panNumber', 'ngoDarpanId',
+  'twelveARegistrationNumber', 'eightyGRegistrationNumber', 'fcraRegistrationNumber', 'csr1RegistrationNumber',
+  'primaryContactName', 'primaryContactDesignation', 'primaryContactPhone', 'primaryContactEmail',
+  'majorProjectsDescription', 'typicalSaplingsPerDrive', 'typicalDriveLocations', 'speciesCommonlyPlanted',
+  'saplingSourceDescription', 'plantationVerificationMethod', 'orgType',
+];
+const NUMBER_KEYS: NumberKeys[] = ['drivesConductedHistorical', 'treesPlantedHistorical', 'environmentalWorkSinceYear', 'expectedDrivesPerYear'];
+const BOOL_KEYS: BoolKeys[] = ['conductsPlantationDrives', 'monitorsSurvivalPostPlanting', 'doesPostPlantationMaintenance'];
+const COMMA_LIST_KEYS: CommaListKeys[] = ['operatingCities', 'operatingStates', 'primaryWorkAreas', 'arthUsageGoals', 'participantTypes'];
+const LINK_LIST_KEYS: LinkListKeys[] = [
+  'socialMediaLinks', 'previousProjectLinks', 'driveReportLinks', 'mediaCoverageLinks', 'projectPageLinks',
+  'annualReportLinks', 'impactReportLinks', 'socialMediaPostLinks',
+];
+
+export interface UpdateNgoProfileInput extends
+  Partial<Record<TextKeys, string>>,
+  Partial<Record<NumberKeys, number>>,
+  Partial<Record<BoolKeys, boolean>>,
+  Partial<Record<CommaListKeys, string[]>>,
+  Partial<Record<LinkListKeys, string[]>> {
+  officeBearers?: NgoOfficeBearerApi[];
   orgName?: string;
   description?: string;
   website?: string;
@@ -53,8 +150,18 @@ export async function updateNgoProfile(input: UpdateNgoProfileInput): Promise<Ap
   if (input.volunteerCountEstimate !== undefined) form.append('volunteerCountEstimate', String(input.volunteerCountEstimate));
   if (input.awards !== undefined) form.append('awards', JSON.stringify(input.awards));
   if (input.followPolicy !== undefined) form.append('followPolicy', input.followPolicy);
+  for (const key of TEXT_KEYS) {
+    const value = input[key];
+    // Emails/phones can't be cleared with '' (the API validates their format), so only non-empty ones are sent.
+    if (value !== undefined && (value !== '' || !/email|phone/i.test(key))) form.append(key, value);
+  }
+  for (const key of NUMBER_KEYS) if (input[key] !== undefined) form.append(key, String(input[key]));
+  for (const key of BOOL_KEYS) if (input[key] !== undefined) form.append(key, String(input[key]));
+  for (const key of COMMA_LIST_KEYS) if (input[key] !== undefined) form.append(key, input[key]!.join(','));
+  for (const key of LINK_LIST_KEYS) if (input[key] !== undefined) form.append(key, JSON.stringify(input[key]));
+  if (input.officeBearers !== undefined) form.append('officeBearers', JSON.stringify(input.officeBearers));
   if (input.logo) {
-    form.append('logo', toFormFile(input.logo.uri), input.logo.name);
+    form.append('logo', await toFormBlob(input.logo.uri, input.logo.type, 'Logo'), input.logo.name);
   }
   return apiFetch<ApiNgoProfile>('/api/ngo/profile', { method: 'PATCH', body: form, isForm: true });
 }

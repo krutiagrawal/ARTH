@@ -2395,12 +2395,12 @@ export function useGroupAchievementsForMember(groupId: string | undefined) {
 
 // ---------- Nursery profile / stats / stock ----------
 
-export function useNurseryProfile() {
+export function useNurseryProfile(enabled: boolean = true) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['nursery', 'profile'],
     queryFn: fetchNurseryProfile,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && enabled,
   });
 }
 

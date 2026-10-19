@@ -14,6 +14,9 @@ import ConfirmDialog from '@/components/dashboard/ConfirmDialog'
 import DrawerFormShell, { fieldButtonClassName } from '@/components/dashboard/DrawerFormShell'
 import { fuzzyMatch } from '@/lib/fuzzyMatch'
 import { proxy } from '../proxy'
+import ApprovalGateDialog from '@/components/dashboard/ApprovalGateDialog'
+import { useApprovalGate } from '@/components/dashboard/useApprovalGate'
+import { useNgoProfile } from '../NgoProfileContext'
 import { usePagedList } from '@/hooks/usePagedList'
 import LoadMoreButton from '@/components/dashboard/LoadMoreButton'
 
@@ -231,6 +234,8 @@ function CreateSheet({ open, onOpenChange, submitting, onSubmit }) {
 }
 
 export default function RequirementsClient() {
+  const { profile } = useNgoProfile()
+  const { open: gateOpen, setOpen: setGateOpen, guard } = useApprovalGate(profile?.status)
   const [showCreate, setShowCreate] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [cancelTarget, setCancelTarget] = useState(null)
@@ -350,7 +355,7 @@ export default function RequirementsClient() {
           <p className="eyebrow text-primary">Bulk Requirements</p>
           <h1 className="font-serif text-3xl md:text-4xl mt-2">Ask nurseries for saplings</h1>
         </div>
-        <Button onClick={() => setShowCreate(true)} className="rounded-full shrink-0">
+        <Button onClick={guard(() => setShowCreate(true))} className="rounded-full shrink-0">
           <Plus className="h-4 w-4" /> New requirement
         </Button>
       </div>
@@ -391,7 +396,7 @@ export default function RequirementsClient() {
                   <div className="flex items-center gap-2">
                     {badge && <Badge variant={badge.variant}>{badge.label}</Badge>}
                     {r.status === 'expired' && (
-                      <Button size="sm" className="rounded-full" onClick={() => openReschedule(r)}>Reschedule</Button>
+                      <Button size="sm" className="rounded-full" onClick={guard(() => openReschedule(r))}>Reschedule</Button>
                     )}
                     {['open', 'partially_fulfilled'].includes(r.status) && (
                       <Button size="sm" variant="outline" className="rounded-full" onClick={() => setCancelTarget(r)}>Cancel</Button>
@@ -430,7 +435,7 @@ export default function RequirementsClient() {
                         )}
                         {resp.status === 'handed_off' && (
                           <div className="mt-2">
-                            <Button size="sm" className="rounded-full" onClick={() => openConfirmReceipt(resp)}>Confirm receipt</Button>
+                            <Button size="sm" className="rounded-full" onClick={guard(() => openConfirmReceipt(resp))}>Confirm receipt</Button>
                           </div>
                         )}
                       </div>
@@ -444,6 +449,7 @@ export default function RequirementsClient() {
         </div>
       )}
 
+      <ApprovalGateDialog open={gateOpen} onOpenChange={setGateOpen} status={profile?.status} rejectionReason={profile?.rejectionReason} entityLabel="NGO" />
       <CreateSheet open={showCreate} onOpenChange={setShowCreate} submitting={submitting} onSubmit={handleCreate} />
 
       <ConfirmDialog

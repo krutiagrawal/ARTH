@@ -127,6 +127,20 @@ function NurseryDetailSheet({ nursery, onOpenChange, onAction }) {
                 {d.status}
               </Badge>
               {d.rejectionReason && <p className="mt-2 text-sm text-muted-foreground">Reason on file: &ldquo;{d.rejectionReason}&rdquo;</p>}
+              {d.rejectionCount > 0 && (
+                <div className="mt-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+                  <p className="text-sm font-medium">
+                    {d.status === 'rejected' ? 'Rejected' : 'Previously rejected'} {d.rejectionCount} time{d.rejectionCount === 1 ? '' : 's'}
+                  </p>
+                  <ul className="mt-2 space-y-2">
+                    {(d.rejectionHistory ?? []).map((h, i) => (
+                      <li key={i} className="text-sm text-muted-foreground">
+                        <span className="text-xs">{new Date(h.rejectedAt).toLocaleDateString()}</span> – {h.reason ? `“${h.reason}”` : 'No reason given'}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             {loadingDetail && !detail ? (
@@ -394,6 +408,11 @@ export default function AdminNurseriesClient() {
         cell: ({ row }) => (
           <div>
             <p className="font-medium">{row.original.nurseryName}</p>
+            {row.original.rejectionCount > 0 && (
+              <Badge variant="destructive" className="mt-1 font-normal">
+                Rejected {row.original.rejectionCount}×
+              </Badge>
+            )}
             <p className="text-xs text-muted-foreground mt-0.5 max-w-xs truncate">{row.original.description}</p>
           </div>
         ),
