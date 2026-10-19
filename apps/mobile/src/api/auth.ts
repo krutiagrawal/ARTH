@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { apiFetch, toFormFile } from './client';
+import { apiFetch, toFormFile, toFormBlob } from './client';
 import { setAccessToken, setRefreshToken, clearTokens, getRefreshToken } from './tokenStorage';
 import type { PickedPhoto } from './posts';
 
@@ -228,11 +228,19 @@ export async function registerNgo(input: RegisterNgoInput) {
     ['csr1Certificate', csr1Certificate],
     ['authorizationProof', authorizationProof],
   ];
+  const documentLabels: Record<string, string> = {
+    registrationCertificate: 'Registration certificate',
+    twelveACertificate: '12A/12AB certificate',
+    eightyGCertificate: '80G certificate',
+    fcraCertificate: 'FCRA certificate',
+    csr1Certificate: 'CSR-1 certificate',
+    authorizationProof: 'Authorisation proof',
+  };
   for (const [key, doc] of documents) {
-    if (doc) form.append(key, toFormFile(doc.uri), doc.name);
+    if (doc) form.append(key, await toFormBlob(doc.uri, doc.type, documentLabels[key] ?? key), doc.name);
   }
-  for (const photo of pastWorkPhotos ?? []) {
-    form.append('pastWorkPhotos', toFormFile(photo.uri), photo.name);
+  for (const [i, photo] of (pastWorkPhotos ?? []).entries()) {
+    form.append('pastWorkPhotos', await toFormBlob(photo.uri, photo.type, `Plantation photo ${i + 1}`), photo.name);
   }
 
   const response = await apiFetch<AuthResponse>('/api/auth/register-ngo', {

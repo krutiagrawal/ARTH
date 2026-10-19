@@ -17,6 +17,11 @@ interface BaseProps {
   options: SelectOption[];
   /** Matches the translucent-white chrome used on night-gradient screens (signup wizards). */
   dark?: boolean;
+  /**
+   * 'chips' (default) wraps pills. 'list' stacks full-width rows with a radio/checkbox indicator,
+   * best for longer labels. 'grid' lays short labels out in two equal columns.
+   */
+  layout?: 'chips' | 'list' | 'grid';
 }
 
 interface SingleSelectProps extends BaseProps {
@@ -37,7 +42,7 @@ interface MultiSelectProps extends BaseProps {
  * mid-form; a whole category picker fits and resolves in one glance/tap here.
  */
 export function SelectField(props: SingleSelectProps | MultiSelectProps) {
-  const { label, hint, options, dark } = props;
+  const { label, hint, options, dark, layout = 'chips' } = props;
 
   const isSelected = (v: string) => (props.multi ? props.value.includes(v) : props.value === v);
   const toggle = (v: string) => {
@@ -55,6 +60,44 @@ export function SelectField(props: SingleSelectProps | MultiSelectProps) {
     <View style={styles.wrap}>
       {label ? <Text style={[styles.label, dark && styles.labelDark]}>{label}</Text> : null}
       {hint ? <Text style={[styles.hint, dark && styles.hintDark]}>{hint}</Text> : null}
+      {layout !== 'chips' ? (
+        <View style={layout === 'grid' ? styles.gridWrap : styles.listWrap}>
+          {options.map((opt) => {
+            const selected = isSelected(opt.value);
+            const indicatorShape = props.multi ? styles.checkbox : styles.radio;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                onPress={() => toggle(opt.value)}
+                activeOpacity={0.8}
+                style={[
+                  layout === 'grid' ? styles.tile : styles.row,
+                  dark ? styles.chipDark : styles.chipLight,
+                  selected && (dark ? styles.rowDarkSelected : styles.chipLightSelected),
+                ]}
+              >
+                {layout === 'list' && opt.icon ? <Text style={styles.rowIcon}>{opt.icon}</Text> : null}
+                <Text
+                  style={[
+                    styles.rowText,
+                    layout === 'grid' && styles.tileText,
+                    dark ? styles.chipTextDark : styles.chipTextLight,
+                    selected && styles.rowTextSelected,
+                  ]}
+                  numberOfLines={2}
+                >
+                  {opt.label}
+                </Text>
+                {layout === 'list' && (
+                  <View style={[indicatorShape, dark && styles.indicatorDark, selected && styles.indicatorOn]}>
+                    {selected ? <Text style={styles.tick}>✓</Text> : null}
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ) : (
       <View style={styles.chipRow}>
         {options.map((opt) => {
           const selected = isSelected(opt.value);
@@ -83,6 +126,7 @@ export function SelectField(props: SingleSelectProps | MultiSelectProps) {
           );
         })}
       </View>
+      )}
     </View>
   );
 }
@@ -110,5 +154,36 @@ const styles = StyleSheet.create({
   chipTextLight: { color: COLORS.textPrimary },
   chipTextLightSelected: { color: COLORS.forest, fontWeight: '700' },
   chipTextDark: { color: COLORS.white },
+  listWrap: { gap: 8 },
+  gridWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+  },
+  tile: {
+    flexGrow: 1,
+    flexBasis: '47%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 13,
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+  },
+  rowDarkSelected: { backgroundColor: 'rgba(168,196,153,0.22)', borderColor: COLORS.mint },
+  rowIcon: { fontSize: 18 },
+  rowText: { flex: 1, fontSize: 14, fontWeight: '600' },
+  tileText: { flex: 0, textAlign: 'center' },
+  rowTextSelected: { fontWeight: '700' },
+  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: 'rgba(139,107,71,0.4)', alignItems: 'center', justifyContent: 'center' },
+  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: 'rgba(139,107,71,0.4)', alignItems: 'center', justifyContent: 'center' },
+  indicatorDark: { borderColor: 'rgba(255,255,255,0.45)' },
+  indicatorOn: { backgroundColor: COLORS.mint, borderColor: COLORS.mint },
+  tick: { fontSize: 13, fontWeight: '800', color: COLORS.forestDeep },
   chipTextDarkSelected: { color: COLORS.forestDeep, fontWeight: '700' },
 });

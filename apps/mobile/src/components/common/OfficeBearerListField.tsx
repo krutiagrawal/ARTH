@@ -84,6 +84,7 @@ export function OfficeBearerListField({ bearers, onChange, max = 3 }: OfficeBear
           />
           <TextInput
             style={styles.input}
+            maxLength={254}
             placeholder="Email (optional)"
             placeholderTextColor={ON_DARK_SURFACE.muted}
             autoCapitalize="none"

@@ -92,6 +92,16 @@ export async function buildApp() {
       reply.status(400).send({ error: 'VALIDATION_ERROR', message: error.message });
       return;
     }
+    // @fastify/multipart aborts oversized or over-count uploads with its own FastifyErrors; without
+    // this they fall through to the generic 500 below and the client can't tell the user what to fix.
+    if (error.code === 'FST_REQ_FILE_TOO_LARGE') {
+      reply.status(413).send({ error: 'FILE_TOO_LARGE', message: 'One of your files is larger than 8 MB. Please choose a smaller file or photo.' });
+      return;
+    }
+    if (error.code === 'FST_FILES_LIMIT') {
+      reply.status(400).send({ error: 'TOO_MANY_FILES', message: 'Too many files were attached.' });
+      return;
+    }
     app.log.error(error);
     reply.status(500).send({ error: 'INTERNAL_ERROR', message: 'Something went wrong' });
   });

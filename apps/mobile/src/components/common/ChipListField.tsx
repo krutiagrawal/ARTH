@@ -12,11 +12,15 @@ interface ChipListFieldProps {
   values: string[];
   onChange: (values: string[]) => void;
   max?: number;
-  /** e.g. isValidWebsite for link fields – an invalid entry is still added but flagged inline. */
+  /** e.g. isValidWebsite for link fields – an invalid entry is refused and flagged inline. */
   validate?: (value: string) => boolean;
   validationHint?: string;
   keyboardType?: 'default' | 'url';
   dark?: boolean;
+  /** Tappable options (e.g. city names) shown under the input, filtered by what's typed. Already-added values are hidden. */
+  suggestions?: string[];
+  /** Max characters per entry (default 300). */
+  maxItemLength?: number;
 }
 
 /**
@@ -35,19 +39,41 @@ export function ChipListField({
   validationHint,
   keyboardType = 'default',
   dark,
+  suggestions,
+  maxItemLength = 300,
 }: ChipListFieldProps) {
   const [draft, setDraft] = useState('');
   const { selection } = useHaptics();
   const isFull = values.length >= max;
   const draftInvalid = !!draft.trim() && !!validate && !validate(draft.trim());
 
-  const add = useCallback(() => {
-    const value = draft.trim();
-    if (!value || isFull) return;
-    selection();
-    onChange([...values, value]);
-    setDraft('');
-  }, [draft, isFull, selection, values, onChange]);
+  const has = useCallback(
+    (v: string) => values.some((x) => x.trim().toLowerCase() === v.trim().toLowerCase()),
+    [values],
+  );
+
+  const addValue = useCallback(
+    (raw: string) => {
+      const value = raw.trim();
+      if (!value || isFull) return;
+      if (has(value)) {
+        setDraft('');
+        return;
+      }
+      // Invalid entries (e.g. a malformed link) stay in the input with the hint shown, not added.
+      if (validate && !validate(value)) return;
+      selection();
+      onChange([...values, value]);
+      setDraft('');
+    },
+    [isFull, has, validate, selection, values, onChange],
+  );
+
+  const add = useCallback(() => addValue(draft), [addValue, draft]);
+
+  const visibleSuggestions = (suggestions ?? [])
+    .filter((c) => !has(c) && c.toLowerCase().includes(draft.trim().toLowerCase()))
+    .slice(0, 12);
 
   const removeAt = useCallback(
     (index: number) => {
@@ -86,12 +112,22 @@ export function ChipListField({
             value={draft}
             onChangeText={setDraft}
             onSubmitEditing={add}
+            maxLength={maxItemLength}
             autoCapitalize="none"
             keyboardType={keyboardType === 'url' ? 'url' : 'default'}
           />
           <TouchableOpacity style={styles.addBtn} onPress={add} disabled={!draft.trim()}>
             <Text style={styles.addBtnText}>+</Text>
           </TouchableOpacity>
+        </View>
+      )}
+      {!isFull && visibleSuggestions.length > 0 && (
+        <View style={styles.suggestionRow}>
+          {visibleSuggestions.map((c) => (
+            <TouchableOpacity key={c} style={[styles.suggestion, dark && styles.suggestionDark]} onPress={() => addValue(c)}>
+              <Text style={[styles.suggestionText, dark && styles.chipTextDark]}>+ {c}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       )}
       {draftInvalid && validationHint ? <Text style={styles.fieldError}>{validationHint}</Text> : null}
@@ -146,5 +182,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addBtnText: { fontSize: 20, fontWeight: '800', color: COLORS.forestDeep },
+  suggestionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  suggestion: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(139, 107, 71, 0.45)',
+  },
+  suggestionDark: { borderColor: 'rgba(255,255,255,0.4)' },
+  suggestionText: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary },
   fieldError: { fontSize: 12, color: COLORS.amberLight, marginTop: 4 },
 });

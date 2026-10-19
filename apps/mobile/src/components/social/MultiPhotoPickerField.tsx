@@ -17,6 +17,8 @@ interface MultiPhotoPickerFieldProps {
   mode?: 'camera' | 'gallery' | 'both';
   label?: string;
   hint?: string;
+  /** Light-on-dark text and translucent-white chrome for night-gradient screens (signup wizards). */
+  dark?: boolean;
 }
 
 /** Renders one thumbnail's small resized preview via `usePhotoPreviewUri` – a hook, so it needs
@@ -40,6 +42,7 @@ export function MultiPhotoPickerField({
   mode = 'both',
   label = 'Photos',
   hint,
+  dark,
 }: MultiPhotoPickerFieldProps) {
   const { medium, selection } = useHaptics();
   const confirm = useConfirm();
@@ -103,8 +106,8 @@ export function MultiPhotoPickerField({
   return (
     <View style={styles.wrap}>
       <View style={styles.header}>
-        <Text style={styles.label}>{label}</Text>
-        <Text style={styles.counter}>
+        <Text style={[styles.label, dark && styles.labelDark]}>{label}</Text>
+        <Text style={[styles.counter, dark && styles.counterDark]}>
           {photos.length}/{max}
         </Text>
       </View>
@@ -148,27 +151,27 @@ export function MultiPhotoPickerField({
       <View style={styles.actions}>
         {mode !== 'gallery' && (
           <TouchableOpacity
-            style={[styles.action, isFull && styles.actionDisabled]}
+            style={[styles.action, dark && styles.actionDark, isFull && styles.actionDisabled]}
             onPress={captureFromCamera}
             disabled={isFull}
           >
             <Text style={styles.actionIcon}>📸</Text>
-            <Text style={styles.actionText}>Camera</Text>
+            <Text style={[styles.actionText, dark && styles.actionTextDark]}>Camera</Text>
           </TouchableOpacity>
         )}
         {mode !== 'camera' && (
           <TouchableOpacity
-            style={[styles.action, isFull && styles.actionDisabled]}
+            style={[styles.action, dark && styles.actionDark, isFull && styles.actionDisabled]}
             onPress={pickFromGallery}
             disabled={isFull}
           >
             <Text style={styles.actionIcon}>🖼️</Text>
-            <Text style={styles.actionText}>Gallery</Text>
+            <Text style={[styles.actionText, dark && styles.actionTextDark]}>Gallery</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {hint ? <Text style={styles.hint}>{hint}</Text> : null}
+      {hint ? <Text style={[styles.hint, dark && styles.hintDark]}>{hint}</Text> : null}
     </View>
   );
 }
@@ -238,6 +241,11 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: 'rgba(139, 107, 71, 0.35)',
   },
+  actionDark: { borderColor: 'rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.08)' },
+  labelDark: { color: COLORS.white },
+  counterDark: { color: 'rgba(255,255,255,0.7)' },
+  actionTextDark: { color: COLORS.white },
+  hintDark: { color: 'rgba(255,255,255,0.65)' },
   actionDisabled: { opacity: 0.4 },
   actionIcon: { fontSize: 18 },
   actionText: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700' },

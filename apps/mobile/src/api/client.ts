@@ -27,6 +27,26 @@ export function toFormFile(uri: string): File {
   return new File(uri);
 }
 
+export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024; // matches the API's multipart fileSize limit
+
+/**
+ * Loads a locally-picked file as a Blob for `FormData.append`, via React Native's own `fetch`.
+ *
+ * `toFormFile` (expo-file-system) is limited to the app's sandbox, and Expo Go scopes that sandbox
+ * to one experience-specific folder - so files the document picker drops in the shared
+ * `cache/DocumentPicker` folder fail with "missing READ permission" / "isn't readable". RN's
+ * networking layer reads any `file://` or `content://` URI the OS lets the app see, and its Blob is
+ * a valid FormData part on the New Architecture. Also enforces the upload size limit up front.
+ */
+export async function toFormBlob(uri: string, type: string, label: string): Promise<Blob> {
+  const blob = await (await fetch(uri)).blob();
+  if (blob.size > MAX_UPLOAD_BYTES) {
+    throw new Error(`${label} is larger than 8 MB. Please choose a smaller file or photo.`);
+  }
+  // fetch() guesses the type from the file extension; the picker already told us the real one.
+  return new Blob([blob], { type });
+}
+
 /**
  * Resolves a stored media path to an absolute URL the app can actually render.
  *

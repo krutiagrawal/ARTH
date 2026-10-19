@@ -30,16 +30,49 @@ export function isValidGstin(value: string): boolean {
   return GSTIN_REGEX.test(value.trim().toUpperCase());
 }
 
+// Every dot-separated label is 1-63 alphanumeric/hyphen chars (no leading/trailing hyphen), ending in an alphabetic TLD.
+const HOSTNAME_RE = /^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}$/i;
+
 export function isValidWebsite(value: string): boolean {
   const trimmed = value.trim();
-  if (!trimmed) return false;
+  if (!trimmed || /\s/.test(trimmed)) return false;
+  // Only http(s) links - "ftp://", "javascript:" etc. are not websites.
+  if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed) && !/^https?:\/\//i.test(trimmed)) return false;
   const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
   try {
     const url = new URL(withScheme);
-    return /\.[a-z]{2,}$/i.test(url.hostname);
+    return HOSTNAME_RE.test(url.hostname);
   } catch {
     return false;
   }
+}
+
+/** Adds https:// when the user typed a bare domain, so stored links are always openable. */
+export function normalizeUrl(value: string): string {
+  const trimmed = value.trim();
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+/** Indian PAN: 5 letters, 4 digits, 1 letter (e.g. ABCDE1234F). */
+export function isValidPan(value: string): boolean {
+  return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value.trim().toUpperCase());
+}
+
+/** A four-digit year between `min` and the current year. */
+export function isValidYear(value: string, min = 1800): boolean {
+  const v = value.trim();
+  if (!/^\d{4}$/.test(v)) return false;
+  const n = Number(v);
+  return n >= min && n <= new Date().getFullYear();
+}
+
+export function isNonNegativeInt(value: string): boolean {
+  return /^\d{1,9}$/.test(value.trim());
+}
+
+/** A whole number from 0 to `max`. */
+export function isIntInRange(value: string, max: number): boolean {
+  return isNonNegativeInt(value) && Number(value.trim()) <= max;
 }
 
 export function isValidPassword(value: string): boolean {

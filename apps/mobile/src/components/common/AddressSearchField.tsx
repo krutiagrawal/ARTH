@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import * as Location from 'expo-location';
 import { Text, TextInput } from './AppText';
 import { FormFieldShell, FORM_FIELD_VALUE_STYLE } from './FormField';
 import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
 import { RADIUS } from '../../constants/theme';
-import { searchAddress, type ApiAddressSuggestion } from '../../api/geocode';
+import { searchAddress, reverseGeocode, type ApiAddressSuggestion } from '../../api/geocode';
+import { getCurrentPositionWithTimeout } from '../../utils/location';
 
 const MIN_QUERY_LENGTH = 3;
 const DEBOUNCE_MS = 350;
@@ -28,6 +30,9 @@ interface AddressSearchFieldProps {
   /** Bias suggestions toward this position (e.g. the user's GPS fix). */
   near?: { lat: number; lng: number };
   onFocus?: () => void;
+  /** Shows a "Use my current location" action - for places Nominatim has no entry for. */
+  allowCurrentLocation?: boolean;
+  maxLength?: number;
 }
 
 /**
@@ -48,6 +53,8 @@ export function AddressSearchField({
   inline,
   near,
   onFocus,
+  allowCurrentLocation,
+  maxLength,
 }: AddressSearchFieldProps) {
   const [suggestions, setSuggestions] = useState<ApiAddressSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -58,6 +65,48 @@ export function AddressSearchField({
   // below (which treats any `value` change while focused as a fresh search query) would
   // immediately re-search for the address text itself and reopen the dropdown right under it.
   const justSelectedRef = useRef(false);
+  const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+
+  const useCurrentLocation = async () => {
+    setLocationError(null);
+    setLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocationError('Location permission is off. Enable it in settings, or type the address.');
+        return;
+      }
+      const pos = await getCurrentPositionWithTimeout({ accuracy: Location.Accuracy.Balanced });
+      const { latitude: lat, longitude: lng } = pos.coords;
+
+      let suggestion: ApiAddressSuggestion | null = await reverseGeocode(lat, lng).catch(() => null);
+      if (!suggestion) {
+        // Nominatim has no entry here - fall back to the device's own geocoder.
+        const [place] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng }).catch(() => []);
+        const parts = place
+          ? [place.name, place.street, place.district, place.city, place.region, place.postalCode].filter(
+              (v, i, arr): v is string => !!v && arr.indexOf(v) === i,
+            )
+          : [];
+        suggestion = {
+          label: parts.length ? parts.join(', ') : `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+          lat,
+          lng,
+          city: place?.city ?? place?.subregion ?? null,
+        };
+      }
+      requestIdRef.current += 1;
+      justSelectedRef.current = true;
+      setSuggestions([]);
+      onChangeText(suggestion.label);
+      onSelectSuggestion?.(suggestion);
+    } catch {
+      setLocationError("Couldn't get your location. Try again or type the address.");
+    } finally {
+      setLocating(false);
+    }
+  };
 
   useEffect(() => {
     if (justSelectedRef.current) {
@@ -116,6 +165,7 @@ export function AddressSearchField({
           onChangeText={onChangeText}
           placeholder={placeholder}
           multiline={multiline}
+          maxLength={maxLength}
           onFocus={() => {
             setFocused(true);
             onFocus?.();
@@ -125,6 +175,17 @@ export function AddressSearchField({
           onBlur={() => setTimeout(() => setFocused(false), 150)}
         />
       </FormFieldShell>
+
+      {allowCurrentLocation && (
+        <TouchableOpacity style={styles.locationBtn} onPress={useCurrentLocation} disabled={locating} activeOpacity={0.7}>
+          {locating ? (
+            <ActivityIndicator size="small" color={dark ? COLORS.white : COLORS.sage} />
+          ) : (
+            <Text style={[styles.locationBtnText, dark && styles.locationBtnTextDark]}>📍 Use my current location</Text>
+          )}
+        </TouchableOpacity>
+      )}
+      {locationError ? <Text style={styles.locationError}>{locationError}</Text> : null}
 
       {focused && suggestions.length > 0 && (
         <View style={[styles.dropdown, inline && styles.dropdownInline, dark && styles.dropdownDark]}>
@@ -148,6 +209,10 @@ export function AddressSearchField({
 
 const styles = StyleSheet.create({
   wrap: { position: 'relative', zIndex: 20 },
+  locationBtn: { alignSelf: 'flex-start', paddingVertical: 8, minHeight: 36, justifyContent: 'center' },
+  locationBtnText: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
+  locationBtnTextDark: { color: COLORS.mint },
+  locationError: { fontSize: 12, color: COLORS.amberLight, marginBottom: 4 },
   inputDark: { color: ON_DARK_SURFACE.primary },
   multiline: { minHeight: 72, textAlignVertical: 'top' },
   dropdown: {
