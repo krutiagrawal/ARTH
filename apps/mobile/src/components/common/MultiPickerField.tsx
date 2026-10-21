@@ -4,9 +4,11 @@ import { Text } from './AppText';
 import { Sheet } from './Sheet';
 import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
 import { RADIUS, SPACING } from '../../constants/theme';
+import { RequiredMark } from './RequiredMark';
 
 interface MultiPickerFieldProps {
   label?: string;
+  required?: boolean;
   placeholder?: string;
   options: string[];
   values: string[];
@@ -19,7 +21,7 @@ interface MultiPickerFieldProps {
  * Pick-only multi-select: a tap-to-open list with checkmarks, selected values shown as removable
  * chips. Nothing can be typed, so every value is guaranteed to be one of `options`.
  */
-export function MultiPickerField({ label, placeholder = 'Select', options, values, onChange, sheetTitle, dark }: MultiPickerFieldProps) {
+export function MultiPickerField({ label, required, placeholder = 'Select', options, values, onChange, sheetTitle, dark }: MultiPickerFieldProps) {
   const [open, setOpen] = useState(false);
 
   const toggle = (opt: string) =>
@@ -27,7 +29,12 @@ export function MultiPickerField({ label, placeholder = 'Select', options, value
 
   return (
     <View>
-      {label ? <Text style={[styles.label, dark && styles.labelDark]}>{label}</Text> : null}
+      {label ? (
+        <Text style={[styles.label, dark && styles.labelDark]}>
+          {label}
+          {required ? <RequiredMark dark={dark} /> : null}
+        </Text>
+      ) : null}
 
       {values.length > 0 && (
         <View style={styles.chipRow}>

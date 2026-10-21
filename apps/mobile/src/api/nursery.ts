@@ -1,4 +1,4 @@
-import { apiFetch, toFormFile } from './client';
+import { apiFetch, toFormFile, type OwnedListSummary, type OwnedExport } from './client';
 import { pagedPath, type Page } from '../hooks/useInfiniteList';
 
 export type NurseryGrowthLevel = 'seedling' | 'growing' | 'established' | 'evergreen';
@@ -75,6 +75,7 @@ export interface UpdateNurseryProfileInput {
   deliveryRadiusKm?: number;
   followPolicy?: 'open' | 'approval';
   logo?: { uri: string; name: string; type: string };
+  coverPhoto?: { uri: string; name: string; type: string };
   // ---- Pickup/delivery configuration ----
   offersPickup?: boolean;
   deliveryFeeCents?: number | null;
@@ -112,6 +113,9 @@ export async function updateNurseryProfile(input: UpdateNurseryProfileInput): Pr
   if (input.pickupInstructions !== undefined) form.append('pickupInstructions', input.pickupInstructions);
   if (input.logo) {
     form.append('logo', toFormFile(input.logo.uri), input.logo.name);
+  }
+  if (input.coverPhoto) {
+    form.append('coverPhoto', toFormFile(input.coverPhoto.uri), input.coverPhoto.name);
   }
   return apiFetch<ApiNurseryProfile>('/api/nursery/profile', { method: 'PATCH', body: form, isForm: true });
 }
@@ -226,6 +230,8 @@ export interface ApiSpeciesRef {
 }
 
 export interface ApiSaplingStock {
+  /** Set when archived – hidden from the default inventory list. */
+  archivedAt?: string | null;
   id: string;
   nurseryId: string;
   species: string;
@@ -279,6 +285,9 @@ export interface SaplingStockInput {
 }
 
 export interface StockFilter {
+  q?: string;
+  archived?: boolean;
+  sort?: 'newest' | 'oldest' | 'name' | 'quantity' | 'price';
   species?: string;
   native?: boolean;
   availability?: 'available' | 'low_stock' | 'out_of_stock';
@@ -288,6 +297,9 @@ export interface StockFilter {
 export async function fetchSaplingStock(filter: StockFilter = {}, cursor?: string): Promise<Page<ApiSaplingStock>> {
   return apiFetch<Page<ApiSaplingStock>>(
     pagedPath('/api/nursery/stock', cursor, {
+      q: filter.q,
+      sort: filter.sort,
+      archived: filter.archived ? 'true' : undefined,
       species: filter.species,
       native: filter.native !== undefined ? String(filter.native) : undefined,
       availability: filter.availability,
@@ -474,6 +486,9 @@ export interface ApiNurseryOrder {
 }
 
 export interface NurseryOrdersFilter {
+  q?: string;
+  group?: 'active' | 'completed' | 'cancelled';
+  sort?: 'newest' | 'oldest' | 'highest' | 'scheduled';
   status?: NurseryOrderStatus;
   fulfillmentType?: 'pickup' | 'delivery';
 }
@@ -481,7 +496,13 @@ export interface NurseryOrdersFilter {
 export async function fetchNurseryOrders(filter: NurseryOrdersFilter | NurseryOrderStatus = {}, cursor?: string): Promise<Page<ApiNurseryOrder>> {
   const normalized: NurseryOrdersFilter = typeof filter === 'string' ? { status: filter } : filter;
   return apiFetch<Page<ApiNurseryOrder>>(
-    pagedPath('/api/nursery/orders', cursor, { status: normalized.status, fulfillmentType: normalized.fulfillmentType }),
+    pagedPath('/api/nursery/orders', cursor, {
+      status: normalized.status,
+      group: normalized.group,
+      q: normalized.q,
+      sort: normalized.sort,
+      fulfillmentType: normalized.fulfillmentType,
+    }),
   );
 }
 
@@ -629,4 +650,20 @@ export async function fetchMyBulkResponses(cursor?: string): Promise<Page<ApiMyB
  * mints traceable sapling units or counts toward the nursery's reputation. */
 export async function markBulkResponseHandedOff(responseId: string): Promise<ApiBulkResponse> {
   return apiFetch<ApiBulkResponse>(`/api/nursery/bulk-requirements/responses/${responseId}/handoff`, { method: 'POST' });
+}
+
+export async function fetchStockSummary(): Promise<OwnedListSummary> {
+  return apiFetch<OwnedListSummary>('/api/nursery/stock/summary');
+}
+export async function exportStock(): Promise<OwnedExport> {
+  return apiFetch<OwnedExport>('/api/nursery/stock/export');
+}
+export async function archiveStock(id: string, archived: boolean): Promise<{ id: string; archived: boolean }> {
+  return apiFetch(`/api/nursery/stock/${id}/archive`, { method: 'POST', body: { archived } });
+}
+export async function fetchNurseryOrdersSummary(): Promise<OwnedListSummary> {
+  return apiFetch<OwnedListSummary>('/api/nursery/orders/summary');
+}
+export async function exportNurseryOrders(): Promise<OwnedExport> {
+  return apiFetch<OwnedExport>('/api/nursery/orders/export');
 }

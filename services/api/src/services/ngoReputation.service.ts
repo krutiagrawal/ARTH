@@ -1,5 +1,6 @@
 import { Prisma, PrismaClient, NgoStreakType, NgoGrowthLevel } from '@arth/db';
 import { startOfUtcDay, addDays } from './streak.service';
+import { recordOrgContribution } from './orgStreak.service';
 import { notify } from './notification.service';
 
 // Accepts either a live PrismaClient (read-only routes) or a transaction client (activity hooks) —
@@ -50,14 +51,7 @@ function dateKey(date: Date): string {
 /** Marks this ISO week as met for each given streak type. Called from every activity hook (update
  * posted, drive created/completed, planted trees logged, drive attendance recorded). */
 export async function recordNgoContribution(tx: Prisma.TransactionClient, ngoId: string, types: NgoStreakType[]) {
-  const periodStart = mondayOf(new Date());
-  for (const streakType of types) {
-    await tx.ngoContributionStreak.upsert({
-      where: { ngoId_streakType_periodStart: { ngoId, streakType, periodStart } },
-      update: { metCriteria: true },
-      create: { ngoId, streakType, periodStart, metCriteria: true },
-    });
-  }
+  await recordOrgContribution(tx, 'ngo', ngoId, types);
 }
 
 interface WeeklyStreakStats {
@@ -82,7 +76,8 @@ async function getWeeklyStreakStats(db: Db, ngoId: string, streakType: NgoStreak
   }
 
   let current = 0;
-  let cursor = thisWeek;
+  // The open week isn't a miss yet: if it isn't met, count the run ending last week instead.
+  let cursor = metWeeks.has(dateKey(thisWeek)) ? thisWeek : addDays(thisWeek, -7);
   // eslint-disable-next-line no-constant-condition
   while (true) {
     if (!metWeeks.has(dateKey(cursor))) break;

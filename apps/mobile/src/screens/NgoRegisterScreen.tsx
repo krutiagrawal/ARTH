@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
+import { FieldLabel } from '../components/common/RequiredMark';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
@@ -384,9 +385,9 @@ export function NgoRegisterScreen({ navigation }: any) {
           <StepTransition stepKey={step}>
             {step === 'orgIdentity' && (
               <>
-                <NgoField name="orgName" label="Organisation name" placeholder="e.g. Green Earth Foundation" maxLength={120} value={orgName} onChangeText={setOrgName} />
+                <NgoField required name="orgName" label="Organisation name" placeholder="e.g. Green Earth Foundation" maxLength={120} value={orgName} onChangeText={setOrgName} />
                 <FieldGroup name="orgType">
-                  <SelectField dark layout="list" label="Organisation type" options={ORG_TYPE_OPTIONS} value={orgType} onChange={(v) => setOrgType(v as NgoOrgType)} />
+                  <SelectField dark required layout="list" label="Organisation type" options={ORG_TYPE_OPTIONS} value={orgType} onChange={(v) => setOrgType(v as NgoOrgType)} />
                 </FieldGroup>
                 <NgoField name="foundedYear" label="Year established" optional placeholder="e.g. 2012" value={foundedYear} onChangeText={setFoundedYear} keyboardType="number-pad" maxLength={4} />
               </>
@@ -398,6 +399,7 @@ export function NgoRegisterScreen({ navigation }: any) {
                   <AddressSearchField
                     dark
                     allowCurrentLocation
+                    required
                     maxLength={300}
                     label="Full registered address"
                     value={line1}
@@ -408,13 +410,13 @@ export function NgoRegisterScreen({ navigation }: any) {
                   />
                 </FieldGroup>
                 <FieldGroup name="city">
-                  <CityPickerField value={city} onChange={setCity} variant="dark" />
+                  <CityPickerField required value={city} onChange={setCity} variant="dark" />
                 </FieldGroup>
                 <FieldGroup name="operatingCities">
-                  <ChipListField dark label="Cities you operate in" maxItemLength={60} placeholder="Search or add a city" suggestions={cityNames} values={operatingCities} onChange={setOperatingCities} />
+                  <ChipListField dark required label="Cities you operate in" maxItemLength={60} placeholder="Search or add a city" suggestions={cityNames} values={operatingCities} onChange={setOperatingCities} />
                 </FieldGroup>
                 <FieldGroup name="officialPhone">
-                  <PhoneField dark label="Official phone number" value={officialPhone} onChangeText={setOfficialPhone} />
+                  <PhoneField dark required label="Official phone number" value={officialPhone} onChangeText={setOfficialPhone} />
                 </FieldGroup>
 
                 <Disclosure title="More contact details" subtitle="Email, website, states, social links" forceOpen={openContactMore}>
@@ -481,12 +483,13 @@ export function NgoRegisterScreen({ navigation }: any) {
 
             {step === 'people' && (
               <>
-                <NgoField name="primaryContactName" label="Primary contact's full name" maxLength={60} value={primaryContactName} onChangeText={setPrimaryContactName} />
+                <NgoField required name="primaryContactName" label="Primary contact's full name" maxLength={60} value={primaryContactName} onChangeText={setPrimaryContactName} />
                 <FieldGroup name="primaryContactPhone">
-                  <PhoneField dark label="Primary contact's phone" value={primaryContactPhone} onChangeText={setPrimaryContactPhone} />
+                  <PhoneField dark required label="Primary contact's phone" value={primaryContactPhone} onChangeText={setPrimaryContactPhone} />
                 </FieldGroup>
                 <FieldGroup name="authorizationProof">
                   <DocumentPickerField
+                    required
                     label="Proof you're authorised to represent this NGO"
                     hint="Board resolution, authorisation letter, or similar – PDF or photo"
                     doc={authorizationProof}
@@ -507,9 +510,9 @@ export function NgoRegisterScreen({ navigation }: any) {
 
             {step === 'whatYouDo' && (
               <>
-                <NgoField name="description" label="About your organisation" placeholder="What does your organisation do?" maxLength={2000} multiline value={description} onChangeText={setDescription} />
+                <NgoField required name="description" label="About your organisation" placeholder="What does your organisation do?" maxLength={2000} multiline value={description} onChangeText={setDescription} />
                 <FieldGroup name="primaryWorkAreas">
-                  <SelectField dark multi layout="list" hint="Select all that apply" label="Primary areas of work" options={WORK_AREA_OPTIONS} value={primaryWorkAreas} onChange={setPrimaryWorkAreas} />
+                  <SelectField dark multi required layout="list" hint="Select all that apply" label="Primary areas of work" options={WORK_AREA_OPTIONS} value={primaryWorkAreas} onChange={setPrimaryWorkAreas} />
                 </FieldGroup>
 
                 <Disclosure title="Your track record" subtitle="Drives, trees planted, volunteers, projects" forceOpen={openTrackRecord}>
@@ -555,7 +558,7 @@ export function NgoRegisterScreen({ navigation }: any) {
             {step === 'arthGoals' && (
               <>
                 <FieldGroup name="arthUsageGoals">
-                  <SelectField dark multi layout="list" hint="Select all that apply" label="What would you like to use ARTH for?" options={ARTH_USAGE_OPTIONS} value={arthUsageGoals} onChange={setArthUsageGoals} />
+                  <SelectField dark multi required layout="list" hint="Select all that apply" label="What would you like to use ARTH for?" options={ARTH_USAGE_OPTIONS} value={arthUsageGoals} onChange={setArthUsageGoals} />
                 </FieldGroup>
                 <FieldGroup>
                   <SelectField dark multi layout="grid" hint="Select all that apply" label="Who typically participates in your drives?" options={PARTICIPANT_TYPE_OPTIONS} value={participantTypes} onChange={setParticipantTypes} />
@@ -567,6 +570,7 @@ export function NgoRegisterScreen({ navigation }: any) {
             {step === 'account' && (
               <>
                 <NgoField
+                  required
                   name="email"
                   label="Email"
                   maxLength={254}
@@ -579,6 +583,7 @@ export function NgoRegisterScreen({ navigation }: any) {
                   hint={!email.error && email.checking ? 'Checking…' : undefined}
                 />
                 <FieldGroup name="password">
+                  <FieldLabel label="Password" required dark />
                   <PasswordInput
                     inputStyle={styles.input}
                     maxLength={72}

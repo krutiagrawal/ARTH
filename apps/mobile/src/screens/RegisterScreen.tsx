@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
+import { FieldLabel } from '../components/common/RequiredMark';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
@@ -120,6 +121,7 @@ export function RegisterScreen({ navigation }: any) {
         <BorderCard style={styles.card}>
           <Text style={styles.title}>Create your forest</Text>
 
+          <FieldLabel label="Name" required dark />
           <TextInput maxLength={60}
             style={styles.input}
             placeholder="Name"
@@ -127,6 +129,7 @@ export function RegisterScreen({ navigation }: any) {
             value={name}
             onChangeText={setName}
           />
+          <FieldLabel label="Email" required dark />
           <TextInput
             style={styles.input}
             placeholder="Email"
@@ -143,6 +146,7 @@ export function RegisterScreen({ navigation }: any) {
             <Text style={styles.fieldHint}>Checking…</Text>
           ) : null}
           <PhoneField
+            required
             value={phone}
             onChangeText={setPhone}
             onBlur={() => setPhoneTouched(true)}
@@ -150,7 +154,8 @@ export function RegisterScreen({ navigation }: any) {
             error={phoneError || (phoneAvailability.checking ? 'Checking…' : null)}
             style={styles.phoneFieldBox}
           />
-          <CityPickerField value={city} onChange={setCity} variant="dark" />
+          <CityPickerField required value={city} onChange={setCity} variant="dark" />
+          <FieldLabel label="Password" required dark />
           <PasswordInput
             inputStyle={styles.input}
             placeholder="Password (min. 8 characters)"

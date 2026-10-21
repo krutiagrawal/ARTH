@@ -39,7 +39,13 @@ export async function createStaff(prisma: PrismaClient, ngoUserId: string, input
 
 export async function updateStaff(prisma: PrismaClient, ngoUserId: string, staffId: string, input: UpdateStaffInput) {
   const staff = await findOwnedStaffOrThrow(prisma, ngoUserId, staffId);
-  return prisma.staffMember.update({ where: { id: staff.id }, data: input });
+  // An emptied email/phone arrives as '' – store it as null rather than an empty string.
+  const data = {
+    ...input,
+    ...(input.contactEmail === '' ? { contactEmail: null } : {}),
+    ...(input.contactPhone === '' ? { contactPhone: null } : {}),
+  };
+  return prisma.staffMember.update({ where: { id: staff.id }, data: data as any });
 }
 
 export async function deleteStaff(prisma: PrismaClient, ngoUserId: string, staffId: string) {

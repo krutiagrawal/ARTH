@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
-import { CAMPAIGN_CATEGORIES, type CampaignCategory } from '../api/donations';
+import { CAMPAIGN_CATEGORIES, type CampaignCategory, type ApiCampaign } from '../api/donations';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,22 +10,32 @@ import { PhotoPickerField, PickedPhoto } from '../components/common/PhotoPickerF
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
-import { useCreateCampaign } from '../hooks/useApiQueries';
+import { useCreateCampaign, useUpdateCampaign } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
-export function NgoCreateCampaignScreen({ navigation }: any) {
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Edit mode: opened with `{ campaign }` route params; otherwise creates a new campaign. */
+export function NgoCreateCampaignScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
+  const editing: ApiCampaign | undefined = route?.params?.campaign;
   const createMutation = useCreateCampaign();
+  const updateMutation = useUpdateCampaign();
   const confirm = useConfirm();
   const { refreshing, onRefresh } = usePullToRefresh();
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [goalRupees, setGoalRupees] = useState('');
-  const [durationDays, setDurationDays] = useState('');
-  const [category, setCategory] = useState<CampaignCategory | null>(null);
+  // Days left from now (not the original duration) – the edit field is "ends in N days from today".
+  const initialDays =
+    editing?.endsAt && new Date(editing.endsAt).getTime() > Date.now()
+      ? String(Math.ceil((new Date(editing.endsAt).getTime() - Date.now()) / DAY_MS))
+      : '';
+  const [title, setTitle] = useState(editing?.title ?? '');
+  const [description, setDescription] = useState(editing?.description ?? '');
+  const [goalRupees, setGoalRupees] = useState(editing?.goalAmountCents ? String(Math.round(editing.goalAmountCents / 100)) : '');
+  const [durationDays, setDurationDays] = useState(initialDays);
+  const [category, setCategory] = useState<CampaignCategory | null>(editing?.category ?? null);
   const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,6 +52,21 @@ export function NgoCreateCampaignScreen({ navigation }: any) {
       return;
     }
     try {
+      if (editing) {
+        await updateMutation.mutateAsync({
+          id: editing.id,
+          title: title.trim(),
+          description: description.trim(),
+          goalAmountCents: goalRupees ? Math.round(Number(goalRupees) * 100) : undefined,
+          category: category ?? undefined,
+          // Only re-send the end date when the field changed, so saving other edits doesn't shift it.
+          endsAt: days && durationDays !== initialDays ? new Date(Date.now() + days * DAY_MS).toISOString() : undefined,
+          photo: photo ?? undefined,
+        });
+        confirm('Campaign updated', 'Your changes are saved.');
+        navigation?.goBack?.();
+        return;
+      }
       await createMutation.mutateAsync({
         title: title.trim(),
         description: description.trim(),
@@ -63,8 +88,8 @@ export function NgoCreateCampaignScreen({ navigation }: any) {
       <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
 
       <ScreenHeader
-        title="New Campaign"
-        subtitle="Raise funds for your next planting push"
+        title={editing ? 'Edit Campaign' : 'New Campaign'}
+        subtitle={editing ? 'Update the details donors see' : 'Raise funds for your next planting push'}
         onBack={() => navigation?.goBack?.()}
       />
 
@@ -76,6 +101,7 @@ export function NgoCreateCampaignScreen({ navigation }: any) {
         <View>
           <PhotoPickerField
             photo={photo}
+            existingUri={editing?.coverPhotoUri}
             onChange={setPhoto}
             mode="gallery"
             label="Add Cover Photo"
@@ -83,14 +109,14 @@ export function NgoCreateCampaignScreen({ navigation }: any) {
           />
 
           <FormField maxLength={120}
-            label="Title"
+            required label="Title"
             value={title}
             onChangeText={setTitle}
             placeholder="eg - Plant 1,000 trees this monsoon"
           />
 
           <FormField maxLength={2000}
-            label="Description"
+            required label="Description"
             value={description}
             onChangeText={setDescription}
             placeholder="eg - What this campaign funds"
@@ -106,7 +132,7 @@ export function NgoCreateCampaignScreen({ navigation }: any) {
           />
 
           <FormField
-            label="Runs for (days, optional)"
+            label={editing ? 'Ends in (days from today, optional)' : 'Runs for (days, optional)'}
             value={durationDays}
             onChangeText={(v: string) => setDurationDays(v.replace(/[^0-9]/g, '').slice(0, 3))}
             placeholder="eg - 30 (leave empty for no end date)"
@@ -134,9 +160,13 @@ export function NgoCreateCampaignScreen({ navigation }: any) {
           {error && <Text style={styles.error}>{error}</Text>}
 
           <AnimatedButton
-            label={createMutation.isPending ? 'Publishing…' : 'Publish Campaign  →'}
+            label={
+              createMutation.isPending || updateMutation.isPending
+                ? editing ? 'Saving…' : 'Publishing…'
+                : editing ? 'Save changes' : 'Publish Campaign  →'
+            }
             onPress={handleSubmit}
-            disabled={createMutation.isPending}
+            disabled={createMutation.isPending || updateMutation.isPending}
             fullWidth
             gradientColors={[COLORS.forest, COLORS.forestDeep]}
             style={styles.submitButton}

@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
-import { Text, TextInput } from '../components/common/AppText';
+import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -8,7 +8,9 @@ import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
-import { useMySponsorships, useSponsorHealthRollup } from '../hooks/useApiQueries';
+import { useMySponsorships, useSponsorHealthRollup, useMySponsorshipsSummary } from '../hooks/useApiQueries';
+import { ListFilterBar } from '../components/common/ListFilterBar';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PageFooter } from '../components/common/PageFooter';
 import { infiniteScrollProps } from '../hooks/useInfiniteList';
@@ -70,42 +72,19 @@ function SponsorshipRow({ s, navigation }: { s: ApiMySponsorship; navigation: an
 
 export function MySponsorshipsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const listQuery = useMySponsorships();
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<'pending' | 'succeeded' | 'failed' | 'refunded' | null>(null);
+  const [sort, setSort] = useState<Sort>('newest');
+  const q = useDebouncedValue(search.trim());
+  const listQuery = useMySponsorships({ q: q || undefined, status: filter ?? undefined, sort });
   const { data: sponsorships, isLoading, refetch } = listQuery;
   const { data: rollup } = useSponsorHealthRollup();
-  const { refreshing, onRefresh } = usePullToRefresh(refetch);
-  const [filter, setFilter] = useState<Filter>('all');
-  const [sort, setSort] = useState<Sort>('newest');
-  const [search, setSearch] = useState('');
-
-  const all = sponsorships ?? [];
-  const summary = useMemo(() => {
-    const paid = all.filter((x) => x.status === 'succeeded');
-    return {
-      totalCents: paid.reduce((n, x) => n + x.amountCents, 0),
-      plants: paid.length,
-      drives: new Set(paid.map((x) => x.driveId)).size,
-      ngos: new Set(paid.map((x) => x.ngoName)).size,
-    };
-  }, [all]);
-  const counts = useMemo(() => {
-    const c: Record<Filter, number> = { all: all.length, succeeded: 0, pending: 0, failed: 0, refunded: 0 };
-    for (const x of all) c[x.status] += 1;
-    return c;
-  }, [all]);
-  const visible = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const rows = all.filter(
-      (x) =>
-        (filter === 'all' || x.status === filter) &&
-        (!q || x.speciesName.toLowerCase().includes(q) || x.driveTitle.toLowerCase().includes(q) || x.ngoName.toLowerCase().includes(q)),
-    );
-    return [...rows].sort((a, b) =>
-      sort === 'amount'
-        ? b.amountCents - a.amountCents
-        : (new Date(a.sponsoredAt).getTime() - new Date(b.sponsoredAt).getTime()) * (sort === 'newest' ? -1 : 1),
-    );
-  }, [all, filter, sort, search]);
+  // Exact totals from the server – the old figures only summed whichever pages were loaded.
+  const summaryQuery = useMySponsorshipsSummary();
+  const summary = summaryQuery.data;
+  const { refreshing, onRefresh } = usePullToRefresh([refetch, summaryQuery.refetch]);
+  const isFiltering = !!q || !!filter;
+  const visible = sponsorships ?? [];
 
   return (
     <View style={styles.container}>
@@ -124,71 +103,74 @@ export function MySponsorshipsScreen({ navigation }: any) {
 
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
-      ) : !sponsorships || sponsorships.length === 0 ? (
+      ) : visible.length === 0 && !isFiltering ? (
         <EmptyState icon="🌱" title="No sponsorships yet" body="Plants you sponsor on drives will show up here." />
       ) : (
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
-          showsVerticalScrollIndicator={false}
-          {...infiniteScrollProps(listQuery)}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
-        >
-          <BorderCard style={styles.rollupCard}>
-            <Text style={styles.totalLabel}>Total sponsored</Text>
-            <Text style={styles.totalValue}>{formatRupees(summary.totalCents)}</Text>
-            <Text style={styles.totalSub}>
-              {summary.plants} plant{summary.plants === 1 ? '' : 's'} · {summary.drives} drive{summary.drives === 1 ? '' : 's'} · {summary.ngos} NGO{summary.ngos === 1 ? '' : 's'}
-            </Text>
-          </BorderCard>
-          {rollup && rollup.totalTrees > 0 ? (
-            <BorderCard style={styles.rollupCard}>
-              <Text style={styles.rollupTitle}>
-                Trees from {rollup.driveCount} drive{rollup.driveCount === 1 ? '' : 's'} you sponsored
-              </Text>
-              <View style={styles.rollupCountsRow}>
-                {(['healthy', 'struggling', 'dead', 'not_checked'] as const)
-                  .filter((status) => rollup.counts[status] > 0)
-                  .map((status) => (
-                    <View key={status} style={[styles.rollupPill, { borderColor: STATUS_META[status].color }]}>
-                      <Text style={[styles.rollupPillText, { color: STATUS_META[status].color }]}>
-                        {rollup.counts[status]} {STATUS_META[status].label}
-                      </Text>
-                    </View>
-                  ))}
-              </View>
-            </BorderCard>
-          ) : null}
-          <TextInput
-            style={styles.search}
-            value={search}
-            onChangeText={setSearch}
+        <>
+          <ListFilterBar
+            query={search}
+            onQueryChange={setSearch}
             placeholder="Search by plant, drive or NGO"
-            placeholderTextColor={COLORS.textMuted}
-            autoCorrect={false}
+            options={[
+              { key: null, label: 'All' },
+              { key: 'succeeded', label: 'Paid' },
+              { key: 'pending', label: 'Pending' },
+              { key: 'failed', label: 'Failed' },
+              { key: 'refunded', label: 'Refunded' },
+            ]}
+            value={filter}
+            onChange={setFilter}
+            rows={[
+              {
+                label: 'Sort',
+                options: SORTS.map((o) => ({ key: o.key as string, label: o.label })),
+                value: sort,
+                onChange: (k) => setSort((k ?? 'newest') as Sort),
+              },
+            ]}
           />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll} contentContainerStyle={styles.chipRow}>
-            {FILTERS.filter((f) => f.key === 'all' || counts[f.key] > 0).map((f) => (
-              <TouchableOpacity key={f.key} onPress={() => setFilter(f.key)} style={[styles.chip, filter === f.key && styles.chipActive]} activeOpacity={0.8}>
-                <Text style={[styles.chipText, filter === f.key && styles.chipTextActive]}>{f.label} ({counts[f.key]})</Text>
-              </TouchableOpacity>
-            ))}
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+            showsVerticalScrollIndicator={false}
+            {...infiniteScrollProps(listQuery)}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+          >
+            {summary && (
+              <BorderCard style={styles.rollupCard}>
+                <Text style={styles.totalLabel}>Total sponsored</Text>
+                <Text style={styles.totalValue}>{formatRupees(summary.totalCents)}</Text>
+                <Text style={styles.totalSub}>
+                  {summary.plants} plant{summary.plants === 1 ? '' : 's'} · {summary.drives} drive{summary.drives === 1 ? '' : 's'} · {summary.ngos} NGO{summary.ngos === 1 ? '' : 's'}
+                </Text>
+              </BorderCard>
+            )}
+            {rollup && rollup.totalTrees > 0 ? (
+              <BorderCard style={styles.rollupCard}>
+                <Text style={styles.rollupTitle}>
+                  Trees from {rollup.driveCount} drive{rollup.driveCount === 1 ? '' : 's'} you sponsored
+                </Text>
+                <View style={styles.rollupCountsRow}>
+                  {(['healthy', 'struggling', 'dead', 'not_checked'] as const)
+                    .filter((status) => rollup.counts[status] > 0)
+                    .map((status) => (
+                      <View key={status} style={[styles.rollupPill, { borderColor: STATUS_META[status].color }]}>
+                        <Text style={[styles.rollupPillText, { color: STATUS_META[status].color }]}>
+                          {rollup.counts[status]} {STATUS_META[status].label}
+                        </Text>
+                      </View>
+                    ))}
+                </View>
+              </BorderCard>
+            ) : null}
+            {visible.length === 0 ? (
+              <Text style={styles.noneText}>No matching sponsorships.</Text>
+            ) : (
+              visible.map((s) => <SponsorshipRow key={s.id} s={s} navigation={navigation} />)
+            )}
+            <PageFooter loading={listQuery.isFetchingNextPage} />
           </ScrollView>
-          <View style={styles.sortRow}>
-            <Text style={styles.sortLabel}>Sort</Text>
-            {SORTS.map((o) => (
-              <TouchableOpacity key={o.key} onPress={() => setSort(o.key)} hitSlop={6}>
-                <Text style={[styles.sortOption, sort === o.key && styles.sortOptionActive]}>{o.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          {visible.length === 0 ? (
-            <Text style={styles.noneText}>No matching sponsorships.</Text>
-          ) : (
-            visible.map((s) => <SponsorshipRow key={s.id} s={s} navigation={navigation} />)
-          )}
-          <PageFooter loading={listQuery.isFetchingNextPage} />
-        </ScrollView>
+        </>
       )}
     </View>
   );

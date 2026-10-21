@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { EmptyState } from '../components/common/EmptyState';
 import { useTreesMap, useTreesPaged } from '../hooks/useApiQueries';
+import { ListFilterBar } from '../components/common/ListFilterBar';
 import { PageFooter } from '../components/common/PageFooter';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { STATUS_META } from '../constants/treeHealth';
@@ -106,11 +107,6 @@ export function MyTreesScreen({ navigation, route }: any) {
   const [filter, setFilter] = useState<HealthFilter>('all');
   const [sort, setSort] = useState<SortKey>('newest');
   const [visible, setVisible] = useState(PAGE);
-  const [sortOpen, setSortOpen] = useState(false);
-  const toggleSort = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setSortOpen((o) => !o);
-  };
   // Search, filter and non-default sorts need every tree, so they run over the full map feed; the
   // untouched default view keeps using the server-paged list.
   const isDefaultView = query.trim() === '' && filter === 'all' && sort === 'newest';
@@ -278,74 +274,29 @@ export function MyTreesScreen({ navigation, route }: any) {
             </TouchableOpacity>
           )}
 
-          <View style={styles.searchBox}>
-            <Text style={styles.searchIcon}>{'🔍'}</Text>
-            <TextInput
-              style={styles.searchInput}
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search by name, species or place"
-              placeholderTextColor={COLORS.textMuted}
-              returnKeyType="search"
-              autoCorrect={false}
-            />
-            {query.length > 0 && (
-              <TouchableOpacity onPress={() => setQuery('')} hitSlop={10}>
-                <Text style={styles.searchClear}>{'✕'}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-            <TouchableOpacity
-              style={[styles.filterChip, filter === 'all' && styles.filterChipActive]}
-              onPress={() => setFilter('all')}
-            >
-              <Text style={[styles.filterChipText, filter === 'all' && styles.filterChipTextActive]}>All {total}</Text>
-            </TouchableOpacity>
-            {COUNT_ORDER.filter((status) => counts[status] > 0).map((status) => {
-              const active = filter === status;
-              return (
-                <TouchableOpacity
-                  key={status}
-                  style={[styles.filterChip, { borderColor: STATUS_META[status].color }, active && { backgroundColor: STATUS_META[status].color }]}
-                  onPress={() => setFilter(active ? 'all' : status)}
-                >
-                  <Text style={[styles.filterChipText, { color: active ? COLORS.white : STATUS_META[status].color }]}>
-                    {STATUS_META[status].emoji} {STATUS_META[status].label} {counts[status]}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-
-          <View style={styles.resultsRow}>
-            <Text style={styles.resultsCount}>
-              {isDefaultView ? total : filteredTrees.length} {(isDefaultView ? total : filteredTrees.length) === 1 ? 'tree' : 'trees'}
-            </Text>
-            <TouchableOpacity style={styles.sortButton} activeOpacity={0.8} onPress={toggleSort}>
-              <Text style={styles.sortButtonText}>Sort: {SORTS.find((o) => o.key === sort)?.label}</Text>
-              <Text style={[styles.sortCaret, sortOpen && styles.sortCaretOpen]}>▾</Text>
-            </TouchableOpacity>
-          </View>
-          {sortOpen && (
-            <View style={styles.sortMenu}>
-              {SORTS.map((o, i) => (
-                <TouchableOpacity
-                  key={o.key}
-                  style={[styles.sortOption, i > 0 && styles.sortOptionBorder]}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    setSort(o.key);
-                    toggleSort();
-                  }}
-                >
-                  <Text style={[styles.sortOptionText, sort === o.key && styles.sortOptionTextActive]}>{o.label}</Text>
-                  {sort === o.key && <Text style={styles.sortCheck}>✓</Text>}
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+          <ListFilterBar
+            flush
+            query={query}
+            onQueryChange={setQuery}
+            placeholder="Search by name, species or place"
+            options={[
+              { key: null, label: `All ${total}` },
+              ...COUNT_ORDER.filter((status) => counts[status] > 0).map((status) => ({
+                key: status as string,
+                label: `${STATUS_META[status].emoji} ${STATUS_META[status].label} ${counts[status]}`,
+              })),
+            ]}
+            value={filter === 'all' ? null : filter}
+            onChange={(k) => setFilter((k ?? 'all') as HealthFilter)}
+            rows={[
+              {
+                label: 'Sort',
+                options: SORTS.map((o) => ({ key: o.key as string, label: o.label })),
+                value: sort,
+                onChange: (k) => setSort((k ?? 'newest') as SortKey),
+              },
+            ]}
+          />
 
           {shownTrees.length === 0 ? (
             <View style={styles.noMatch}>

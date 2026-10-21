@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
+import { RequiredMark } from '../components/common/RequiredMark';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -26,6 +27,17 @@ export function EditGroupProfileScreen({ navigation }: any) {
   const [handle, setHandle] = useState(profile?.handle ?? '');
   const [avatarEmoji, setAvatarEmoji] = useState(profile?.avatarEmoji ?? '🌳');
   const [error, setError] = useState<string | null>(null);
+
+  // `useState(profile?.x)` only reads the profile at mount, so opening this with a cold cache left
+  // every field blank. Seed once when the profile arrives, never overwriting what's being typed.
+  const seeded = React.useRef(!!profile);
+  React.useEffect(() => {
+    if (!profile || seeded.current) return;
+    seeded.current = true;
+    setGroupName(profile.groupName ?? '');
+    setHandle(profile.handle ?? '');
+    setAvatarEmoji(profile.avatarEmoji ?? '🌳');
+  }, [profile]);
 
   const handleSubmit = async () => {
     setError(null);
@@ -80,7 +92,7 @@ export function EditGroupProfileScreen({ navigation }: any) {
             <Text style={styles.avatarPickerHint}>Tap to choose an emoji</Text>
           </TouchableOpacity>
 
-          <Text style={styles.label}>Group Name</Text>
+          <Text style={styles.label}>Group Name<RequiredMark /></Text>
           <TextInput
             style={styles.input}
             value={groupName}

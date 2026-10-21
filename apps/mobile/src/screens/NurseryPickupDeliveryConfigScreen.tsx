@@ -170,7 +170,7 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
             <Text style={styles.sectionTitle}>Delivery details</Text>
 
             <AddressSearchField
-              label="Nursery address"
+              required label="Nursery address"
               value={line1}
               onChangeText={(text) => {
                 setLine1(text);

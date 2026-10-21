@@ -218,10 +218,10 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
 
       <Sheet visible={showCreate} onClose={() => setShowCreate(false)} title="Add a delivery partner" scrollable maxHeight={620}>
         <View style={{ gap: 4 }}>
-          <FormField maxLength={80} label="Name" value={name} onChangeText={setName} placeholder="eg - Rider's full name" />
-          <FormField maxLength={30} label="Handle" value={handle} onChangeText={setHandle} placeholder="eg - ravi_delivers" autoCapitalize="none" />
+          <FormField maxLength={80} required label="Name" value={name} onChangeText={setName} placeholder="eg - Rider's full name" />
+          <FormField maxLength={30} required label="Handle" value={handle} onChangeText={setHandle} placeholder="eg - ravi_delivers" autoCapitalize="none" />
           <FormField
-            label="Email"
+            required label="Email"
             value={email.value}
             onChangeText={email.setValue}
             onBlur={() => email.setTouched(true)}
@@ -235,13 +235,13 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
             <Text style={styles.hint}>Checking…</Text>
           ) : null}
           <PhoneField
-            label="Phone"
+            required label="Phone"
             value={phone.value}
             onChangeText={phone.setValue}
             onBlur={() => phone.setTouched(true)}
             error={phone.touched ? phone.error : phone.checking ? 'Checking…' : null}
           />
-          <FormField label="Temporary password" value={password} onChangeText={setPassword} placeholder="eg - At least 8 characters" secureTextEntry />
+          <FormField required label="Temporary password" value={password} onChangeText={setPassword} placeholder="eg - At least 8 characters" secureTextEntry />
           {error && <Text style={styles.errorText}>{error}</Text>}
           <Text style={styles.hint}>
             Share this password with your delivery partner directly – they can log in on their own phone with this email and password.
@@ -260,8 +260,11 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
 
       <Sheet visible={!!editingPartner} onClose={() => setEditingPartner(null)} title="Edit delivery partner" scrollable>
         <View style={{ gap: 4 }}>
-          <FormField maxLength={80} label="Name" value={editName} onChangeText={setEditName} placeholder="eg - Rider's full name" />
-          <PhoneField label="Phone" value={editPhone} onChangeText={setEditPhone} />
+          <FormField maxLength={80} required label="Name" value={editName} onChangeText={setEditName} placeholder="eg - Rider's full name" />
+          <PhoneField required label="Phone" value={editPhone} onChangeText={setEditPhone} />
+          {/* Sign-in details can't be changed here, but showing them keeps the form complete. */}
+          <FormField label="Handle (can't be changed)" value={editingPartner?.handle ?? ''} editable={false} />
+          <FormField label="Email (can't be changed)" value={editingPartner?.email ?? ''} editable={false} />
           {editError && <Text style={styles.errorText}>{editError}</Text>}
           <AnimatedButton
             label={updateMutation.isPending ? 'Saving…' : 'Save changes'}

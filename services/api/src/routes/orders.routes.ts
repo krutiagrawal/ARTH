@@ -1,11 +1,29 @@
+import { toCsv } from '../utils/csv';
 import { FastifyInstance } from 'fastify';
 import * as orderService from '../services/order.service';
 import { checkoutSchema, submitOrderReviewSchema } from '../schemas/marketplace.schema';
 import { BadRequestError } from '../utils/errors';
 
 export default async function ordersRoutes(fastify: FastifyInstance) {
-  fastify.get<{ Querystring: { cursor?: string; take?: string } }>('/', async (request, reply) => {
-    reply.send(await orderService.listMyOrders(fastify.prisma, request.user!.id, request.query));
+  fastify.get<{ Querystring: { cursor?: string; take?: string; q?: string; group?: string; sort?: string } }>('/', async (request, reply) => {
+    const { q, group, sort, ...paging } = request.query;
+    reply.send(
+      await orderService.listMyOrders(fastify.prisma, request.user!.id, {
+        ...paging,
+        search: q?.trim() || undefined,
+        group: group as any,
+        sort: sort as any,
+      }),
+    );
+  });
+
+  fastify.get('/summary', async (request, reply) => {
+    reply.send(await orderService.getMyOrdersSummary(fastify.prisma, request.user!.id));
+  });
+
+  fastify.get('/export', async (request, reply) => {
+    const rows = await orderService.exportMyOrders(fastify.prisma, request.user!.id);
+    reply.send({ csv: toCsv(rows), count: rows.length });
   });
 
   fastify.post('/checkout', async (request, reply) => {

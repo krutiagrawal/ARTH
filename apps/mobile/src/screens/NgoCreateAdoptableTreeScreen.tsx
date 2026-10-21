@@ -11,23 +11,27 @@ import { FormField } from '../components/common/FormField';
 import { AddressSearchField } from '../components/common/AddressSearchField';
 import { CityPickerField } from '../components/common/CityPickerField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
-import { useCreateAdoptableTree } from '../hooks/useApiQueries';
+import { useCreateAdoptableTree, useUpdateAdoptableTree } from '../hooks/useApiQueries';
+import type { ApiAdoptableTree } from '../api/adoptions';
 import { ApiError } from '../api/client';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
-export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
+/** Edit mode: opened with `{ tree }` route params; otherwise lists a new tree. */
+export function NgoCreateAdoptableTreeScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
+  const editing: ApiAdoptableTree | undefined = route?.params?.tree;
   const createTreeMutation = useCreateAdoptableTree();
+  const updateTreeMutation = useUpdateAdoptableTree();
   const confirm = useConfirm();
   const { refreshing, onRefresh } = usePullToRefresh();
 
-  const [nickname, setNickname] = useState('');
-  const [speciesName, setSpeciesName] = useState('');
-  const [description, setDescription] = useState('');
-  const [instructions, setInstructions] = useState('');
-  const [locationLabel, setLocationLabel] = useState('');
-  const [city, setCity] = useState('Pune');
+  const [nickname, setNickname] = useState(editing?.nickname ?? '');
+  const [speciesName, setSpeciesName] = useState(editing?.speciesName ?? '');
+  const [description, setDescription] = useState(editing?.description ?? '');
+  const [instructions, setInstructions] = useState(editing?.instructions ?? '');
+  const [locationLabel, setLocationLabel] = useState(editing?.location ?? '');
+  const [city, setCity] = useState(editing?.city ?? 'Pune');
   const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +42,21 @@ export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
       return;
     }
     try {
+      if (editing) {
+        await updateTreeMutation.mutateAsync({
+          id: editing.id,
+          nickname: nickname.trim(),
+          speciesName: speciesName.trim(),
+          description: description.trim(),
+          instructions: instructions.trim(),
+          locationLabel: locationLabel.trim(),
+          city: city.trim(),
+          photo: photo ?? undefined,
+        });
+        confirm('Tree updated', 'Your changes are saved.');
+        navigation?.goBack?.();
+        return;
+      }
       await createTreeMutation.mutateAsync({
         nickname: nickname.trim(),
         speciesName: speciesName.trim(),
@@ -60,8 +79,8 @@ export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
       <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
 
       <ScreenHeader
-        title="New Adoptable Tree"
-        subtitle="List a tree for someone to adopt"
+        title={editing ? 'Edit Tree' : 'New Adoptable Tree'}
+        subtitle={editing ? 'Update the listing adopters see' : 'List a tree for someone to adopt'}
         onBack={() => navigation?.goBack?.()}
       />
 
@@ -74,6 +93,7 @@ export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
         <View>
           <PhotoPickerField
             photo={photo}
+            existingUri={editing?.photoUri}
             onChange={setPhoto}
             mode="gallery"
             label="Add Photo"
@@ -81,21 +101,21 @@ export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
           />
 
           <FormField maxLength={60}
-            label="Tree nickname"
+            required label="Tree nickname"
             value={nickname}
             onChangeText={setNickname}
             placeholder="eg - Grandmother Banyan"
           />
 
           <FormField maxLength={100}
-            label="Species"
+            required label="Species"
             value={speciesName}
             onChangeText={setSpeciesName}
             placeholder="eg - Banyan"
           />
 
           <FormField maxLength={2000}
-            label="Description"
+            required label="Description"
             value={description}
             onChangeText={setDescription}
             placeholder="eg - Tell the tree's story"
@@ -112,19 +132,24 @@ export function NgoCreateAdoptableTreeScreen({ navigation }: any) {
 
           <AddressSearchField
             label="Area / landmark"
+            allowCurrentLocation
             value={locationLabel}
             onChangeText={setLocationLabel}
             placeholder="eg - Optional"
           />
 
-          <CityPickerField value={city} onChange={setCity} />
+          <CityPickerField required value={city} onChange={setCity} />
 
           {error && <Text style={styles.error}>{error}</Text>}
 
           <AnimatedButton
-            label={createTreeMutation.isPending ? 'Listing…' : 'List for Adoption  →'}
+            label={
+              createTreeMutation.isPending || updateTreeMutation.isPending
+                ? editing ? 'Saving…' : 'Listing…'
+                : editing ? 'Save changes' : 'List for Adoption  →'
+            }
             onPress={handleSubmit}
-            disabled={createTreeMutation.isPending}
+            disabled={createTreeMutation.isPending || updateTreeMutation.isPending}
             fullWidth
             gradientColors={[COLORS.forest, COLORS.forestDeep]}
             style={styles.submitButton}

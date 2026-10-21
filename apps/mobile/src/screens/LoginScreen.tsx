@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
+import { FieldLabel } from '../components/common/RequiredMark';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
@@ -68,6 +69,7 @@ export function LoginScreen({ navigation }: any) {
         <BorderCard style={styles.card}>
           <Text style={styles.title}>Welcome back</Text>
 
+          <FieldLabel label="Email" required dark />
           <TextInput
             style={styles.input}
             placeholder="Email"
@@ -79,6 +81,7 @@ export function LoginScreen({ navigation }: any) {
             onBlur={() => setEmailTouched(true)}
           />
           {emailError && <Text style={styles.fieldError}>{emailError}</Text>}
+          <FieldLabel label="Password" required dark />
           <PasswordInput
             inputStyle={styles.input}
             placeholder="Password"

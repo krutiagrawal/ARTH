@@ -5,6 +5,13 @@ export interface NgoStreakWeek {
   posted: boolean;
 }
 
-export async function fetchNgoStreakCalendar(weeks = 12): Promise<{ weeks: NgoStreakWeek[] }> {
-  return apiFetch<{ weeks: NgoStreakWeek[] }>(`/api/ngo/streaks/calendar?weeks=${weeks}`);
+export interface NgoStreakCalendar {
+  weeks: NgoStreakWeek[];
+  /** Server-computed, uncapped by `weeks`. */
+  current: number;
+  longest: number;
+}
+
+export async function fetchNgoStreakCalendar(weeks = 12): Promise<NgoStreakCalendar> {
+  return apiFetch<NgoStreakCalendar>(`/api/ngo/streaks/calendar?weeks=${weeks}`);
 }

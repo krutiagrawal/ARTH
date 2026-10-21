@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Text } from '../common/AppText';
+import { RequiredMark } from '../common/RequiredMark';
 import { Sheet } from '../common/Sheet';
 import { FormField } from '../common/FormField';
 import { PhoneField } from '../common/PhoneField';
@@ -116,7 +117,7 @@ export function DriveRsvpSheet({ visible, drive, defaultPhone, submitting, error
           {drive.ngoName} will use these details to reach you about “{drive.title}”.
         </Text>
 
-        <PhoneField label="Your phone number" value={phone} onChangeText={setPhone} onBlur={() => touch('phone')} error={phoneError} />
+        <PhoneField required label="Your phone number" value={phone} onChangeText={setPhone} onBlur={() => touch('phone')} error={phoneError} />
 
         {hasTransport && (
           <>
@@ -147,9 +148,9 @@ export function DriveRsvpSheet({ visible, drive, defaultPhone, submitting, error
         )}
 
         <Text style={styles.sectionLabel}>Emergency contact</Text>
-        <FormField label="Name" value={ecName} onChangeText={setEcName} onBlur={() => touch('ecName')} placeholder="Who should we call?" maxLength={100} />
+        <FormField required label="Name" value={ecName} onChangeText={setEcName} onBlur={() => touch('ecName')} placeholder="Who should we call?" maxLength={100} />
         {ecNameError ? <Text style={styles.error}>{ecNameError}</Text> : null}
-        <PhoneField label="Phone number" value={ecPhone} onChangeText={setEcPhone} onBlur={() => touch('ecPhone')} error={ecPhoneError} />
+        <PhoneField required label="Phone number" value={ecPhone} onChangeText={setEcPhone} onBlur={() => touch('ecPhone')} error={ecPhoneError} />
 
         <FormField
           label="Note for the organiser (optional)"
@@ -171,7 +172,7 @@ export function DriveRsvpSheet({ visible, drive, defaultPhone, submitting, error
           <View style={[styles.checkbox, agreed && styles.checkboxChecked, agreedError && styles.checkboxError]}>
             {agreed && <Text style={styles.checkmark}>✓</Text>}
           </View>
-          <Text style={styles.agreeText}>I’ll attend and follow the organiser’s instructions.</Text>
+          <Text style={styles.agreeText}>I’ll attend and follow the organiser’s instructions.<RequiredMark /></Text>
         </TouchableOpacity>
         {agreedError ? <Text style={styles.error}>Please confirm to continue</Text> : null}
 

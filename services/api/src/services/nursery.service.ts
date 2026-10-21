@@ -225,6 +225,9 @@ export async function getOwnStats(prisma: PrismaClient, userId: string) {
 }
 
 interface StockFilter {
+  q?: string;
+  archived?: boolean;
+  sort?: 'newest' | 'oldest' | 'name' | 'quantity' | 'price';
   species?: string;
   native?: boolean;
   availability?: 'available' | 'low_stock' | 'out_of_stock';
@@ -244,26 +247,64 @@ function withAvailability<T extends { quantity: number; lowStockThreshold: numbe
 export async function listStock(prisma: PrismaClient, userId: string, filter: StockFilter & CursorQuery = {}) {
   const profile = await getOwnProfile(prisma, userId);
   const { take, args } = cursorArgs(filter);
+
+  // Availability compares two columns (quantity vs. its own low-stock threshold), which Prisma's
+  // `where` can't express – so the matching ids come from SQL and the page itself stays exact.
+  let availabilityIds: string[] | undefined;
+  if (filter.availability) {
+    const cond =
+      filter.availability === 'out_of_stock'
+        ? Prisma.sql`quantity <= 0`
+        : filter.availability === 'low_stock'
+          ? Prisma.sql`quantity > 0 AND quantity <= low_stock_threshold`
+          : Prisma.sql`quantity > low_stock_threshold`;
+    const matches = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`SELECT id FROM sapling_stock WHERE nursery_id = ${profile.id} AND ${cond}`);
+    availabilityIds = matches.map((m) => m.id);
+  }
+
+  const speciesRefFilter = {
+    ...(filter.native !== undefined ? { isNative: filter.native } : {}),
+    ...(filter.season ? { plantingSeasons: { has: filter.season } } : {}),
+  };
+
+  const orderBy: Prisma.SaplingStockOrderByWithRelationInput[] =
+    filter.sort === 'oldest'
+      ? [{ createdAt: 'asc' }, { id: 'asc' }]
+      : filter.sort === 'name'
+        ? [{ species: 'asc' }, { id: 'asc' }]
+        : filter.sort === 'quantity'
+          ? [{ quantity: 'asc' }, { id: 'asc' }]
+          : filter.sort === 'price'
+            ? [{ priceCents: { sort: 'desc', nulls: 'last' } }, { id: 'asc' }]
+            : [{ createdAt: 'desc' }, { id: 'desc' }];
+
   const fetched = await prisma.saplingStock.findMany({
     where: {
       nurseryId: profile.id,
+      archivedAt: filter.archived ? { not: null } : null,
+      ...(availabilityIds ? { id: { in: availabilityIds } } : {}),
       ...(filter.species ? { species: { contains: filter.species, mode: 'insensitive' } } : {}),
-      ...(filter.native !== undefined ? { speciesRef: { isNative: filter.native } } : {}),
-      ...(filter.season ? { speciesRef: { plantingSeasons: { has: filter.season } } } : {}),
+      ...(Object.keys(speciesRefFilter).length ? { speciesRef: speciesRefFilter } : {}),
+      ...(filter.q
+        ? {
+            OR: [
+              { species: { contains: filter.q, mode: 'insensitive' } },
+              { scientificNameSnap: { contains: filter.q, mode: 'insensitive' } },
+              { ageLabel: { contains: filter.q, mode: 'insensitive' } },
+              { potSize: { contains: filter.q, mode: 'insensitive' } },
+              { nurseryNotes: { contains: filter.q, mode: 'insensitive' } },
+              { speciesRef: { commonName: { contains: filter.q, mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
     },
     include: { speciesRef: true },
-    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    orderBy,
     ...args,
   });
   const hasMore = fetched.length > take;
   const rows = hasMore ? fetched.slice(0, take) : fetched;
-  const withStatus = rows.map(withAvailability);
-  // Availability is derived from quantity/thresholds, not a column, so it filters the page after the
-  // fetch; a filtered page can be short while `nextCursor` still points at more rows.
-  return {
-    items: filter.availability ? withStatus.filter((r) => r.availabilityStatus === filter.availability) : withStatus,
-    nextCursor: hasMore ? rows[rows.length - 1].id : null,
-  };
+  return { items: rows.map(withAvailability), nextCursor: hasMore ? rows[rows.length - 1].id : null };
 }
 
 export async function createStock(prisma: PrismaClient, userId: string, input: StockInput) {
@@ -718,4 +759,53 @@ export async function getStockAnalytics(prisma: PrismaClient, userId: string) {
     currentSpeciesCount: stats.speciesCount,
     currentTotalQuantity: stats.totalQuantity,
   };
+}
+
+/** Header numbers for the stock list (non-archived), plus how many are archived. */
+export async function getStockSummary(prisma: PrismaClient, userId: string) {
+  const profile = await getOwnProfile(prisma, userId);
+  const rows = await prisma.saplingStock.findMany({
+    where: { nurseryId: profile.id, archivedAt: null },
+    select: { quantity: true, lowStockThreshold: true },
+  });
+  const archived = await prisma.saplingStock.count({ where: { nurseryId: profile.id, archivedAt: { not: null } } });
+  let available = 0;
+  let low = 0;
+  let out = 0;
+  let saplings = 0;
+  for (const r of rows) {
+    saplings += Math.max(r.quantity, 0);
+    const a = deriveAvailability(r.quantity, r.lowStockThreshold);
+    if (a === 'available') available += 1;
+    else if (a === 'low_stock') low += 1;
+    else out += 1;
+  }
+  return { total: rows.length, available, low_stock: low, out_of_stock: out, saplings, archived, needsAttention: low + out };
+}
+
+export async function setStockArchived(prisma: PrismaClient, userId: string, stockId: string, archived: boolean) {
+  const profile = await getOwnProfile(prisma, userId);
+  const result = await prisma.saplingStock.updateMany({
+    where: { id: stockId, nurseryId: profile.id },
+    data: { archivedAt: archived ? new Date() : null },
+  });
+  if (result.count === 0) throw new NotFoundError('Stock item not found');
+  return { id: stockId, archived };
+}
+
+export async function exportStock(prisma: PrismaClient, userId: string) {
+  const profile = await getOwnProfile(prisma, userId);
+  const items = await prisma.saplingStock.findMany({ where: { nurseryId: profile.id }, orderBy: { species: 'asc' } });
+  return items.map((i) => ({
+    species: i.species,
+    quantity: i.quantity,
+    availability: i.archivedAt ? 'archived' : deriveAvailability(i.quantity, i.lowStockThreshold),
+    lowStockThreshold: i.lowStockThreshold,
+    priceRupees: i.isFree ? 'free' : i.priceCents != null ? i.priceCents / 100 : '',
+    age: i.ageLabel ?? '',
+    height: i.heightLabel ?? '',
+    potSize: i.potSize ?? '',
+    notes: i.nurseryNotes ?? '',
+    addedOn: i.createdAt.toISOString(),
+  }));
 }

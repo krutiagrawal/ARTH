@@ -38,9 +38,14 @@ export interface PortfolioInput {
   partnerOrgs?: string;
   sortOrder?: number;
   photos?: PickedPhoto[];
+  /** Update only: ids of already-stored photos to delete (new `photos` are appended). */
+  removeMediaIds?: string[];
 }
 
-function toForm(input: Partial<PortfolioInput>): FormData {
+/** Text fields an edit may blank out; numbers can't be cleared over multipart so they never are. */
+const CLEARABLE_TEXT = ['description', 'locationLabel', 'city', 'partnerOrgs'];
+
+function toForm(input: Partial<PortfolioInput>, isUpdate = false): FormData {
   const form = new FormData();
   const scalar: [string, unknown][] = [
     ['title', input.title],
@@ -55,7 +60,9 @@ function toForm(input: Partial<PortfolioInput>): FormData {
   ];
   for (const [key, value] of scalar) {
     if (value !== undefined && value !== null && value !== '') form.append(key, String(value));
+    else if (isUpdate && value === '' && CLEARABLE_TEXT.includes(key)) form.append(key, '');
   }
+  if (input.removeMediaIds?.length) form.append('removeMediaIds', JSON.stringify(input.removeMediaIds));
   for (const photo of input.photos ?? []) {
     form.append('photos', toFormFile(photo.uri), photo.name);
   }
@@ -79,8 +86,8 @@ export async function createPortfolioEntry(input: PortfolioInput): Promise<ApiPo
 }
 
 /**
- * Photos are replaced wholesale when `photos` is supplied and left alone when it is omitted –
- * so an edit that only changes the title must not pass an empty array.
+ * Photos are edited incrementally: `photos` are appended and `removeMediaIds` deleted; leaving
+ * both out keeps the photos as they are.
  */
 export async function updatePortfolioEntry(
   id: string,
@@ -88,7 +95,7 @@ export async function updatePortfolioEntry(
 ): Promise<ApiPortfolioEntry> {
   return apiFetch<ApiPortfolioEntry>(`/api/ngo/portfolio/${id}`, {
     method: 'PATCH',
-    body: toForm(input),
+    body: toForm(input, true),
     isForm: true,
   });
 }

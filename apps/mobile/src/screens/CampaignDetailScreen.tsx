@@ -1,6 +1,7 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl, Switch } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
+import { RequiredMark } from '../components/common/RequiredMark';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -214,7 +215,7 @@ export function CampaignDetailScreen({ navigation, route }: any) {
             </View>
           ) : (
             <>
-              <Text style={styles.fieldLabel}>Choose an amount</Text>
+              <Text style={styles.fieldLabel}>Choose an amount<RequiredMark /></Text>
               <View style={styles.chipRow}>
                 {AMOUNT_CHIPS.filter((amt) => capRupees == null || amt <= capRupees).map((amt) => (
                   <TouchableOpacity

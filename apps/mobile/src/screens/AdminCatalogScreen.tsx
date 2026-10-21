@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
+import { RequiredMark } from '../components/common/RequiredMark';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -143,7 +144,7 @@ export function AdminCatalogScreen() {
         <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
           {config.hasKey && (
             <View style={styles.field}>
-              <Text style={styles.sheetLabel}>key *</Text>
+              <Text style={styles.sheetLabel}>key<RequiredMark /></Text>
               <TextInput
                 style={styles.sheetInput}
                 value={form.key ?? ''}
@@ -155,7 +156,7 @@ export function AdminCatalogScreen() {
           )}
           {config.fields.map((f) => (
             <View key={f.name} style={styles.field}>
-              <Text style={styles.sheetLabel}>{f.name}{f.required ? ' *' : ''}</Text>
+              <Text style={styles.sheetLabel}>{f.name}{f.required ? <RequiredMark /> : null}</Text>
               {f.type === 'checkbox' ? (
                 <TouchableOpacity
                   style={[styles.checkboxRow]}

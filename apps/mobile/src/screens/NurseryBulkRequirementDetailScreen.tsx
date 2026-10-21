@@ -227,7 +227,7 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
               <Text style={styles.sectionTitle}>{req.myResponse ? 'Send a new offer' : 'Respond with an offer'}</Text>
               <View style={styles.inlineRow}>
                 <View style={styles.inlineField}>
-                  <FormField label="Quantity offered" value={quantityOffered} onChangeText={setQuantityOffered} placeholder="eg - 0" keyboardType="number-pad" />
+                  <FormField required label="Quantity offered" value={quantityOffered} onChangeText={setQuantityOffered} placeholder="eg - 0" keyboardType="number-pad" />
                 </View>
                 <View style={styles.inlineField}>
                   <FormField label="Price per unit ₹ (optional)" value={priceCents} onChangeText={setPriceCents} placeholder="eg - 0" keyboardType="number-pad" />

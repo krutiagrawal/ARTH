@@ -69,7 +69,25 @@ export interface Award {
   issuer?: string;
 }
 
+export type NgoDocumentType =
+  | 'registration_certificate'
+  | 'twelve_a_certificate'
+  | 'eighty_g_certificate'
+  | 'fcra_certificate'
+  | 'csr1_certificate'
+  | 'authorization_proof'
+  | 'past_work_photo';
+
+export interface ApiNgoDocument {
+  id: string;
+  docType: NgoDocumentType;
+  fileUrl: string;
+  uploadedAt: string;
+}
+
 export interface ApiNgoProfile extends NgoRegistrationDetails {
+  /** Verification documents uploaded at registration (own profile only). */
+  documents?: ApiNgoDocument[];
   id: string;
   orgName: string;
   description: string;
@@ -176,6 +194,7 @@ export interface ApiNgoStats {
   totalRsvps: number;
   treesAvailable: number;
   treesAdopted: number;
+  treesPlanted: number;
   totalRaisedCents: number;
   communitiesReached: number;
   volunteersInvolved: number;
@@ -293,4 +312,16 @@ export async function fetchNgoVolunteers(cursor?: string): Promise<Page<ApiVolun
  * here afterward. */
 export async function removeNgoVolunteer(userId: string): Promise<{ cancelledCount: number }> {
   return apiFetch<{ cancelledCount: number }>(`/api/ngo/volunteers/${userId}`, { method: 'DELETE' });
+}
+
+/** Uploads/replaces one verification document. Legal documents are refused once the NGO is approved. */
+export async function uploadNgoDocument(docType: NgoDocumentType, file: { uri: string; name: string; type: string }): Promise<ApiNgoProfile> {
+  const form = new FormData();
+  form.append('docType', docType);
+  form.append('file', await toFormBlob(file.uri, file.type, 'Document'), file.name);
+  return apiFetch<ApiNgoProfile>('/api/ngo/profile/documents', { method: 'POST', body: form, isForm: true });
+}
+
+export async function deleteNgoDocument(id: string): Promise<ApiNgoProfile> {
+  return apiFetch<ApiNgoProfile>(`/api/ngo/profile/documents/${id}`, { method: 'DELETE' });
 }

@@ -4,9 +4,11 @@ import { Text, TextInput } from './AppText';
 import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
 import { RADIUS, SPACING } from '../../constants/theme';
 import { useHaptics } from '../../hooks/useHaptics';
+import { RequiredMark } from './RequiredMark';
 
 interface ChipListFieldProps {
   label?: string;
+  required?: boolean;
   hint?: string;
   placeholder?: string;
   values: string[];
@@ -30,6 +32,7 @@ interface ChipListFieldProps {
  */
 export function ChipListField({
   label,
+  required,
   hint,
   placeholder,
   values,
@@ -85,7 +88,12 @@ export function ChipListField({
 
   return (
     <View style={styles.wrap}>
-      {label ? <Text style={[styles.label, dark && styles.labelDark]}>{label}</Text> : null}
+      {label ? (
+        <Text style={[styles.label, dark && styles.labelDark]}>
+          {label}
+          {required ? <RequiredMark dark={dark} /> : null}
+        </Text>
+      ) : null}
       {hint ? <Text style={[styles.hint, dark && styles.hintDark]}>{hint}</Text> : null}
 
       {values.length > 0 && (

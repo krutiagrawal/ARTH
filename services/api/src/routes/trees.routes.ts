@@ -1,3 +1,4 @@
+import { toCsv } from '../utils/csv';
 import { FastifyInstance } from 'fastify';
 import { MultipartFile } from '@fastify/multipart';
 import { plantTreeSchema, updateTreeSchema, logOwnObservationSchema } from '../schemas/trees.schema';
@@ -48,6 +49,26 @@ function serializeTree(tree: any) {
 }
 
 export default async function treesRoutes(fastify: FastifyInstance) {
+  // CSV of the caller's trees, as JSON ({ csv }) for the app's share sheet.
+  fastify.get('/mine/export', async (request, reply) => {
+    const trees = await fastify.prisma.tree.findMany({
+      where: { userId: request.user!.id, isDeleted: false },
+      include: { species: true },
+      orderBy: { plantedAt: 'desc' },
+    });
+    const rows = trees.map((t) => ({
+      id: t.publicId,
+      nickname: t.nickname,
+      species: t.species.commonName,
+      plantedOn: t.plantedAt.toISOString(),
+      location: t.locationLabel ?? '',
+      health: t.healthStatus,
+      growthStage: t.growthStage,
+      co2AbsorbedKg: t.co2Absorbed,
+    }));
+    reply.send({ csv: toCsv(rows), count: rows.length });
+  });
+
   fastify.get<{ Querystring: { limit?: string; page?: string } }>('/', async (request, reply) => {
     const limit = Math.min(Number(request.query.limit) || 50, 100);
     const page = Math.max(Number(request.query.page) || 1, 1);

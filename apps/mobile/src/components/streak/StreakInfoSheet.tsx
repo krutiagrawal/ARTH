@@ -41,6 +41,42 @@ const SECTIONS: { icon: string; title: string; body: (n: { every: number; cap: n
   },
 ];
 
+const WEEKLY_SECTIONS: typeof SECTIONS = [
+  {
+    icon: '🔥',
+    title: 'What counts',
+    body: () =>
+      'Your streak is the number of weeks in a row with at least one activity: a post, a drive, planted trees, stock or orders, or finishing the daily lesson or a game.',
+  },
+  {
+    icon: '⚠️',
+    title: 'Streak at risk',
+    body: () => "You were active last week but haven't done anything yet this week. Do one thing before Sunday to keep it going.",
+  },
+  {
+    icon: '🧊',
+    title: 'Streak freeze',
+    body: ({ every, cap }) =>
+      `A freeze covers this week without any activity. You start with 2, earn another every ${every} weeks of streak, and can hold up to ${cap}.`,
+  },
+  {
+    icon: '⚡',
+    title: 'Spending XP',
+    body: ({ xpCost }) => `No freezes left? ${xpCost} XP does the same job – to protect this week, or to revive a missed one. Lessons and games earn XP.`,
+  },
+  {
+    icon: '💔',
+    title: 'Missed a week',
+    body: () =>
+      'If you missed exactly one week, you can revive the streak with a freeze or XP and carry on from where you were. Miss two or more weeks and the streak starts over.',
+  },
+  {
+    icon: '🏆',
+    title: 'Your best streak',
+    body: () => 'Your best streak is never lost, even when the current streak resets.',
+  },
+];
+
 function Stat({ value, label }: { value: string; label: string }) {
   return (
     <View style={styles.stat}>
@@ -69,7 +105,7 @@ export function StreakInfoSheet({ visible, onClose }: { visible: boolean; onClos
             You have {status.xp} XP · a save costs {status.xpCost}
           </Text>
 
-          {SECTIONS.map((s) => (
+          {(status.weekly ? WEEKLY_SECTIONS : SECTIONS).map((s) => (
             <View key={s.title} style={styles.section}>
               <Text style={styles.sectionIcon}>{s.icon}</Text>
               <View style={styles.sectionText}>

@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Image, RefreshControl, AppState, Keyboard, Alert, Animated as RNAnimated, PanResponder } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
+import { RequiredMark } from '../components/common/RequiredMark';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -905,7 +906,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
           </View>
 
           <View style={styles.speciesLabelRow}>
-            <Text style={styles.detailsLabel}>Choose Species</Text>
+            <Text style={styles.detailsLabel}>Choose Species<RequiredMark /></Text>
           </View>
 
           <View style={styles.speciesGrid}>
@@ -973,7 +974,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
 
           {showAddSpecies && (
             <BorderCard style={styles.addSpeciesCard}>
-              <Text style={styles.detailsLabel}>Species name</Text>
+              <Text style={styles.detailsLabel}>Species name<RequiredMark /></Text>
               <TextInput
                 style={styles.nicknameInput}
                 value={newSpeciesName}

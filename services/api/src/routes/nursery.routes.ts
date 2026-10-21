@@ -4,6 +4,7 @@ import * as orderService from '../services/order.service';
 import { saveNurseryLogo, saveNurseryCoverPhoto, saveStockPhoto } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
 import { BadRequestError } from '../utils/errors';
+import { toCsv } from '../utils/csv';
 import {
   updateNurseryProfileSchema,
   createSaplingStockSchema,
@@ -138,11 +139,14 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
     reply.send(await nurseryService.getImpact(fastify.prisma, request.user!.id));
   });
 
-  fastify.get<{ Querystring: { species?: string; native?: string; availability?: string; season?: string; cursor?: string; take?: string } }>(
+  fastify.get<{ Querystring: { q?: string; sort?: string; archived?: string; species?: string; native?: string; availability?: string; season?: string; cursor?: string; take?: string } }>(
     '/stock',
     async (request, reply) => {
       reply.send(
         await nurseryService.listStock(fastify.prisma, request.user!.id, {
+          q: request.query.q?.trim() || undefined,
+          sort: request.query.sort as any,
+          archived: request.query.archived === 'true',
           species: request.query.species,
           native: request.query.native !== undefined ? isTrue(request.query.native) : undefined,
           availability: request.query.availability as any,
@@ -153,6 +157,20 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
       );
     },
   );
+
+  fastify.get('/stock/summary', async (request, reply) => {
+    reply.send(await nurseryService.getStockSummary(fastify.prisma, request.user!.id));
+  });
+
+  // CSV as JSON ({ csv }) so the app can hand the text straight to the share sheet.
+  fastify.get('/stock/export', async (request, reply) => {
+    const rows = await nurseryService.exportStock(fastify.prisma, request.user!.id);
+    reply.send({ csv: toCsv(rows), count: rows.length });
+  });
+
+  fastify.post<{ Params: { id: string }; Body: { archived?: boolean } }>('/stock/:id/archive', async (request, reply) => {
+    reply.send(await nurseryService.setStockArchived(fastify.prisma, request.user!.id, request.params.id, request.body?.archived !== false));
+  });
 
   fastify.post('/stock', async (request, reply) => {
     const isMultipart = (request.headers['content-type'] ?? '').includes('multipart/form-data');
@@ -241,11 +259,25 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
 
   // ---------- Marketplace orders (paid cart checkouts — distinct from the free /reservations flow) ----------
 
-  fastify.get<{ Querystring: { status?: string; fulfillmentType?: string; cursor?: string; take?: string } }>('/orders', async (request, reply) => {
+  fastify.get('/orders/summary', async (request, reply) => {
+    const profile = await nurseryService.getOwnProfile(fastify.prisma, request.user!.id);
+    reply.send(await orderService.getNurseryOrdersSummary(fastify.prisma, profile.id));
+  });
+
+  fastify.get('/orders/export', async (request, reply) => {
+    const profile = await nurseryService.getOwnProfile(fastify.prisma, request.user!.id);
+    const rows = await orderService.exportNurseryOrders(fastify.prisma, profile.id);
+    reply.send({ csv: toCsv(rows), count: rows.length });
+  });
+
+  fastify.get<{ Querystring: { status?: string; group?: string; q?: string; sort?: string; fulfillmentType?: string; cursor?: string; take?: string } }>('/orders', async (request, reply) => {
     const profile = await nurseryService.getOwnProfile(fastify.prisma, request.user!.id);
     reply.send(
       await orderService.listNurseryOrders(fastify.prisma, profile.id, {
         status: request.query.status,
+        group: request.query.group as any,
+        q: request.query.q?.trim() || undefined,
+        sort: request.query.sort as any,
         fulfillmentType: request.query.fulfillmentType,
         cursor: request.query.cursor,
         take: request.query.take,

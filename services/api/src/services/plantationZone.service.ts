@@ -295,3 +295,28 @@ export async function bulkMarkZoneHealth(prisma: PrismaClient, ngoUserId: string
 
   return logBulkHealthChecks(prisma, ngoUserId, { plantedTreeIds: trees.map((t) => t.id), status, notes });
 }
+
+/**
+ * Moves already-logged trees into a zone (or back to "Unzoned" with `zoneId: null`). Zones belong
+ * to one drive, so every tree must be in the same drive as the target zone.
+ */
+export async function moveTreesToZone(prisma: PrismaClient, ngoUserId: string, plantedTreeIds: string[], zoneId: string | null) {
+  const ngo = await requireApprovedNgoProfile(prisma, ngoUserId);
+
+  const trees = await prisma.plantedTree.findMany({
+    where: { id: { in: plantedTreeIds }, ngoId: ngo.id },
+    select: { id: true, driveId: true },
+  });
+  if (trees.length !== new Set(plantedTreeIds).size) throw new NotFoundError('Some of these trees were not found');
+
+  if (zoneId) {
+    const zone = await prisma.plantationZone.findFirst({ where: { id: zoneId, ngoId: ngo.id } });
+    if (!zone) throw new NotFoundError('Zone not found');
+    if (trees.some((t) => t.driveId !== zone.driveId)) {
+      throw new ConflictError('A zone only holds trees from its own drive');
+    }
+  }
+
+  const result = await prisma.plantedTree.updateMany({ where: { id: { in: trees.map((t) => t.id) } }, data: { zoneId } });
+  return { movedCount: result.count };
+}

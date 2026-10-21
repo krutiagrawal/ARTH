@@ -3,6 +3,7 @@ import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Text } from './AppText';
 import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
 import { RADIUS, SPACING } from '../../constants/theme';
+import { RequiredMark } from './RequiredMark';
 
 export interface SelectOption {
   value: string;
@@ -13,6 +14,8 @@ export interface SelectOption {
 
 interface BaseProps {
   label?: string;
+  /** Marks the field mandatory with a red asterisk after the label. */
+  required?: boolean;
   hint?: string;
   options: SelectOption[];
   /** Matches the translucent-white chrome used on night-gradient screens (signup wizards). */
@@ -42,7 +45,7 @@ interface MultiSelectProps extends BaseProps {
  * mid-form; a whole category picker fits and resolves in one glance/tap here.
  */
 export function SelectField(props: SingleSelectProps | MultiSelectProps) {
-  const { label, hint, options, dark, layout = 'chips' } = props;
+  const { label, required, hint, options, dark, layout = 'chips' } = props;
 
   const isSelected = (v: string) => (props.multi ? props.value.includes(v) : props.value === v);
   const toggle = (v: string) => {
@@ -58,7 +61,12 @@ export function SelectField(props: SingleSelectProps | MultiSelectProps) {
 
   return (
     <View style={styles.wrap}>
-      {label ? <Text style={[styles.label, dark && styles.labelDark]}>{label}</Text> : null}
+      {label ? (
+        <Text style={[styles.label, dark && styles.labelDark]}>
+          {label}
+          {required ? <RequiredMark dark={dark} /> : null}
+        </Text>
+      ) : null}
       {hint ? <Text style={[styles.hint, dark && styles.hintDark]}>{hint}</Text> : null}
       {layout !== 'chips' ? (
         <View style={layout === 'grid' ? styles.gridWrap : styles.listWrap}>

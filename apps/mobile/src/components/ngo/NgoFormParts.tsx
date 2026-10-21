@@ -1,3 +1,4 @@
+import { RequiredMark } from '../common/RequiredMark';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -48,6 +49,7 @@ function useFieldError(name: string | undefined, ref: React.RefObject<View | nul
 export function NgoField({
   name,
   label,
+  required,
   optional,
   hint,
   error,
@@ -57,6 +59,8 @@ export function NgoField({
   /** Key matched against the wizard's current validation error. */
   name?: string;
   label: string;
+  /** Red asterisk after the label – set on every field the wizard's validation requires. */
+  required?: boolean;
   optional?: boolean;
   hint?: string;
   error?: string | null;
@@ -67,7 +71,10 @@ export function NgoField({
   return (
     <View ref={ref} style={styles.field}>
       <View style={styles.labelRow}>
-        <Text style={styles.label}>{label}</Text>
+        <Text style={styles.label}>
+          {label}
+          {required ? <RequiredMark dark /> : null}
+        </Text>
         {optional && <Text style={styles.optionalTag}>Optional</Text>}
       </View>
       <TextInput

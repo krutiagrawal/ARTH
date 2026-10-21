@@ -3,8 +3,8 @@ import { notify } from '../services/notification.service';
 import { startOfUtcDay, addDays } from '../services/streak.service';
 import { hasRecentNotification } from './dedupe';
 
-// Weekly analog of streaks.job.ts, scoped to the NGO Updates Streak (NgoContributionStreak,
-// streakType 'updates') instead of the daily User.streakCurrent — an NGO's cadence is
+// Weekly analog of streaks.job.ts, over the NGO's combined activity streak (any NgoContributionStreak
+// row – posts, drives, trees, lessons, freezes) instead of the daily User.streakCurrent — an NGO's cadence is
 // per-Monday-week, not per-day, so "at risk"/"broken" are both defined in week terms.
 
 function mondayOf(date: Date): Date {
@@ -18,7 +18,7 @@ function mondayOf(date: Date): Date {
 // same spirit as streaks.job.ts's evening-hour window but scaled to a week instead of a day.
 const AT_RISK_DAYS = new Set([5, 6, 0]);
 
-/** NGOs who met the Updates Streak last week but haven't posted anything this week yet. */
+/** NGOs who met the Updates Streak last week but haven't done anything this week yet. */
 export async function runNgoStreakAtRiskJob(prisma: PrismaClient): Promise<void> {
   const now = new Date();
   if (!AT_RISK_DAYS.has(now.getUTCDay())) return;
@@ -34,7 +34,7 @@ export async function runNgoStreakAtRiskJob(prisma: PrismaClient): Promise<void>
     if (ngos.length === 0) return;
 
     const rows = await prisma.ngoContributionStreak.findMany({
-      where: { ngoId: { in: ngos.map((n) => n.id) }, streakType: 'updates', periodStart: { in: [thisWeek, lastWeek] } },
+      where: { ngoId: { in: ngos.map((n) => n.id) }, periodStart: { in: [thisWeek, lastWeek] } },
     });
     const metThisWeek = new Set(rows.filter((r) => r.metCriteria && r.periodStart.getTime() === thisWeek.getTime()).map((r) => r.ngoId));
     const metLastWeek = new Set(rows.filter((r) => r.metCriteria && r.periodStart.getTime() === lastWeek.getTime()).map((r) => r.ngoId));
@@ -47,7 +47,7 @@ export async function runNgoStreakAtRiskJob(prisma: PrismaClient): Promise<void>
       await notify(prisma, {
         userId: ngo.userId,
         type: 'ngo_streak_at_risk',
-        push: { title: '🔥 Your Updates Streak is at risk!', body: 'Post an update before the week ends to keep it alive.' },
+        push: { title: '🔥 Your streak is at risk!', body: 'Post, run a drive or finish a lesson before the week ends – or use a streak freeze.' },
       });
     }
   } catch (error) {
@@ -55,7 +55,7 @@ export async function runNgoStreakAtRiskJob(prisma: PrismaClient): Promise<void>
   }
 }
 
-/** NGOs who let a full week pass with no update posted, i.e. the streak has actually broken.
+/** NGOs who let a full week pass with no activity, i.e. the streak has actually broken.
  * Dedup compares against the last-met week (not a time window), same convention as
  * streaks.job.ts's runStreakBrokenJob. */
 export async function runNgoStreakBrokenJob(prisma: PrismaClient): Promise<void> {
@@ -67,7 +67,7 @@ export async function runNgoStreakBrokenJob(prisma: PrismaClient): Promise<void>
 
     for (const ngo of ngos) {
       const lastMet = await prisma.ngoContributionStreak.findFirst({
-        where: { ngoId: ngo.id, streakType: 'updates', metCriteria: true },
+        where: { ngoId: ngo.id, metCriteria: true },
         orderBy: { periodStart: 'desc' },
         select: { periodStart: true },
       });
@@ -79,7 +79,7 @@ export async function runNgoStreakBrokenJob(prisma: PrismaClient): Promise<void>
       await notify(prisma, {
         userId: ngo.userId,
         type: 'ngo_streak_broken',
-        push: { title: 'Your Updates Streak broke 💔', body: 'Post an update to start a new one.' },
+        push: { title: 'Your streak broke 💔', body: 'Revive it with a freeze or XP, or post an update to start a new one.' },
       });
     }
   } catch (error) {

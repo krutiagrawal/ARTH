@@ -1,4 +1,4 @@
-import { PrismaClient, NgoOrgType, Prisma } from '@arth/db';
+import { PrismaClient, NgoOrgType, NgoDocumentType, Prisma } from '@arth/db';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
 import { notify } from './notification.service';
 import { computeSurvivalStats } from './plantedTree.service';
@@ -85,8 +85,11 @@ interface DonationsFilter {
   take?: number;
 }
 
+// Registration documents come back with the profile so the edit screens can show what was uploaded.
+const documentsInclude = { verificationDocuments: { orderBy: { uploadedAt: 'asc' as const } } };
+
 export async function getOwnProfile(prisma: PrismaClient, userId: string) {
-  const profile = await prisma.ngoProfile.findUnique({ where: { userId } });
+  const profile = await prisma.ngoProfile.findUnique({ where: { userId }, include: documentsInclude });
   if (!profile) throw new NotFoundError('NGO profile not found');
   return profile;
 }
@@ -143,7 +146,11 @@ export async function updateOwnProfile(prisma: PrismaClient, userId: string, inp
     }
   }
 
-  const updated = await prisma.ngoProfile.update({ where: { id: profile.id }, data: input as Prisma.NgoProfileUpdateInput });
+  const updated = await prisma.ngoProfile.update({
+    where: { id: profile.id },
+    data: input as Prisma.NgoProfileUpdateInput,
+    include: documentsInclude,
+  });
 
   // Switching to "open" means follows no longer need approval — without this, any request that
   // queued up while policy was "approval" would sit `pending` forever, since nothing else ever
@@ -172,7 +179,50 @@ export async function resubmitProfile(prisma: PrismaClient, userId: string) {
   return prisma.ngoProfile.update({
     where: { id: profile.id },
     data: { status: 'pending', rejectionReason: null, approvedAt: null, approvedByUserId: null },
+    include: documentsInclude,
   });
+}
+
+const MAX_PAST_WORK_PHOTOS = 5;
+
+/** Legal documents are verified at approval, so they lock like the other legal fields; past-work photos stay editable. */
+function assertDocumentsEditable(profile: { status: string }, docType: NgoDocumentType) {
+  if (docType !== 'past_work_photo' && (profile.status === 'approved' || profile.status === 'suspended')) {
+    throw new ForbiddenError('Verification documents are locked once your account is approved. Contact support to change them.');
+  }
+}
+
+/**
+ * Uploads one verification document. A single-copy type (certificate, authorisation proof) replaces
+ * the one on file; past-work photos are added up to the registration limit.
+ */
+export async function addVerificationDocument(prisma: PrismaClient, userId: string, docType: NgoDocumentType, fileUrl: string) {
+  const profile = await prisma.ngoProfile.findUnique({ where: { userId } });
+  if (!profile) throw new NotFoundError('NGO profile not found');
+  assertDocumentsEditable(profile, docType);
+
+  await prisma.$transaction(async (tx) => {
+    if (docType === 'past_work_photo') {
+      const count = await tx.ngoVerificationDocument.count({ where: { ngoId: profile.id, docType } });
+      if (count >= MAX_PAST_WORK_PHOTOS) throw new BadRequestError(`At most ${MAX_PAST_WORK_PHOTOS} past-work photos`);
+    } else {
+      await tx.ngoVerificationDocument.deleteMany({ where: { ngoId: profile.id, docType } });
+    }
+    await tx.ngoVerificationDocument.create({ data: { ngoId: profile.id, docType, fileUrl } });
+  });
+  return getOwnProfile(prisma, userId);
+}
+
+export async function removeVerificationDocument(prisma: PrismaClient, userId: string, documentId: string) {
+  const profile = await prisma.ngoProfile.findUnique({ where: { userId } });
+  if (!profile) throw new NotFoundError('NGO profile not found');
+  const doc = await prisma.ngoVerificationDocument.findFirst({ where: { id: documentId, ngoId: profile.id } });
+  if (!doc) throw new NotFoundError('Document not found');
+  assertDocumentsEditable(profile, doc.docType);
+  // Proof of authority is required to register, so it can be replaced but never left empty.
+  if (doc.docType === 'authorization_proof') throw new BadRequestError('Proof of authorisation is required – upload a new one to replace it.');
+  await prisma.ngoVerificationDocument.delete({ where: { id: doc.id } });
+  return getOwnProfile(prisma, userId);
 }
 
 // Used by drives/adoptions/donations create-routes to gate content creation
@@ -212,6 +262,7 @@ export async function getOwnStats(prisma: PrismaClient, userId: string) {
     distinctLocations,
     distinctVolunteers,
     totalDrives,
+    treesPlanted,
     recentRsvps,
     recentDonations,
     recentAdoptions,
@@ -242,6 +293,7 @@ export async function getOwnStats(prisma: PrismaClient, userId: string) {
     }),
     // Total drives, all-time — vs. upcomingDrives above which filters status:'upcoming'.
     prisma.drive.count({ where: { ngoId: ngo.id } }),
+    prisma.plantedTree.count({ where: { ngoId: ngo.id } }),
     prisma.driveRsvp.findMany({
       where: { status: 'confirmed', drive: { ngoId: ngo.id } },
       orderBy: { createdAt: 'desc' },
@@ -312,6 +364,7 @@ export async function getOwnStats(prisma: PrismaClient, userId: string) {
     communitiesReached,
     volunteersInvolved,
     totalDrives,
+    treesPlanted,
     // Estimated from each tree's species and age (see lib/treeImpact.ts), not a flat per-tree rate.
     co2AbsorptionKg: impact.co2Kg,
     oxygenKg: impact.oxygenKg,

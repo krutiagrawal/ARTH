@@ -8,7 +8,9 @@ import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
-import { useMyOrders, useCancelOrder } from '../hooks/useApiQueries';
+import { useMyOrders, useCancelOrder, useMyOrdersSummary } from '../hooks/useApiQueries';
+import { ListFilterBar } from '../components/common/ListFilterBar';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { flattenPages, infiniteScrollProps } from '../hooks/useInfiniteList';
 import { PageFooter } from '../components/common/PageFooter';
@@ -116,31 +118,17 @@ function OrderRow({ order, navigation }: { order: ApiOrder; navigation: any }) {
 
 export function MyOrdersScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const query = useMyOrders();
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<'active' | 'completed' | 'cancelled' | null>(null);
+  const [sort, setSort] = useState<'newest' | 'oldest' | 'highest'>('newest');
+  const q = useDebouncedValue(search.trim());
+  const query = useMyOrders({ q: q || undefined, group: filter ?? undefined, sort });
   const { isLoading, refetch } = query;
   const orders = flattenPages(query.data);
-  const { refreshing, onRefresh } = usePullToRefresh(refetch);
-  const [filter, setFilter] = useState<Filter>('all');
-  const [search, setSearch] = useState('');
-
-  const counts = useMemo(() => {
-    const c: Record<Filter, number> = { all: orders.length, active: 0, completed: 0, cancelled: 0 };
-    for (const o of orders) c[bucket(o.status)] += 1;
-    return c;
-  }, [orders]);
-
-  const visible = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return orders.filter((o) => {
-      if (filter !== 'all' && bucket(o.status) !== filter) return false;
-      if (!q) return true;
-      return (
-        o.nursery.nurseryName.toLowerCase().includes(q) ||
-        o.id.toLowerCase().includes(q) ||
-        o.items.some((i) => i.species.toLowerCase().includes(q))
-      );
-    });
-  }, [orders, filter, search]);
+  const summaryQuery = useMyOrdersSummary();
+  const summary = summaryQuery.data;
+  const { refreshing, onRefresh } = usePullToRefresh([refetch, summaryQuery.refetch]);
+  const isFiltering = !!q || !!filter;
 
   return (
     <View style={styles.container}>
@@ -159,25 +147,35 @@ export function MyOrdersScreen({ navigation }: any) {
 
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
-      ) : orders.length === 0 ? (
+      ) : orders.length === 0 && !isFiltering ? (
         <EmptyState icon="📦" title="No orders yet" body="Saplings you buy from nurseries will show up here." />
       ) : (
         <>
-          <TextInput
-            style={styles.search}
-            value={search}
-            onChangeText={setSearch}
+          <ListFilterBar
+            query={search}
+            onQueryChange={setSearch}
             placeholder="Search by nursery, sapling or order #"
-            placeholderTextColor={COLORS.textMuted}
-            autoCorrect={false}
+            options={[
+              { key: null, label: 'All' },
+              { key: 'active', label: 'Active' },
+              { key: 'completed', label: 'Completed' },
+              { key: 'cancelled', label: 'Cancelled' },
+            ]}
+            value={filter}
+            onChange={setFilter}
+            rows={[
+              {
+                label: 'Sort',
+                options: [
+                  { key: 'newest', label: 'Newest' },
+                  { key: 'oldest', label: 'Oldest' },
+                  { key: 'highest', label: 'Highest value' },
+                ],
+                value: sort,
+                onChange: (k) => setSort((k ?? 'newest') as 'newest' | 'oldest' | 'highest'),
+              },
+            ]}
           />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
-            {FILTERS.map((f) => (
-              <TouchableOpacity key={f.key} onPress={() => setFilter(f.key)} style={[styles.chip, filter === f.key && styles.chipActive]} activeOpacity={0.8}>
-                <Text style={[styles.chipText, filter === f.key && styles.chipTextActive]}>{f.label} ({counts[f.key]})</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
           <ScrollView
             contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
             showsVerticalScrollIndicator={false}
@@ -185,10 +183,10 @@ export function MyOrdersScreen({ navigation }: any) {
             {...infiniteScrollProps(query)}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
           >
-            {visible.length === 0 ? (
+            {orders.length === 0 ? (
               <Text style={styles.noneText}>No matching orders.</Text>
             ) : (
-              visible.map((order) => <OrderRow key={order.id} order={order} navigation={navigation} />)
+              orders.map((order) => <OrderRow key={order.id} order={order} navigation={navigation} />)
             )}
             <PageFooter loading={query.isFetchingNextPage} />
           </ScrollView>

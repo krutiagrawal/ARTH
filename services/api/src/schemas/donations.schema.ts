@@ -41,11 +41,16 @@ export const listCampaignsQuerySchema = z.object({
 
 export const ownedListQuerySchema = z.object({
   q: z.string().max(200).optional(),
+  status: z.enum(['active', 'closed']).optional(),
+  category: z.enum(CAMPAIGN_CATEGORIES).optional(),
+  archived: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
+  sort: z.enum(['newest', 'oldest', 'ending_soon', 'goal']).optional(),
   page: z.coerce.number().int().min(1).optional(),
   take: z.coerce.number().int().min(1).max(50).optional(),
 });
 
 export const myDonationsQuerySchema = z.object({
+  sort: z.enum(['newest', 'oldest', 'amount']).optional(),
   q: z.string().trim().max(200).optional(),
   status: z.enum(['succeeded', 'pending', 'failed', 'refunded']).optional(),
   period: z.enum(['30d', '6m', '1y']).optional(),

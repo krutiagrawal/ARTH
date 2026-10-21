@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
+import { FieldLabel } from '../components/common/RequiredMark';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -198,7 +199,7 @@ export function AddressBookScreen({ navigation }: any) {
           {showForm ? (
             <BorderCard style={styles.card}>
               <AddressSearchField
-                label="Address"
+                required label="Address"
                 value={line1}
                 onChangeText={(text) => {
                   handleLine1Change(text);
@@ -211,6 +212,7 @@ export function AddressBookScreen({ navigation }: any) {
                   setLocationNotice(null);
                 }}
               />
+              <FieldLabel label="Pincode" required />
               <TextInput
                 style={[styles.input, { marginTop: 12 }]}
                 placeholder="eg - Pincode"

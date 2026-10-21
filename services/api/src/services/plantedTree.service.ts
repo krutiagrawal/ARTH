@@ -1,3 +1,4 @@
+import { estimateTreeImpact, round1 } from '../lib/treeImpact';
 import { PrismaClient, TreeHealthStatus, generatePublicId } from '@arth/db';
 
 // 'not_checked' is a derived absence-of-check state, never something you can actually log a
@@ -199,10 +200,69 @@ async function findOwnedPlantedTreeForRead(prisma: PrismaClient, ngoUserId: stri
   return tree;
 }
 
+const CHECK_MILESTONE_DAYS = [30, 90, 180, 365];
+
 export async function getPlantedTreeDetail(prisma: PrismaClient, ngoUserId: string, plantedTreeId: string) {
   const tree = await findOwnedPlantedTreeForRead(prisma, ngoUserId, plantedTreeId);
   const statusByTree = await getLatestStatusByTree(prisma, [tree.id]);
-  return { ...tree, latestStatus: statusByTree.get(tree.id) ?? 'not_checked' };
+  const latestStatus = statusByTree.get(tree.id) ?? 'not_checked';
+
+  const [checks, listing, observations] = await Promise.all([
+    prisma.treeHealthCheck.findMany({ where: { plantedTreeId: tree.id }, orderBy: { checkedAt: 'desc' }, select: { checkedAt: true } }),
+    // The adoption listing made from this tree (if any), with who adopted it.
+    prisma.adoptableTree.findFirst({
+      where: { plantedTreeId: tree.id, status: { not: 'removed' } },
+      select: { id: true, nickname: true, status: true, adoption: { select: { user: { select: { name: true, handle: true } } } } },
+    }),
+    // Updates from the owner, NGO staff or community (only ones already accepted), newest first.
+    prisma.treeObservation.findMany({
+      where: { plantedTreeId: tree.id, reviewStatus: 'accepted' },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      select: { id: true, observerRole: true, status: true, note: true, photoUrl: true, createdAt: true },
+    }),
+  ]);
+
+  const now = Date.now();
+  const plantedMs = tree.plantedAt.getTime();
+  const checkTimes = checks.map((c) => c.checkedAt.getTime());
+  // A milestone counts as covered when a check was logged on or after its date.
+  const milestones = CHECK_MILESTONE_DAYS.map((days) => {
+    const due = plantedMs + days * 86_400_000;
+    return { days, dueAt: new Date(due), passed: due <= now, checked: checkTimes.some((t) => t >= due) };
+  });
+  const nextMilestone = milestones.find((m) => !m.checked) ?? null;
+
+  const counts = latestStatus !== 'dead' && latestStatus !== 'removed';
+  const impact = estimateTreeImpact({ name: tree.speciesName }, tree.plantedAt);
+
+  return {
+    ...tree,
+    latestStatus,
+    extras: {
+      publicId: tree.publicId,
+      ageDays: Math.floor(impact.ageYears * 365.25),
+      estimatedHeightM: round1(impact.estimatedHeightM),
+      // Dead or removed trees no longer hold carbon, so they report zero, same as the totals.
+      co2Kg: counts ? round1(impact.co2Kg) : 0,
+      oxygenKg: counts ? round1(impact.oxygenKg) : 0,
+      co2NextYearKg: counts ? round1(impact.co2NextYearKg) : 0,
+      impactConfidence: impact.confidence,
+      checkCount: checks.length,
+      lastCheckedAt: checks[0]?.checkedAt ?? null,
+      milestones,
+      nextCheck: nextMilestone ? { days: nextMilestone.days, dueAt: nextMilestone.dueAt, overdue: nextMilestone.dueAt.getTime() < now } : null,
+      listing: listing
+        ? {
+            id: listing.id,
+            nickname: listing.nickname,
+            status: listing.status,
+            adopter: listing.adoption ? { name: listing.adoption.user.name, handle: listing.adoption.user.handle } : null,
+          }
+        : null,
+      observations,
+    },
+  };
 }
 
 export async function listHealthChecksForTree(prisma: PrismaClient, ngoUserId: string, plantedTreeId: string) {

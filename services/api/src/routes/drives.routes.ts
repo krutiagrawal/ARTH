@@ -1,3 +1,4 @@
+import { toCsv } from '../utils/csv';
 import { FastifyInstance } from 'fastify';
 import { ORG_ROLES } from '../constants/roles';
 import {
@@ -48,6 +49,7 @@ export function serializeDrive(entry: any) {
     hasEnded: d.startsAt ? driveService.hasDriveEnded(d) : false,
     isRsvped: d.isRsvped,
     featured: d.featured,
+    isArchived: !!d.archivedAt,
     distanceKm: entry.distanceKm,
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,
@@ -71,6 +73,33 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
     reply.send(drives.map(serializeDrive));
   });
 
+  fastify.get('/mine/summary', { preHandler: [fastify.requireRole(...ORG_ROLES)] }, async (request, reply) => {
+    reply.send(await driveService.getOwnedDriveSummary(fastify.prisma, request.user!.id));
+  });
+
+  // CSV rows as JSON ({ csv }) so the app can hand the text straight to the share sheet.
+  fastify.get('/mine/export', { preHandler: [fastify.requireRole(...ORG_ROLES)] }, async (request, reply) => {
+    const rows = await driveService.exportOwnedDrives(fastify.prisma, request.user!.id);
+    reply.send({ csv: toCsv(rows), count: rows.length });
+  });
+
+  fastify.post<{ Params: { id: string } }>(
+    '/:id/duplicate',
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
+    async (request, reply) => {
+      reply.status(201).send(serializeDrive(await driveService.duplicateDrive(fastify.prisma, request.user!.id, request.params.id)));
+    },
+  );
+
+  fastify.post<{ Params: { id: string }; Body: { archived?: boolean } }>(
+    '/:id/archive',
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
+    async (request, reply) => {
+      const archived = request.body?.archived !== false;
+      reply.send(serializeDrive(await driveService.setDriveArchived(fastify.prisma, request.user!.id, request.params.id, archived)));
+    },
+  );
+
   // Drives the calling user has RSVP'd to — for their own profile's Drives tab.
   fastify.get('/joined', async (request, reply) => {
     const drives = await driveService.listJoinedDrives(fastify.prisma, request.user!.id);
@@ -78,8 +107,25 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
   });
 
   // Plants the calling user has sponsored, across every drive — for the activity hub.
-  fastify.get<{ Querystring: { cursor?: string; take?: string } }>('/sponsorships/mine', async (request, reply) => {
-    reply.send(await driveService.listMySponsorships(fastify.prisma, request.user!.id, request.query));
+  fastify.get<{ Querystring: { cursor?: string; take?: string; q?: string; status?: string; sort?: string } }>('/sponsorships/mine', async (request, reply) => {
+    const { q, status, sort, ...paging } = request.query;
+    reply.send(
+      await driveService.listMySponsorships(fastify.prisma, request.user!.id, {
+        ...paging,
+        search: q?.trim() || undefined,
+        status: status as any,
+        sort: sort as any,
+      }),
+    );
+  });
+
+  fastify.get('/sponsorships/mine/summary', async (request, reply) => {
+    reply.send(await driveService.getMySponsorshipsSummary(fastify.prisma, request.user!.id));
+  });
+
+  fastify.get('/sponsorships/mine/export', async (request, reply) => {
+    const rows = await driveService.exportMySponsorships(fastify.prisma, request.user!.id);
+    reply.send({ csv: toCsv(rows), count: rows.length });
   });
 
   // Real PlantedTree health outcomes across every drive the user has sponsored — an aggregate,
@@ -209,6 +255,15 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
       if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
       const drive = await driveService.cancelDrive(fastify.prisma, request.user!.id, request.params.id, parsed.data);
       reply.send(serializeDrive(drive));
+    },
+  );
+
+  // Hard delete – only succeeds while nothing real depends on it (see the service for the rules).
+  fastify.delete<{ Params: { id: string } }>(
+    '/:id/permanent',
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
+    async (request, reply) => {
+      reply.send(await driveService.deleteDrive(fastify.prisma, request.user!.id, request.params.id));
     },
   );
 

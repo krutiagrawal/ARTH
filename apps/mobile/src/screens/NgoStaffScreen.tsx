@@ -100,8 +100,9 @@ export function NgoStaffScreen({ navigation }: any) {
           id: editingId,
           name: name.trim(),
           role: role.trim(),
-          contactEmail: contactEmail.trim() || undefined,
-          contactPhone: contactPhone.trim() || undefined,
+          // '' (not undefined) so a field the user emptied is cleared on the server.
+          contactEmail: contactEmail.trim(),
+          contactPhone: contactPhone.trim(),
           photo: photo ?? undefined,
         });
       } else {
@@ -150,21 +151,16 @@ export function NgoStaffScreen({ navigation }: any) {
         {showForm && (
           <View style={styles.formCard}>
             <Text style={styles.formTitle}>{editingId ? 'Edit staff member' : 'Add staff member'}</Text>
-            {editingId && editingMember?.photoUrl && !photo && (
-              <View style={styles.currentPhotoRow}>
-                <Image source={{ uri: resolveMediaUrl(editingMember.photoUrl) }} style={styles.currentPhoto} />
-                <Text style={styles.currentPhotoText}>Current photo – pick a new one below to replace it</Text>
-              </View>
-            )}
             <PhotoPickerField
               photo={photo}
+              existingUri={editingId ? editingMember?.photoUrl : null}
               onChange={setPhoto}
               mode="gallery"
               label="Add Photo"
               hint="A friendly headshot works best"
             />
-            <FormField maxLength={120} label="Name" value={name} onChangeText={setName} placeholder="eg - Full name" />
-            <FormField maxLength={120} label="Role" value={role} onChangeText={setRole} placeholder="eg - Field Coordinator" />
+            <FormField maxLength={120} required label="Name" value={name} onChangeText={setName} placeholder="eg - Full name" />
+            <FormField maxLength={120} required label="Role" value={role} onChangeText={setRole} placeholder="eg - Field Coordinator" />
             <FormField
               label="Email"
               value={contactEmail}

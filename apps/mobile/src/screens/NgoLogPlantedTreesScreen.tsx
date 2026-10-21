@@ -12,7 +12,7 @@ import { FormField } from '../components/common/FormField';
 import { AddressSearchField } from '../components/common/AddressSearchField';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { StatusModal } from '../components/common/StatusModal';
-import { useMyDrives, useBulkCreatePlantedTrees, useZonesForDrive, useNgoProfile } from '../hooks/useApiQueries';
+import { useMyDrives, useBulkCreatePlantedTrees, useZonesForDrive, useCreateZone, useNgoProfile } from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import { ApiError } from '../api/client';
 import { useConfirm } from '../context/ConfirmDialogContext';
@@ -38,6 +38,22 @@ export function NgoLogPlantedTreesScreen({ navigation, route }: any) {
 
   const { data: zonesData } = useZonesForDrive(driveId ?? null);
   const zones = zonesData?.zones ?? [];
+  const createZoneMutation = useCreateZone();
+  const [newZoneName, setNewZoneName] = useState('');
+  const [zoneError, setZoneError] = useState<string | null>(null);
+
+  const handleAddZone = guard(async () => {
+    const name = newZoneName.trim();
+    if (!driveId || !name) return;
+    setZoneError(null);
+    try {
+      const zone = await createZoneMutation.mutateAsync({ driveId, name });
+      setZoneId(zone.id ?? undefined);
+      setNewZoneName('');
+    } catch (e) {
+      setZoneError(e instanceof ApiError ? e.message : 'Could not create this zone.');
+    }
+  });
 
   const handleSubmit = async () => {
     setError(null);
@@ -100,7 +116,7 @@ export function NgoLogPlantedTreesScreen({ navigation, route }: any) {
             <Text style={styles.driveHint}>These trees won't be linked to a plantation drive, but will still show up under "Independent Plantings".</Text>
           )}
 
-          {driveId && zones.length > 0 && (
+          {driveId && (
             <>
               <Text style={styles.sectionLabel}>Zone (optional)</Text>
               <View style={styles.chipRow}>
@@ -113,18 +129,38 @@ export function NgoLogPlantedTreesScreen({ navigation, route }: any) {
                   </TouchableOpacity>
                 ))}
               </View>
+              {zones.length === 0 && (
+                <Text style={styles.driveHint}>
+                  This drive has no zones yet. A zone is a named area of the plantation, like "North bank". Add one below to group these trees, or leave them unzoned.
+                </Text>
+              )}
+              <FormField
+                maxLength={100}
+                label="New zone"
+                value={newZoneName}
+                onChangeText={setNewZoneName}
+                placeholder="eg - North bank"
+                rightAccessory={
+                  <TouchableOpacity onPress={handleAddZone} disabled={createZoneMutation.isPending || !newZoneName.trim()}>
+                    <Text style={[styles.chipText, styles.chipTextSelected, { color: COLORS.forest }]}>
+                      {createZoneMutation.isPending ? 'Adding…' : 'Add'}
+                    </Text>
+                  </TouchableOpacity>
+                }
+              />
+              {zoneError && <Text style={styles.error}>{zoneError}</Text>}
             </>
           )}
 
           <FormField maxLength={100}
-            label="Species"
+            required label="Species"
             value={speciesName}
             onChangeText={setSpeciesName}
             placeholder="eg - Neem"
           />
 
           <FormField
-            label="Number of trees (max 200 per batch)"
+            required label="Number of trees (max 200 per batch)"
             value={count}
             onChangeText={(v: string) => setCount(v.replace(/[^0-9]/g, ''))}
             placeholder="eg - 100"
@@ -142,7 +178,7 @@ export function NgoLogPlantedTreesScreen({ navigation, route }: any) {
             photo={photo}
             onChange={setPhoto}
             mode="gallery"
-            label="Add Photo"
+            required label="Add Photo"
             hint="Required – show what you planted"
           />
 

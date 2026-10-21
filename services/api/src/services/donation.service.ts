@@ -27,11 +27,16 @@ interface UpdateCampaignInput {
 
 interface OwnedListFilter {
   q?: string;
+  status?: 'active' | 'closed';
+  category?: string;
+  archived?: boolean;
+  sort?: 'newest' | 'oldest' | 'ending_soon' | 'goal';
   page?: number;
   take?: number;
 }
 
 interface MyDonationsFilter {
+  sort?: 'newest' | 'oldest' | 'amount';
   q?: string;
   status?: 'succeeded' | 'pending' | 'failed' | 'refunded';
   period?: '30d' | '6m' | '1y';
@@ -169,10 +174,27 @@ export async function listOwnedCampaigns(prisma: PrismaClient, ngoUserId: string
   const campaigns = await prisma.donationCampaign.findMany({
     where: {
       ngoId: ngo.id,
-      ...(filter.q ? { title: { contains: filter.q, mode: 'insensitive' as const } } : {}),
+      ...(filter.q
+        ? {
+            OR: [
+              { title: { contains: filter.q, mode: 'insensitive' as const } },
+              { description: { contains: filter.q, mode: 'insensitive' as const } },
+            ],
+          }
+        : {}),
+      archivedAt: filter.archived ? { not: null } : null,
+      ...(filter.status ? { status: filter.status } : {}),
+      ...(filter.category ? { category: filter.category } : {}),
     },
     include: { ...campaignInclude, donations: { select: { amountCents: true, status: true, isAnonymous: true } } },
-    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    orderBy:
+      filter.sort === 'oldest'
+        ? [{ createdAt: 'asc' as const }, { id: 'asc' as const }]
+        : filter.sort === 'ending_soon'
+          ? [{ endsAt: { sort: 'asc' as const, nulls: 'last' as const } }, { id: 'desc' as const }]
+          : filter.sort === 'goal'
+            ? [{ goalAmountCents: { sort: 'desc' as const, nulls: 'last' as const } }, { id: 'desc' as const }]
+            : [{ createdAt: 'desc' as const }, { id: 'desc' as const }],
     take,
     skip: (page - 1) * take,
   });
@@ -230,7 +252,12 @@ export async function listMyDonations(prisma: PrismaClient, userId: string, filt
   const [donations, total, sum, settledCount, ngoRows, anyCount] = await Promise.all([
     prisma.donation.findMany({
       where,
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      orderBy:
+        filter.sort === 'oldest'
+          ? [{ createdAt: 'asc' }, { id: 'asc' }]
+          : filter.sort === 'amount'
+            ? [{ amountCents: 'desc' }, { id: 'desc' }]
+            : [{ createdAt: 'desc' }, { id: 'desc' }],
       take,
       skip: (page - 1) * take,
       include: { campaign: { include: { ngo: true } } },
@@ -500,4 +527,100 @@ export async function handleStripeWebhookEvent(
       }
     }
   }
+}
+
+/**
+ * Permanently removes a campaign created by mistake or for testing. Blocked as soon as it has any
+ * donation that went through (donors hold receipts); a campaign with only abandoned/failed
+ * attempts can go. Otherwise it should just be closed.
+ */
+export async function deleteCampaign(prisma: PrismaClient, ngoUserId: string, campaignId: string) {
+  const campaign = await findOwnedCampaignOrThrow(prisma, ngoUserId, campaignId);
+  const paid = await prisma.donation.count({ where: { campaignId: campaign.id, status: { in: ['succeeded', 'refunded'] } } });
+  if (paid > 0) throw new ConflictError('This campaign has received donations – close it instead of deleting it.');
+  await prisma.donationCampaign.delete({ where: { id: campaign.id } });
+  return { id: campaign.id };
+}
+
+export async function getOwnedCampaignSummary(prisma: PrismaClient, ngoUserId: string) {
+  const ngo = await requireNgoProfile(prisma, ngoUserId);
+  const now = new Date();
+  const base = { ngoId: ngo.id, archivedAt: null };
+  const [total, active, closed, archived, endingSoon] = await Promise.all([
+    prisma.donationCampaign.count({ where: base }),
+    prisma.donationCampaign.count({ where: { ...base, status: 'active' } }),
+    prisma.donationCampaign.count({ where: { ...base, status: 'closed' } }),
+    prisma.donationCampaign.count({ where: { ngoId: ngo.id, archivedAt: { not: null } } }),
+    prisma.donationCampaign.count({ where: { ...base, status: 'active', endsAt: { gt: now, lte: new Date(now.getTime() + 3 * 86_400_000) } } }),
+  ]);
+  return { total, active, closed, archived, needsAttention: endingSoon };
+}
+
+/** Clones a campaign as a fresh active one with no donations; a timed campaign keeps its original length, counted from now. */
+export async function duplicateCampaign(prisma: PrismaClient, ngoUserId: string, campaignId: string) {
+  const source = await findOwnedCampaignOrThrow(prisma, ngoUserId, campaignId);
+  const length = source.endsAt ? source.endsAt.getTime() - source.createdAt.getTime() : null;
+  const created = await prisma.donationCampaign.create({
+    data: {
+      ngoId: source.ngoId,
+      title: `${source.title} (copy)`.slice(0, 120),
+      description: source.description,
+      goalAmountCents: source.goalAmountCents,
+      coverPhotoUrl: source.coverPhotoUrl,
+      category: source.category,
+      endsAt: length && length > 0 ? new Date(Date.now() + length) : null,
+    },
+    include: campaignInclude,
+  });
+  return withRaisedAmount(created);
+}
+
+/** Only a closed campaign can be archived – an active one is still collecting donations. */
+export async function setCampaignArchived(prisma: PrismaClient, ngoUserId: string, campaignId: string, archived: boolean) {
+  const campaign = await findOwnedCampaignOrThrow(prisma, ngoUserId, campaignId);
+  if (archived && campaign.status === 'active') throw new ConflictError('Close this campaign before archiving it.');
+  const updated = await prisma.donationCampaign.update({
+    where: { id: campaign.id },
+    data: { archivedAt: archived ? new Date() : null },
+    include: campaignInclude,
+  });
+  return withRaisedAmount(updated);
+}
+
+export async function exportOwnedCampaigns(prisma: PrismaClient, ngoUserId: string) {
+  const ngo = await requireNgoProfile(prisma, ngoUserId);
+  const campaigns = await prisma.donationCampaign.findMany({
+    where: { ngoId: ngo.id },
+    orderBy: { createdAt: 'desc' },
+    include: { donations: { select: { amountCents: true, status: true, userId: true } } },
+  });
+  return campaigns.map((c) => {
+    const paid = c.donations.filter((d) => d.status === 'succeeded');
+    return {
+      title: c.title,
+      status: c.archivedAt ? `${c.status} (archived)` : c.status,
+      category: c.category ?? '',
+      goalRupees: c.goalAmountCents != null ? c.goalAmountCents / 100 : '',
+      raisedRupees: paid.reduce((sum, d) => sum + d.amountCents, 0) / 100,
+      donors: new Set(paid.map((d) => d.userId)).size,
+      createdAt: c.createdAt.toISOString(),
+      endsAt: c.endsAt ? c.endsAt.toISOString() : '',
+    };
+  });
+}
+
+export async function exportMyDonations(prisma: PrismaClient, userId: string) {
+  const donations = await prisma.donation.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    include: { campaign: { include: { ngo: { select: { orgName: true } } } } },
+  });
+  return donations.map((d) => ({
+    date: d.createdAt.toISOString(),
+    campaign: d.campaign.title,
+    ngo: d.campaign.ngo?.orgName ?? '',
+    amountRupees: d.amountCents / 100,
+    status: d.status,
+    receiptNumber: d.receiptNumber ?? '',
+  }));
 }

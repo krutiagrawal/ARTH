@@ -1,5 +1,6 @@
 import { Prisma, PrismaClient, NurseryStreakType, NurseryGrowthLevel } from '@arth/db';
 import { startOfUtcDay, addDays } from './streak.service';
+import { recordOrgContribution } from './orgStreak.service';
 
 // Accepts either a live PrismaClient (read-only routes) or a transaction client (activity hooks) —
 // every function here is a pure read/derive over existing tables plus, where noted, a write onto
@@ -39,14 +40,7 @@ function dateKey(date: Date): string {
 /** Marks this ISO week as met for each given streak type. Called from every activity hook (stock
  * create/update, order success, bulk-requirement fulfilled, reservation fulfilled, nursery post). */
 export async function recordNurseryContribution(tx: Prisma.TransactionClient, nurseryId: string, types: NurseryStreakType[]) {
-  const periodStart = mondayOf(new Date());
-  for (const streakType of types) {
-    await tx.nurseryContributionStreak.upsert({
-      where: { nurseryId_streakType_periodStart: { nurseryId, streakType, periodStart } },
-      update: { metCriteria: true },
-      create: { nurseryId, streakType, periodStart, metCriteria: true },
-    });
-  }
+  await recordOrgContribution(tx, 'nursery', nurseryId, types);
 }
 
 interface WeeklyStreakStats {
@@ -71,7 +65,8 @@ async function getWeeklyStreakStats(db: Db, nurseryId: string, streakType: Nurse
   }
 
   let current = 0;
-  let cursor = thisWeek;
+  // The open week isn't a miss yet: if it isn't met, count the run ending last week instead.
+  let cursor = metWeeks.has(dateKey(thisWeek)) ? thisWeek : addDays(thisWeek, -7);
   // eslint-disable-next-line no-constant-condition
   while (true) {
     if (!metWeeks.has(dateKey(cursor))) break;

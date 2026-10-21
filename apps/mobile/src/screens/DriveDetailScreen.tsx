@@ -24,6 +24,7 @@ import {
   useCancelDrive,
   useCompleteDrive,
   useSetDriveFeatured,
+  useDeleteDrive,
   useDriveTreeSummary,
 } from '../hooks/useApiQueries';
 import { STATUS_META } from '../constants/treeHealth';
@@ -31,6 +32,7 @@ import { ApiError } from '../api/client';
 import type { ApiDrivePlant } from '../api/drives';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { useConfirm } from '../context/ConfirmDialogContext';
+import { useConfirmDelete } from '../hooks/useConfirmDelete';
 import { DriveRsvpSheet } from '../components/drives/DriveRsvpSheet';
 import { AttendeeCard } from '../components/drives/AttendeeCard';
 import { CancelDriveSheet } from '../components/drives/CancelDriveSheet';
@@ -84,6 +86,8 @@ export function DriveDetailScreen({ navigation, route }: any) {
   const cancelDriveMutation = useCancelDrive();
   const completeDriveMutation = useCompleteDrive();
   const featuredMutation = useSetDriveFeatured();
+  const deleteDriveMutation = useDeleteDrive();
+  const confirmDelete = useConfirmDelete();
   const confirm = useConfirm();
   const queryClient = useQueryClient();
   const { refreshing, onRefresh } = usePullToRefresh(isOwnDrive ? [refetch, attendeesQuery.refetch, sponsorsQuery.refetch] : refetch);
@@ -380,6 +384,11 @@ export function DriveDetailScreen({ navigation, route }: any) {
           {isOwnDrive ? (
             <>
               <View style={styles.ownerActionsRow}>
+                {drive.status === 'upcoming' && !drive.hasEnded && (
+                  <TouchableOpacity onPress={() => navigation.navigate('NgoCreateDrive', { drive })}>
+                    <Text style={styles.ownerActionText}>Edit drive</Text>
+                  </TouchableOpacity>
+                )}
                 {drive.status === 'upcoming' && (
                   <>
                     <TouchableOpacity onPress={handleCompleteDrive} disabled={completeDriveMutation.isPending}>
@@ -390,9 +399,20 @@ export function DriveDetailScreen({ navigation, route }: any) {
                     </TouchableOpacity>
                   </>
                 )}
-                <TouchableOpacity onPress={toggleFeatured} disabled={featuredMutation.isPending}>
-                  <Text style={styles.ownerActionText}>{drive.featured ? '★ Featured' : '☆ Feature on profile'}</Text>
+                <TouchableOpacity
+                  onPress={() =>
+                    confirmDelete('drive', drive.title, () => deleteDriveMutation.mutateAsync(drive.id), () => navigation.goBack())
+                  }
+                >
+                  <Text style={[styles.ownerActionText, styles.ownerActionTextDanger]}>Delete drive</Text>
                 </TouchableOpacity>
+                {/* Featuring only reorders the completed-drives list on the public profile (pinned
+                    first); every drive is listed there regardless, so it's meaningless before then. */}
+                {drive.status === 'completed' && (
+                  <TouchableOpacity onPress={toggleFeatured} disabled={featuredMutation.isPending}>
+                    <Text style={styles.ownerActionText}>{drive.featured ? '★ Pinned to top' : '☆ Pin to top of profile'}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
               <Text style={styles.sectionLabel}>Who's coming ({drive.confirmedCount})</Text>
               {drive.status === 'completed' && (attendeesQuery.data?.attendees.length ?? 0) > 0 && (

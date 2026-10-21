@@ -68,13 +68,25 @@ export default async function portfolioRoutes(fastify: FastifyInstance) {
     const parsed = patchSchema.safeParse(fields);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
 
-    // `mediaUrls` stays undefined when no files were sent, which the service reads as "leave the
-    // existing photos alone" rather than "remove them all".
+    // New files are appended to the entry's photos; `removeMediaIds` (below) deletes stored ones.
+    // Sending neither leaves the photos untouched.
+    // Ids of existing photos to drop – sent as a JSON array inside the multipart form.
+    let removeMediaIds: string[] | undefined;
+    const rawRemove = (fields as Record<string, unknown>).removeMediaIds;
+    if (typeof rawRemove === 'string' && rawRemove) {
+      try {
+        const ids = JSON.parse(rawRemove);
+        if (Array.isArray(ids)) removeMediaIds = ids.filter((id): id is string => typeof id === 'string');
+      } catch {
+        throw new BadRequestError('removeMediaIds must be a JSON array of ids');
+      }
+    }
+
     const entry = await portfolioService.updatePortfolioEntry(
       fastify.prisma,
       request.user!.id,
       request.params.id,
-      { ...parsed.data, mediaUrls },
+      { ...parsed.data, mediaUrls, removeMediaIds },
     );
     reply.send(entry);
   });

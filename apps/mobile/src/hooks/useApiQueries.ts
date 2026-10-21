@@ -1,3 +1,15 @@
+import type { OwnedListSummary } from '../api/client';
+import { fetchStockSummary, exportStock, archiveStock, fetchNurseryOrdersSummary, exportNurseryOrders } from '../api/nursery';
+import { fetchMyOrdersSummary, exportMyOrders, type MyOrdersFilter } from '../api/orders';
+import { exportMyDonations } from '../api/donations';
+import { exportMyTrees } from '../api/trees';
+import { fetchMyAdoptionsSummary, exportMyAdoptions, type MyAdoptionsFilter } from '../api/adoptions';
+import { fetchMySponsorshipsSummary, exportMySponsorships, type MySponsorshipsFilter } from '../api/drives';
+import { uploadNgoDocument, deleteNgoDocument, type NgoDocumentType } from '../api/ngo';
+import { updateCampaign, deleteCampaign, fetchOwnedCampaignSummary, exportOwnedCampaigns, duplicateCampaign, archiveCampaign, type UpdateCampaignInput, type OwnedCampaignFilter } from '../api/donations';
+import { updateDrive, deleteDrive, fetchOwnedDriveSummary, exportOwnedDrives, duplicateDrive, archiveDrive, type UpdateDriveInput, type OwnedDriveFilter } from '../api/drives';
+import { updateAdoptableTree, deleteAdoptableTree, relistAdoptableTree, fetchOwnedTreeSummary, exportOwnedTrees, duplicateAdoptableTree, archiveAdoptableTree, type UpdateAdoptableTreeInput, type OwnedTreeFilter } from '../api/adoptions';
+import { fetchOrgStreakStatus, reviveOrgStreak, protectOrgStreak } from '../api/orgStreaks';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
 import { pageParams, totalPageParams, mergePages, totalInfinite, flatItems, arrayPageParams, flatArrays } from './useInfiniteList';
 import type { ApiPublicFollowersPage } from '../api/publicFollowers';
@@ -159,6 +171,7 @@ import {
   fetchZonesForDrive,
   fetchZoneDetail,
   createZone,
+  moveTreesToZone,
   renameZone,
   deleteZone,
   bulkMarkZoneHealth,
@@ -790,38 +803,51 @@ export function useUpdateSettings() {
   });
 }
 
+const isOrgRole = (role?: string) => role === 'ngo' || role === 'nursery';
+
+// NGO/nursery accounts share these hooks with individuals but hit the weekly /api/org-streaks
+// endpoints, so every streak screen works for any role without branching.
 export function useStreakStatus() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const org = isOrgRole(user?.role);
   return useQuery({
-    queryKey: ['streaks', 'status'],
-    queryFn: fetchStreakStatus,
+    queryKey: ['streaks', 'status', org ? 'org' : 'user'],
+    queryFn: org ? fetchOrgStreakStatus : fetchStreakStatus,
     enabled: isAuthenticated,
     staleTime: 0,
   });
 }
 
-export function useReviveStreak() {
+function useStreakInvalidation() {
   const queryClient = useQueryClient();
   const { refreshUser } = useAuth();
+  return async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['streaks'] }),
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'streaks'] }),
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'reputation'] }),
+      queryClient.invalidateQueries({ queryKey: ['nursery', 'reputation'] }),
+      refreshUser(),
+    ]);
+  };
+}
+
+export function useReviveStreak() {
+  const { user } = useAuth();
+  const invalidate = useStreakInvalidation();
   return useMutation({
-    mutationFn: (method: 'freeze' | 'xp') => reviveStreak(method),
-    onSuccess: async () => {
-      await Promise.all([queryClient.invalidateQueries({ queryKey: ['streaks'] }), refreshUser()]);
-    },
+    mutationFn: (method: 'freeze' | 'xp') => (isOrgRole(user?.role) ? reviveOrgStreak(method) : reviveStreak(method)),
+    onSuccess: invalidate,
   });
 }
 
 export function useProtectStreak() {
-  const queryClient = useQueryClient();
-  const { refreshUser } = useAuth();
+  const { user } = useAuth();
+  const invalidate = useStreakInvalidation();
   return useMutation({
-    mutationFn: (method: 'plant' | 'freeze' | 'xp') => protectStreak(method),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['streaks'] }),
-        refreshUser(),
-      ]);
-    },
+    mutationFn: (method: 'plant' | 'freeze' | 'xp') =>
+      isOrgRole(user?.role) ? protectOrgStreak(method === 'plant' ? 'freeze' : method) : protectStreak(method),
+    onSuccess: invalidate,
   });
 }
 
@@ -1154,11 +1180,12 @@ export function useAdoptTree() {
   });
 }
 
-export function useMyAdoptions() {
+export function useMyAdoptions(filter: MyAdoptionsFilter = {}) {
   const { isAuthenticated } = useAuth();
   return useInfiniteQuery({
-    queryKey: ['adoptable-trees', 'my-adoptions'],
-    queryFn: ({ pageParam }) => fetchMyAdoptions(pageParam),
+    placeholderData: keepPreviousData,
+    queryKey: ['adoptable-trees', 'my-adoptions', filter],
+    queryFn: ({ pageParam }) => fetchMyAdoptions(pageParam, filter),
     enabled: isAuthenticated,
     ...pageParams<Awaited<ReturnType<typeof fetchMyAdoptions>>['items'][number]>(),
     select: flatItems,
@@ -1213,11 +1240,12 @@ export function useJoinedDrives() {
   });
 }
 
-export function useMySponsorships() {
+export function useMySponsorships(filter: MySponsorshipsFilter = {}) {
   const { isAuthenticated } = useAuth();
   return useInfiniteQuery({
-    queryKey: ['drives', 'sponsorships', 'mine'],
-    queryFn: ({ pageParam }) => fetchMySponsorships(pageParam),
+    placeholderData: keepPreviousData,
+    queryKey: ['drives', 'sponsorships', 'mine', filter],
+    queryFn: ({ pageParam }) => fetchMySponsorships(pageParam, filter),
     enabled: isAuthenticated,
     ...pageParams<Awaited<ReturnType<typeof fetchMySponsorships>>['items'][number]>(),
     select: flatItems,
@@ -1264,11 +1292,12 @@ export function useGroupDrives(groupId: string | undefined) {
 const OWNED_PAGE_SIZE = 30;
 
 /** Paged twin of useMyDrives for the NGO Drives list; the plain hook stays a single request for pickers/maps. */
-export function useMyDrivesPaged() {
+export function useMyDrivesPaged(filter: OwnedDriveFilter = {}) {
   const { isAuthenticated } = useAuth();
   return useInfiniteQuery({
-    queryKey: ['drives', 'mine', 'paged'],
-    queryFn: ({ pageParam }) => fetchMyDrives(pageParam, OWNED_PAGE_SIZE),
+    placeholderData: keepPreviousData,
+    queryKey: ['drives', 'mine', 'paged', filter],
+    queryFn: ({ pageParam }) => fetchMyDrives(pageParam, OWNED_PAGE_SIZE, filter),
     enabled: isAuthenticated,
     ...arrayPageParams<Awaited<ReturnType<typeof fetchMyDrives>>[number]>(OWNED_PAGE_SIZE),
     select: flatArrays,
@@ -1297,6 +1326,22 @@ export function useCancelDrive() {
   });
 }
 
+export function useUpdateDrive() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...input }: UpdateDriveInput & { id: string }) => updateDrive(id, input),
+    onSuccess: (_data, { id }) => invalidateDrive(queryClient, id),
+  });
+}
+
+export function useDeleteDrive() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteDrive(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['drives'] }),
+  });
+}
+
 export function useCompleteDrive() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -1322,11 +1367,12 @@ export function useCreateDrive() {
 }
 
 /** Paged twin of useMyAdoptableTrees for the NGO Trees list. */
-export function useMyAdoptableTreesPaged() {
+export function useMyAdoptableTreesPaged(filter: OwnedTreeFilter = {}) {
   const { isAuthenticated } = useAuth();
   return useInfiniteQuery({
-    queryKey: ['adoptable-trees', 'mine', 'paged'],
-    queryFn: ({ pageParam }) => fetchMyAdoptableTrees(pageParam, OWNED_PAGE_SIZE),
+    placeholderData: keepPreviousData,
+    queryKey: ['adoptable-trees', 'mine', 'paged', filter],
+    queryFn: ({ pageParam }) => fetchMyAdoptableTrees(pageParam, OWNED_PAGE_SIZE, filter),
     enabled: isAuthenticated,
     ...arrayPageParams<Awaited<ReturnType<typeof fetchMyAdoptableTrees>>[number]>(OWNED_PAGE_SIZE),
     select: flatArrays,
@@ -1346,6 +1392,30 @@ export function useCreateAdoptableTree() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateAdoptableTreeInput) => createAdoptableTree(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] }),
+  });
+}
+
+export function useUpdateAdoptableTree() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...input }: UpdateAdoptableTreeInput & { id: string }) => updateAdoptableTree(id, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] }),
+  });
+}
+
+export function useRelistAdoptableTree() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => relistAdoptableTree(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] }),
+  });
+}
+
+export function useDeleteAdoptableTree() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteAdoptableTree(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] }),
   });
 }
@@ -1391,11 +1461,12 @@ export function useCreateDonationIntent() {
   });
 }
 
-export function useMyCampaigns() {
+export function useMyCampaigns(filter: OwnedCampaignFilter = {}) {
   const { isAuthenticated } = useAuth();
   return useInfiniteQuery({
-    queryKey: ['campaigns', 'mine'],
-    queryFn: ({ pageParam }) => fetchMyCampaigns(pageParam, OWNED_PAGE_SIZE),
+    placeholderData: keepPreviousData,
+    queryKey: ['campaigns', 'mine', filter],
+    queryFn: ({ pageParam }) => fetchMyCampaigns(pageParam, OWNED_PAGE_SIZE, filter),
     enabled: isAuthenticated,
     ...arrayPageParams<Awaited<ReturnType<typeof fetchMyCampaigns>>[number]>(OWNED_PAGE_SIZE),
     select: flatArrays,
@@ -1418,6 +1489,22 @@ export function useCreateCampaign() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateCampaignInput) => createCampaign(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['campaigns'] }),
+  });
+}
+
+export function useUpdateCampaign() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...input }: UpdateCampaignInput & { id: string }) => updateCampaign(id, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['campaigns'] }),
+  });
+}
+
+export function useDeleteCampaign() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteCampaign(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['campaigns'] }),
   });
 }
@@ -1453,6 +1540,23 @@ export function useUpdateNgoProfile() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: UpdateNgoProfileInput) => updateNgoProfile(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ngo', 'profile'] }),
+  });
+}
+
+export function useUploadNgoDocument() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ docType, file }: { docType: NgoDocumentType; file: { uri: string; name: string; type: string } }) =>
+      uploadNgoDocument(docType, file),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ngo', 'profile'] }),
+  });
+}
+
+export function useDeleteNgoDocument() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteNgoDocument(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ngo', 'profile'] }),
   });
 }
@@ -1684,6 +1788,19 @@ export function useCreateZone() {
     mutationFn: (input: { driveId: string; name: string }) => createZone(input),
     onSuccess: (_data, { driveId }) => {
       queryClient.invalidateQueries({ queryKey: ['ngo', 'zones', driveId] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'plantations'] });
+    },
+  });
+}
+
+export function useMoveTreesToZone() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { plantedTreeIds: string[]; zoneId: string | null }) => moveTreesToZone(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'planted-trees'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'zones'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'zone'] });
       queryClient.invalidateQueries({ queryKey: ['ngo', 'plantations'] });
     },
   });
@@ -2451,6 +2568,7 @@ export function useNurseryImpact() {
 export function useSaplingStock(filter: StockFilter = {}) {
   const { isAuthenticated } = useAuth();
   return useInfiniteQuery({
+    placeholderData: keepPreviousData,
     queryKey: ['nursery', 'stock', filter],
     queryFn: ({ pageParam }) => fetchSaplingStock(filter, pageParam),
     enabled: isAuthenticated,
@@ -2575,6 +2693,7 @@ export function useStockAnalytics() {
 export function useNurseryOrders(filter: NurseryOrdersFilter | NurseryOrderStatus = {}) {
   const { isAuthenticated } = useAuth();
   return useInfiniteQuery({
+    placeholderData: keepPreviousData,
     queryKey: ['nursery', 'orders', filter],
     queryFn: ({ pageParam }) => fetchNurseryOrders(filter, pageParam),
     enabled: isAuthenticated,
@@ -3130,11 +3249,12 @@ export function useClearCart() {
   });
 }
 
-export function useMyOrders() {
+export function useMyOrders(filter: MyOrdersFilter = {}) {
   const { isAuthenticated } = useAuth();
   return useInfiniteQuery({
-    queryKey: ['orders', 'mine'],
-    queryFn: ({ pageParam }) => fetchMyOrders(pageParam),
+    placeholderData: keepPreviousData,
+    queryKey: ['orders', 'mine', filter],
+    queryFn: ({ pageParam }) => fetchMyOrders(pageParam, filter),
     enabled: isAuthenticated,
     staleTime: 60_000,
     ...pageParams<ApiOrder>(),
@@ -3225,5 +3345,76 @@ export function useRemoveWishlistItem() {
   return useMutation({
     mutationFn: (id: string) => removeWishlistItem(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['wishlist'] }),
+  });
+}
+
+// ---------- NGO Manage lists: header summary, duplicate, archive, export ----------
+
+export function useOwnedDriveSummary() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({ queryKey: ['drives', 'mine', 'summary'], queryFn: fetchOwnedDriveSummary, enabled: isAuthenticated });
+}
+export function useOwnedCampaignSummary() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({ queryKey: ['campaigns', 'mine', 'summary'], queryFn: fetchOwnedCampaignSummary, enabled: isAuthenticated });
+}
+export function useOwnedTreeSummary() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({ queryKey: ['adoptable-trees', 'mine', 'summary'], queryFn: fetchOwnedTreeSummary, enabled: isAuthenticated });
+}
+
+export function useDuplicateDrive() {
+  const queryClient = useQueryClient();
+  return useMutation({ mutationFn: (id: string) => duplicateDrive(id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['drives'] }) });
+}
+export function useDuplicateCampaign() {
+  const queryClient = useQueryClient();
+  return useMutation({ mutationFn: (id: string) => duplicateCampaign(id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['campaigns'] }) });
+}
+export function useDuplicateAdoptableTree() {
+  const queryClient = useQueryClient();
+  return useMutation({ mutationFn: (id: string) => duplicateAdoptableTree(id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] }) });
+}
+
+export function useArchiveDrive() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, archived }: { id: string; archived: boolean }) => archiveDrive(id, archived),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['drives'] }),
+  });
+}
+export function useArchiveCampaign() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, archived }: { id: string; archived: boolean }) => archiveCampaign(id, archived),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['campaigns'] }),
+  });
+}
+export function useArchiveAdoptableTree() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, archived }: { id: string; archived: boolean }) => archiveAdoptableTree(id, archived),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] }),
+  });
+}
+
+// ---------- Nursery + individual lists: header summaries, archive, export ----------
+
+function useSummaryQuery(queryKey: unknown[], fetcher: () => Promise<OwnedListSummary>) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({ queryKey, queryFn: fetcher, enabled: isAuthenticated });
+}
+
+export const useStockSummary = () => useSummaryQuery(['nursery', 'stock', 'summary'], fetchStockSummary);
+export const useNurseryOrdersSummary = () => useSummaryQuery(['nursery', 'orders', 'summary'], fetchNurseryOrdersSummary);
+export const useMyOrdersSummary = () => useSummaryQuery(['orders', 'mine', 'summary'], fetchMyOrdersSummary);
+export const useMyAdoptionsSummary = () => useSummaryQuery(['adoptable-trees', 'my-adoptions', 'summary'], fetchMyAdoptionsSummary);
+export const useMySponsorshipsSummary = () => useSummaryQuery(['drives', 'sponsorships', 'mine', 'summary'], fetchMySponsorshipsSummary);
+
+export function useArchiveStock() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, archived }: { id: string; archived: boolean }) => archiveStock(id, archived),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['nursery', 'stock'] }),
   });
 }

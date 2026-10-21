@@ -95,7 +95,7 @@ export function CorporateSponsorshipsScreen({ navigation }: any) {
 
       {isApproved && (
         <View style={styles.addCard}>
-          <FormField label="Amount (₹)" value={amount} onChangeText={setAmount} placeholder="eg - 0" keyboardType="number-pad" />
+          <FormField required label="Amount (₹)" value={amount} onChangeText={setAmount} placeholder="eg - 0" keyboardType="number-pad" />
           <FormField label="Drive ID (optional)" value={driveId} onChangeText={setDriveId} placeholder="eg - Leave blank for a general sponsorship" />
           <FormField maxLength={500} label="Note (optional)" value={note} onChangeText={setNote} placeholder="eg - What is this sponsoring?" />
           {error && <Text style={styles.error}>{error}</Text>}

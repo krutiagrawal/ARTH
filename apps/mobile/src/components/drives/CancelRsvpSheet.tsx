@@ -74,6 +74,7 @@ export function CancelRsvpSheet({ visible, driveTitle, submitting, error, onClos
         {tried && !reason ? <Text style={styles.error}>Please choose a reason</Text> : null}
 
         <FormField
+          required={noteRequired}
           label={noteRequired ? 'Details' : 'Anything to add? (optional)'}
           value={note}
           onChangeText={setNote}

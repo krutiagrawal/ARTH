@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, type OwnedListSummary, type OwnedExport } from './client';
 import { pagedPath, type Page } from '../hooks/useInfiniteList';
 import type { ApiAddress } from './addresses';
 
@@ -95,8 +95,21 @@ export interface ApiOrder {
   review: ApiOrderReview | null;
 }
 
-export async function fetchMyOrders(cursor?: string): Promise<Page<ApiOrder>> {
-  return apiFetch<Page<ApiOrder>>(pagedPath('/api/orders', cursor));
+export interface MyOrdersFilter {
+  q?: string;
+  group?: 'active' | 'completed' | 'cancelled';
+  sort?: 'newest' | 'oldest' | 'highest';
+}
+
+export async function fetchMyOrders(cursor?: string, filter: MyOrdersFilter = {}): Promise<Page<ApiOrder>> {
+  return apiFetch<Page<ApiOrder>>(pagedPath('/api/orders', cursor, { q: filter.q, group: filter.group, sort: filter.sort }));
+}
+
+export async function fetchMyOrdersSummary(): Promise<OwnedListSummary> {
+  return apiFetch<OwnedListSummary>('/api/orders/summary');
+}
+export async function exportMyOrders(): Promise<OwnedExport> {
+  return apiFetch<OwnedExport>('/api/orders/export');
 }
 
 export async function fetchMyOrder(id: string): Promise<ApiOrder> {

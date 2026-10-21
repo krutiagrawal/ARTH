@@ -25,6 +25,7 @@ import { FloatingParticles } from '../components/common/FloatingParticles';
 import { useHaptics } from '../hooks/useHaptics';
 import { useAuth } from '../context/AuthContext';
 import { isAtRiskHours } from '../api/streaks';
+import { isOrgAtRiskDays } from '../api/orgStreaks';
 import { useProtectStreak, useReviveStreak, useStreakStatus } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { StreakInfoSheet } from '../components/streak/StreakInfoSheet';
@@ -36,13 +37,14 @@ type ProtectionStage = 'warning' | 'choosing' | 'saved';
 
 const XP_STREAK_SAVE_COST = 100;
 
-function buildFreezeOptions(streakFreezesAvailable: number, xp: number, revive = false) {
+function buildFreezeOptions(streakFreezesAvailable: number, xp: number, revive = false, weekly = false) {
+  const unit = weekly ? 'week' : 'day';
   if (revive) {
     return [
       {
         id: 'freeze',
         title: 'Use Streak Freeze',
-        subtitle: 'Fill in the day you missed with a freeze.',
+        subtitle: `Fill in the ${unit} you missed with a freeze.`,
         icon: '🧊',
         cost: `${streakFreezesAvailable} remaining`,
         recommended: true,
@@ -51,7 +53,7 @@ function buildFreezeOptions(streakFreezesAvailable: number, xp: number, revive =
       {
         id: 'xp',
         title: 'Spend XP Tokens',
-        subtitle: `Use ${XP_STREAK_SAVE_COST} XP to fill in the day you missed`,
+        subtitle: `Use ${XP_STREAK_SAVE_COST} XP to fill in the ${unit} you missed`,
         icon: '⚡',
         cost: `${XP_STREAK_SAVE_COST} XP`,
         recommended: false,
@@ -62,9 +64,9 @@ function buildFreezeOptions(streakFreezesAvailable: number, xp: number, revive =
   return [
     {
       id: 'plant',
-      title: 'Plant a Tree Now',
-      subtitle: 'Upload a quick photo and save your streak instantly',
-      icon: '🌱',
+      title: weekly ? 'Do a Lesson Now' : 'Plant a Tree Now',
+      subtitle: weekly ? "Finish today's lesson to count this week instantly" : 'Upload a quick photo and save your streak instantly',
+      icon: weekly ? '📚' : '🌱',
       cost: 'Free',
       recommended: true,
       disabled: false,
@@ -72,7 +74,7 @@ function buildFreezeOptions(streakFreezesAvailable: number, xp: number, revive =
     {
       id: 'freeze',
       title: 'Use Streak Freeze',
-      subtitle: 'Skip one day without losing your streak.',
+      subtitle: weekly ? 'Skip this week without losing your streak.' : 'Skip one day without losing your streak.',
       icon: '🧊',
       cost: `${streakFreezesAvailable} remaining`,
       recommended: false,
@@ -81,7 +83,7 @@ function buildFreezeOptions(streakFreezesAvailable: number, xp: number, revive =
     {
       id: 'xp',
       title: 'Spend XP Tokens',
-      subtitle: `Use ${XP_STREAK_SAVE_COST} XP points to protect today's streak`,
+      subtitle: `Use ${XP_STREAK_SAVE_COST} XP points to protect ${weekly ? 'this week' : 'today'}'s streak`,
       icon: '⚡',
       cost: `${XP_STREAK_SAVE_COST} XP`,
       recommended: false,
@@ -114,7 +116,7 @@ function HeartAnimation() {
   );
 }
 
-function StreakCounter({ streakCurrent, sublabel = 'At risk of breaking ⚠️' }: { streakCurrent: number; sublabel?: string }) {
+function StreakCounter({ streakCurrent, sublabel = 'At risk of breaking ⚠️', unit = 'Day' }: { streakCurrent: number; sublabel?: string; unit?: 'Day' | 'Week' }) {
   const countStyle = useAnimatedStyle(() => ({ opacity: 1 }));
 
   return (
@@ -128,7 +130,7 @@ function StreakCounter({ streakCurrent, sublabel = 'At risk of breaking ⚠️' 
         <HeartAnimation />
         <View style={styles.streakCountContent}>
           <Text style={styles.streakCountNum}>{streakCurrent}</Text>
-          <Text style={styles.streakCountLabel}>Day Streak</Text>
+          <Text style={styles.streakCountLabel}>{unit} Streak</Text>
           <Text style={styles.streakCountSublabel}>{sublabel}</Text>
         </View>
       </LinearGradient>
@@ -136,7 +138,7 @@ function StreakCounter({ streakCurrent, sublabel = 'At risk of breaking ⚠️' 
   );
 }
 
-function SavedAnimation({ onDone, streakCurrent, revived = false }: { onDone: () => void; streakCurrent: number; revived?: boolean }) {
+function SavedAnimation({ onDone, streakCurrent, revived = false, unit = 'day' }: { onDone: () => void; streakCurrent: number; revived?: boolean; unit?: 'day' | 'week' }) {
   const scale = useSharedValue(0);
   const opacity = useSharedValue(0);
   const textOpacity = useSharedValue(0);
@@ -181,7 +183,7 @@ function SavedAnimation({ onDone, streakCurrent, revived = false }: { onDone: ()
       <Animated.View style={[styles.savedText, textStyle]}>
         <Text style={styles.savedTitle}>{revived ? 'Streak Revived! 🎉' : 'Streak Saved! 🎉'}</Text>
         <Text style={styles.savedSubtitle}>
-          {revived ? `Your streak is back at ${streakCurrent} days.` : `Your ${streakCurrent}-day streak lives on.`}{'\n'}Amazing dedication!
+          {revived ? `Your streak is back at ${streakCurrent} ${unit}s.` : `Your ${streakCurrent}-${unit} streak lives on.`}{'\n'}Amazing dedication!
         </Text>
       </Animated.View>
 
@@ -210,6 +212,11 @@ export function StreakProtectionScreen({ navigation }: any) {
   const { refreshing, onRefresh } = usePullToRefresh(streakStatus.refetch);
 
   const status = streakStatus.data;
+  const weekly = !!status?.weekly;
+  const unit = weekly ? 'week' : 'day';
+  const atRiskNow = weekly ? isOrgAtRiskDays() : isAtRiskHours();
+  const bestStreak = weekly ? (status?.streakMax ?? 0) : (user?.streakMax ?? 0);
+  const currentStreak = status?.streakCurrent ?? user?.streakCurrent ?? 0;
   // A missed day sits behind us: offer to buy it back. Otherwise it's the usual "save today" flow.
   const reviving = !!status?.revivable;
   const alreadySafe = !!status && !status.revivable && status.state === 'safe';
@@ -235,6 +242,7 @@ export function StreakProtectionScreen({ navigation }: any) {
     status?.streakFreezesAvailable ?? user?.streakFreezesAvailable ?? 0,
     status?.xp ?? user?.xp ?? 0,
     reviving,
+    weekly,
   );
 
   const handleContinue = useCallback(async () => {
@@ -251,7 +259,7 @@ export function StreakProtectionScreen({ navigation }: any) {
     if (selectedOption === 'plant') {
       // Push (not replace) so Back from planting returns here, to the saved-streak message.
       setAwaitingPlant(true);
-      navigation.navigate('PlantTree');
+      navigation.navigate(weekly ? 'DailyLesson' : 'PlantTree');
       return;
     }
 
@@ -289,7 +297,7 @@ export function StreakProtectionScreen({ navigation }: any) {
 
       {stage === 'saved' ? (
         <>
-          <SavedAnimation onDone={handleDismiss} streakCurrent={reviving || revivedStreak ? revivedStreak : (status?.streakCurrent ?? user?.streakCurrent ?? 0)} revived={reviving || revivedStreak > 0} />
+          <SavedAnimation unit={unit} onDone={handleDismiss} streakCurrent={reviving || revivedStreak ? revivedStreak : (status?.streakCurrent ?? user?.streakCurrent ?? 0)} revived={reviving || revivedStreak > 0} />
           <View style={[styles.savedButton, { paddingBottom: insets.bottom + 24 }]}>
             <AnimatedButton
               label="Continue Growing 🌱"
@@ -323,7 +331,9 @@ export function StreakProtectionScreen({ navigation }: any) {
             <View style={styles.messageSection}>
               <Text style={styles.messageTitle}>Your streak is safe 🌿</Text>
               <Text style={styles.messageBody}>
-                You've already been active today, and there's no missed day to bring back. Come back tomorrow!
+                {weekly
+                  ? "This week is already counted, and there's no missed week to bring back. Keep it going next week!"
+                  : "You've already been active today, and there's no missed day to bring back. Come back tomorrow!"}
               </Text>
             </View>
           )}
@@ -334,8 +344,8 @@ export function StreakProtectionScreen({ navigation }: any) {
                 Your streak broke{'\n'}but it isn't gone 💔
               </Text>
               <Text style={styles.messageBody}>
-                You missed yesterday and lost your {status?.previousStreak ?? 0}-day streak. Revive it now and you'll be back at{' '}
-                {status?.restoredStreak ?? 0} days.
+                {weekly ? 'You missed last week' : 'You missed yesterday'} and lost your {status?.previousStreak ?? 0}-{unit} streak. Revive it now and you'll be back at{' '}
+                {status?.restoredStreak ?? 0} {unit}s.
               </Text>
             </View>
           )}
@@ -346,8 +356,10 @@ export function StreakProtectionScreen({ navigation }: any) {
                 Hey {user?.name ?? 'there'}, don't{'\n'}let your streak fade 🌿
               </Text>
               <Text style={styles.messageBody}>
-                You've been building something beautiful for {user?.streakCurrent ?? 0} days.
-                A few moments today keeps your forest alive – and your momentum going.
+                You've been building something beautiful for {currentStreak} {unit}s.
+                {weekly
+                  ? 'One post, drive, order or lesson this week keeps your forest alive – and your momentum going.'
+                  : 'A few moments today keeps your forest alive – and your momentum going.'}
               </Text>
             </View>
           )}
@@ -358,15 +370,28 @@ export function StreakProtectionScreen({ navigation }: any) {
                 {reviving ? `How would you like to${'\n'}revive your streak? 🛡️` : `How would you like to${'\n'}protect your streak? 🛡️`}
               </Text>
               <Text style={styles.messageBody}>
-                {reviving ? 'This fills in the day you missed so the run continues.' : 'Choose the option that feels right for you today.'}
+                {reviving
+                  ? `This fills in the ${unit} you missed so the run continues.`
+                  : weekly
+                    ? 'Choose the option that feels right for you this week.'
+                    : 'Choose the option that feels right for you today.'}
               </Text>
             </View>
           )}
 
           {/* Streak counter */}
           <StreakCounter
-            streakCurrent={reviving ? (status?.previousStreak ?? 0) : (status?.streakCurrent ?? user?.streakCurrent ?? 0)}
-            sublabel={reviving ? 'Broke yesterday 💔' : alreadySafe ? 'Safe for today ✅' : isAtRiskHours() ? 'At risk of breaking ⚠️' : 'Keep it going today 🌱'}
+            unit={weekly ? 'Week' : 'Day'}
+            streakCurrent={reviving ? (status?.previousStreak ?? 0) : currentStreak}
+            sublabel={
+              reviving
+                ? weekly ? 'Broke last week 💔' : 'Broke yesterday 💔'
+                : alreadySafe
+                  ? weekly ? 'Safe this week ✅' : 'Safe for today ✅'
+                  : atRiskNow
+                    ? 'At risk of breaking ⚠️'
+                    : weekly ? 'Keep it going this week 🌱' : 'Keep it going today 🌱'
+            }
           />
 
           {/* Record */}
@@ -374,7 +399,7 @@ export function StreakProtectionScreen({ navigation }: any) {
             <Text style={styles.recordIcon}>🏆</Text>
             <View>
               <Text style={styles.recordTitle}>Your Personal Best</Text>
-              <Text style={styles.recordValue}>{user?.streakMax ?? 0} days – you can beat it!</Text>
+              <Text style={styles.recordValue}>{bestStreak} {unit}s – you can beat it!</Text>
             </View>
           </BorderCard>
 
@@ -437,7 +462,7 @@ export function StreakProtectionScreen({ navigation }: any) {
 
           {stage === 'choosing' && status && (
             <Text style={styles.freezeHint}>
-              🧊 Earn a free streak freeze every {status.freezeEarnEveryDays} days of streak (you can hold up to {status.freezeCap}).
+              🧊 Earn a free streak freeze every {status.freezeEarnEveryDays} {unit}s of streak (you can hold up to {status.freezeCap}).
             </Text>
           )}
 

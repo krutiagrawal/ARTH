@@ -9,7 +9,9 @@ import { resolveMediaUrl } from '../api/client';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { useHaptics } from '../hooks/useHaptics';
-import { useMyAdoptions, useReleaseMyAdoption } from '../hooks/useApiQueries';
+import { useMyAdoptions, useReleaseMyAdoption, useMyAdoptionsSummary } from '../hooks/useApiQueries';
+import { ListFilterBar } from '../components/common/ListFilterBar';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PageFooter } from '../components/common/PageFooter';
 import { AdoptionStatusPill } from '../components/adopt/AdoptionStatusPill';
@@ -120,9 +122,15 @@ function AdoptionRow({ tree, navigation }: { tree: ApiAdoptableTree; navigation:
 
 export function MyAdoptionsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const listQuery = useMyAdoptions();
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<'newest' | 'oldest' | 'name'>('newest');
+  const q = useDebouncedValue(search.trim());
+  const listQuery = useMyAdoptions({ q: q || undefined, sort });
   const { data: trees, isLoading, refetch } = listQuery;
-  const { refreshing, onRefresh } = usePullToRefresh(refetch);
+  const summaryQuery = useMyAdoptionsSummary();
+  const summary = summaryQuery.data;
+  const { refreshing, onRefresh } = usePullToRefresh([refetch, summaryQuery.refetch]);
+  const isFiltering = !!q;
 
   return (
     <View style={styles.container}>
@@ -141,20 +149,43 @@ export function MyAdoptionsScreen({ navigation }: any) {
 
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 40 }} />
-      ) : !trees || trees.length === 0 ? (
+      ) : (!trees || trees.length === 0) && !isFiltering ? (
         <EmptyState icon="🌳" title="No adopted trees yet" body="Trees you adopt from NGOs will show up here." />
       ) : (
+        <>
+        <ListFilterBar
+          query={search}
+          onQueryChange={setSearch}
+          placeholder="Search by tree, species, NGO or place"
+          options={[{ key: null, label: 'All' }]}
+          value={null}
+          onChange={() => undefined}
+          rows={[
+            {
+              label: 'Sort',
+              options: [
+                { key: 'newest', label: 'Recently adopted' },
+                { key: 'oldest', label: 'Oldest' },
+                { key: 'name', label: 'Name A–Z' },
+              ],
+              value: sort,
+              onChange: (k) => setSort((k ?? 'newest') as 'newest' | 'oldest' | 'name'),
+            },
+          ]}
+        />
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
           {...infiniteScrollProps(listQuery)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
-          {trees.map((t) => (
+          {(trees ?? []).length === 0 && <Text style={{ textAlign: 'center', color: COLORS.textMuted, marginTop: 24 }}>No trees match your search.</Text>}
+          {(trees ?? []).map((t) => (
             <AdoptionRow key={t.id} tree={t} navigation={navigation} />
           ))}
           <PageFooter loading={listQuery.isFetchingNextPage} />
         </ScrollView>
+        </>
       )}
     </View>
   );

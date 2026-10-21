@@ -1,4 +1,5 @@
-import { apiFetch, toFormFile } from './client';
+import { ownedQuery } from './drives';
+import { apiFetch, toFormFile, type OwnedListSummary, type OwnedExport } from './client';
 
 export interface ApiCampaign {
   id: string;
@@ -19,6 +20,7 @@ export interface ApiCampaign {
   /** ISO timestamp the campaign stops taking donations; null = open-ended. */
   endsAt: string | null;
   status: 'active' | 'closed';
+  isArchived?: boolean;
   createdAt: string;
 }
 
@@ -89,6 +91,7 @@ export interface MyDonationsSummary {
 }
 
 export interface MyDonationsFilters {
+  sort?: 'newest' | 'oldest' | 'amount';
   q?: string;
   status?: DonationStatus;
   period?: DonationPeriod;
@@ -101,6 +104,7 @@ export async function fetchMyDonations(
   if (params.q) qs.set('q', params.q);
   if (params.status) qs.set('status', params.status);
   if (params.period) qs.set('period', params.period);
+  if (params.sort) qs.set('sort', params.sort);
   if (params.page) qs.set('page', String(params.page));
   if (params.take) qs.set('take', String(params.take));
   return apiFetch(`/api/campaigns/mine-donations${qs.toString() ? `?${qs}` : ''}`);
@@ -108,8 +112,20 @@ export async function fetchMyDonations(
 
 // ---------- NGO-facing ----------
 
-export async function fetchMyCampaigns(page?: number, take?: number): Promise<ApiCampaign[]> {
-  return apiFetch<ApiCampaign[]>(`/api/campaigns/mine${page ? `?page=${page}&take=${take ?? 30}` : ''}`);
+export interface OwnedCampaignFilter {
+  q?: string;
+  status?: 'active' | 'closed';
+  category?: CampaignCategory;
+  archived?: boolean;
+  sort?: 'newest' | 'oldest' | 'ending_soon' | 'goal';
+}
+
+export async function fetchMyCampaigns(
+  page?: number,
+  take?: number,
+  filter: OwnedCampaignFilter = {},
+): Promise<ApiCampaign[]> {
+  return apiFetch<ApiCampaign[]>(`/api/campaigns/mine${ownedQuery(page, take, { ...filter, archived: filter.archived ? 'true' : undefined })}`);
 }
 
 export interface CreateCampaignInput {
@@ -141,4 +157,39 @@ export async function closeCampaign(id: string): Promise<ApiCampaign> {
 
 export async function reopenCampaign(id: string): Promise<ApiCampaign> {
   return apiFetch<ApiCampaign>(`/api/campaigns/${id}/reopen`, { method: 'POST' });
+}
+
+export type UpdateCampaignInput = Partial<Omit<CreateCampaignInput, 'photo'>> & { photo?: CreateCampaignInput['photo'] };
+
+export async function updateCampaign(id: string, input: UpdateCampaignInput): Promise<ApiCampaign> {
+  const form = new FormData();
+  if (input.title !== undefined) form.append('title', input.title);
+  if (input.description !== undefined) form.append('description', input.description);
+  if (input.goalAmountCents !== undefined) form.append('goalAmountCents', String(input.goalAmountCents));
+  if (input.category) form.append('category', input.category);
+  if (input.endsAt) form.append('endsAt', input.endsAt);
+  if (input.photo) form.append('photo', toFormFile(input.photo.uri), input.photo.name);
+  return apiFetch<ApiCampaign>(`/api/campaigns/${id}`, { method: 'PATCH', body: form, isForm: true });
+}
+
+/** Permanent delete – the server refuses once the campaign has received donations (close it instead). */
+export async function deleteCampaign(id: string): Promise<{ id: string }> {
+  return apiFetch<{ id: string }>(`/api/campaigns/${id}/permanent`, { method: 'DELETE' });
+}
+
+export async function fetchOwnedCampaignSummary(): Promise<OwnedListSummary> {
+  return apiFetch<OwnedListSummary>('/api/campaigns/mine/summary');
+}
+export async function exportOwnedCampaigns(): Promise<OwnedExport> {
+  return apiFetch<OwnedExport>('/api/campaigns/mine/export');
+}
+export async function duplicateCampaign(id: string): Promise<ApiCampaign> {
+  return apiFetch<ApiCampaign>(`/api/campaigns/${id}/duplicate`, { method: 'POST' });
+}
+export async function archiveCampaign(id: string, archived: boolean): Promise<ApiCampaign> {
+  return apiFetch<ApiCampaign>(`/api/campaigns/${id}/archive`, { method: 'POST', body: { archived } });
+}
+
+export async function exportMyDonations(): Promise<OwnedExport> {
+  return apiFetch<OwnedExport>('/api/campaigns/mine-donations/export');
 }

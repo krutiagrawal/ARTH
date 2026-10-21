@@ -35,6 +35,9 @@ export const nearbyQuerySchema = z.object({
 
 export const ownedListQuerySchema = z.object({
   q: z.string().max(200).optional(),
+  status: z.enum(['available', 'adopted', 'removed']).optional(),
+  archived: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
+  sort: z.enum(['newest', 'oldest', 'name']).optional(),
   page: z.coerce.number().int().min(1).optional(),
   take: z.coerce.number().int().min(1).max(50).optional(),
 });

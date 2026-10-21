@@ -219,3 +219,7 @@ export async function verifyPlantingPhoto(photo: { uri: string; name: string; ty
 
   return apiFetch<VerifyPlantingPhotoResult>('/api/trees/verify-photo', { method: 'POST', body: form, isForm: true });
 }
+
+export async function exportMyTrees(): Promise<{ csv: string; count: number }> {
+  return apiFetch('/api/trees/mine/export');
+}

@@ -2,11 +2,12 @@ import { FastifyInstance } from 'fastify';
 import { ORG_ROLES } from '../constants/roles';
 import * as ngoService from '../services/ngo.service';
 import { requireNgoProfile } from '../services/ngo.service';
-import { saveNgoLogo } from '../services/upload.service';
+import { saveNgoLogo, saveNgoVerificationDocument, saveNgoPastWorkPhoto } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
 import { BadRequestError } from '../utils/errors';
 import { updateProfileSchema, donationsQuerySchema } from '../schemas/ngo.schema';
-import { getContributionStreakSummary, getReputationSummary } from '../services/ngoReputation.service';
+import { getReputationSummary } from '../services/ngoReputation.service';
+import { getOrgStreakSummary } from '../services/orgStreak.service';
 
 interface NgoLeaderboardRow {
   id: string;
@@ -58,6 +59,13 @@ function serializeNgoProfile(profile: any) {
     primaryContactPhone: profile.primaryContactPhone,
     primaryContactEmail: profile.primaryContactEmail,
     officeBearers: profile.officeBearers ?? [],
+    // What was uploaded at registration (own profile only – never on the public serializer).
+    documents: (profile.verificationDocuments ?? []).map((d: any) => ({
+      id: d.id,
+      docType: d.docType,
+      fileUrl: d.fileUrl,
+      uploadedAt: d.uploadedAt,
+    })),
 
     primaryWorkAreas: profile.primaryWorkAreas ?? [],
     drivesConductedHistorical: profile.drivesConductedHistorical,
@@ -126,6 +134,35 @@ export default async function ngoRoutes(fastify: FastifyInstance) {
       ...parsed.data,
       ...(logoUrl ? { logoUrl } : {}),
     });
+    reply.send(serializeNgoProfile(profile));
+  });
+
+  const DOCUMENT_TYPES = [
+    'registration_certificate',
+    'twelve_a_certificate',
+    'eighty_g_certificate',
+    'fcra_certificate',
+    'csr1_certificate',
+    'authorization_proof',
+    'past_work_photo',
+  ] as const;
+
+  // Upload or replace a verification document: multipart with `docType` and `file`.
+  fastify.post('/profile/documents', async (request, reply) => {
+    const { fields, file } = splitMultipartBody(request.body as any, 'file');
+    const docType = DOCUMENT_TYPES.find((t) => t === fields.docType);
+    if (!docType) throw new BadRequestError('Unknown document type');
+    if (!file) throw new BadRequestError('Attach a file');
+
+    const buffer = await file.toBuffer();
+    const input = { filename: file.filename, mimetype: file.mimetype, buffer };
+    const fileUrl = docType === 'past_work_photo' ? await saveNgoPastWorkPhoto(input) : await saveNgoVerificationDocument(input);
+    const profile = await ngoService.addVerificationDocument(fastify.prisma, request.user!.id, docType, fileUrl);
+    reply.send(serializeNgoProfile(profile));
+  });
+
+  fastify.delete<{ Params: { id: string } }>('/profile/documents/:id', async (request, reply) => {
+    const profile = await ngoService.removeVerificationDocument(fastify.prisma, request.user!.id, request.params.id);
     reply.send(serializeNgoProfile(profile));
   });
 
@@ -227,8 +264,9 @@ export default async function ngoRoutes(fastify: FastifyInstance) {
     const ngo = await requireNgoProfile(fastify.prisma, request.user!.id);
     const weeksCount = Math.min(Math.max(Number(request.query.weeks) || 12, 1), 26);
 
-    const { updates } = await getContributionStreakSummary(fastify.prisma, ngo.id, weeksCount);
-    reply.send({ weeks: updates.weeks.map((w) => ({ weekLabel: w.week, posted: w.met })) });
+    // Combined across every activity type (posts, drives, trees, lessons, freezes), not just posts.
+    const { weeks, current, longest } = await getOrgStreakSummary(fastify.prisma, 'ngo', ngo.id, weeksCount);
+    reply.send({ weeks: weeks.map((w) => ({ weekLabel: w.week, posted: w.met })), current, longest });
   });
 
   fastify.get<{ Querystring: { weeks?: string } }>('/reputation', async (request, reply) => {

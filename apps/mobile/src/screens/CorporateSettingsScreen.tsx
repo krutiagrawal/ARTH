@@ -188,8 +188,8 @@ export function CorporateSettingsScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            <FormField maxLength={120} label="Company Name" value={companyName} onChangeText={setCompanyName} placeholder="eg - Your company" />
-            <FormField maxLength={2000} label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What does your company do?" />
+            <FormField maxLength={120} required label="Company Name" value={companyName} onChangeText={setCompanyName} placeholder="eg - Your company" />
+            <FormField maxLength={2000} required label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What does your company do?" />
             <FormField maxLength={120} label="Industry" value={industry} onChangeText={setIndustry} placeholder="eg - Industry" />
             <CityPickerField value={city} onChange={setCity} />
 

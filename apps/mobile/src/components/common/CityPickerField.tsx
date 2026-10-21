@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Text } from './AppText';
 import { FormFieldShell } from './FormField';
+import { FieldLabel } from './RequiredMark';
 import { Sheet } from './Sheet';
 import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
 import { RADIUS, SPACING } from '../../constants/theme';
@@ -16,11 +17,13 @@ import { useCities } from '../../hooks/useApiQueries';
  */
 export function CityPickerField({
   label = 'City',
+  required,
   value,
   onChange,
   variant = 'light',
 }: {
   label?: string;
+  required?: boolean;
   value: string;
   onChange: (city: string) => void;
   variant?: 'light' | 'dark';
@@ -32,13 +35,16 @@ export function CityPickerField({
     <>
       <TouchableOpacity activeOpacity={0.8} onPress={() => setOpen(true)}>
         {variant === 'dark' ? (
-          <View style={styles.darkTrigger}>
-            <Text style={[styles.darkTriggerText, !value && styles.darkTriggerPlaceholder]}>
-              {value || `${label} (optional)`}
-            </Text>
-          </View>
+          <>
+            {required ? <FieldLabel label={label} required dark /> : null}
+            <View style={styles.darkTrigger}>
+              <Text style={[styles.darkTriggerText, !value && styles.darkTriggerPlaceholder]}>
+                {value || (required ? 'Select city' : `${label} (optional)`)}
+              </Text>
+            </View>
+          </>
         ) : (
-          <FormFieldShell label={label}>
+          <FormFieldShell label={label} required={required}>
             <Text style={styles.valueText}>{value || 'Select city'}</Text>
           </FormFieldShell>
         )}

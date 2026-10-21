@@ -42,6 +42,12 @@ export const createZoneSchema = z.object({
   name: z.string().min(1).max(100),
 });
 
+export const moveTreesToZoneSchema = z.object({
+  plantedTreeIds: z.array(z.string().uuid()).min(1).max(500),
+  // null = take the trees out of their zone (back to "Unzoned").
+  zoneId: z.string().uuid().nullable(),
+});
+
 export const renameZoneSchema = z.object({
   name: z.string().min(1).max(100),
 });

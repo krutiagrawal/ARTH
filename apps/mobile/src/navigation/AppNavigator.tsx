@@ -180,10 +180,11 @@ const GROUP_TABS: TabItem[] = [
 // Settings moved off the tab bar and into the nursery's own profile screen (gear icon, next to
 // the "Edit profile" button) – the same place individual users reach Settings from, rather than
 // a dedicated tab. Orders takes the freed-up slot since it's a daily-use action.
-export type NurseryTabName = 'Home' | 'Stock' | 'Orders';
+export type NurseryTabName = 'Home' | 'Community' | 'Stock' | 'Orders';
 
 const NURSERY_TABS: TabItem[] = [
   { name: 'Home', icon: '🏡', label: 'Home' },
+  { name: 'Community', icon: '👥', label: 'Community' },
   { name: 'Stock', icon: '📦', label: 'Stock', raised: true },
   { name: 'Orders', icon: '🚚', label: 'Orders' },
 ];
@@ -639,7 +640,7 @@ function NgoMainApp({ navigation }: any) {
       case 'Map':
         return <NgoMapScreen navigation={navigation} />;
       case 'Community':
-        return <NgoCommunityScreen navigation={navigation} />;
+        return <CommunityScreen navigation={navigation} />;
       default:
         return <NgoDashboardScreen navigation={navigation} onNavigateTab={navigateTab} />;
     }
@@ -715,6 +716,8 @@ function NurseryMainApp({ navigation }: any) {
     switch (activeTab) {
       case 'Home':
         return <NurseryDashboardScreen navigation={navigation} />;
+      case 'Community':
+        return <CommunityScreen navigation={navigation} />;
       case 'Stock':
         return <NurseryStockScreen navigation={tabBackNavigation('Home')} />;
       case 'Orders':

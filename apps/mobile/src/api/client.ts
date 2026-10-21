@@ -199,3 +199,17 @@ export async function apiFetch<T = unknown>(path: string, options: RequestOption
 
   return data as T;
 }
+
+/** Header numbers for an NGO's Manage list (drives / campaigns / trees); the extra keys differ per list. */
+export interface OwnedListSummary {
+  total: number;
+  archived: number;
+  /** Records worth a look: drives with no volunteers close to the date, campaigns ending soon, adopted trees with no recent care updates. */
+  needsAttention: number;
+  [status: string]: number;
+}
+
+export interface OwnedExport {
+  csv: string;
+  count: number;
+}

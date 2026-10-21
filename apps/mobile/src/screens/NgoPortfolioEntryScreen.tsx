@@ -58,7 +58,7 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
   );
   const [partnerOrgs, setPartnerOrgs] = useState(existing?.partnerOrgs ?? '');
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
-  const [replacePhotos, setReplacePhotos] = useState(!isEdit);
+  const [removedMediaIds, setRemovedMediaIds] = useState<string[]>([]);
 
   const create = useCreatePortfolioEntry();
   const update = useUpdatePortfolioEntry();
@@ -83,15 +83,17 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
 
     const input = {
       title: title.trim(),
-      description: description.trim() || undefined,
+      // On edit, send '' so a field the user emptied is actually cleared on the server.
+      description: isEdit ? description.trim() : description.trim() || undefined,
       happenedOn: happenedOn.toISOString(),
-      locationLabel: locationLabel.trim() || undefined,
-      city: city.trim() || undefined,
+      locationLabel: isEdit ? locationLabel.trim() : locationLabel.trim() || undefined,
+      city: isEdit ? city.trim() : city.trim() || undefined,
       treesPlanted: treesPlanted ? Number(treesPlanted) : undefined,
       volunteersInvolved: volunteers ? Number(volunteers) : undefined,
-      partnerOrgs: partnerOrgs.trim() || undefined,
-      // Only sent when the user chose new images – see the note above.
-      ...(replacePhotos && photos.length > 0 ? { photos } : {}),
+      partnerOrgs: isEdit ? partnerOrgs.trim() : partnerOrgs.trim() || undefined,
+      // New photos are appended; stored ones the user removed are deleted by id.
+      ...(photos.length > 0 ? { photos } : {}),
+      ...(removedMediaIds.length > 0 ? { removeMediaIds: removedMediaIds } : {}),
     };
 
     const onDone = () => navigation.goBack();
@@ -125,13 +127,13 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           <FormField maxLength={160}
-            label="What was it?"
+            required label="What was it?"
             placeholder="eg - Yamuna bank restoration"
             value={title}
             onChangeText={setTitle}
           />
 
-          <FormFieldShell label="When did it happen?">
+          <FormFieldShell required label="When did it happen?">
             <TouchableOpacity onPress={() => setShowPicker(true)} activeOpacity={0.7}>
               <Text style={styles.dateValue}>
                 {happenedOn.toLocaleDateString(undefined, {
@@ -206,32 +208,15 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
           />
 
           <Text style={styles.sectionTitle}>Photos</Text>
-          {isEdit && !replacePhotos ? (
-            <View style={styles.existingPhotos}>
-              <Text style={styles.existingText}>
-                {existing!.media.length > 0
-                  ? `${existing!.media.length} photo${existing!.media.length === 1 ? '' : 's'} already attached.`
-                  : 'No photos attached yet.'}
-              </Text>
-              <TouchableOpacity onPress={() => setReplacePhotos(true)} activeOpacity={0.7}>
-                <Text style={styles.replaceLink}>
-                  {existing!.media.length > 0 ? 'Replace photos' : 'Add photos'} →
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <MultiPhotoPickerField
-              photos={photos}
-              onChange={setPhotos}
-              max={6}
-              label="Up to 6 photos"
-              hint={
-                isEdit
-                  ? 'These replace the photos currently on this entry.'
-                  : 'The first photo becomes the cover.'
-              }
-            />
-          )}
+          <MultiPhotoPickerField
+            photos={photos}
+            onChange={setPhotos}
+            existing={(existing?.media ?? []).filter((m) => !removedMediaIds.includes(m.id))}
+            onRemoveExisting={(id) => setRemovedMediaIds((prev) => [...prev, id])}
+            max={6}
+            label="Up to 6 photos"
+            hint={isEdit ? 'Saved photos stay unless you remove them; new ones are added after.' : 'The first photo becomes the cover.'}
+          />
 
           <AnimatedButton
             label={busy ? 'Saving…' : isEdit ? 'Save changes' : 'Add to profile'}

@@ -401,12 +401,39 @@ export async function confirmOrderPayment(prisma: PrismaClient, paymentIntentId:
   await finalizeConfirmedOrder(prisma, order);
 }
 
-export async function listMyOrders(prisma: PrismaClient, userId: string, q: CursorQuery = {}) {
+const MY_ORDER_GROUPS = {
+  active: ['pending_payment', 'confirmed', 'packed', 'ready_for_pickup', 'out_for_delivery'],
+  completed: ['picked_up', 'delivered', 'plantation_verified'],
+  cancelled: ['cancelled'],
+} as const;
+
+export async function listMyOrders(
+  prisma: PrismaClient,
+  userId: string,
+  q: CursorQuery & { search?: string; group?: 'active' | 'completed' | 'cancelled'; sort?: 'newest' | 'oldest' | 'highest' } = {},
+) {
   const { take, args } = cursorArgs(q);
   const orders = await prisma.order.findMany({
-    where: { userId },
+    where: {
+      userId,
+      ...(q.group ? { status: { in: [...MY_ORDER_GROUPS[q.group]] as any } } : {}),
+      ...(q.search
+        ? {
+            OR: [
+              { nursery: { nurseryName: { contains: q.search, mode: 'insensitive' as const } } },
+              { items: { some: { species: { contains: q.search, mode: 'insensitive' as const } } } },
+              { id: { endsWith: q.search.toLowerCase().replace(/^#/, '') } },
+            ],
+          }
+        : {}),
+    },
     include: orderInclude,
-    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    orderBy:
+      q.sort === 'oldest'
+        ? [{ createdAt: 'asc' as const }, { id: 'asc' as const }]
+        : q.sort === 'highest'
+          ? [{ totalCents: 'desc' as const }, { id: 'desc' as const }]
+          : [{ createdAt: 'desc' as const }, { id: 'desc' as const }],
     ...args,
   });
   return toCursorPage(orders, take, serializeOrder);
@@ -607,17 +634,48 @@ export async function listMyReviews(prisma: PrismaClient, userId: string, q: Cur
 export async function listNurseryOrders(
   prisma: PrismaClient,
   nurseryId: string,
-  filter: { status?: string; fulfillmentType?: string } & CursorQuery = {},
+  filter: {
+    status?: string;
+    /** active = still being fulfilled, completed = picked up / delivered / verified. */
+    group?: 'active' | 'completed' | 'cancelled';
+    fulfillmentType?: string;
+    q?: string;
+    sort?: 'newest' | 'oldest' | 'highest' | 'scheduled';
+  } & CursorQuery = {},
 ) {
   const { take, args } = cursorArgs(filter);
+  const GROUPS = {
+    active: ['pending_payment', 'confirmed', 'packed', 'ready_for_pickup', 'out_for_delivery'],
+    completed: ['picked_up', 'delivered', 'plantation_verified'],
+    cancelled: ['cancelled'],
+  } as const;
   const orders = await prisma.order.findMany({
     where: {
       nurseryId,
       ...(filter.status ? { status: filter.status as any } : {}),
+      ...(!filter.status && filter.group ? { status: { in: [...GROUPS[filter.group]] as any } } : {}),
       ...(filter.fulfillmentType ? { fulfillmentType: filter.fulfillmentType as any } : {}),
+      ...(filter.q
+        ? {
+            OR: [
+              { user: { name: { contains: filter.q, mode: 'insensitive' as const } } },
+              { user: { handle: { contains: filter.q, mode: 'insensitive' as const } } },
+              { items: { some: { species: { contains: filter.q, mode: 'insensitive' as const } } } },
+              { address: { is: { city: { contains: filter.q, mode: 'insensitive' as const } } } },
+              { id: { endsWith: filter.q.toLowerCase() } },
+            ],
+          }
+        : {}),
     },
     include: { items: true, address: true, user: { select: { id: true, name: true, handle: true } } },
-    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    orderBy:
+      filter.sort === 'oldest'
+        ? [{ createdAt: 'asc' as const }, { id: 'asc' as const }]
+        : filter.sort === 'highest'
+          ? [{ totalCents: 'desc' as const }, { id: 'desc' as const }]
+          : filter.sort === 'scheduled'
+            ? [{ scheduledFor: { sort: 'asc' as const, nulls: 'last' as const } }, { id: 'desc' as const }]
+            : [{ createdAt: 'desc' as const }, { id: 'desc' as const }],
     ...args,
   });
   return toCursorPage(orders, take);
@@ -887,4 +945,79 @@ export async function maybeMarkOrderPlantationVerified(tx: Prisma.TransactionCli
 
   await tx.order.update({ where: { id: orderId }, data: { status: 'plantation_verified', plantationVerifiedAt: new Date() } });
   return true;
+}
+
+/** Counts by stage for the nursery Orders header, plus the money taken from completed orders. */
+export async function getNurseryOrdersSummary(prisma: PrismaClient, nurseryId: string) {
+  const grouped = await prisma.order.groupBy({ by: ['status'], where: { nurseryId }, _count: { _all: true }, _sum: { totalCents: true } });
+  const count = (...statuses: string[]) => grouped.filter((g) => statuses.includes(g.status)).reduce((n, g) => n + g._count._all, 0);
+  const revenueCents = grouped
+    .filter((g) => ['picked_up', 'delivered', 'plantation_verified'].includes(g.status))
+    .reduce((n, g) => n + (g._sum.totalCents ?? 0), 0);
+  const confirmed = count('confirmed');
+  const ready = count('ready_for_pickup');
+  return {
+    total: grouped.reduce((n, g) => n + g._count._all, 0),
+    new: confirmed,
+    packed: count('packed'),
+    ready_for_pickup: ready,
+    out_for_delivery: count('out_for_delivery'),
+    completed: count('picked_up', 'delivered', 'plantation_verified'),
+    cancelled: count('cancelled'),
+    revenueCents,
+    // New orders waiting to be packed, plus packed ones the customer hasn't collected.
+    needsAttention: confirmed + ready,
+  };
+}
+
+export async function exportNurseryOrders(prisma: PrismaClient, nurseryId: string) {
+  const orders = await prisma.order.findMany({
+    where: { nurseryId },
+    orderBy: { createdAt: 'desc' },
+    include: { items: true, address: true, user: { select: { name: true, handle: true } } },
+  });
+  return orders.map((o) => ({
+    orderRef: o.id.slice(-6).toUpperCase(),
+    placedOn: o.createdAt.toISOString(),
+    status: o.status,
+    fulfilment: o.fulfillmentType,
+    customer: `${o.user.name} (@${o.user.handle})`,
+    items: o.items.map((i) => `${i.species} x${i.quantity}`).join('; '),
+    totalRupees: o.totalCents / 100,
+    city: o.address?.city ?? '',
+    scheduledFor: o.scheduledFor ? o.scheduledFor.toISOString() : '',
+  }));
+}
+
+export async function getMyOrdersSummary(prisma: PrismaClient, userId: string) {
+  const grouped = await prisma.order.groupBy({ by: ['status'], where: { userId }, _count: { _all: true }, _sum: { totalCents: true } });
+  const count = (statuses: readonly string[]) => grouped.filter((g) => statuses.includes(g.status)).reduce((n, g) => n + g._count._all, 0);
+  const spentCents = grouped.filter((g) => (MY_ORDER_GROUPS.completed as readonly string[]).includes(g.status)).reduce((n, g) => n + (g._sum.totalCents ?? 0), 0);
+  const outForDelivery = count(['out_for_delivery']);
+  return {
+    total: grouped.reduce((n, g) => n + g._count._all, 0),
+    active: count(MY_ORDER_GROUPS.active),
+    completed: count(MY_ORDER_GROUPS.completed),
+    cancelled: count(MY_ORDER_GROUPS.cancelled),
+    spentCents,
+    // Orders on their way – worth knowing at a glance.
+    needsAttention: outForDelivery,
+  };
+}
+
+export async function exportMyOrders(prisma: PrismaClient, userId: string) {
+  const orders = await prisma.order.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    include: { items: true, nursery: { select: { nurseryName: true } } },
+  });
+  return orders.map((o) => ({
+    orderRef: o.id.slice(-6).toUpperCase(),
+    placedOn: o.createdAt.toISOString(),
+    status: o.status,
+    nursery: o.nursery.nurseryName,
+    fulfilment: o.fulfillmentType,
+    items: o.items.map((i) => `${i.species} x${i.quantity}`).join('; '),
+    totalRupees: o.totalCents / 100,
+  }));
 }

@@ -41,6 +41,9 @@ interface NearbyFilter {
 
 interface OwnedListFilter {
   q?: string;
+  status?: 'available' | 'adopted' | 'removed';
+  archived?: boolean;
+  sort?: 'newest' | 'oldest' | 'name';
   page?: number;
   take?: number;
 }
@@ -248,10 +251,26 @@ export async function listOwnedAdoptableTrees(prisma: PrismaClient, ngoUserId: s
   return prisma.adoptableTree.findMany({
     where: {
       ngoId: ngo.id,
-      ...(filter.q ? { nickname: { contains: filter.q, mode: 'insensitive' as const } } : {}),
+      ...(filter.q
+        ? {
+            OR: [
+              { nickname: { contains: filter.q, mode: 'insensitive' as const } },
+              { speciesName: { contains: filter.q, mode: 'insensitive' as const } },
+              { city: { contains: filter.q, mode: 'insensitive' as const } },
+              { locationLabel: { contains: filter.q, mode: 'insensitive' as const } },
+            ],
+          }
+        : {}),
+      archivedAt: filter.archived ? { not: null } : null,
+      ...(filter.status ? { status: filter.status } : {}),
     },
     include: adoptableTreeInclude,
-    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    orderBy:
+      filter.sort === 'name'
+        ? [{ nickname: 'asc' as const }, { id: 'asc' as const }]
+        : filter.sort === 'oldest'
+          ? [{ createdAt: 'asc' as const }, { id: 'asc' as const }]
+          : [{ createdAt: 'desc' as const }, { id: 'desc' as const }],
     take,
     skip: (page - 1) * take,
   });
@@ -275,11 +294,35 @@ export async function releaseAdoption(prisma: PrismaClient, ngoUserId: string, t
   return updated;
 }
 
-export async function listMyAdoptedTrees(prisma: PrismaClient, userId: string, q: CursorQuery = {}) {
+export async function listMyAdoptedTrees(
+  prisma: PrismaClient,
+  userId: string,
+  q: CursorQuery & { search?: string; sort?: 'newest' | 'oldest' | 'name' } = {},
+) {
   const { take, args } = cursorArgs(q);
   const adoptions = await prisma.adoption.findMany({
-    where: { userId },
-    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    where: {
+      userId,
+      ...(q.search
+        ? {
+            adoptableTree: {
+              OR: [
+                { nickname: { contains: q.search, mode: 'insensitive' as const } },
+                { speciesName: { contains: q.search, mode: 'insensitive' as const } },
+                { city: { contains: q.search, mode: 'insensitive' as const } },
+                { locationLabel: { contains: q.search, mode: 'insensitive' as const } },
+                { ngo: { orgName: { contains: q.search, mode: 'insensitive' as const } } },
+              ],
+            },
+          }
+        : {}),
+    },
+    orderBy:
+      q.sort === 'name'
+        ? [{ adoptableTree: { nickname: 'asc' as const } }, { id: 'asc' as const }]
+        : q.sort === 'oldest'
+          ? [{ createdAt: 'asc' as const }, { id: 'asc' as const }]
+          : [{ createdAt: 'desc' as const }, { id: 'desc' as const }],
     include: { adoptableTree: { include: adoptableTreeInclude } },
     ...args,
   });
@@ -513,4 +556,129 @@ export async function getAdoptionStatus(prisma: PrismaClient, adoptableTreeId: s
     timeline,
     pendingUpdates,
   };
+}
+
+/**
+ * Permanently removes an adoptable tree listed by mistake or for testing. Only while it has never
+ * been adopted and has no care history; otherwise it should be delisted (removeAdoptableTree),
+ * which releases the adopter and keeps the record.
+ */
+export async function deleteAdoptableTree(prisma: PrismaClient, ngoUserId: string, treeId: string) {
+  const { tree } = await findOwnedTreeOrThrow(prisma, ngoUserId, treeId);
+  if (tree.status === 'adopted') throw new ConflictError('This tree is currently adopted – delist it instead of deleting it.');
+  const [adoptions, observations] = await Promise.all([
+    prisma.adoption.count({ where: { adoptableTreeId: tree.id } }),
+    prisma.treeObservation.count({ where: { adoptableTreeId: tree.id } }),
+  ]);
+  if (adoptions > 0 || observations > 0) throw new ConflictError('This tree has adoption or care history – delist it instead of deleting it.');
+  await prisma.adoptableTree.delete({ where: { id: tree.id } });
+  return { id: tree.id };
+}
+
+/** Puts a delisted tree back on the public list. Its old adoption already ended when it was removed, so it returns as available. */
+export async function relistAdoptableTree(prisma: PrismaClient, ngoUserId: string, treeId: string) {
+  const { tree } = await findOwnedTreeOrThrow(prisma, ngoUserId, treeId);
+  if (tree.status !== 'removed') throw new ConflictError('Only a removed tree can be relisted');
+  return prisma.adoptableTree.update({ where: { id: tree.id }, data: { status: 'available' }, include: adoptableTreeInclude });
+}
+
+export async function getOwnedTreeSummary(prisma: PrismaClient, ngoUserId: string) {
+  const ngo = await requireNgoProfile(prisma, ngoUserId);
+  const base = { ngoId: ngo.id, archivedAt: null };
+  const [total, available, adopted, removed, archived, pendingUpdates] = await Promise.all([
+    prisma.adoptableTree.count({ where: base }),
+    prisma.adoptableTree.count({ where: { ...base, status: 'available' } }),
+    prisma.adoptableTree.count({ where: { ...base, status: 'adopted' } }),
+    prisma.adoptableTree.count({ where: { ...base, status: 'removed' } }),
+    prisma.adoptableTree.count({ where: { ngoId: ngo.id, archivedAt: { not: null } } }),
+    // Adopted trees whose adopter hasn't checked in for a month – worth a nudge.
+    prisma.adoptableTree.count({
+      where: {
+        ...base,
+        status: 'adopted',
+        observations: { none: { createdAt: { gt: new Date(Date.now() - 30 * 86_400_000) } } },
+      },
+    }),
+  ]);
+  return { total, available, adopted, removed, archived, needsAttention: pendingUpdates };
+}
+
+/** Lists the same tree again as a fresh available listing (planted-tree link and adopter are not copied). */
+export async function duplicateAdoptableTree(prisma: PrismaClient, ngoUserId: string, treeId: string) {
+  const { tree } = await findOwnedTreeOrThrow(prisma, ngoUserId, treeId);
+  return prisma.adoptableTree.create({
+    data: {
+      ngoId: tree.ngoId,
+      nickname: `${tree.nickname} (copy)`.slice(0, 60),
+      speciesName: tree.speciesName,
+      description: tree.description,
+      instructions: tree.instructions,
+      city: tree.city,
+      locationLabel: tree.locationLabel,
+      photoUrl: tree.photoUrl,
+      lat: tree.lat,
+      lng: tree.lng,
+    },
+    include: adoptableTreeInclude,
+  });
+}
+
+/** An adopted tree can't be archived – release or remove it first. */
+export async function setAdoptableTreeArchived(prisma: PrismaClient, ngoUserId: string, treeId: string, archived: boolean) {
+  const { tree } = await findOwnedTreeOrThrow(prisma, ngoUserId, treeId);
+  if (archived && tree.status === 'adopted') throw new ConflictError('This tree is adopted – release or remove it before archiving.');
+  return prisma.adoptableTree.update({ where: { id: tree.id }, data: { archivedAt: archived ? new Date() : null }, include: adoptableTreeInclude });
+}
+
+export async function exportOwnedTrees(prisma: PrismaClient, ngoUserId: string) {
+  const ngo = await requireNgoProfile(prisma, ngoUserId);
+  const trees = await prisma.adoptableTree.findMany({
+    where: { ngoId: ngo.id },
+    orderBy: { createdAt: 'desc' },
+    include: { adoption: { include: { user: { select: { name: true, handle: true } } } } },
+  });
+  return trees.map((t) => ({
+    nickname: t.nickname,
+    species: t.speciesName,
+    status: t.archivedAt ? `${t.status} (archived)` : t.status,
+    city: t.city ?? '',
+    location: t.locationLabel ?? '',
+    adopter: t.adoption ? `${t.adoption.user.name} (@${t.adoption.user.handle})` : '',
+    adoptedOn: t.adoption ? t.adoption.createdAt.toISOString() : '',
+    listedOn: t.createdAt.toISOString(),
+  }));
+}
+
+export async function getMyAdoptionsSummary(prisma: PrismaClient, userId: string) {
+  const adoptions = await prisma.adoption.findMany({
+    where: { userId },
+    select: { adoptableTree: { select: { ngoId: true, id: true } } },
+  });
+  const treeIds = adoptions.map((a) => a.adoptableTree.id);
+  // Community updates waiting on this adopter's decision.
+  const pending = treeIds.length
+    ? await prisma.treeObservation.count({ where: { adoptableTreeId: { in: treeIds }, reviewStatus: 'pending' } })
+    : 0;
+  return {
+    total: adoptions.length,
+    ngos: new Set(adoptions.map((a) => a.adoptableTree.ngoId)).size,
+    needsAttention: pending,
+  };
+}
+
+export async function exportMyAdoptions(prisma: PrismaClient, userId: string) {
+  const adoptions = await prisma.adoption.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    include: { adoptableTree: { include: { ngo: { select: { orgName: true } } } } },
+  });
+  return adoptions.map((a) => ({
+    tree: a.adoptableTree.nickname,
+    species: a.adoptableTree.speciesName,
+    ngo: a.adoptableTree.ngo.orgName,
+    city: a.adoptableTree.city ?? '',
+    location: a.adoptableTree.locationLabel ?? '',
+    adoptedOn: a.createdAt.toISOString(),
+    dedication: a.message ?? '',
+  }));
 }

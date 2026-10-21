@@ -3,6 +3,7 @@ import { View, StyleSheet, TextInputProps, ViewStyle, StyleProp } from 'react-na
 import { Text, TextInput } from './AppText';
 import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
 import { RADIUS } from '../../constants/theme';
+import { RequiredMark } from './RequiredMark';
 
 /**
  * A single labelled form field: one white rounded box holding a small sentence-case
@@ -15,6 +16,8 @@ interface FormFieldProps extends Pick<
   'value' | 'onChangeText' | 'onBlur' | 'placeholder' | 'keyboardType' | 'autoCapitalize' | 'editable' | 'multiline' | 'secureTextEntry' | 'maxLength'
 > {
   label: string;
+  /** Marks the field mandatory with a red asterisk after the label. */
+  required?: boolean;
   /** Rendered at the right edge of the box – e.g. a dropdown chevron. */
   rightAccessory?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -28,11 +31,14 @@ interface FormFieldProps extends Pick<
   dark?: boolean;
 }
 
-export function FormField({ label, rightAccessory, style, multiline, dark, ...inputProps }: FormFieldProps) {
+export function FormField({ label, required, rightAccessory, style, multiline, dark, ...inputProps }: FormFieldProps) {
   return (
     <View style={[styles.box, dark && styles.boxDark, style]}>
       <View style={styles.textColumn}>
-        <Text style={[styles.label, dark && styles.labelDark]}>{label}</Text>
+        <Text style={[styles.label, dark && styles.labelDark]}>
+          {label}
+          {required ? <RequiredMark dark={dark} /> : null}
+        </Text>
         <TextInput
           style={[styles.input, dark && styles.inputDark, multiline && styles.multiline]}
           placeholderTextColor={dark ? ON_DARK_SURFACE.muted : COLORS.textLight}
@@ -51,12 +57,14 @@ export function FormField({ label, rightAccessory, style, multiline, dark, ...in
  */
 export function FormFieldShell({
   label,
+  required,
   children,
   rightAccessory,
   style,
   dark,
 }: {
   label: string;
+  required?: boolean;
   children: React.ReactNode;
   rightAccessory?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -65,7 +73,10 @@ export function FormFieldShell({
   return (
     <View style={[styles.box, dark && styles.boxDark, style]}>
       <View style={styles.textColumn}>
-        <Text style={[styles.label, dark && styles.labelDark]}>{label}</Text>
+        <Text style={[styles.label, dark && styles.labelDark]}>
+          {label}
+          {required ? <RequiredMark dark={dark} /> : null}
+        </Text>
         {children}
       </View>
       {rightAccessory}

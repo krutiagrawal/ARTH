@@ -121,6 +121,8 @@ interface PortfolioInput {
   partnerOrgs?: string;
   sortOrder?: number;
   mediaUrls?: string[];
+  /** Update only: ids of existing photos to drop. New `mediaUrls` are then appended, not swapped in. */
+  removeMediaIds?: string[];
 }
 
 export async function createPortfolioEntry(prisma: PrismaClient, ngoUserId: string, input: PortfolioInput) {
@@ -183,16 +185,22 @@ export async function updatePortfolioEntry(
 ) {
   const entry = await requireOwnEntry(prisma, ngoUserId, entryId);
 
-  if ((input.mediaUrls?.length ?? 0) > MAX_PORTFOLIO_MEDIA) {
-    throw new BadRequestError(`A past-work entry can have at most ${MAX_PORTFOLIO_MEDIA} photos`);
-  }
-
   const updated = await prisma.$transaction(async (tx) => {
-    // Photos are replaced wholesale when new ones are sent, and left alone otherwise — the
-    // editor always submits the full set it wants to end up with.
-    if (input.mediaUrls) {
-      await tx.ngoPortfolioMedia.deleteMany({ where: { entryId: entry.id } });
+    // Photos are edited incrementally: `removeMediaIds` drops specific ones, and any new files are
+    // appended after the survivors. Omitting both leaves the photos alone.
+    if (input.removeMediaIds?.length) {
+      await tx.ngoPortfolioMedia.deleteMany({ where: { entryId: entry.id, id: { in: input.removeMediaIds } } });
     }
+    const remaining = await tx.ngoPortfolioMedia.findMany({
+      where: { entryId: entry.id },
+      orderBy: { order: 'asc' },
+      select: { order: true },
+    });
+    const newUrls = input.mediaUrls ?? [];
+    if (remaining.length + newUrls.length > MAX_PORTFOLIO_MEDIA) {
+      throw new BadRequestError(`A past-work entry can have at most ${MAX_PORTFOLIO_MEDIA} photos`);
+    }
+    const nextOrder = remaining.length ? remaining[remaining.length - 1].order + 1 : 0;
 
     return tx.ngoPortfolioEntry.update({
       where: { id: entry.id },
@@ -206,8 +214,8 @@ export async function updatePortfolioEntry(
         volunteersInvolved: input.volunteersInvolved,
         partnerOrgs: input.partnerOrgs,
         sortOrder: input.sortOrder,
-        ...(input.mediaUrls
-          ? { media: { create: input.mediaUrls.map((url, order) => ({ url, order })) } }
+        ...(newUrls.length
+          ? { media: { create: newUrls.map((url, i) => ({ url, order: nextOrder + i })) } }
           : {}),
       },
       include: portfolioInclude,

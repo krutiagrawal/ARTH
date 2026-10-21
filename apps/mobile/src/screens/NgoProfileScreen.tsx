@@ -222,7 +222,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
   const isError = isOwn ? ownProfile.isError : publicProfile.isError;
   const isLoading = !isError && (isOwn ? !ownProfile.data : !publicProfile.data);
   const weeks = isOwn ? ownStreak.data?.weeks ?? [] : [];
-  const streakCurrent = currentStreakFromWeeks(weeks);
+  const streakCurrent = isOwn ? ownStreak.data?.current ?? currentStreakFromWeeks(weeks) : 0;
   const achievements = isOwn ? ownAchievements.data ?? [] : publicAchievements.data ?? [];
   const badgesCount = achievements.filter((a) => a.unlocked).length;
   const myRank = isOwn ? ownLeaderboard.data?.myRank ?? null : null;

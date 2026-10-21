@@ -6,6 +6,8 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { COLORS } from '../../constants/colors';
 import { RADIUS } from '../../constants/theme';
 import { useHaptics } from '../../hooks/useHaptics';
+import { RequiredMark } from './RequiredMark';
+import { resolveMediaUrl } from '../../api/client';
 
 export interface PickedPhoto {
   uri: string;
@@ -18,6 +20,11 @@ interface PhotoPickerFieldProps {
   onChange: (photo: PickedPhoto) => void;
   mode?: 'camera' | 'gallery' | 'both';
   label?: string;
+  /** Appends a red asterisk to the label inside the empty tile. */
+  required?: boolean;
+  /** A stored image (e.g. `/uploads/...` from the API) shown when editing and nothing new has been
+   * picked yet; picking a photo replaces it. Leave `photo` null to keep the stored one on save. */
+  existingUri?: string | null;
   /** Second line under the label, e.g. "Tap to capture or upload". `mode="both"`
    * falls back to its own tap/hold explainer when this isn't supplied. */
   hint?: string;
@@ -77,7 +84,7 @@ export function usePhotoPreviewUri(photo: PickedPhoto | null): string | undefine
  * from the gallery. `mode="gallery"`/`"both"` are for cover-photo-style
  * pickers where a curated gallery image is appropriate.
  */
-export function PhotoPickerField({ photo, onChange, mode = 'gallery', label, hint, icon, aspect = [1, 1], dark }: PhotoPickerFieldProps) {
+export function PhotoPickerField({ photo, onChange, mode = 'gallery', label, required, existingUri, hint, icon, aspect = [1, 1], dark }: PhotoPickerFieldProps) {
   const { medium } = useHaptics();
   const glyph = icon ?? (mode === 'camera' ? '📸' : '🖼️');
   const previewUri = usePhotoPreviewUri(photo);
@@ -113,11 +120,19 @@ export function PhotoPickerField({ photo, onChange, mode = 'gallery', label, hin
   // overlaid on top (rather than the Image nested inside the TouchableOpacity itself) – on some
   // devices an Image nested directly inside this TouchableOpacity never draws at all, even with a
   // guaranteed-valid, small source; the same Image as a sibling of the touchable renders fine.
-  if (photo) {
+  // The stored image is shown straight from its URL – no point re-encoding a remote file.
+  const existingResolved = !photo && existingUri ? resolveMediaUrl(existingUri) : null;
+  if (photo || existingResolved) {
+    const shownUri = photo ? previewUri : existingResolved ?? undefined;
     return (
       <View style={[styles.picker, styles.pickerFilled]}>
-        {previewUri && <Image source={{ uri: previewUri }} style={styles.preview} resizeMode="cover" />}
+        {shownUri && <Image source={{ uri: shownUri }} style={styles.preview} resizeMode="cover" />}
         <TouchableOpacity style={styles.pressOverlay} onPress={onPress} onLongPress={onLongPress} activeOpacity={0.85} />
+        {existingResolved && (
+          <View style={styles.replaceBadge} pointerEvents="none">
+            <Text style={styles.replaceBadgeText}>Tap to replace</Text>
+          </View>
+        )}
       </View>
     );
   }
@@ -129,7 +144,10 @@ export function PhotoPickerField({ photo, onChange, mode = 'gallery', label, hin
       onLongPress={onLongPress}
     >
       <Text style={styles.pickerIcon}>{glyph}</Text>
-      <Text style={textStyle}>{label ?? 'Add Photo'}</Text>
+      <Text style={textStyle}>
+        {label ?? 'Add Photo'}
+        {required ? <RequiredMark dark={dark} /> : null}
+      </Text>
       {hint || mode === 'both' ? (
         <Text style={hintStyle}>{hint ?? 'Tap for gallery, hold for camera'}</Text>
       ) : null}
@@ -165,6 +183,8 @@ const styles = StyleSheet.create({
   },
   pickerFilled: { backgroundColor: 'transparent' },
   preview: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  replaceBadge: { position: 'absolute', right: 8, bottom: 8, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 100, paddingHorizontal: 10, paddingVertical: 4 },
+  replaceBadgeText: { color: '#fff', fontSize: 11, fontWeight: '600' },
   pressOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   pickerIcon: { fontSize: 26 },
   pickerText: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '700' },

@@ -12,6 +12,7 @@ import {
   bulkHealthCheckSchema,
   survivalStatsQuerySchema,
   createZoneSchema,
+  moveTreesToZoneSchema,
   renameZoneSchema,
   listZonesQuerySchema,
   zoneBulkHealthCheckSchema,
@@ -83,6 +84,13 @@ export default async function plantedTreesRoutes(fastify: FastifyInstance) {
     reply.status(201).send(zone);
   });
 
+  fastify.post('/move-to-zone', async (request, reply) => {
+    const parsed = moveTreesToZoneSchema.safeParse(request.body);
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    reply.send(await plantationZoneService.moveTreesToZone(fastify.prisma, request.user!.id, parsed.data.plantedTreeIds, parsed.data.zoneId));
+  });
+
   fastify.patch<{ Params: { id: string } }>('/zones/:id', async (request, reply) => {
     const parsed = renameZoneSchema.safeParse(request.body);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
@@ -140,8 +148,8 @@ export default async function plantedTreesRoutes(fastify: FastifyInstance) {
   });
 
   fastify.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
-    const tree = await plantedTreeService.getPlantedTreeDetail(fastify.prisma, request.user!.id, request.params.id);
-    reply.send(serializeTree(tree));
+    const { extras, ...tree } = await plantedTreeService.getPlantedTreeDetail(fastify.prisma, request.user!.id, request.params.id);
+    reply.send({ ...serializeTree(tree), ...extras });
   });
 
   fastify.get<{ Params: { id: string } }>('/:id/health-checks', async (request, reply) => {

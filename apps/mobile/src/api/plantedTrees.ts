@@ -19,6 +19,25 @@ export interface ApiPlantedTree {
   lng: number | null;
   photoUrl: string | null;
   latestStatus: TreeHealthStatus;
+  // ---- Only on the single-tree detail response ----
+  /** Permanent ARTH Tree Identity, e.g. "A48Z91". */
+  publicId?: string;
+  ageDays?: number;
+  estimatedHeightM?: number;
+  /** Estimated carbon stored / oxygen produced so far (0 once the tree is dead or removed). */
+  co2Kg?: number;
+  oxygenKg?: number;
+  co2NextYearKg?: number;
+  impactConfidence?: 'low' | 'medium';
+  checkCount?: number;
+  lastCheckedAt?: string | null;
+  /** 30/90/180/365-day follow-up checkpoints; `checked` = a health check was logged on or after its date. */
+  milestones?: { days: number; dueAt: string; passed: boolean; checked: boolean }[];
+  nextCheck?: { days: number; dueAt: string; overdue: boolean } | null;
+  /** The adoption listing made from this tree, if any. */
+  listing?: { id: string; nickname: string; status: 'available' | 'adopted' | 'removed'; adopter: { name: string; handle: string } | null } | null;
+  /** Latest accepted updates from the owner, NGO staff or the community. */
+  observations?: { id: string; observerRole: 'owner' | 'ngo' | 'community'; status: TreeHealthStatus; note: string | null; photoUrl: string | null; createdAt: string }[];
 }
 
 export interface ApiTreeHealthCheck {
@@ -190,4 +209,9 @@ export async function bulkMarkZoneHealth(
   notes?: string,
 ): Promise<{ updatedCount: number }> {
   return apiFetch(`/api/ngo/planted-trees/zones/${zoneId}/health-checks/bulk`, { method: 'POST', body: { status, notes } });
+}
+
+/** Moves logged trees into a zone of their drive, or back to Unzoned with `zoneId: null`. */
+export async function moveTreesToZone(input: { plantedTreeIds: string[]; zoneId: string | null }): Promise<{ movedCount: number }> {
+  return apiFetch('/api/ngo/planted-trees/move-to-zone', { method: 'POST', body: input });
 }

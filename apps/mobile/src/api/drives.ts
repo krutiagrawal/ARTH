@@ -1,4 +1,4 @@
-import { apiFetch, toFormFile } from './client';
+import { apiFetch, toFormFile, type OwnedListSummary, type OwnedExport } from './client';
 import { pagedPath, type Page } from '../hooks/useInfiniteList';
 
 export interface ApiDrivePickupPoint {
@@ -41,6 +41,8 @@ export interface ApiDrive {
   hasEnded?: boolean;
   isRsvped?: boolean;
   featured: boolean;
+  /** Hidden from the NGO's own Manage list unless the Archived filter is on. */
+  isArchived?: boolean;
   distanceKm?: number;
 }
 
@@ -101,8 +103,21 @@ export interface ApiMySponsorship {
   ngoName: string;
 }
 
-export async function fetchMySponsorships(cursor?: string): Promise<Page<ApiMySponsorship>> {
-  return apiFetch<Page<ApiMySponsorship>>(pagedPath('/api/drives/sponsorships/mine', cursor));
+export interface MySponsorshipsFilter {
+  q?: string;
+  status?: 'pending' | 'succeeded' | 'failed' | 'refunded';
+  sort?: 'newest' | 'oldest' | 'amount';
+}
+
+export async function fetchMySponsorships(cursor?: string, filter: MySponsorshipsFilter = {}): Promise<Page<ApiMySponsorship>> {
+  return apiFetch<Page<ApiMySponsorship>>(pagedPath('/api/drives/sponsorships/mine', cursor, { q: filter.q, status: filter.status, sort: filter.sort }));
+}
+
+export async function fetchMySponsorshipsSummary(): Promise<OwnedListSummary> {
+  return apiFetch<OwnedListSummary>('/api/drives/sponsorships/mine/summary');
+}
+export async function exportMySponsorships(): Promise<OwnedExport> {
+  return apiFetch<OwnedExport>('/api/drives/sponsorships/mine/export');
 }
 
 export interface ApiSponsorHealthRollup {
@@ -142,8 +157,30 @@ export async function fetchGroupDrives(groupId: string): Promise<ApiDrive[]> {
 
 // ---------- NGO-facing ----------
 
-export async function fetchMyDrives(page?: number, take?: number): Promise<ApiDrive[]> {
-  return apiFetch<ApiDrive[]>(`/api/drives/mine${page ? `?page=${page}&take=${take ?? 30}` : ''}`);
+export function ownedQuery(page: number | undefined, take: number | undefined, filter: Record<string, string | undefined>): string {
+  const params = new URLSearchParams();
+  if (page) {
+    params.set('page', String(page));
+    params.set('take', String(take ?? 30));
+  }
+  for (const [k, v] of Object.entries(filter)) if (v) params.set(k, v);
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
+}
+
+export type OwnedDriveStatus = 'upcoming' | 'ended' | 'completed' | 'cancelled';
+
+export interface OwnedDriveFilter {
+  q?: string;
+  status?: OwnedDriveStatus;
+  archived?: boolean;
+  sort?: 'newest' | 'oldest' | 'soonest';
+  from?: string;
+  to?: string;
+}
+
+export async function fetchMyDrives(page?: number, take?: number, filter: OwnedDriveFilter = {}): Promise<ApiDrive[]> {
+  return apiFetch<ApiDrive[]>(`/api/drives/mine${ownedQuery(page, take, { ...filter, archived: filter.archived ? 'true' : undefined })}`);
 }
 
 /** Cancels a drive the NGO organizes (e.g. rained out) – RSVPs stay recorded, the drive just
@@ -254,4 +291,42 @@ export async function createDrive(input: CreateDriveInput): Promise<ApiDrive> {
   }
 
   return apiFetch<ApiDrive>('/api/drives', { method: 'POST', body: form, isForm: true });
+}
+
+export type UpdateDriveInput = Partial<CreateDriveInput>;
+
+/** `plants` are appended on the server (paid sponsorships hang off existing ones), never replaced. */
+export async function updateDrive(id: string, input: UpdateDriveInput): Promise<ApiDrive> {
+  const form = new FormData();
+  if (input.title !== undefined) form.append('title', input.title);
+  if (input.description !== undefined) form.append('description', input.description);
+  if (input.instructions !== undefined) form.append('instructions', input.instructions);
+  if (input.address !== undefined) form.append('address', input.address);
+  if (input.city !== undefined) form.append('city', input.city);
+  if (input.transportMode !== undefined) form.append('transportMode', input.transportMode);
+  if (input.pickupPoints !== undefined) form.append('pickupPoints', JSON.stringify(input.pickupPoints));
+  if (input.plants?.length) form.append('plants', JSON.stringify(input.plants));
+  if (input.startsAt !== undefined) form.append('startsAt', input.startsAt);
+  if (input.durationMinutes) form.append('durationMinutes', String(input.durationMinutes));
+  if (input.capacity) form.append('capacity', String(input.capacity));
+  if (input.photo) form.append('photo', toFormFile(input.photo.uri), input.photo.name);
+  return apiFetch<ApiDrive>(`/api/drives/${id}`, { method: 'PATCH', body: form, isForm: true });
+}
+
+/** Permanent delete – the server refuses while RSVPs, sponsorships or linked trees exist (cancel instead). */
+export async function deleteDrive(id: string): Promise<{ id: string }> {
+  return apiFetch<{ id: string }>(`/api/drives/${id}/permanent`, { method: 'DELETE' });
+}
+
+export async function fetchOwnedDriveSummary(): Promise<OwnedListSummary> {
+  return apiFetch<OwnedListSummary>('/api/drives/mine/summary');
+}
+export async function exportOwnedDrives(): Promise<OwnedExport> {
+  return apiFetch<OwnedExport>('/api/drives/mine/export');
+}
+export async function duplicateDrive(id: string): Promise<ApiDrive> {
+  return apiFetch<ApiDrive>(`/api/drives/${id}/duplicate`, { method: 'POST' });
+}
+export async function archiveDrive(id: string, archived: boolean): Promise<ApiDrive> {
+  return apiFetch<ApiDrive>(`/api/drives/${id}/archive`, { method: 'POST', body: { archived } });
 }

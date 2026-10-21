@@ -1,4 +1,5 @@
-import { apiFetch, toFormFile } from './client';
+import { ownedQuery } from './drives';
+import { apiFetch, toFormFile, type OwnedListSummary, type OwnedExport } from './client';
 import { pagedPath, type Page } from '../hooks/useInfiniteList';
 import type { TreeHealthStatus } from './plantedTrees';
 import type { PassportTimelineEntry, PendingUpdate } from './trees';
@@ -18,6 +19,7 @@ export interface ApiAdoptableTree {
   lng: number | null;
   status: 'available' | 'adopted' | 'removed';
   isAdopted: boolean;
+  isArchived?: boolean;
   distanceKm?: number;
   /** Set when the NGO created the listing from a real planted tree (has a Tree Passport). */
   plantedTreeId?: string | null;
@@ -49,8 +51,20 @@ export async function adoptTree(id: string, message?: string): Promise<ApiAdopta
   });
 }
 
-export async function fetchMyAdoptions(cursor?: string): Promise<Page<ApiAdoptableTree>> {
-  return apiFetch<Page<ApiAdoptableTree>>(pagedPath('/api/adoptable-trees/my-adoptions', cursor));
+export interface MyAdoptionsFilter {
+  q?: string;
+  sort?: 'newest' | 'oldest' | 'name';
+}
+
+export async function fetchMyAdoptions(cursor?: string, filter: MyAdoptionsFilter = {}): Promise<Page<ApiAdoptableTree>> {
+  return apiFetch<Page<ApiAdoptableTree>>(pagedPath('/api/adoptable-trees/my-adoptions', cursor, { q: filter.q, sort: filter.sort }));
+}
+
+export async function fetchMyAdoptionsSummary(): Promise<OwnedListSummary> {
+  return apiFetch<OwnedListSummary>('/api/adoptable-trees/my-adoptions/summary');
+}
+export async function exportMyAdoptions(): Promise<OwnedExport> {
+  return apiFetch<OwnedExport>('/api/adoptable-trees/my-adoptions/export');
 }
 
 export async function releaseMyAdoption(id: string, reason?: string): Promise<ApiAdoptableTree> {
@@ -62,8 +76,19 @@ export async function releaseMyAdoption(id: string, reason?: string): Promise<Ap
 
 // ---------- NGO-facing ----------
 
-export async function fetchMyAdoptableTrees(page?: number, take?: number): Promise<ApiAdoptableTree[]> {
-  return apiFetch<ApiAdoptableTree[]>(`/api/adoptable-trees/mine${page ? `?page=${page}&take=${take ?? 30}` : ''}`);
+export interface OwnedTreeFilter {
+  q?: string;
+  status?: 'available' | 'adopted' | 'removed';
+  archived?: boolean;
+  sort?: 'newest' | 'oldest' | 'name';
+}
+
+export async function fetchMyAdoptableTrees(
+  page?: number,
+  take?: number,
+  filter: OwnedTreeFilter = {},
+): Promise<ApiAdoptableTree[]> {
+  return apiFetch<ApiAdoptableTree[]>(`/api/adoptable-trees/mine${ownedQuery(page, take, { ...filter, archived: filter.archived ? 'true' : undefined })}`);
 }
 
 export interface CreateAdoptableTreeInput {
@@ -130,4 +155,41 @@ export interface AdoptionStatus {
 
 export async function fetchAdoptionStatus(adoptableTreeId: string): Promise<AdoptionStatus> {
   return apiFetch<AdoptionStatus>(`/api/adoptable-trees/${adoptableTreeId}/status`);
+}
+
+export type UpdateAdoptableTreeInput = Partial<CreateAdoptableTreeInput>;
+
+export async function updateAdoptableTree(id: string, input: UpdateAdoptableTreeInput): Promise<ApiAdoptableTree> {
+  const form = new FormData();
+  if (input.nickname !== undefined) form.append('nickname', input.nickname);
+  if (input.speciesName !== undefined) form.append('speciesName', input.speciesName);
+  if (input.description !== undefined) form.append('description', input.description);
+  if (input.instructions !== undefined) form.append('instructions', input.instructions);
+  if (input.locationLabel !== undefined) form.append('locationLabel', input.locationLabel);
+  if (input.city !== undefined) form.append('city', input.city);
+  if (input.photo) form.append('photo', toFormFile(input.photo.uri), input.photo.name);
+  return apiFetch<ApiAdoptableTree>(`/api/adoptable-trees/${id}`, { method: 'PATCH', body: form, isForm: true });
+}
+
+/** Permanent delete – refused for adopted trees or ones with history (delist instead). */
+export async function deleteAdoptableTree(id: string): Promise<{ id: string }> {
+  return apiFetch<{ id: string }>(`/api/adoptable-trees/${id}/permanent`, { method: 'DELETE' });
+}
+
+/** Puts a removed (delisted) tree back on the public list as available. */
+export async function relistAdoptableTree(id: string): Promise<ApiAdoptableTree> {
+  return apiFetch<ApiAdoptableTree>(`/api/adoptable-trees/${id}/relist`, { method: 'POST' });
+}
+
+export async function fetchOwnedTreeSummary(): Promise<OwnedListSummary> {
+  return apiFetch<OwnedListSummary>('/api/adoptable-trees/mine/summary');
+}
+export async function exportOwnedTrees(): Promise<OwnedExport> {
+  return apiFetch<OwnedExport>('/api/adoptable-trees/mine/export');
+}
+export async function duplicateAdoptableTree(id: string): Promise<ApiAdoptableTree> {
+  return apiFetch<ApiAdoptableTree>(`/api/adoptable-trees/${id}/duplicate`, { method: 'POST' });
+}
+export async function archiveAdoptableTree(id: string, archived: boolean): Promise<ApiAdoptableTree> {
+  return apiFetch<ApiAdoptableTree>(`/api/adoptable-trees/${id}/archive`, { method: 'POST', body: { archived } });
 }

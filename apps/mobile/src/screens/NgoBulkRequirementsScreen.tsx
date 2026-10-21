@@ -134,7 +134,7 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
                       Ask the nursery for their handoff code, then enter it below to confirm you received the saplings.
                     </Text>
                     <FormField maxLength={20}
-                      label="Handoff code"
+                      required label="Handoff code"
                       value={codeDrafts[r.id] ?? ''}
                       onChangeText={(v) => setCodeDrafts((prev) => ({ ...prev, [r.id]: v }))}
                       placeholder="eg - 1234"
@@ -460,7 +460,7 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
             Matching a catalog species lets nurseries' existing stock be checked when they respond – leave blank for open-ended asks like "any native species".
           </Text>
           <FormField maxLength={200} label="Additional description (optional)" value={speciesNote} onChangeText={setSpeciesNote} placeholder="eg - Native shade trees" />
-          <FormField label="Quantity needed" value={quantityNeeded} onChangeText={setQuantityNeeded} placeholder="eg - 0" keyboardType="number-pad" />
+          <FormField required label="Quantity needed" value={quantityNeeded} onChangeText={setQuantityNeeded} placeholder="eg - 0" keyboardType="number-pad" />
           <FormFieldShell label="Needed by (optional)">
             <TouchableOpacity onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
               <Text style={[styles.dateValue, !neededByDate && styles.datePlaceholder]}>

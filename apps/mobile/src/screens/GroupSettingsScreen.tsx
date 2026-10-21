@@ -190,7 +190,7 @@ export function GroupSettingsScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            <FormField maxLength={120} label="Group Name" value={groupName} onChangeText={setGroupName} placeholder="eg - Your group" />
+            <FormField maxLength={120} required label="Group Name" value={groupName} onChangeText={setGroupName} placeholder="eg - Your group" />
 
             <Text style={styles.sectionLabel}>Group type</Text>
             <View style={styles.chipRow}>
@@ -201,7 +201,7 @@ export function GroupSettingsScreen({ navigation }: any) {
               ))}
             </View>
 
-            <FormField maxLength={2000} label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What's your group about?" />
+            <FormField maxLength={2000} required label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What's your group about?" />
             <CityPickerField value={city} onChange={setCity} />
 
             {error && <Text style={styles.error}>{error}</Text>}

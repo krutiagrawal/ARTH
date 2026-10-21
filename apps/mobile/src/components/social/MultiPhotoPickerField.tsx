@@ -6,6 +6,8 @@ import { COLORS } from '../../constants/colors';
 import { RADIUS, SPACING } from '../../constants/theme';
 import { FONTS, TEXT } from '../../constants/typography';
 import { useHaptics } from '../../hooks/useHaptics';
+import { RequiredMark } from '../common/RequiredMark';
+import { resolveMediaUrl } from '../../api/client';
 import { useConfirm } from '../../context/ConfirmDialogContext';
 import { assetToPhoto, usePhotoPreviewUri, type PickedPhoto } from '../common/PhotoPickerField';
 
@@ -16,6 +18,11 @@ interface MultiPhotoPickerFieldProps {
   /** Matches PhotoPickerField's API so the two feel like one control. */
   mode?: 'camera' | 'gallery' | 'both';
   label?: string;
+  required?: boolean;
+  /** Photos already stored on the record being edited (shown first, before newly-picked ones). */
+  existing?: { id: string; url: string }[];
+  /** Fired when the user taps ✕ on a stored photo; the caller records it to delete on save. */
+  onRemoveExisting?: (id: string) => void;
   hint?: string;
   /** Light-on-dark text and translucent-white chrome for night-gradient screens (signup wizards). */
   dark?: boolean;
@@ -41,12 +48,15 @@ export function MultiPhotoPickerField({
   max = 6,
   mode = 'both',
   label = 'Photos',
+  required,
+  existing = [],
+  onRemoveExisting,
   hint,
   dark,
 }: MultiPhotoPickerFieldProps) {
   const { medium, selection } = useHaptics();
   const confirm = useConfirm();
-  const remaining = max - photos.length;
+  const remaining = max - photos.length - existing.length;
   const isFull = remaining <= 0;
 
   const add = useCallback(
@@ -106,14 +116,30 @@ export function MultiPhotoPickerField({
   return (
     <View style={styles.wrap}>
       <View style={styles.header}>
-        <Text style={[styles.label, dark && styles.labelDark]}>{label}</Text>
+        <Text style={[styles.label, dark && styles.labelDark]}>
+          {label}
+          {required ? <RequiredMark dark={dark} /> : null}
+        </Text>
         <Text style={[styles.counter, dark && styles.counterDark]}>
-          {photos.length}/{max}
+          {photos.length + existing.length}/{max}
         </Text>
       </View>
 
-      {photos.length > 0 && (
+      {(photos.length > 0 || existing.length > 0) && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>
+          {existing.map((item, index) => (
+            <View key={item.id} style={styles.thumbWrap}>
+              <Image source={{ uri: resolveMediaUrl(item.url) }} style={styles.thumb} resizeMode="cover" />
+              <View style={styles.orderBadge}>
+                <Text style={styles.orderText}>{index + 1}</Text>
+              </View>
+              {onRemoveExisting && (
+                <TouchableOpacity style={styles.removeBtn} onPress={() => onRemoveExisting(item.id)} hitSlop={8}>
+                  <Text style={styles.removeText}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
           {photos.map((photo, index) => (
             <View key={`${photo.uri}-${index}`} style={styles.thumbWrap}>
               <Thumb photo={photo} />

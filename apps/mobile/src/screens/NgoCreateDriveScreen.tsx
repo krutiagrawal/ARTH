@@ -7,7 +7,8 @@ import { StatusBar } from 'expo-status-bar';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
-import { useCreateDrive } from '../hooks/useApiQueries';
+import { useCreateDrive, useUpdateDrive } from '../hooks/useApiQueries';
+import type { ApiDrive } from '../api/drives';
 import { ApiError } from '../api/client';
 import { PhotoPickerField, PickedPhoto } from '../components/common/PhotoPickerField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
@@ -28,7 +29,7 @@ interface PlantDraft {
   priceRupees: string;
 }
 
-function DateField({ label, value, onChange }: { label: string; value: Date; onChange: (d: Date) => void }) {
+function DateField({ label, required, value, onChange }: { label: string; required?: boolean; value: Date; onChange: (d: Date) => void }) {
   // Android has no real combined "datetime" mode – the library fakes it by chaining a date
   // dialog into a time dialog internally, and unmounting the picker as soon as the first
   // (date) callback fires – which we used to do via `setShowPicker(false)` – tears down that
@@ -61,7 +62,7 @@ function DateField({ label, value, onChange }: { label: string; value: Date; onC
   return (
     <>
       <TouchableOpacity activeOpacity={0.8} onPress={() => setStep('date')}>
-        <FormFieldShell label={label}>
+        <FormFieldShell label={label} required={required}>
           <Text style={styles.inputText}>{value.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</Text>
         </FormFieldShell>
       </TouchableOpacity>
@@ -77,23 +78,28 @@ function DateField({ label, value, onChange }: { label: string; value: Date; onC
   );
 }
 
-export function NgoCreateDriveScreen({ navigation }: any) {
+/** Edit mode: opened with `{ drive }` route params; otherwise creates a new drive. */
+export function NgoCreateDriveScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
+  const editing: ApiDrive | undefined = route?.params?.drive;
   const createDriveMutation = useCreateDrive();
+  const updateDriveMutation = useUpdateDrive();
   const confirm = useConfirm();
   const { refreshing, onRefresh } = usePullToRefresh();
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [instructions, setInstructions] = useState('');
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('Pune');
-  const [transportMode, setTransportMode] = useState<'self_arrange' | 'ngo_provided'>('self_arrange');
-  const [pickupPoints, setPickupPoints] = useState<PickupPointDraft[]>([]);
+  const [title, setTitle] = useState(editing?.title ?? '');
+  const [description, setDescription] = useState(editing?.description ?? '');
+  const [instructions, setInstructions] = useState(editing?.instructions ?? '');
+  const [address, setAddress] = useState(editing?.address ?? '');
+  const [city, setCity] = useState(editing?.city ?? 'Pune');
+  const [transportMode, setTransportMode] = useState<'self_arrange' | 'ngo_provided'>(editing?.transportMode ?? 'self_arrange');
+  const [pickupPoints, setPickupPoints] = useState<PickupPointDraft[]>(
+    editing?.pickupPoints?.map((p) => ({ address: p.address, arrivalBy: new Date(p.arrivalBy) })) ?? [],
+  );
   const [plants, setPlants] = useState<PlantDraft[]>([]);
-  const [startsAt, setStartsAt] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
-  const [durationMinutes, setDurationMinutes] = useState('');
-  const [capacity, setCapacity] = useState('');
+  const [startsAt, setStartsAt] = useState(editing ? new Date(editing.startsAt) : new Date(Date.now() + 24 * 60 * 60 * 1000));
+  const [durationMinutes, setDurationMinutes] = useState(editing?.durationMinutes ? String(editing.durationMinutes) : '');
+  const [capacity, setCapacity] = useState(editing?.capacity ? String(editing.capacity) : '');
   const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -118,6 +124,32 @@ export function NgoCreateDriveScreen({ navigation }: any) {
       return;
     }
     try {
+      if (editing) {
+        await updateDriveMutation.mutateAsync({
+          id: editing.id,
+          title: title.trim(),
+          description: description.trim(),
+          instructions: instructions.trim(),
+          address: address.trim(),
+          city: city.trim(),
+          transportMode,
+          pickupPoints:
+            transportMode === 'ngo_provided'
+              ? pickupPoints.map((p) => ({ address: p.address.trim(), arrivalBy: p.arrivalBy.toISOString() }))
+              : [],
+          // Only the plants added in this session – existing ones are kept as they are.
+          plants: plants
+            .filter((p) => p.speciesName.trim() && p.priceRupees)
+            .map((p) => ({ speciesName: p.speciesName.trim(), priceCents: Math.round(Number(p.priceRupees) * 100) })),
+          startsAt: startsAt.toISOString(),
+          durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
+          capacity: capacity ? Number(capacity) : undefined,
+          photo: photo ?? undefined,
+        });
+        confirm('Drive updated', 'Your changes are saved.');
+        navigation?.goBack?.();
+        return;
+      }
       await createDriveMutation.mutateAsync({
         title: title.trim(),
         description: description.trim(),
@@ -150,8 +182,8 @@ export function NgoCreateDriveScreen({ navigation }: any) {
       <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
 
       <ScreenHeader
-        title="Create New Drive"
-        subtitle="Tell us more about your drive"
+        title={editing ? 'Edit Drive' : 'Create New Drive'}
+        subtitle={editing ? 'Update the details volunteers see' : 'Tell us more about your drive'}
         onBack={() => navigation?.goBack?.()}
         align="left"
       />
@@ -165,6 +197,7 @@ export function NgoCreateDriveScreen({ navigation }: any) {
         <View>
           <PhotoPickerField
             photo={photo}
+            existingUri={editing?.photoUri}
             onChange={setPhoto}
             mode="gallery"
             label="Add Cover Photo"
@@ -172,11 +205,11 @@ export function NgoCreateDriveScreen({ navigation }: any) {
             aspect={[16, 9]}
           />
 
-          <FormField maxLength={120} label="Drive Title" value={title} onChangeText={setTitle} placeholder="eg - Riverbank Plantation Drive" />
-          <FormField maxLength={2000} label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What will volunteers do?" />
+          <FormField maxLength={120} required label="Drive Title" value={title} onChangeText={setTitle} placeholder="eg - Riverbank Plantation Drive" />
+          <FormField maxLength={2000} required label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What will volunteers do?" />
           <FormField maxLength={2000} label="Instructions for Volunteers" value={instructions} onChangeText={setInstructions} multiline placeholder="eg - What to carry, weather, meeting point" />
-          <AddressSearchField label="Address" value={address} onChangeText={setAddress} multiline placeholder="eg - Street / Landmark" />
-          <CityPickerField value={city} onChange={setCity} />
+          <AddressSearchField required label="Address" value={address} onChangeText={setAddress} multiline placeholder="eg - Street / Landmark" />
+          <CityPickerField required value={city} onChange={setCity} />
 
           <Text style={styles.sectionLabel}>Transport</Text>
           <View style={styles.chipRow}>
@@ -223,8 +256,18 @@ export function NgoCreateDriveScreen({ navigation }: any) {
             </View>
           )}
 
+          {/* Plants already on the drive are listed read-only (paid sponsorships hang off them, so
+              the server only lets new ones be appended); anything added below is appended on save. */}
           <Text style={styles.sectionLabel}>Plants to sponsor (optional)</Text>
           <View style={styles.subCard}>
+            {editing?.plants?.map((p) => (
+              <View key={p.id} style={styles.listItem}>
+                <Text style={styles.listItemTitle}>
+                  {p.speciesName} · ₹{Math.round(p.priceCents / 100)}
+                  {p.sponsoredCount > 0 ? ` · ${p.sponsoredCount} sponsored` : ''}
+                </Text>
+              </View>
+            ))}
             {plants.map((p, i) => (
               <View key={i} style={styles.listItem}>
                 <View style={styles.listItemHeader}>
@@ -253,7 +296,7 @@ export function NgoCreateDriveScreen({ navigation }: any) {
             </TouchableOpacity>
           </View>
 
-          <DateField label="Starts at" value={startsAt} onChange={setStartsAt} />
+          <DateField required label="Starts at" value={startsAt} onChange={setStartsAt} />
 
           <FormField
             label="Duration (minutes)"
@@ -273,9 +316,13 @@ export function NgoCreateDriveScreen({ navigation }: any) {
           {error && <Text style={styles.error}>{error}</Text>}
 
           <AnimatedButton
-            label={createDriveMutation.isPending ? 'Publishing…' : 'Create Drive  →'}
+            label={
+              createDriveMutation.isPending || updateDriveMutation.isPending
+                ? editing ? 'Saving…' : 'Publishing…'
+                : editing ? 'Save changes' : 'Create Drive  →'
+            }
             onPress={handleSubmit}
-            disabled={createDriveMutation.isPending}
+            disabled={createDriveMutation.isPending || updateDriveMutation.isPending}
             fullWidth
             gradientColors={[COLORS.forest, COLORS.forestDeep]}
             style={styles.submitButton}

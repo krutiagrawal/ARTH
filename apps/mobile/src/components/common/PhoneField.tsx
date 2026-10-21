@@ -7,6 +7,7 @@ import { sanitizePhoneDigits } from '../../utils/validation';
 
 interface PhoneFieldProps {
   label?: string;
+  required?: boolean;
   value: string;
   onChangeText: (digits: string) => void;
   onBlur?: () => void;
@@ -24,10 +25,10 @@ interface PhoneFieldProps {
  * visual prefix, never part of the stored value, so every phone field in the app produces the
  * same bare-10-digit shape regardless of what the user tries to type.
  */
-export function PhoneField({ label = 'Phone number', value, onChangeText, onBlur, placeholder = '98765 43210', dark, error, style }: PhoneFieldProps) {
+export function PhoneField({ label = 'Phone number', required, value, onChangeText, onBlur, placeholder = '98765 43210', dark, error, style }: PhoneFieldProps) {
   return (
     <View style={styles.wrap}>
-      <FormFieldShell label={label} dark={dark} style={style}>
+      <FormFieldShell label={label} required={required} dark={dark} style={style}>
         <View style={styles.row}>
           <Text style={[styles.prefix, dark && styles.prefixDark]}>+91</Text>
           <View style={[styles.divider, dark && styles.dividerDark]} />

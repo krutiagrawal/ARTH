@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
-import { Text, TextInput } from '../components/common/AppText';
+import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -8,9 +8,9 @@ import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
-import { Sheet } from '../components/common/Sheet';
-import { OutlineChip } from '../components/common/OutlineChip';
 import { useMyDonations } from '../hooks/useApiQueries';
+import { ListFilterBar } from '../components/common/ListFilterBar';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PageFooter } from '../components/common/PageFooter';
 import { infiniteScrollProps } from '../hooks/useInfiniteList';
@@ -91,21 +91,16 @@ export function MyDonationsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
 
   const [query, setQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const debouncedQuery = useDebouncedValue(query.trim());
   const [status, setStatus] = useState<DonationStatus | null>(null);
   const [period, setPeriod] = useState<DonationPeriod | null>(null);
-  const [filterOpen, setFilterOpen] = useState(false);
-
-  // Search runs on the server (the list is paged), so wait for a pause in typing before querying.
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(query.trim()), SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(t);
-  }, [query]);
+  const [sort, setSort] = useState<'newest' | 'oldest' | 'amount'>('newest');
 
   const listQuery = useMyDonations({
     q: debouncedQuery || undefined,
     status: status ?? undefined,
     period: period ?? undefined,
+    sort,
   });
   const { data, isLoading, isPlaceholderData, refetch } = listQuery;
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
@@ -113,20 +108,18 @@ export function MyDonationsScreen({ navigation }: any) {
   const summary = data?.summary;
   const matchCount = data?.total ?? 0;
 
-  const activeCount = (status ? 1 : 0) + (period ? 1 : 0);
-  const filtersActive = activeCount > 0 || debouncedQuery !== '';
-  const clearChips = () => {
-    setStatus(null);
-    setPeriod(null);
-  };
+  const filtersActive = !!status || !!period || debouncedQuery !== '';
   const clearAll = () => {
     setQuery('');
-    setDebouncedQuery('');
-    clearChips();
+    setStatus(null);
+    setPeriod(null);
+    setSort('newest');
   };
 
   const groups = useMemo(() => {
     const out: { month: string; items: ApiMyDonation[] }[] = [];
+    // Amount order breaks the month grouping, so those rows go in one unlabelled group.
+    if (sort === 'amount') return [{ month: '', items: donations }];
     for (const d of donations) {
       const key = monthKey(d.donatedAt);
       const last = out[out.length - 1];
@@ -134,7 +127,7 @@ export function MyDonationsScreen({ navigation }: any) {
       else out.push({ month: key, items: [d] });
     }
     return out;
-  }, [donations]);
+  }, [donations, sort]);
 
   const hasNoDonationsAtAll = !isLoading && summary != null && summary.allCount === 0;
 
@@ -164,6 +157,33 @@ export function MyDonationsScreen({ navigation }: any) {
           onAction={() => navigation.navigate('Campaigns')}
         />
       ) : (
+        <>
+        <ListFilterBar
+          query={query}
+          onQueryChange={setQuery}
+          placeholder="Search campaign or NGO"
+          options={[{ key: null, label: 'All' }, ...STATUS_FILTERS.map((f) => ({ key: f.key, label: f.label }))]}
+          value={status}
+          onChange={setStatus}
+          rows={[
+            {
+              label: 'Period',
+              options: [{ key: null, label: 'Any time' }, ...PERIOD_FILTERS.map((f) => ({ key: f.key as string, label: f.label }))],
+              value: period,
+              onChange: (k) => setPeriod(k as DonationPeriod | null),
+            },
+            {
+              label: 'Sort',
+              options: [
+                { key: 'newest', label: 'Newest' },
+                { key: 'oldest', label: 'Oldest' },
+                { key: 'amount', label: 'Largest' },
+              ],
+              value: sort,
+              onChange: (k) => setSort((k ?? 'newest') as 'newest' | 'oldest' | 'amount'),
+            },
+          ]}
+        />
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
@@ -189,50 +209,6 @@ export function MyDonationsScreen({ navigation }: any) {
             </BorderCard>
           )}
 
-          <View style={styles.searchRow}>
-            <View style={styles.searchBox}>
-              <Text style={styles.searchIcon}>🔍</Text>
-              <TextInput
-                value={query}
-                onChangeText={setQuery}
-                placeholder="Search campaign or NGO"
-                placeholderTextColor={COLORS.textMuted}
-                style={styles.searchInput}
-                returnKeyType="search"
-                autoCorrect={false}
-              />
-              {query !== '' && (
-                <TouchableOpacity onPress={() => setQuery('')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Clear search">
-                  <Text style={styles.searchClear}>✕</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            <TouchableOpacity style={styles.filterBtn} onPress={() => setFilterOpen(true)} accessibilityRole="button" accessibilityLabel="Filters">
-              <Text style={styles.filterBtnText}>⚙ Filters</Text>
-              {activeCount > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{activeCount}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          {filtersActive && (
-            <View style={styles.metaRow}>
-              <Text style={styles.countText}>{matchCount} donation{matchCount === 1 ? '' : 's'}</Text>
-            </View>
-          )}
-
-          {activeCount > 0 && (
-            <View style={styles.activeRow}>
-              {status && <ActiveChip label={STATUS_FILTERS.find((f) => f.key === status)!.label} onRemove={() => setStatus(null)} />}
-              {period && <ActiveChip label={PERIOD_FILTERS.find((f) => f.key === period)!.label} onRemove={() => setPeriod(null)} />}
-              <TouchableOpacity onPress={clearChips} accessibilityRole="button">
-                <Text style={styles.clearAll}>Clear all</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
           <View style={isPlaceholderData ? styles.stale : undefined}>
             {donations.length === 0 ? (
               <View style={styles.noMatch}>
@@ -246,7 +222,7 @@ export function MyDonationsScreen({ navigation }: any) {
             ) : (
               groups.map((g) => (
                 <View key={g.month}>
-                  <Text style={styles.monthLabel}>{g.month}</Text>
+                  {g.month ? <Text style={styles.monthLabel}>{g.month}</Text> : null}
                   {g.items.map((d) => (
                     <DonationRow key={d.id} d={d} navigation={navigation} />
                   ))}
@@ -256,32 +232,9 @@ export function MyDonationsScreen({ navigation }: any) {
           </View>
           <PageFooter loading={listQuery.isFetchingNextPage} />
         </ScrollView>
+        </>
       )}
 
-      <Sheet visible={filterOpen} onClose={() => setFilterOpen(false)} title="Filters" scrollable>
-        <Text style={styles.sheetLabel}>Status</Text>
-        <View style={styles.wrapRow}>
-          {STATUS_FILTERS.map((f) => (
-            <OutlineChip key={f.key} label={f.label} active={status === f.key} onPress={() => setStatus(status === f.key ? null : f.key)} />
-          ))}
-        </View>
-
-        <Text style={styles.sheetLabel}>Time period</Text>
-        <View style={styles.wrapRow}>
-          {PERIOD_FILTERS.map((f) => (
-            <OutlineChip key={f.key} label={f.label} active={period === f.key} onPress={() => setPeriod(period === f.key ? null : f.key)} />
-          ))}
-        </View>
-
-        <View style={styles.sheetFooter}>
-          <TouchableOpacity onPress={clearChips} disabled={activeCount === 0} accessibilityRole="button">
-            <Text style={[styles.clearAll, activeCount === 0 && { opacity: 0.4 }]}>Clear all</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.applyBtn} onPress={() => setFilterOpen(false)} accessibilityRole="button">
-            <Text style={styles.applyText}>Show {matchCount} donation{matchCount === 1 ? '' : 's'}</Text>
-          </TouchableOpacity>
-        </View>
-      </Sheet>
     </View>
   );
 }

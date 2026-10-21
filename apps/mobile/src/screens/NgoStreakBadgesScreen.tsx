@@ -8,6 +8,7 @@ import { COLORS, ON_LIGHT_SURFACE } from '../constants/colors';
 import { RADIUS, SPACING } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { Mascot } from '../components/common/Mascot';
+import { OrgStreakCard } from '../components/streak/OrgStreakCard';
 import { ContributionStreakCard } from '../components/common/ContributionStreakCard';
 import { AchievementGrid, AchievementDetailModal } from '../components/common/AchievementGrid';
 import { useNgoAchievements, useNgoReputation, useNgoLeaderboard } from '../hooks/useApiQueries';
@@ -118,6 +119,8 @@ export function NgoStreakBadgesScreen({ navigation }: any) {
         <Text style={styles.subtitle}>
           Built from real ARTH activity – drives run, updates posted, and impact logged.
         </Text>
+
+        <OrgStreakCard navigation={navigation} />
 
         <BorderCard style={styles.card}>
           <View style={styles.growthRow}>

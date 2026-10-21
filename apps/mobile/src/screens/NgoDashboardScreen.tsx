@@ -24,11 +24,11 @@ import { getSceneryMode, RainEffect, WindEffect } from '../components/common/Wea
 import { useTimeTheme, type TimeTheme, type TimePeriod } from '../hooks/useTimeTheme';
 import { useDeviceWeather } from '../hooks/useDeviceWeather';
 import { useAuth } from '../context/AuthContext';
-import { useNgoStats, useNgoStreakCalendar, useNgoProfile, useSettings } from '../hooks/useApiQueries';
+import { useNgoStats, useNgoStreakCalendar, useNgoProfile, useSettings, useStreakStatus } from '../hooks/useApiQueries';
+import { isOrgAtRiskDays } from '../api/orgStreaks';
 import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
-import { currentStreakFromWeeks } from '../utils/streak';
 import { getHeroSeamColor, getHeroSeamTextColors } from '../utils/heroSeam';
 import { hexToRgba, relativeLuminance } from '../utils/color';
 import type { NgoTabName } from '../navigation/AppNavigator';
@@ -70,12 +70,14 @@ function StreakCard({
   theme,
   streakCurrent,
   recentWeeks,
+  needsAction,
   onPress,
   blurTarget,
 }: {
   theme: TimeTheme;
   streakCurrent: number;
   recentWeeks: { posted: boolean }[];
+  needsAction: boolean;
   onPress: () => void;
   blurTarget: RefObject<View | null>;
 }) {
@@ -94,9 +96,9 @@ function StreakCard({
             <Mascot size={64} animate={false} />
             <View style={styles.streakTextColumn}>
               <Text style={[styles.streakTitle, { color: theme.textPrimaryOnCard }]}>
-                {hasStreak ? 'Keep your streak alive!' : 'Start your streak today!'}
+                {needsAction ? 'Your streak needs you!' : hasStreak ? 'Keep your streak alive!' : 'Start your streak this week!'}
               </Text>
-              <Text style={[styles.streakSubtitle, { color: theme.textSecondaryOnCard }]}>Plant. Track. Impact.</Text>
+              <Text style={[styles.streakSubtitle, { color: theme.textSecondaryOnCard }]}>Post. Plant. Learn. Impact.</Text>
 
               <Text style={[styles.streakLabel, { color: theme.textSecondaryOnCard }]}>Current streak</Text>
               <View style={styles.streakRow}>
@@ -221,8 +223,13 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
   const { data: profile, refetch: refetchProfile } = useNgoProfile();
   const { data: stats, isLoading, refetch: refetchStats } = useNgoStats();
   const { data: streakData, refetch: refetchStreak } = useNgoStreakCalendar(8);
-  const { refreshing, onRefresh } = usePullToRefresh([refetchStats, refetchStreak, refetchProfile]);
-  const streakCurrent = streakData ? currentStreakFromWeeks(streakData.weeks) : 0;
+  const { data: streakStatus, refetch: refetchStreakStatus } = useStreakStatus();
+  const { refreshing, onRefresh } = usePullToRefresh([refetchStats, refetchStreak, refetchStreakStatus, refetchProfile]);
+  // Server-computed (uncapped, combined across posts/drives/trees/lessons/freezes) – the 8-week
+  // calendar window only drives the leaf glyphs.
+  const streakCurrent = streakStatus?.streakCurrent ?? streakData?.current ?? 0;
+  const streakNeedsAction = !!streakStatus && (streakStatus.revivable || (streakStatus.state === 'at_risk' && isOrgAtRiskDays()));
+  const openStreak = () => navigation.navigate(streakNeedsAction ? 'StreakProtection' : 'NgoStreakBadges');
   const recentWeeks = (streakData?.weeks ?? []).slice(-STREAK_WEEKS_SHOWN);
   const statsAnim = useFadeIn(80);
   const blurTargetRef = useRef<View>(null);
@@ -269,6 +276,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
     { key: 'plantedTrees', emoji: '🌳', color: COLORS.forest, title: 'Log planted trees', onPress: guard(() => navigation.navigate('NgoLogPlantedTrees')) },
     { key: 'bulkRequirements', emoji: '🤝', color: COLORS.amber, title: 'Bulk requirements', onPress: () => navigation.navigate('NgoBulkRequirements') },
     { key: 'streak', emoji: '🔥', color: COLORS.sage, title: 'Growth & Trust', onPress: () => navigation.navigate('NgoStreakBadges') },
+    { key: 'learn', emoji: '🎓', color: COLORS.xpBlue, title: 'Learn & play', onPress: () => navigation.navigate('Games') },
     { key: 'volunteers', emoji: '🙋', color: COLORS.coral, title: 'Volunteers', onPress: () => navigation.navigate('NgoVolunteers') },
     { key: 'staff', emoji: '🧑‍🤝‍🧑', color: COLORS.warmBrown, title: 'Staff roster', onPress: () => navigation.navigate('NgoStaff') },
     { key: 'donations', emoji: '💸', color: COLORS.sageDark, title: 'Donations', onPress: () => navigation.navigate('NgoDonations') },
@@ -349,7 +357,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
                 subTextColor={statColor}
                 haloColor={haloColor}
                 delay={100}
-                onPress={() => navigation.navigate('NgoStreakBadges')}
+                onPress={openStreak}
               />
               <EcoWidget
                 icon="🌍"
@@ -378,7 +386,8 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
           theme={theme}
           streakCurrent={streakCurrent}
           recentWeeks={recentWeeks}
-          onPress={() => navigation.navigate('NgoStreakBadges')}
+          needsAction={streakNeedsAction}
+          onPress={openStreak}
           blurTarget={blurTargetRef}
         />
 
@@ -398,7 +407,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
                 <EcoWidget
                   {...tileProps}
                   icon="🤝"
-                  value={String(stats.upcomingDrives)}
+                  value={String(stats.totalDrives)}
                   label="Drives"
                   delay={0}
                   onPress={() => onNavigateTab('Manage', 'drives')}
@@ -406,8 +415,8 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
                 <EcoWidget
                   {...tileProps}
                   icon="🌳"
-                  value={String(stats.treesAdopted)}
-                  label="Trees"
+                  value={String(stats.treesPlanted)}
+                  label="Trees planted"
                   delay={60}
                   onPress={() => onNavigateTab('Manage', 'trees')}
                 />

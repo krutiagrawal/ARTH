@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
+import { FieldLabel } from '../components/common/RequiredMark';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
@@ -99,6 +100,7 @@ export function CorporateRegisterScreen({ navigation }: any) {
           </Text>
 
           <Text style={styles.sectionLabel}>Company</Text>
+          <FieldLabel label="Company name" required dark />
           <TextInput maxLength={120}
             style={styles.input}
             placeholder="Company name"
@@ -106,6 +108,7 @@ export function CorporateRegisterScreen({ navigation }: any) {
             value={companyName}
             onChangeText={setCompanyName}
           />
+          <FieldLabel label="What does your company do?" required dark />
           <TextInput maxLength={2000}
             style={[styles.input, styles.multiline]}
             placeholder="What does your company do?"
@@ -114,6 +117,7 @@ export function CorporateRegisterScreen({ navigation }: any) {
             onChangeText={setDescription}
             multiline
           />
+          <FieldLabel label="Industry" dark />
           <TextInput maxLength={120}
             style={styles.input}
             placeholder="Industry (optional)"
@@ -124,6 +128,7 @@ export function CorporateRegisterScreen({ navigation }: any) {
           <CityPickerField value={city} onChange={setCity} variant="dark" />
 
           <Text style={styles.sectionLabel}>Your account</Text>
+          <FieldLabel label="Your name" required dark />
           <TextInput maxLength={60}
             style={styles.input}
             placeholder="Your name"
@@ -131,6 +136,7 @@ export function CorporateRegisterScreen({ navigation }: any) {
             value={contactName}
             onChangeText={setContactName}
           />
+          <FieldLabel label="Email" required dark />
           <TextInput
             style={styles.input}
             placeholder="Email"
@@ -146,6 +152,7 @@ export function CorporateRegisterScreen({ navigation }: any) {
           ) : email.checking ? (
             <Text style={styles.fieldHint}>Checking…</Text>
           ) : null}
+          <FieldLabel label="Password" required dark />
           <PasswordInput
             inputStyle={styles.input}
             placeholder="Password (min. 8 characters)"

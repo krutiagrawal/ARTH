@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
+import { FieldLabel } from '../components/common/RequiredMark';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
@@ -101,6 +102,7 @@ export function GroupRegisterScreen({ navigation }: any) {
           <Text style={styles.subtitle}>No review wait – you're live right away with a shareable invite code.</Text>
 
           <Text style={styles.sectionLabel}>Group</Text>
+          <FieldLabel label="Group name" required dark />
           <TextInput maxLength={120}
             style={styles.input}
             placeholder="Group name"
@@ -119,6 +121,7 @@ export function GroupRegisterScreen({ navigation }: any) {
               </TouchableOpacity>
             ))}
           </View>
+          <FieldLabel label="What's your group about?" required dark />
           <TextInput maxLength={2000}
             style={[styles.input, styles.multiline]}
             placeholder="What's your group about?"
@@ -129,6 +132,7 @@ export function GroupRegisterScreen({ navigation }: any) {
           />
 
           <Text style={styles.sectionLabel}>Your account</Text>
+          <FieldLabel label="Your name" required dark />
           <TextInput maxLength={60}
             style={styles.input}
             placeholder="Your name"
@@ -136,6 +140,7 @@ export function GroupRegisterScreen({ navigation }: any) {
             value={ownerName}
             onChangeText={setOwnerName}
           />
+          <FieldLabel label="Email" required dark />
           <TextInput
             style={styles.input}
             placeholder="Email"
@@ -151,6 +156,7 @@ export function GroupRegisterScreen({ navigation }: any) {
           ) : email.checking ? (
             <Text style={styles.fieldHint}>Checking…</Text>
           ) : null}
+          <FieldLabel label="Password" required dark />
           <PasswordInput
             inputStyle={styles.input}
             placeholder="Password (min. 8 characters)"

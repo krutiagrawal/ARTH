@@ -1,3 +1,4 @@
+import { toCsv } from '../utils/csv';
 import { FastifyInstance } from 'fastify';
 import { ORG_ROLES } from '../constants/roles';
 import {
@@ -40,6 +41,7 @@ export function serializeAdoptableTree(
     lng: t.lng != null ? Number(t.lng) : null,
     status: t.status,
     isAdopted: t.status === 'adopted',
+    isArchived: !!t.archivedAt,
     distanceKm: entry.distanceKm,
     createdAt: t.createdAt,
     // Set when the NGO created this listing from a real planted tree: what status and check-ins hang off.
@@ -75,14 +77,55 @@ export default async function adoptionsRoutes(fastify: FastifyInstance) {
     reply.send(trees.map((t) => serializeAdoptableTree(t, { includeAdopter: true })));
   });
 
+  fastify.get('/mine/summary', { preHandler: [fastify.requireRole(...ORG_ROLES)] }, async (request, reply) => {
+    reply.send(await adoptionService.getOwnedTreeSummary(fastify.prisma, request.user!.id));
+  });
+
+  // CSV rows as JSON ({ csv }) so the app can hand the text straight to the share sheet.
+  fastify.get('/mine/export', { preHandler: [fastify.requireRole(...ORG_ROLES)] }, async (request, reply) => {
+    const rows = await adoptionService.exportOwnedTrees(fastify.prisma, request.user!.id);
+    reply.send({ csv: toCsv(rows), count: rows.length });
+  });
+
+  fastify.post<{ Params: { id: string } }>(
+    '/:id/duplicate',
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
+    async (request, reply) => {
+      reply.status(201).send(serializeAdoptableTree(await adoptionService.duplicateAdoptableTree(fastify.prisma, request.user!.id, request.params.id)));
+    },
+  );
+
+  fastify.post<{ Params: { id: string }; Body: { archived?: boolean } }>(
+    '/:id/archive',
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
+    async (request, reply) => {
+      const archived = request.body?.archived !== false;
+      reply.send(serializeAdoptableTree(await adoptionService.setAdoptableTreeArchived(fastify.prisma, request.user!.id, request.params.id, archived)));
+    },
+  );
+
   fastify.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
     const tree = await adoptionService.getAdoptableTree(fastify.prisma, request.params.id);
     const health = await adoptionService.getHealthSummaries(fastify.prisma, [tree]);
     reply.send(serializeAdoptableTree(tree, { health: health.get(tree.id) }));
   });
 
-  fastify.get<{ Querystring: { cursor?: string; take?: string } }>('/my-adoptions', async (request, reply) => {
-    const page = await adoptionService.listMyAdoptedTrees(fastify.prisma, request.user!.id, request.query);
+  fastify.get('/my-adoptions/summary', async (request, reply) => {
+    reply.send(await adoptionService.getMyAdoptionsSummary(fastify.prisma, request.user!.id));
+  });
+
+  fastify.get('/my-adoptions/export', async (request, reply) => {
+    const rows = await adoptionService.exportMyAdoptions(fastify.prisma, request.user!.id);
+    reply.send({ csv: toCsv(rows), count: rows.length });
+  });
+
+  fastify.get<{ Querystring: { cursor?: string; take?: string; q?: string; sort?: string } }>('/my-adoptions', async (request, reply) => {
+    const { q, sort, ...paging } = request.query;
+    const page = await adoptionService.listMyAdoptedTrees(fastify.prisma, request.user!.id, {
+      ...paging,
+      search: q?.trim() || undefined,
+      sort: sort as any,
+    });
     const health = await adoptionService.getHealthSummaries(fastify.prisma, page.items, {
       countPendingForUserId: request.user!.id,
     });
@@ -165,6 +208,24 @@ export default async function adoptionsRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const tree = await adoptionService.removeAdoptableTree(fastify.prisma, request.user!.id, request.params.id);
       reply.send(serializeAdoptableTree(tree));
+    },
+  );
+
+  fastify.post<{ Params: { id: string } }>(
+    '/:id/relist',
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
+    async (request, reply) => {
+      const tree = await adoptionService.relistAdoptableTree(fastify.prisma, request.user!.id, request.params.id);
+      reply.send(serializeAdoptableTree(tree));
+    },
+  );
+
+  // Hard delete – only succeeds while nothing real depends on it (see the service for the rules).
+  fastify.delete<{ Params: { id: string } }>(
+    '/:id/permanent',
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
+    async (request, reply) => {
+      reply.send(await adoptionService.deleteAdoptableTree(fastify.prisma, request.user!.id, request.params.id));
     },
   );
 

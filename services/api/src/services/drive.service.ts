@@ -75,6 +75,11 @@ export function hasDriveEnded(drive: { status: string; startsAt: Date; durationM
 
 interface OwnedListFilter {
   q?: string;
+  status?: 'upcoming' | 'ended' | 'completed' | 'cancelled';
+  archived?: boolean;
+  sort?: 'newest' | 'oldest' | 'soonest';
+  from?: Date;
+  to?: Date;
   page?: number;
   take?: number;
 }
@@ -383,10 +388,24 @@ export async function listOwnedDrives(prisma: PrismaClient, ngoUserId: string, f
   return prisma.drive.findMany({
     where: {
       ngoId: ngo.id,
-      ...(filter.q ? { title: { contains: filter.q, mode: 'insensitive' as const } } : {}),
+      ...(filter.q
+        ? {
+            OR: [
+              { title: { contains: filter.q, mode: 'insensitive' as const } },
+              { city: { contains: filter.q, mode: 'insensitive' as const } },
+              { address: { contains: filter.q, mode: 'insensitive' as const } },
+            ],
+          }
+        : {}),
+      archivedAt: filter.archived ? { not: null } : null,
+      ...(filter.from || filter.to ? { startsAt: { ...(filter.from ? { gte: filter.from } : {}), ...(filter.to ? { lte: filter.to } : {}) } } : {}),
+      // "Ended" = still marked upcoming but its start has passed, matching how the app labels it.
+      ...(filter.status === 'upcoming' ? { status: 'upcoming' as const, startsAt: { gt: new Date() } } : {}),
+      ...(filter.status === 'ended' ? { status: 'upcoming' as const, startsAt: { lte: new Date() } } : {}),
+      ...(filter.status === 'completed' || filter.status === 'cancelled' ? { status: filter.status } : {}),
     },
     include: driveInclude,
-    orderBy: [{ startsAt: 'desc' }, { id: 'desc' }],
+    orderBy: [{ startsAt: filter.sort === 'oldest' || filter.sort === 'soonest' ? 'asc' : 'desc' }, { id: 'desc' }],
     take,
     skip: (page - 1) * take,
   });
@@ -584,11 +603,32 @@ export async function listDriveSponsors(prisma: PrismaClient, ngoUserId: string,
 /** Plants the caller has sponsored, across every drive — the activity-hub counterpart to
  * listDriveSponsors above (that one is per-drive and NGO-owner-only; this one is cross-drive and
  * scoped to the sponsoring user). */
-export async function listMySponsorships(prisma: PrismaClient, userId: string, q: CursorQuery = {}) {
+export async function listMySponsorships(
+  prisma: PrismaClient,
+  userId: string,
+  q: CursorQuery & { search?: string; status?: 'pending' | 'succeeded' | 'failed' | 'refunded'; sort?: 'newest' | 'oldest' | 'amount' } = {},
+) {
   const { take, args } = cursorArgs(q);
   const sponsorships = await prisma.drivePlantSponsorship.findMany({
-    where: { userId },
-    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    where: {
+      userId,
+      ...(q.status ? { status: q.status } : {}),
+      ...(q.search
+        ? {
+            OR: [
+              { drivePlant: { speciesName: { contains: q.search, mode: 'insensitive' as const } } },
+              { drivePlant: { drive: { title: { contains: q.search, mode: 'insensitive' as const } } } },
+              { drivePlant: { drive: { ngo: { orgName: { contains: q.search, mode: 'insensitive' as const } } } } },
+            ],
+          }
+        : {}),
+    },
+    orderBy:
+      q.sort === 'oldest'
+        ? [{ createdAt: 'asc' as const }, { id: 'asc' as const }]
+        : q.sort === 'amount'
+          ? [{ amountCents: 'desc' as const }, { id: 'desc' as const }]
+          : [{ createdAt: 'desc' as const }, { id: 'desc' as const }],
     ...args,
     include: {
       drivePlant: {
@@ -673,4 +713,151 @@ export async function sponsorPlant(prisma: PrismaClient, userId: string, driveId
   });
 
   return { sponsorship, clientSecret: paymentIntent?.client_secret ?? null };
+}
+
+/**
+ * Permanently removes a drive created by mistake or for testing. Only allowed while nothing real
+ * hangs off it – RSVPs from volunteers, sponsorship payments, planted-tree records, CSR
+ * sponsorships or bulk requirements – otherwise the NGO should cancel it instead, which keeps
+ * the history and notifies/refunds people.
+ */
+export async function deleteDrive(prisma: PrismaClient, ngoUserId: string, driveId: string) {
+  const drive = await findOwnedDriveOrThrow(prisma, ngoUserId, driveId);
+
+  const [rsvps, sponsorships, plantedTrees, csr, bulk] = await Promise.all([
+    // A cancelled drive's RSVPs were already notified/refunded; only live ones block deletion.
+    drive.status === 'cancelled'
+      ? Promise.resolve(0)
+      : prisma.driveRsvp.count({ where: { driveId: drive.id, status: 'confirmed' } }),
+    prisma.drivePlantSponsorship.count({ where: { drivePlant: { driveId: drive.id } } }),
+    prisma.plantedTree.count({ where: { driveId: drive.id } }),
+    prisma.csrSponsorship.count({ where: { driveId: drive.id } }),
+    prisma.bulkRequirement.count({ where: { driveId: drive.id } }),
+  ]);
+
+  if (rsvps > 0) throw new ConflictError('This drive has volunteers signed up – cancel it instead of deleting it.');
+  if (sponsorships > 0 || csr > 0) throw new ConflictError('This drive has sponsorships – cancel it instead of deleting it.');
+  if (plantedTrees > 0 || bulk > 0) throw new ConflictError('This drive has trees or requirements linked to it, so it can’t be deleted.');
+
+  await prisma.drive.delete({ where: { id: drive.id } });
+  return { id: drive.id };
+}
+
+/** Counts for the list header, over the NGO's non-archived drives (plus how many are archived). */
+export async function getOwnedDriveSummary(prisma: PrismaClient, ngoUserId: string) {
+  const ngo = await requireNgoProfile(prisma, ngoUserId);
+  const now = new Date();
+  const base = { ngoId: ngo.id, archivedAt: null };
+  const [total, upcoming, ended, completed, cancelled, archived, noVolunteers] = await Promise.all([
+    prisma.drive.count({ where: base }),
+    prisma.drive.count({ where: { ...base, status: 'upcoming', startsAt: { gt: now } } }),
+    prisma.drive.count({ where: { ...base, status: 'upcoming', startsAt: { lte: now } } }),
+    prisma.drive.count({ where: { ...base, status: 'completed' } }),
+    prisma.drive.count({ where: { ...base, status: 'cancelled' } }),
+    prisma.drive.count({ where: { ngoId: ngo.id, archivedAt: { not: null } } }),
+    // Starting within a week with nobody signed up yet.
+    prisma.drive.count({
+      where: { ...base, status: 'upcoming', startsAt: { gt: now, lte: new Date(now.getTime() + 7 * 86_400_000) }, rsvps: { none: { status: 'confirmed' } } },
+    }),
+  ]);
+  return { total, upcoming, ended, completed, cancelled, archived, needsAttention: ended + noVolunteers };
+}
+
+/** Clones a drive (details, pickup points, plants) one week later, as a fresh upcoming drive with no RSVPs or sponsorships. */
+export async function duplicateDrive(prisma: PrismaClient, ngoUserId: string, driveId: string) {
+  const source = await findOwnedDriveOrThrow(prisma, ngoUserId, driveId);
+  const full = await prisma.drive.findUniqueOrThrow({ where: { id: source.id }, include: { pickupPoints: true, plants: true } });
+
+  const WEEK = 7 * 86_400_000;
+  const startsAt = new Date(Math.max(full.startsAt.getTime() + WEEK, Date.now() + 86_400_000));
+  const shift = startsAt.getTime() - full.startsAt.getTime();
+
+  return prisma.drive.create({
+    data: {
+      ngoId: full.ngoId,
+      title: `${full.title} (copy)`.slice(0, 120),
+      description: full.description,
+      instructions: full.instructions,
+      photoUrl: full.photoUrl,
+      address: full.address,
+      city: full.city,
+      lat: full.lat,
+      lng: full.lng,
+      transportMode: full.transportMode,
+      startsAt,
+      durationMinutes: full.durationMinutes,
+      capacity: full.capacity,
+      pickupPoints: full.pickupPoints.length
+        ? { create: full.pickupPoints.map((p) => ({ address: p.address, arrivalBy: new Date(p.arrivalBy.getTime() + shift), order: p.order })) }
+        : undefined,
+      plants: full.plants.length
+        ? { create: full.plants.map((p) => ({ speciesName: p.speciesName, priceCents: p.priceCents, order: p.order })) }
+        : undefined,
+    },
+    include: driveInclude,
+  });
+}
+
+/** Archiving tidies the NGO's own list; a drive that is still upcoming has to be completed or cancelled first. */
+export async function setDriveArchived(prisma: PrismaClient, ngoUserId: string, driveId: string, archived: boolean) {
+  const drive = await findOwnedDriveOrThrow(prisma, ngoUserId, driveId);
+  if (archived && drive.status === 'upcoming' && !hasDriveEnded(drive)) {
+    throw new ConflictError('This drive is still upcoming – cancel or complete it before archiving.');
+  }
+  return prisma.drive.update({ where: { id: drive.id }, data: { archivedAt: archived ? new Date() : null }, include: driveInclude });
+}
+
+export async function exportOwnedDrives(prisma: PrismaClient, ngoUserId: string) {
+  const ngo = await requireNgoProfile(prisma, ngoUserId);
+  const drives = await prisma.drive.findMany({
+    where: { ngoId: ngo.id },
+    orderBy: { startsAt: 'desc' },
+    include: { _count: { select: { rsvps: { where: { status: 'confirmed' } } } } },
+  });
+  return drives.map((d) => ({
+    title: d.title,
+    status: d.archivedAt ? `${d.status} (archived)` : d.status,
+    startsAt: d.startsAt.toISOString(),
+    durationMinutes: d.durationMinutes ?? '',
+    city: d.city ?? '',
+    address: d.address ?? '',
+    volunteersConfirmed: d._count.rsvps,
+    capacity: d.capacity ?? '',
+  }));
+}
+
+/** Exact totals across every sponsorship (the old screen summed only the pages it had loaded). */
+export async function getMySponsorshipsSummary(prisma: PrismaClient, userId: string) {
+  const rows = await prisma.drivePlantSponsorship.findMany({
+    where: { userId },
+    select: { status: true, amountCents: true, drivePlant: { select: { driveId: true, drive: { select: { ngoId: true } } } } },
+  });
+  const settled = rows.filter((r) => r.status === 'succeeded');
+  const byStatus = { pending: 0, succeeded: 0, failed: 0, refunded: 0 };
+  for (const r of rows) byStatus[r.status] += 1;
+  return {
+    total: rows.length,
+    totalCents: settled.reduce((n, r) => n + r.amountCents, 0),
+    plants: settled.length,
+    drives: new Set(settled.map((r) => r.drivePlant.driveId)).size,
+    ngos: new Set(settled.map((r) => r.drivePlant.drive.ngoId)).size,
+    ...byStatus,
+    needsAttention: byStatus.pending,
+  };
+}
+
+export async function exportMySponsorships(prisma: PrismaClient, userId: string) {
+  const rows = await prisma.drivePlantSponsorship.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    include: { drivePlant: { include: { drive: { select: { title: true, ngo: { select: { orgName: true } } } } } } },
+  });
+  return rows.map((r) => ({
+    date: r.createdAt.toISOString(),
+    plant: r.drivePlant.speciesName,
+    drive: r.drivePlant.drive.title,
+    ngo: r.drivePlant.drive.ngo.orgName,
+    amountRupees: r.amountCents / 100,
+    status: r.status,
+  }));
 }

@@ -13,6 +13,7 @@ const DEBOUNCE_MS = 350;
 
 interface AddressSearchFieldProps {
   label: string;
+  required?: boolean;
   value: string;
   onChangeText: (text: string) => void;
   /** Fired when the user taps a suggestion – use this to also capture lat/lng/city rather than
@@ -44,6 +45,7 @@ interface AddressSearchFieldProps {
  */
 export function AddressSearchField({
   label,
+  required,
   value,
   onChangeText,
   onSelectSuggestion,
@@ -154,6 +156,7 @@ export function AddressSearchField({
     <View style={styles.wrap}>
       <FormFieldShell
         label={label}
+        required={required}
         dark={dark}
         rightAccessory={loading ? <ActivityIndicator size="small" color={dark ? COLORS.white : COLORS.sage} /> : undefined}
       >

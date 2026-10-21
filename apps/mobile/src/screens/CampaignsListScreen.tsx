@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl, Image } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
+import { resolveMediaUrl } from '../api/client';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -304,7 +305,7 @@ export function CampaignsListScreen({ navigation }: any) {
           return (
             <TouchableOpacity key={c.id} activeOpacity={0.85} onPress={() => openCampaign(c)}>
               <BorderCard style={styles.card}>
-                {c.coverPhotoUri ? <Image source={{ uri: c.coverPhotoUri }} style={styles.cover} resizeMode="cover" /> : null}
+                {c.coverPhotoUri ? <Image source={{ uri: resolveMediaUrl(c.coverPhotoUri) }} style={styles.cover} resizeMode="cover" /> : null}
 
                 <View style={styles.badgeRow}>
                   {cat && <Text style={styles.categoryBadge}>{cat.emoji} {cat.label}</Text>}

@@ -10,7 +10,10 @@ import { RADIUS } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { StatusModal } from '../components/common/StatusModal';
-import { usePlantedTrees, useLogBulkHealthChecks, useNgoProfile } from '../hooks/useApiQueries';
+import { Sheet } from '../components/common/Sheet';
+import { FormField } from '../components/common/FormField';
+import { ApiError } from '../api/client';
+import { usePlantedTrees, useLogBulkHealthChecks, useMoveTreesToZone, useZonesForDrive, useCreateZone, useNgoProfile } from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import type { TreeHealthStatus } from '../api/plantedTrees';
 import { useSlideUp } from '../hooks/useAnimations';
@@ -36,6 +39,12 @@ export function NgoZoneTreesScreen({ navigation, route }: any) {
   const listQuery = usePlantedTrees(driveId ? { driveId, zoneId: zoneId ?? 'unzoned' } : { driveId: 'none' });
   const { data, isLoading, refetch } = listQuery;
   const bulkMutation = useLogBulkHealthChecks();
+  const moveMutation = useMoveTreesToZone();
+  const createZoneMutation = useCreateZone();
+  const { data: zonesData } = useZonesForDrive(driveId);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [newZoneName, setNewZoneName] = useState('');
+  const [moveError, setMoveError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<TreeHealthStatus | 'all'>('all');
   const confirm = useConfirm();
@@ -72,6 +81,33 @@ export function NgoZoneTreesScreen({ navigation, route }: any) {
     ]);
   });
 
+  // Other zones of this drive, plus "Unzoned" when these trees currently sit in a zone.
+  const moveTargets = (zonesData?.zones ?? []).filter((z) => z.id && z.id !== zoneId);
+
+  const moveTo = guard(async (target: string | null) => {
+    setMoveError(null);
+    try {
+      await moveMutation.mutateAsync({ plantedTreeIds: Array.from(selected), zoneId: target });
+      setSelected(new Set());
+      setMoveOpen(false);
+    } catch (e) {
+      setMoveError(e instanceof ApiError ? e.message : 'Could not move these trees.');
+    }
+  });
+
+  const moveToNewZone = guard(async () => {
+    const name = newZoneName.trim();
+    if (!driveId || !name) return;
+    setMoveError(null);
+    try {
+      const zone = await createZoneMutation.mutateAsync({ driveId, name });
+      setNewZoneName('');
+      await moveTo(zone.id);
+    } catch (e) {
+      setMoveError(e instanceof ApiError ? e.message : 'Could not create this zone.');
+    }
+  });
+
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
@@ -90,6 +126,23 @@ export function NgoZoneTreesScreen({ navigation, route }: any) {
       {/* Explicit height (not just contentContainerStyle) – a horizontal ScrollView here was
           measuring its own viewport shorter than the pills actually render, silently clipping
           the bottom of every pill at the same boundary regardless of the pills' own padding. */}
+      {/* The move/bulk actions only appear once something is ticked, which was easy to miss – so say it up front. */}
+      <View style={styles.selectBar}>
+        <Text style={styles.selectHint}>
+          {driveId && zoneId === null
+            ? 'These trees are not in a zone yet. Tick trees, then tap “Move to zone”.'
+            : 'Tick trees to mark their health' + (driveId ? ' or move them to another zone.' : '.')}
+        </Text>
+        <TouchableOpacity
+          onPress={() =>
+            setSelected(selected.size === filteredTrees.length ? new Set() : new Set(filteredTrees.map((t) => t.id)))
+          }
+          disabled={filteredTrees.length === 0}
+        >
+          <Text style={styles.selectAll}>{selected.size > 0 && selected.size === filteredTrees.length ? 'Clear' : 'Select all'}</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
         {STATUS_FILTERS.map((s) => (
           <TouchableOpacity
@@ -158,8 +211,41 @@ export function NgoZoneTreesScreen({ navigation, route }: any) {
               </TouchableOpacity>
             ))}
           </View>
+          {driveId && (
+            <TouchableOpacity style={styles.moveButton} onPress={() => { setMoveError(null); setMoveOpen(true); }}>
+              <Text style={styles.moveButtonText}>📍 Move to zone…</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
+
+      <Sheet visible={moveOpen} onClose={() => setMoveOpen(false)} title={`Move ${selected.size} tree${selected.size === 1 ? '' : 's'} to…`} scrollable>
+        <View style={{ gap: 4 }}>
+          {zoneId !== null && (
+            <TouchableOpacity style={styles.moveRow} onPress={() => moveTo(null)} disabled={moveMutation.isPending}>
+              <Text style={styles.moveRowText}>Unzoned</Text>
+            </TouchableOpacity>
+          )}
+          {moveTargets.map((z) => (
+            <TouchableOpacity key={z.id} style={styles.moveRow} onPress={() => moveTo(z.id)} disabled={moveMutation.isPending}>
+              <Text style={styles.moveRowText}>{z.name}</Text>
+            </TouchableOpacity>
+          ))}
+          <FormField
+            maxLength={100}
+            label="Or create a new zone"
+            value={newZoneName}
+            onChangeText={setNewZoneName}
+            placeholder="eg - North bank"
+            rightAccessory={
+              <TouchableOpacity onPress={moveToNewZone} disabled={!newZoneName.trim() || createZoneMutation.isPending || moveMutation.isPending}>
+                <Text style={styles.moveRowText}>Create & move</Text>
+              </TouchableOpacity>
+            }
+          />
+          {moveError && <Text style={styles.moveError}>{moveError}</Text>}
+        </View>
+      </Sheet>
 
       <StatusModal {...statusModalProps} />
     </View>
@@ -168,6 +254,14 @@ export function NgoZoneTreesScreen({ navigation, route }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  selectBar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingBottom: 8 },
+  selectHint: { flex: 1, fontSize: 12, color: COLORS.textSecondary },
+  selectAll: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
+  moveButton: { marginTop: 10, alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 12, borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.forest },
+  moveButtonText: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
+  moveRow: { paddingVertical: 14, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: 'rgba(139, 107, 71, 0.12)' },
+  moveRowText: { fontSize: 15, fontWeight: '600', color: COLORS.forest },
+  moveError: { fontSize: 12, color: COLORS.dangerDark, marginTop: 6 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
   backButton: { width: 40, height: 40 },
   addButton: { width: 40, height: 40 },

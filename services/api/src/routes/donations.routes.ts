@@ -1,3 +1,4 @@
+import { toCsv } from '../utils/csv';
 import { FastifyInstance } from 'fastify';
 import { ORG_ROLES } from '../constants/roles';
 import {
@@ -30,6 +31,7 @@ export function serializeCampaign(c: any) {
     category: c.category ?? null,
     endsAt: c.endsAt ?? null,
     status: c.status,
+    isArchived: !!c.archivedAt,
     createdAt: c.createdAt,
   };
 }
@@ -49,6 +51,38 @@ export default async function donationsRoutes(fastify: FastifyInstance) {
 
     const campaigns = await donationService.listOwnedCampaigns(fastify.prisma, request.user!.id, parsed.data);
     reply.send(campaigns.map(serializeCampaign));
+  });
+
+  fastify.get('/mine/summary', { preHandler: [fastify.requireRole(...ORG_ROLES)] }, async (request, reply) => {
+    reply.send(await donationService.getOwnedCampaignSummary(fastify.prisma, request.user!.id));
+  });
+
+  // CSV rows as JSON ({ csv }) so the app can hand the text straight to the share sheet.
+  fastify.get('/mine/export', { preHandler: [fastify.requireRole(...ORG_ROLES)] }, async (request, reply) => {
+    const rows = await donationService.exportOwnedCampaigns(fastify.prisma, request.user!.id);
+    reply.send({ csv: toCsv(rows), count: rows.length });
+  });
+
+  fastify.post<{ Params: { id: string } }>(
+    '/:id/duplicate',
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
+    async (request, reply) => {
+      reply.status(201).send(serializeCampaign(await donationService.duplicateCampaign(fastify.prisma, request.user!.id, request.params.id)));
+    },
+  );
+
+  fastify.post<{ Params: { id: string }; Body: { archived?: boolean } }>(
+    '/:id/archive',
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
+    async (request, reply) => {
+      const archived = request.body?.archived !== false;
+      reply.send(serializeCampaign(await donationService.setCampaignArchived(fastify.prisma, request.user!.id, request.params.id, archived)));
+    },
+  );
+
+  fastify.get('/mine-donations/export', async (request, reply) => {
+    const rows = await donationService.exportMyDonations(fastify.prisma, request.user!.id);
+    reply.send({ csv: toCsv(rows), count: rows.length });
   });
 
   fastify.get('/mine-donations', async (request, reply) => {
@@ -164,6 +198,15 @@ export default async function donationsRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       const campaign = await donationService.closeCampaign(fastify.prisma, request.user!.id, request.params.id);
       reply.send(serializeCampaign(campaign));
+    },
+  );
+
+  // Hard delete – only succeeds while nothing real depends on it (see the service for the rules).
+  fastify.delete<{ Params: { id: string } }>(
+    '/:id/permanent',
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
+    async (request, reply) => {
+      reply.send(await donationService.deleteCampaign(fastify.prisma, request.user!.id, request.params.id));
     },
   );
 

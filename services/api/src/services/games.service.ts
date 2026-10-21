@@ -1,3 +1,4 @@
+import { recordOrgContribution } from './orgStreak.service';
 import { Prisma, GameKey, GamePlay } from '@arth/db';
 import { addXp } from './xp.service';
 import { completeMissionByType } from './missions.service';
@@ -168,6 +169,16 @@ async function getOrCreatePlay(tx: Prisma.TransactionClient, userId: string, key
   });
 }
 
+/** NGO/nursery accounts keep a weekly streak, so finishing a game or lesson meets their week too. */
+async function recordOrgLearning(tx: Prisma.TransactionClient, userId: string) {
+  const [ngo, nursery] = await Promise.all([
+    tx.ngoProfile.findUnique({ where: { userId }, select: { id: true } }),
+    tx.nurseryProfile.findUnique({ where: { userId }, select: { id: true } }),
+  ]);
+  if (ngo) await recordOrgContribution(tx, 'ngo', ngo.id, ['learning']);
+  if (nursery) await recordOrgContribution(tx, 'nursery', nursery.id, ['learning']);
+}
+
 /**
  * Closes out today's play and pays out. The `status: 'in_progress'` guard on the update is the
  * race-safe once-a-day gate — a concurrent double-submit finds count 0 and gets a 409, so XP and
@@ -193,6 +204,7 @@ async function finishGame(
 
   await addXp(tx, userId, outcome.xp, 'game_completed', 'game', play.gameKey);
   const user = await recordActivityToday(tx, userId, 'game');
+  await recordOrgLearning(tx, userId);
   await evaluateAchievements(tx, userId);
 
   return {

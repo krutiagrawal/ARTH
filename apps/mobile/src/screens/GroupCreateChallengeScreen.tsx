@@ -23,7 +23,7 @@ const GOAL_TYPES: { value: 'trees_planted_count' | 'cities_count' | 'streak_days
   { value: 'rare_species_count', label: 'Rare species' },
 ];
 
-function DateField({ label, value, onChange }: { label: string; value: Date; onChange: (d: Date) => void }) {
+function DateField({ label, required, value, onChange }: { label: string; required?: boolean; value: Date; onChange: (d: Date) => void }) {
   // Android has no real combined "datetime" mode – the library fakes it by chaining a date
   // dialog into a time dialog internally, and unmounting the picker as soon as the first
   // (date) callback fires – which we used to do via `setShowPicker(false)` – tears down that
@@ -56,7 +56,7 @@ function DateField({ label, value, onChange }: { label: string; value: Date; onC
   return (
     <>
       <TouchableOpacity activeOpacity={0.8} onPress={() => setStep('date')}>
-        <FormFieldShell label={label}>
+        <FormFieldShell label={label} required={required}>
           <Text style={styles.inputText}>{value.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</Text>
         </FormFieldShell>
       </TouchableOpacity>
@@ -126,8 +126,8 @@ export function GroupCreateChallengeScreen({ navigation }: any) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         <Animated.View style={cardAnim}>
-          <FormField maxLength={120} label="Title" value={title} onChangeText={setTitle} placeholder="eg - Monsoon Sprint" />
-          <FormField maxLength={2000} label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What are you working toward?" />
+          <FormField maxLength={120} required label="Title" value={title} onChangeText={setTitle} placeholder="eg - Monsoon Sprint" />
+          <FormField maxLength={2000} required label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What are you working toward?" />
 
           <Text style={styles.sectionLabel}>Goal type</Text>
           <View style={styles.chipRow}>
@@ -143,15 +143,15 @@ export function GroupCreateChallengeScreen({ navigation }: any) {
           </View>
 
           <FormField
-            label="Goal total"
+            required label="Goal total"
             value={goalTotal}
             onChangeText={(v: string) => setGoalTotal(v.replace(/[^0-9]/g, ''))}
             keyboardType="number-pad"
             placeholder="eg - 100"
           />
 
-          <DateField label="Starts at" value={startsAt} onChange={setStartsAt} />
-          <DateField label="Ends at" value={endsAt} onChange={setEndsAt} />
+          <DateField required label="Starts at" value={startsAt} onChange={setStartsAt} />
+          <DateField required label="Ends at" value={endsAt} onChange={setEndsAt} />
 
           {error && <Text style={styles.error}>{error}</Text>}
 

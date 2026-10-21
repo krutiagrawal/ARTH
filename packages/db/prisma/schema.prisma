@@ -1017,6 +1017,8 @@ model SaplingStock {
   // Availability status (Available/Low Stock/Out of Stock) is derived from quantity vs this
   // threshold at serialization time, not stored — editing stays "touch one number."
   lowStockThreshold    Int      @default(5) @map("low_stock_threshold")
+  // Hidden from the nursery's default inventory list; the Archived filter shows it again.
+  archivedAt           DateTime? @map("archived_at")
 
   nursery            NurseryProfile       @relation(fields: [nurseryId], references: [id], onDelete: Cascade)
   speciesRef         TreeSpecies?         @relation(fields: [speciesId], references: [id])
@@ -1090,6 +1092,8 @@ enum NurseryStreakType {
   supply
   inventory_freshness
   arth_contribution
+  learning
+  protection
 }
 
 // One row per (nursery, streak type, week) — Monday-anchored, same shape as NgoStreakHistory's
@@ -1097,12 +1101,14 @@ enum NurseryStreakType {
 // recordNurseryContribution whenever a qualifying activity happens; current/longest streak length
 // is derived by walking these rows backward, never stored redundantly.
 model NurseryContributionStreak {
-  id          String            @id @default(uuid())
-  nurseryId   String            @map("nursery_id")
-  streakType  NurseryStreakType @map("streak_type")
-  periodStart DateTime          @map("period_start") @db.Date
-  metCriteria Boolean           @default(false) @map("met_criteria")
-  createdAt   DateTime          @default(now()) @map("created_at")
+  id          String             @id @default(uuid())
+  nurseryId   String             @map("nursery_id")
+  streakType  NurseryStreakType  @map("streak_type")
+  periodStart DateTime           @map("period_start") @db.Date
+  metCriteria Boolean            @default(false) @map("met_criteria")
+  // Set on `protection` rows written by a streak freeze / XP revive.
+  protectedBy StreakProtectedBy? @map("protected_by")
+  createdAt   DateTime           @default(now()) @map("created_at")
 
   nursery NurseryProfile @relation(fields: [nurseryId], references: [id], onDelete: Cascade)
 
@@ -1984,6 +1990,8 @@ model Drive {
   cancelReason    String?            @map("cancel_reason")
   // NGO-curated flag for highlighting a completed drive on its public profile "past drives" showcase.
   featured        Boolean            @default(false)
+  // Set when the NGO archives it – hidden from the NGO's own Manage list (see "Archived" filter), still public as before.
+  archivedAt DateTime? @map("archived_at")
   createdAt       DateTime           @default(now()) @map("created_at")
   updatedAt       DateTime           @updatedAt @map("updated_at")
 
@@ -2159,6 +2167,8 @@ model AdoptableTree {
   lat           Decimal?            @db.Decimal(9, 6)
   lng           Decimal?            @db.Decimal(9, 6)
   status        AdoptableTreeStatus @default(available)
+  // Set when the NGO archives it – hidden from the NGO's own Manage list (see "Archived" filter), still public as before.
+  archivedAt DateTime? @map("archived_at")
   createdAt     DateTime            @default(now()) @map("created_at")
   updatedAt     DateTime            @updatedAt @map("updated_at")
   // Set when an NGO creates this listing FROM a real PlantedTree row — lets the listing resolve
@@ -2205,6 +2215,8 @@ model DonationCampaign {
   // After this moment the campaign stops appearing in the public list and stops taking donations.
   endsAt          DateTime?      @map("ends_at")
   status          CampaignStatus @default(active)
+  // Set when the NGO archives it – hidden from the NGO's own Manage list (see "Archived" filter), still public as before.
+  archivedAt DateTime? @map("archived_at")
   createdAt       DateTime       @default(now()) @map("created_at")
   updatedAt       DateTime       @updatedAt @map("updated_at")
 
@@ -2687,6 +2699,8 @@ enum NgoStreakType {
   updates
   drive_activity
   impact_verification
+  learning
+  protection
 }
 
 // One row per (ngo, streak type, week) — Monday-anchored, same shape as
@@ -2694,12 +2708,14 @@ enum NgoStreakType {
 // recordNgoContribution whenever a qualifying activity happens; current/longest streak length is
 // derived by walking these rows backward, never stored redundantly.
 model NgoContributionStreak {
-  id          String        @id @default(uuid())
-  ngoId       String        @map("ngo_id")
-  streakType  NgoStreakType @map("streak_type")
-  periodStart DateTime      @map("period_start") @db.Date
-  metCriteria Boolean       @default(false) @map("met_criteria")
-  createdAt   DateTime      @default(now()) @map("created_at")
+  id          String             @id @default(uuid())
+  ngoId       String             @map("ngo_id")
+  streakType  NgoStreakType      @map("streak_type")
+  periodStart DateTime           @map("period_start") @db.Date
+  metCriteria Boolean            @default(false) @map("met_criteria")
+  // Set on `protection` rows written by a streak freeze / XP revive.
+  protectedBy StreakProtectedBy? @map("protected_by")
+  createdAt   DateTime           @default(now()) @map("created_at")
 
   ngo NgoProfile @relation(fields: [ngoId], references: [id], onDelete: Cascade)
 

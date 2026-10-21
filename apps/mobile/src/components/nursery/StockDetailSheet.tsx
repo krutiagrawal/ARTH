@@ -155,7 +155,7 @@ export function StockDetailSheet({ item, visible, onClose }: StockDetailSheetPro
       <Text style={styles.sectionTitle}>Your listing</Text>
       <View style={styles.inlineRow}>
         <View style={styles.inlineField}>
-          <FormField label="Quantity" value={quantity} onChangeText={setQuantity} placeholder="0" keyboardType="number-pad" />
+          <FormField required label="Quantity" value={quantity} onChangeText={setQuantity} placeholder="0" keyboardType="number-pad" />
         </View>
         <View style={styles.inlineField}>
           <FormField

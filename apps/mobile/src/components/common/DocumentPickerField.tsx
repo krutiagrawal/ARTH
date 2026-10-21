@@ -5,12 +5,18 @@ import * as DocumentPicker from 'expo-document-picker';
 import { COLORS, ON_DARK_SURFACE } from '../../constants/colors';
 import { RADIUS, SPACING } from '../../constants/theme';
 import { useHaptics } from '../../hooks/useHaptics';
+import { RequiredMark } from './RequiredMark';
 import type { PickedPhoto } from './PhotoPickerField';
 
 interface DocumentPickerFieldProps {
   doc: PickedPhoto | null;
   onChange: (doc: PickedPhoto | null) => void;
   label?: string;
+  required?: boolean;
+  /** Name of a document already stored for this record (edit screens); shown until a new one is picked. */
+  existingName?: string | null;
+  /** Read-only: shows the stored document but does not open the picker (e.g. legal documents locked after approval). */
+  disabled?: boolean;
   hint?: string;
   /** Translucent-white chrome for night-gradient screens (signup wizards), matching FormField's dark variant. */
   dark?: boolean;
@@ -24,7 +30,7 @@ const ACCEPTED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/web
  * several of these back to back (one per registration type). Accepts a PDF or a photo of the
  * document, since scanned certificates arrive as either.
  */
-export function DocumentPickerField({ doc, onChange, label, hint, dark }: DocumentPickerFieldProps) {
+export function DocumentPickerField({ doc, onChange, label, required, existingName, disabled, hint, dark }: DocumentPickerFieldProps) {
   const { medium, selection } = useHaptics();
 
   const pick = useCallback(async () => {
@@ -40,22 +46,30 @@ export function DocumentPickerField({ doc, onChange, label, hint, dark }: Docume
     onChange(null);
   }, [selection, onChange]);
 
-  const isPdf = doc?.type === 'application/pdf';
+  const isPdf = doc ? doc.type === 'application/pdf' : !!existingName && /\.pdf$/i.test(existingName);
+  const shownName = doc?.name ?? existingName ?? null;
 
   return (
     <View style={styles.wrap}>
-      {label ? <Text style={[styles.label, dark && styles.labelDark]}>{label}</Text> : null}
+      {label ? (
+        <Text style={[styles.label, dark && styles.labelDark]}>
+          {label}
+          {required ? <RequiredMark dark={dark} /> : null}
+        </Text>
+      ) : null}
       <TouchableOpacity
-        style={[styles.row, dark ? styles.rowDark : styles.rowLight, doc && styles.rowFilled]}
+        style={[styles.row, dark ? styles.rowDark : styles.rowLight, shownName && styles.rowFilled, disabled && { opacity: 0.6 }]}
         onPress={pick}
+        disabled={disabled}
         activeOpacity={0.8}
       >
-        <Text style={styles.icon}>{doc ? (isPdf ? '📄' : '🖼️') : '📎'}</Text>
+        <Text style={styles.icon}>{shownName ? (isPdf ? '📄' : '🖼️') : '📎'}</Text>
         <View style={styles.textCol}>
           <Text style={[styles.rowText, dark && styles.rowTextDark]} numberOfLines={1}>
-            {doc ? doc.name : 'Tap to upload'}
+            {shownName ? shownName : 'Tap to upload'}
           </Text>
-          {hint && !doc ? <Text style={[styles.rowHint, dark && styles.rowHintDark]}>{hint}</Text> : null}
+          {existingName && !doc && !disabled ? <Text style={[styles.rowHint, dark && styles.rowHintDark]}>Tap to replace</Text> : null}
+          {hint && !shownName ? <Text style={[styles.rowHint, dark && styles.rowHintDark]}>{hint}</Text> : null}
         </View>
         {doc && (
           <TouchableOpacity onPress={remove} hitSlop={8} style={styles.removeBtn}>

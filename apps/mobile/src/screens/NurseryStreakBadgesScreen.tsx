@@ -10,6 +10,7 @@ import { BorderCard } from '../components/common/BorderCard';
 import { Mascot } from '../components/common/Mascot';
 import { TrustScoreGauge } from '../components/common/TrustScoreGauge';
 import { GrowthLevelBadge, GROWTH_LEVEL_META } from '../components/common/GrowthLevelBadge';
+import { OrgStreakCard } from '../components/streak/OrgStreakCard';
 import { ContributionStreakCard } from '../components/common/ContributionStreakCard';
 import { AchievementGrid, AchievementDetailModal } from '../components/common/AchievementGrid';
 import { useNurseryReputation, useNurseryBadges } from '../hooks/useApiQueries';
@@ -65,6 +66,8 @@ export function NurseryStreakBadgesScreen({ navigation }: any) {
         <Text style={styles.subtitle}>
           Built from real ARTH activity – orders fulfilled, inventory kept fresh, and NGO partnerships – not a daily check-in.
         </Text>
+
+        <OrgStreakCard navigation={navigation} />
 
         <BorderCard style={styles.card}>
           <View style={styles.growthRow}>

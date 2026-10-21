@@ -7,3 +7,7 @@ export const reviveStreakSchema = z.object({
 export const protectStreakSchema = z.object({
   method: z.enum(['plant', 'freeze', 'xp']),
 });
+
+export const protectOrgStreakSchema = z.object({
+  method: z.enum(['freeze', 'xp']),
+});

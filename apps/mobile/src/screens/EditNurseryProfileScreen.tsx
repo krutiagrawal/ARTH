@@ -11,7 +11,7 @@ import { COLORS } from '../constants/colors';
 import { RADIUS, SHADOWS } from '../constants/theme';
 import { useNurseryProfile, useUpdateNurseryProfile, useResubmitNurseryProfile, useUpdateMe } from '../hooks/useApiQueries';
 import { BorderCard } from '../components/common/BorderCard';
-import { PickedPhoto } from '../components/common/PhotoPickerField';
+import { PickedPhoto, PhotoPickerField } from '../components/common/PhotoPickerField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
 import { PhoneField } from '../components/common/PhoneField';
@@ -53,6 +53,7 @@ export function EditNurseryProfileScreen({ navigation }: any) {
   const [deliveryRadiusKm, setDeliveryRadiusKm] = useState('');
   const [approvalRequired, setApprovalRequired] = useState(false);
   const [logo, setLogo] = useState<PickedPhoto | null>(null);
+  const [coverPhoto, setCoverPhoto] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const cardAnim = useSlideUp(0, 24);
@@ -150,7 +151,9 @@ export function EditNurseryProfileScreen({ navigation }: any) {
         offersDelivery,
         deliveryRadiusKm: deliveryRadiusKm.trim() ? Number(deliveryRadiusKm.trim()) : undefined,
         logo: logo ?? undefined,
+        coverPhoto: coverPhoto ?? undefined,
       });
+      setCoverPhoto(null);
       confirm('Saved', 'Your nursery profile has been updated.');
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not save your profile. Please try again.');
@@ -209,24 +212,65 @@ export function EditNurseryProfileScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            <FormField maxLength={60} label="Owner Name" value={ownerName} onChangeText={setOwnerName} placeholder="Your name" />
-            <FormField maxLength={120} label="Nursery Name" value={nurseryName} onChangeText={setNurseryName} placeholder="eg - Your nursery" />
-            <FormField maxLength={2000} label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What does your nursery grow?" />
+            <FormField maxLength={60} required label="Owner Name" value={ownerName} onChangeText={setOwnerName} placeholder="Your name" />
+            <FormField maxLength={120} required label="Nursery Name" value={nurseryName} onChangeText={setNurseryName} placeholder="eg - Your nursery" />
+            <FormField maxLength={2000} required label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - What does your nursery grow?" />
             <AddressSearchField
-              label="Address"
+              required label="Address"
               value={line1}
               onChangeText={setLine1}
               placeholder="eg - Street / area / landmark"
               onSelectSuggestion={(s) => setLine1(s.label)}
             />
             <CityPickerField value={city} onChange={setCity} />
+            <PhotoPickerField
+              photo={coverPhoto}
+              existingUri={profile?.coverPhotoUrl}
+              onChange={setCoverPhoto}
+              mode="gallery"
+              label="Cover photo"
+              hint="Shown at the top of your public profile"
+              aspect={[16, 9]}
+            />
             <PhoneField
-              label="Contact phone"
+              required label="Contact phone"
               value={contactPhone}
               onChangeText={setContactPhone}
               onBlur={() => setContactPhoneTouched(true)}
               error={contactPhoneTouched && contactPhone && !isValidPhone(contactPhone) ? 'Enter a valid 10-digit mobile number' : null}
             />
+
+            {/* What was submitted at registration, shown read-only so the form is the full picture. */}
+            {profile && (
+              <BorderCard style={styles.regCard}>
+                <Text style={styles.regTitle}>Registration details</Text>
+                {profile.verificationPhotoUrl && (
+                  <Image source={{ uri: resolveMediaUrl(profile.verificationPhotoUrl) }} style={styles.regPhoto} resizeMode="cover" />
+                )}
+                {[
+                  ['Nursery type', profile.nurseryType],
+                  ['Year established', profile.yearEstablished],
+                  ['Website / social', profile.websiteUrl],
+                  ['Responsible person', profile.responsiblePersonName],
+                  ['Their role', profile.responsiblePersonRole],
+                  ['Their phone', profile.responsiblePersonPhone],
+                  ['Stocks', profile.plantCategories?.join(', ')],
+                  ['Approx. plants', profile.approxPlantCount],
+                  ['GSTIN', profile.gstin],
+                  ['Business registration no.', profile.businessRegistrationNumber],
+                  ['Trade licence no.', profile.tradeLicenseNumber],
+                  ['NGO registration no.', profile.ngoRegistrationNumber],
+                  ['Government nursery ID', profile.governmentNurseryId],
+                ]
+                  .filter(([, v]) => v !== null && v !== undefined && v !== '')
+                  .map(([k, v]) => (
+                    <View key={String(k)} style={styles.regRow}>
+                      <Text style={styles.regKey}>{k}</Text>
+                      <Text style={styles.regValue}>{String(v)}</Text>
+                    </View>
+                  ))}
+              </BorderCard>
+            )}
 
             <BorderCard noPadding style={styles.deliveryCard}>
               <View style={styles.deliveryRow}>
@@ -303,6 +347,12 @@ export function EditNurseryProfileScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+  regCard: { marginTop: 16 },
+  regTitle: { fontSize: 14, fontWeight: '800', color: COLORS.textPrimary, marginBottom: 8 },
+  regPhoto: { width: '100%', height: 140, borderRadius: 12, marginBottom: 8, backgroundColor: COLORS.beige },
+  regRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingVertical: 4 },
+  regKey: { fontSize: 12, color: COLORS.textMuted, flexShrink: 0 },
+  regValue: { fontSize: 12, fontWeight: '600', color: COLORS.textPrimary, flex: 1, textAlign: 'right' },
   container: { flex: 1 },
   settingsButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   settingsIcon: { fontSize: 18 },

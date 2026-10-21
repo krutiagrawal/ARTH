@@ -34,6 +34,8 @@ export interface StreakStatus {
   freezeEarnEveryDays: number;
   /** …up to this many held at once. */
   freezeCap: number;
+  /** NGO/nursery streaks count weeks, not days (see api/orgStreaks.ts). */
+  weekly?: boolean;
 }
 
 /** "At risk" is only surfaced from 6 PM (device time) – earlier in the day there is still plenty of time. */

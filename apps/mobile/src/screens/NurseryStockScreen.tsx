@@ -22,8 +22,13 @@ import {
   useDeleteSaplingStock,
   useNurseryProfile,
   useSpecies,
+  useStockSummary,
+  useArchiveStock,
 } from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
+import { ListFilterBar } from '../components/common/ListFilterBar';
+import { BulkActionBar, SelectBox, useBulkSelection } from '../components/ngo/ManageListTools';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import type { ApiSaplingStock, SunlightNeeds, WaterNeeds } from '../api/nursery';
 import { ApiError, resolveMediaUrl } from '../api/client';
 import { SPECIES_EMOJI_OPTIONS } from '../api/species';
@@ -56,7 +61,21 @@ function Chip({ label, selected, onPress }: { label: string; selected: boolean; 
   );
 }
 
-function StockRow({ item, onPress, onDelete }: { item: ApiSaplingStock; onPress: () => void; onDelete: () => void }) {
+function StockRow({
+  item,
+  onPress,
+  onLongPress,
+  onDelete,
+  selectMode,
+  selected,
+}: {
+  item: ApiSaplingStock;
+  onPress: () => void;
+  onLongPress?: () => void;
+  onDelete: () => void;
+  selectMode?: boolean;
+  selected?: boolean;
+}) {
   const photoUri = resolveMediaUrl(item.photoUrl);
   const metaBits = [
     `${item.quantity} in stock`,
@@ -64,8 +83,9 @@ function StockRow({ item, onPress, onDelete }: { item: ApiSaplingStock; onPress:
   ];
   if (item.ageLabel) metaBits.push(item.ageLabel);
   return (
-    <BorderCard noPadding style={styles.row}>
-      <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.rowTouchable}>
+    <BorderCard noPadding style={[styles.row, selected && { borderColor: COLORS.sage, borderWidth: 2 }]}>
+      {selectMode && <SelectBox selected={!!selected} />}
+      <TouchableOpacity onPress={onPress} onLongPress={onLongPress} activeOpacity={0.8} style={styles.rowTouchable}>
         {photoUri ? <Image source={{ uri: photoUri }} style={styles.thumb} /> : <View style={styles.thumbPlaceholder}><Text style={{ fontSize: 18 }}>{item.speciesRef?.emoji ?? '🌱'}</Text></View>}
         <View style={styles.rowText}>
           <Text style={styles.species}>{item.speciesRef?.commonName ?? item.species}</Text>
@@ -75,21 +95,37 @@ function StockRow({ item, onPress, onDelete }: { item: ApiSaplingStock; onPress:
           </View>
         </View>
       </TouchableOpacity>
-      <TouchableOpacity onPress={onDelete} accessibilityRole="button" accessibilityLabel={`Remove ${item.species}`} hitSlop={8}>
-        <Text style={styles.deleteIcon}>🗑</Text>
-      </TouchableOpacity>
+      {!selectMode && (
+        <TouchableOpacity onPress={onDelete} accessibilityRole="button" accessibilityLabel={`Remove ${item.species}`} hitSlop={8}>
+          <Text style={styles.deleteIcon}>🗑</Text>
+        </TouchableOpacity>
+      )}
     </BorderCard>
   );
 }
 
 export function NurseryStockScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const listQuery = useSaplingStock();
+  const [search, setSearch] = useState('');
+  const [view, setView] = useState<'available' | 'low_stock' | 'out_of_stock' | 'archived' | null>(null);
+  const [sort, setSort] = useState<'newest' | 'oldest' | 'name' | 'quantity' | 'price'>('newest');
+  const debouncedSearch = useDebouncedValue(search.trim());
+  const listQuery = useSaplingStock({
+    q: debouncedSearch || undefined,
+    availability: view && view !== 'archived' ? view : undefined,
+    archived: view === 'archived',
+    sort,
+  });
+  const isFiltering = !!debouncedSearch || !!view;
   const { data: stock = [], isLoading, refetch } = listQuery;
+  const summaryQuery = useStockSummary();
+  const summary = summaryQuery.data;
+  const archiveMutation = useArchiveStock();
+  const bulk = useBulkSelection();
   const { data: speciesCatalog = [] } = useSpecies();
   const createMutation = useCreateSaplingStock();
   const deleteMutation = useDeleteSaplingStock();
-  const { refreshing, onRefresh } = usePullToRefresh(refetch);
+  const { refreshing, onRefresh } = usePullToRefresh([refetch, summaryQuery.refetch]);
 
   // ---- Fast path: species picker + quantity + price ----
   const [speciesQuery, setSpeciesQuery] = useState('');
@@ -228,6 +264,18 @@ export function NurseryStockScreen({ navigation }: any) {
     ]);
   };
 
+  const bulkActions = [
+    view === 'archived'
+      ? { label: 'Unarchive', run: (id: string) => archiveMutation.mutateAsync({ id, archived: false }) }
+      : { label: 'Archive', run: (id: string) => archiveMutation.mutateAsync({ id, archived: true }) },
+    {
+      label: 'Delete',
+      danger: true,
+      confirmText: 'These items are removed from your inventory for good. Past orders keep their own record.',
+      run: (id: string) => deleteMutation.mutateAsync(id),
+    },
+  ];
+
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
@@ -239,16 +287,54 @@ export function NurseryStockScreen({ navigation }: any) {
         onBack={navigation?.canGoBack?.() ? () => navigation.goBack() : undefined}
       />
 
+      <ListFilterBar
+        query={search}
+        onQueryChange={setSearch}
+        placeholder="Search your stock by species, age or notes"
+        options={[
+          { key: null, label: 'All' },
+          { key: 'available', label: 'In stock' },
+          { key: 'low_stock', label: 'Low stock' },
+          { key: 'out_of_stock', label: 'Out of stock' },
+          { key: 'archived', label: `Archived${summary?.archived ? ` (${summary.archived})` : ''}` },
+        ]}
+        value={view}
+        onChange={setView}
+        rows={[
+          {
+            label: 'Sort',
+            options: [
+              { key: 'newest', label: 'Newest' },
+              { key: 'oldest', label: 'Oldest' },
+              { key: 'name', label: 'Name A–Z' },
+              { key: 'quantity', label: 'Lowest quantity' },
+              { key: 'price', label: 'Highest price' },
+            ],
+            value: sort,
+            onChange: (k) => setSort((k ?? 'newest') as 'newest' | 'oldest' | 'name' | 'quantity' | 'price'),
+          },
+        ]}
+      />
+
       <FlatList
           onEndReached={() => { if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) listQuery.fetchNextPage(); }}
           onEndReachedThreshold={0.5}
           ListFooterComponent={<PageFooter loading={listQuery.isFetchingNextPage} />}
         data={stock}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 + (bulk.selected.size > 0 ? 90 : 0) }]}
         refreshing={refreshing}
         onRefresh={onRefresh}
-        renderItem={({ item }) => <StockRow item={item} onPress={() => setSelectedItem(item)} onDelete={() => handleDelete(item)} />}
+        renderItem={({ item }) => (
+          <StockRow
+            item={item}
+            selectMode={bulk.selectMode}
+            selected={bulk.selected.has(item.id)}
+            onPress={() => (bulk.selectMode ? bulk.toggle(item.id) : setSelectedItem(item))}
+            onLongPress={() => bulk.beginSelect(item.id)}
+            onDelete={() => handleDelete(item)}
+          />
+        )}
         ListHeaderComponent={
           <View style={styles.addCard}>
             <Text style={styles.formLabel}>Species</Text>
@@ -300,7 +386,7 @@ export function NurseryStockScreen({ navigation }: any) {
 
             {showAddSpecies && !selectedSpeciesId && (
               <View style={styles.inlineSpeciesBlock}>
-                <FormField maxLength={120} label="Common name" value={newCommonName} onChangeText={setNewCommonName} placeholder="eg - Karanj" />
+                <FormField maxLength={120} required label="Common name" value={newCommonName} onChangeText={setNewCommonName} placeholder="eg - Karanj" />
                 <Text style={[styles.formLabel, { marginTop: 10 }]}>Emoji</Text>
                 <View style={styles.emojiGrid}>
                   {SPECIES_EMOJI_OPTIONS.slice(0, 16).map((emoji) => (
@@ -314,7 +400,7 @@ export function NurseryStockScreen({ navigation }: any) {
 
             <View style={styles.inlineRow}>
               <View style={styles.inlineField}>
-                <FormField label="Quantity" value={quantity} onChangeText={setQuantity} placeholder="eg - 0" keyboardType="number-pad" />
+                <FormField required label="Quantity" value={quantity} onChangeText={setQuantity} placeholder="eg - 0" keyboardType="number-pad" />
               </View>
               <View style={styles.inlineField}>
                 <FormField label="Price ₹ (blank = free)" value={priceCents} onChangeText={setPriceCents} placeholder="eg - 0" keyboardType="number-pad" />
@@ -412,10 +498,16 @@ export function NurseryStockScreen({ navigation }: any) {
           isLoading ? (
             <ActivityIndicator color={COLORS.sage} style={{ marginTop: 20 }} />
           ) : (
+            isFiltering ? (
+            <EmptyState icon="🔍" title="No stock matches" body="Try a different search or filter." />
+          ) : (
             <EmptyState icon="🌱" title="No stock yet" body="Add your first species above to get started." />
+          )
           )
         }
       />
+
+      <BulkActionBar count={bulk.selected.size} actions={bulkActions} busy={bulk.busy} onAction={bulk.onAction} bottomOffset={insets.bottom} />
 
       <StatusModal {...statusModalProps} />
       <StockDetailSheet

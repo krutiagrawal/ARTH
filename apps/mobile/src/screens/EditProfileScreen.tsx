@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Image, LayoutAnimation } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
+import { RequiredMark } from '../components/common/RequiredMark';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -357,7 +358,7 @@ export function EditProfileScreen({ navigation }: any) {
           ) : null}
 
           <Text style={styles.sectionTitle}>Basics</Text>
-          <Text style={styles.label}>Name</Text>
+          <Text style={styles.label}>Name<RequiredMark /></Text>
           <TextInput
             style={[styles.input, nameError && styles.inputInvalid]}
             value={name}
@@ -368,7 +369,7 @@ export function EditProfileScreen({ navigation }: any) {
           />
           <FieldError message={nameError} />
 
-          <Text style={styles.label}>Handle</Text>
+          <Text style={styles.label}>Handle<RequiredMark /></Text>
           <TextInput
             style={[styles.input, handleError && styles.inputInvalid]}
             value={handle}

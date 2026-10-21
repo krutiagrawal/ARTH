@@ -187,6 +187,7 @@ export function PostComposerScreen({ navigation, route }: any) {
             onChange={setPhotos}
             max={mode === 'story' ? 1 : 6}
             mode="both"
+            required={mode === 'story'}
             label={mode === 'story' ? 'Story photo' : 'Photos'}
             hint={
               mode === 'story'

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
+import { RequiredMark } from '../components/common/RequiredMark';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -69,7 +70,7 @@ export function ChangePasswordScreen({ navigation }: any) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
         <BorderCard>
-          <Text style={styles.label}>Current Password</Text>
+          <Text style={styles.label}>Current Password<RequiredMark /></Text>
           <PasswordInput
             inputStyle={styles.input}
             iconColor={COLORS.textSecondary}
@@ -79,7 +80,7 @@ export function ChangePasswordScreen({ navigation }: any) {
             placeholderTextColor={COLORS.textLight}
           />
 
-          <Text style={styles.label}>New Password</Text>
+          <Text style={styles.label}>New Password<RequiredMark /></Text>
           <PasswordInput
             inputStyle={styles.input}
             iconColor={COLORS.textSecondary}
@@ -89,7 +90,7 @@ export function ChangePasswordScreen({ navigation }: any) {
             placeholderTextColor={COLORS.textLight}
           />
 
-          <Text style={styles.label}>Confirm New Password</Text>
+          <Text style={styles.label}>Confirm New Password<RequiredMark /></Text>
           <PasswordInput
             inputStyle={styles.input}
             iconColor={COLORS.textSecondary}

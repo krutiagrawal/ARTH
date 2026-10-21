@@ -51,7 +51,7 @@ export function CancelDriveSheet({ visible, driveTitle, confirmedCount, submitti
         </Text>
 
         <FormField
-          label="Reason for cancelling"
+          required label="Reason for cancelling"
           value={reason}
           onChangeText={setReason}
           placeholder="e.g. Heavy rain is forecast for that day"

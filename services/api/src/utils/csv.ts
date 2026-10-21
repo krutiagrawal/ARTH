@@ -1,0 +1,10 @@
+/** Minimal RFC-4180 CSV writer: quotes any cell with a comma, quote or newline. */
+export function toCsv(rows: Record<string, unknown>[]): string {
+  if (rows.length === 0) return '';
+  const headers = Object.keys(rows[0]);
+  const escape = (value: unknown) => {
+    const s = value == null ? '' : String(value);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return [headers.join(','), ...rows.map((row) => headers.map((h) => escape(row[h])).join(','))].join('\n');
+}

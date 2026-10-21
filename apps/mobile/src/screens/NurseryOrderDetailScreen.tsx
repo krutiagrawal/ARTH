@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
+import { RequiredMark } from '../components/common/RequiredMark';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -204,7 +205,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
                   <Text style={styles.otpHintText}>Ask the planter for their handoff code</Text>
                 </View>
               )}
-              <Text style={styles.fieldLabel}>Handoff code</Text>
+              <Text style={styles.fieldLabel}>Handoff code<RequiredMark /></Text>
               <TextInput style={styles.input} value={code} onChangeText={setCode} placeholder="eg - 4-digit code" placeholderTextColor={COLORS.textLight} keyboardType="number-pad" maxLength={4} />
               <AnimatedButton
                 label={pickedUpMutation.isPending ? 'Confirming…' : 'Confirm picked up'}
@@ -261,7 +262,7 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
                     <Text style={styles.otpHintText}>Ask the customer for their delivery code</Text>
                   </View>
                 )}
-                <Text style={styles.fieldLabel}>Delivery code</Text>
+                <Text style={styles.fieldLabel}>Delivery code<RequiredMark /></Text>
                 <TextInput style={styles.input} value={code} onChangeText={setCode} placeholder="eg - 4-digit code" placeholderTextColor={COLORS.textLight} keyboardType="number-pad" maxLength={4} />
                 <AnimatedButton
                   label={deliverMutation.isPending ? 'Confirming…' : 'Confirm delivery'}

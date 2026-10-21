@@ -30,6 +30,7 @@ import gamesRoutes from './routes/games.routes';
 import themesRoutes from './routes/themes.routes';
 import decorationsRoutes from './routes/decorations.routes';
 import streaksRoutes from './routes/streaks.routes';
+import orgStreaksRoutes from './routes/orgStreaks.routes';
 import xpRoutes from './routes/xp.routes';
 import feedRoutes from './routes/feed.routes';
 import storiesRoutes from './routes/stories.routes';
@@ -142,6 +143,7 @@ export async function buildApp() {
     await instance.register(themesRoutes, { prefix: '/api/themes' });
     await instance.register(decorationsRoutes, { prefix: '/api/decorations' });
     await instance.register(streaksRoutes, { prefix: '/api/streaks' });
+    await instance.register(orgStreaksRoutes, { prefix: '/api/org-streaks' });
     await instance.register(xpRoutes, { prefix: '/api/xp' });
     await instance.register(feedRoutes, { prefix: '/api/feed' });
     await instance.register(storiesRoutes, { prefix: '/api/stories' });

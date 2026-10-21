@@ -13,6 +13,7 @@ export const updateStaffSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   role: z.string().min(1).max(120).optional(),
   contactEmail: z.union([z.string().email().max(200), z.literal('')]).optional(),
-  contactPhone: phoneSchema.optional(),
+  // '' = clear the field (an edit that emptied it).
+  contactPhone: z.union([phoneSchema, z.literal('')]).optional(),
   sortOrder: z.coerce.number().int().min(0).optional(),
 });

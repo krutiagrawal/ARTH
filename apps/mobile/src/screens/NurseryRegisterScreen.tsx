@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
+import { FieldLabel } from '../components/common/RequiredMark';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
@@ -340,8 +341,11 @@ export function NurseryRegisterScreen({ navigation }: any) {
 
           {step === 'identity' && (
             <>
+              <FieldLabel label="Nursery / business name" required dark />
               <TextInput maxLength={120} style={styles.input} placeholder="Nursery / business name" placeholderTextColor={ON_DARK_SURFACE.muted} value={nurseryName} onChangeText={setNurseryName} />
+              <FieldLabel label="Owner / proprietor name" required dark />
               <TextInput maxLength={60} style={styles.input} placeholder="Owner / proprietor name" placeholderTextColor={ON_DARK_SURFACE.muted} value={ownerName} onChangeText={setOwnerName} />
+              <FieldLabel label="What does your nursery grow?" required dark />
               <TextInput maxLength={2000}
                 style={[styles.input, styles.multiline]}
                 placeholder="What does your nursery grow?"
@@ -359,7 +363,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
                 keyboardType="number-pad"
                 maxLength={4}
               />
-              <SelectField dark label="Nursery type" options={NURSERY_TYPE_OPTIONS} value={nurseryType} onChange={(v) => setNurseryType(v as NurseryType)} />
+              <SelectField dark required label="Nursery type" options={NURSERY_TYPE_OPTIONS} value={nurseryType} onChange={(v) => setNurseryType(v as NurseryType)} />
               <TextInput maxLength={300}
                 style={styles.input}
                 placeholder="Website / social media (optional)"
@@ -379,6 +383,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
             <>
               <AddressSearchField
                 dark
+                required
                 label="Full nursery address"
                 value={line1}
                 onChangeText={handleLine1Change}
@@ -399,6 +404,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
               <CityPickerField value={city} onChange={setCity} variant="dark" />
               <PhoneField
                 dark
+                required
                 label="Contact number"
                 value={contactPhone.value}
                 onChangeText={contactPhone.setValue}
@@ -425,10 +431,12 @@ export function NurseryRegisterScreen({ navigation }: any) {
               </View>
               {!sameAsOwner && (
                 <>
+                  <FieldLabel label="Full name" required dark />
                   <TextInput maxLength={120} style={styles.input} placeholder="Full name" placeholderTextColor={ON_DARK_SURFACE.muted} value={personName} onChangeText={setPersonName} />
                   <SelectField dark label="Role" options={RESPONSIBLE_ROLE_OPTIONS} value={personRole} onChange={setPersonRole} />
                   <PhoneField
                     dark
+                    required
                     label="Phone"
                     value={personPhone.value}
                     onChangeText={personPhone.setValue}
@@ -442,8 +450,8 @@ export function NurseryRegisterScreen({ navigation }: any) {
 
           {step === 'stock' && (
             <>
-              <SelectField dark multi label="What do you stock?" options={PLANT_CATEGORY_OPTIONS} value={plantCategories} onChange={setPlantCategories} />
-              <SelectField dark label="Approximately how many plants do you have?" options={PLANT_COUNT_OPTIONS} value={approxPlantCount} onChange={setApproxPlantCount} />
+              <SelectField dark multi required label="What do you stock?" options={PLANT_CATEGORY_OPTIONS} value={plantCategories} onChange={setPlantCategories} />
+              <SelectField dark required label="Approximately how many plants do you have?" options={PLANT_COUNT_OPTIONS} value={approxPlantCount} onChange={setApproxPlantCount} />
               <View style={styles.toggleRow}>
                 <Text style={styles.toggleLabel}>🍂 Availability changes by season</Text>
                 <Toggle value={seasonalAvailability} onValueChange={setSeasonalAvailability} offColor="rgba(255,255,255,0.25)" onColor={COLORS.mint} />
@@ -475,7 +483,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
               {visibleVerificationFields.includes('govId') && (
                 <TextInput maxLength={60} style={styles.input} placeholder="Government nursery ID (if applicable)" placeholderTextColor={ON_DARK_SURFACE.muted} value={govId} onChangeText={setGovId} />
               )}
-              <Text style={styles.helperNote}>None of these are mandatory – add whichever you have to help us approve you faster.</Text>
+              <Text style={styles.helperNote}>Pick your categories and rough stock level – the seasonal switch is optional.</Text>
             </>
           )}
 
@@ -483,6 +491,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
             <>
               <PhotoPickerField
                 dark
+                required
                 mode="camera"
                 photo={verificationPhoto}
                 onChange={setVerificationPhoto}
@@ -496,6 +505,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
 
           {step === 'account' && (
             <>
+              <FieldLabel label="Email" required dark />
               <TextInput
                 style={styles.input}
                 placeholder="Email"
@@ -511,6 +521,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
               ) : email.checking ? (
                 <Text style={styles.helperNote}>Checking…</Text>
               ) : null}
+              <FieldLabel label="Password" required dark />
               <PasswordInput
                 inputStyle={styles.input}
                 placeholder="Password (min. 8 characters)"

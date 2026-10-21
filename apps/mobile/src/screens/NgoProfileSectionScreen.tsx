@@ -17,6 +17,7 @@ import { ChipListField } from '../components/common/ChipListField';
 import { MultiPickerField } from '../components/common/MultiPickerField';
 import { OfficeBearerListField } from '../components/common/OfficeBearerListField';
 import { Toggle } from '../components/common/Toggle';
+import { NgoDocumentRow, NgoPastWorkPhotos } from '../components/ngo/NgoDocumentRows';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { INDIAN_STATES_AND_UTS } from '../constants/indianStates';
 import {
@@ -163,8 +164,8 @@ export function NgoProfileSectionScreen({ navigation, route }: any) {
         >
           {section === 'basic' && (
             <View>
-            <FormField maxLength={120} label="Organization Name" value={orgName} onChangeText={setOrgName} placeholder="eg - Your organization" />
-            <FormField maxLength={2000} label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - We plant. We protect. We inspire." />
+            <FormField maxLength={120} required label="Organization Name" value={orgName} onChangeText={setOrgName} placeholder="eg - Your organization" />
+            <FormField maxLength={2000} required label="Description" value={description} onChangeText={setDescription} multiline placeholder="eg - We plant. We protect. We inspire." />
             <FormField maxLength={300}
               label="Website"
               value={website}
@@ -178,13 +179,13 @@ export function NgoProfileSectionScreen({ navigation, route }: any) {
               <Text style={styles.fieldError}>Enter a valid website URL</Text>
             )}
             <PhoneField
-              label="Contact Phone"
+              required label="Contact Phone"
               value={contactPhone}
               onChangeText={setContactPhone}
               onBlur={() => setContactPhoneTouched(true)}
               error={contactPhoneTouched && contactPhone && !isValidPhone(contactPhone) ? 'Enter a valid 10-digit mobile number' : null}
             />
-            <CityPickerField value={city} onChange={setCity} />
+            <CityPickerField required value={city} onChange={setCity} />
             <View style={styles.row2}>
             <FormField
               style={styles.flex1}
@@ -239,21 +240,21 @@ export function NgoProfileSectionScreen({ navigation, route }: any) {
           {section === 'organisation' && (
             <View>
             {legalLocked ? (
-              <FormField label="Organisation type" value={ORG_TYPE_OPTIONS.find((o) => o.value === details.orgType)?.label ?? ''} editable={false} style={styles.lockedField} />
+              <FormField required label="Organisation type" value={ORG_TYPE_OPTIONS.find((o) => o.value === details.orgType)?.label ?? ''} editable={false} style={styles.lockedField} />
             ) : (
-              <SelectField layout="list" label="Organisation type" options={ORG_TYPE_OPTIONS} value={details.orgType} onChange={setDetail('orgType')} />
+              <SelectField layout="list" required label="Organisation type" options={ORG_TYPE_OPTIONS} value={details.orgType} onChange={setDetail('orgType')} />
             )}
             <AddressSearchField
               allowCurrentLocation
               maxLength={300}
-              label="Full registered address"
+              required label="Full registered address"
               value={details.line1}
               onChangeText={setDetail('line1')}
               placeholder="Street / area / landmark"
               multiline
               onSelectSuggestion={(sg) => setDetail('line1')(sg.label)}
             />
-            <ChipListField label="Cities you operate in" maxItemLength={60} placeholder="Search or add a city" suggestions={cityNames} values={details.operatingCities} onChange={setDetail('operatingCities')} />
+            <ChipListField required label="Cities you operate in" maxItemLength={60} placeholder="Search or add a city" suggestions={cityNames} values={details.operatingCities} onChange={setDetail('operatingCities')} />
             <MultiPickerField label="States you operate in" placeholder="Select states / UTs" sheetTitle="States and Union Territories" options={INDIAN_STATES_AND_UTS} values={details.operatingStates} onChange={setDetail('operatingStates')} />
             <FormField maxLength={254} label="Official email" value={details.officialEmail} onChangeText={setDetail('officialEmail')} autoCapitalize="none" keyboardType="email-address" placeholder="eg - contact@yourngo.org" />
             <ChipListField label="Social media links" placeholder="Paste a link" values={details.socialMediaLinks} onChange={setDetail('socialMediaLinks')} {...linkProps} />
@@ -273,15 +274,27 @@ export function NgoProfileSectionScreen({ navigation, route }: any) {
             <FormField maxLength={60} label="80G registration number" value={details.eightyGRegistrationNumber} onChangeText={setDetail('eightyGRegistrationNumber')} editable={!legalLocked} style={legalLocked ? styles.lockedField : undefined} />
             <FormField maxLength={60} label="FCRA registration number" value={details.fcraRegistrationNumber} onChangeText={setDetail('fcraRegistrationNumber')} editable={!legalLocked} style={legalLocked ? styles.lockedField : undefined} />
             <FormField maxLength={60} label="CSR-1 registration number" value={details.csr1RegistrationNumber} onChangeText={setDetail('csr1RegistrationNumber')} editable={!legalLocked} style={legalLocked ? styles.lockedField : undefined} />
+            <NgoDocumentRow docType="registration_certificate" label="Registration certificate" documents={profile?.documents} locked={legalLocked} />
+            <NgoDocumentRow docType="twelve_a_certificate" label="12A / 12AB certificate" documents={profile?.documents} locked={legalLocked} />
+            <NgoDocumentRow docType="eighty_g_certificate" label="80G certificate" documents={profile?.documents} locked={legalLocked} />
+            <NgoDocumentRow docType="fcra_certificate" label="FCRA certificate" documents={profile?.documents} locked={legalLocked} />
+            <NgoDocumentRow docType="csr1_certificate" label="CSR-1 certificate" documents={profile?.documents} locked={legalLocked} />
             </View>
           )}
 
           {section === 'people' && (
             <View>
-            <FormField maxLength={60} label="Primary contact's full name" value={details.primaryContactName} onChangeText={setDetail('primaryContactName')} />
+            <FormField maxLength={60} required label="Primary contact's full name" value={details.primaryContactName} onChangeText={setDetail('primaryContactName')} />
             <FormField maxLength={80} label="Designation" value={details.primaryContactDesignation} onChangeText={setDetail('primaryContactDesignation')} />
-            <PhoneField label="Primary contact's phone" value={details.primaryContactPhone} onChangeText={setDetail('primaryContactPhone')} />
+            <PhoneField required label="Primary contact's phone" value={details.primaryContactPhone} onChangeText={setDetail('primaryContactPhone')} />
             <FormField maxLength={254} label="Primary contact's email" value={details.primaryContactEmail} onChangeText={setDetail('primaryContactEmail')} autoCapitalize="none" keyboardType="email-address" />
+            <NgoDocumentRow
+              docType="authorization_proof"
+              label="Proof you're authorised to represent this NGO"
+              required
+              documents={profile?.documents}
+              locked={legalLocked}
+            />
             {legalLocked ? (
               details.officeBearers.length > 0 && (
                 <View style={styles.subCard}>
@@ -302,7 +315,7 @@ export function NgoProfileSectionScreen({ navigation, route }: any) {
 
           {section === 'work' && (
             <View>
-            <SelectField multi layout="list" hint="Select all that apply" label="Primary areas of work" options={WORK_AREA_OPTIONS} value={details.primaryWorkAreas} onChange={setDetail('primaryWorkAreas')} />
+            <SelectField multi layout="list" hint="Select all that apply" required label="Primary areas of work" options={WORK_AREA_OPTIONS} value={details.primaryWorkAreas} onChange={setDetail('primaryWorkAreas')} />
             <View style={styles.row2}>
             <FormField style={styles.flex1} maxLength={7} label="Drives conducted" value={details.drivesConductedHistorical} onChangeText={(v: string) => setDetail('drivesConductedHistorical')(v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" placeholder="Approx." />
             <FormField style={styles.flex1} maxLength={9} label="Trees planted" value={details.treesPlantedHistorical} onChangeText={(v: string) => setDetail('treesPlantedHistorical')(v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" placeholder="Approx." />
@@ -314,6 +327,7 @@ export function NgoProfileSectionScreen({ navigation, route }: any) {
 
           {section === 'plantation' && (
             <View>
+            <NgoPastWorkPhotos documents={profile?.documents} />
             <View style={styles.policyCard}>
               <View style={styles.policyText}>
                 <Text style={styles.policyTitle}>We conduct plantation drives</Text>
@@ -354,7 +368,7 @@ export function NgoProfileSectionScreen({ navigation, route }: any) {
 
           {section === 'arth' && (
             <View>
-            <SelectField multi layout="list" hint="Select all that apply" label="What would you like to use ARTH for?" options={ARTH_USAGE_OPTIONS} value={details.arthUsageGoals} onChange={setDetail('arthUsageGoals')} />
+            <SelectField multi layout="list" hint="Select all that apply" required label="What would you like to use ARTH for?" options={ARTH_USAGE_OPTIONS} value={details.arthUsageGoals} onChange={setDetail('arthUsageGoals')} />
             <SelectField multi layout="grid" hint="Select all that apply" label="Who typically participates in your drives?" options={PARTICIPANT_TYPE_OPTIONS} value={details.participantTypes} onChange={setDetail('participantTypes')} />
             <FormField maxLength={5} label="Expected drives per year via ARTH" value={details.expectedDrivesPerYear} onChangeText={(v: string) => setDetail('expectedDrivesPerYear')(v.replace(/[^0-9]/g, ''))} keyboardType="number-pad" />
             </View>

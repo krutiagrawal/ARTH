@@ -70,8 +70,16 @@ export const nearbyQuerySchema = z.object({
   includePast: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
 });
 
+export const archiveSchema = z.object({ archived: z.boolean() });
+
 export const ownedListQuerySchema = z.object({
   q: z.string().max(200).optional(),
+  // upcoming = still to come, ended = past its start but never marked completed/cancelled.
+  status: z.enum(['upcoming', 'ended', 'completed', 'cancelled']).optional(),
+  archived: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
+  sort: z.enum(['newest', 'oldest', 'soonest']).optional(),
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
   page: z.coerce.number().int().min(1).optional(),
   take: z.coerce.number().int().min(1).max(50).optional(),
 });

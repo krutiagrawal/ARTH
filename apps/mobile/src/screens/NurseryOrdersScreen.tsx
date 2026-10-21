@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
-import { Text, TextInput } from '../components/common/AppText';
+import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,8 +9,10 @@ import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
-import { Sheet } from '../components/common/Sheet';
-import { useNurseryOrders } from '../hooks/useApiQueries';
+import { useNurseryOrders, useNurseryOrdersSummary, usePackOrder } from '../hooks/useApiQueries';
+import { ListFilterBar } from '../components/common/ListFilterBar';
+import { BulkActionBar, SelectBox, AttentionBadge, useBulkSelection } from '../components/ngo/ManageListTools';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import type { ApiNurseryOrder, NurseryOrderStatus } from '../api/nursery';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { flattenPages, infiniteScrollProps } from '../hooks/useInfiniteList';
@@ -44,24 +46,37 @@ const STATUS_COLOR: Record<NurseryOrderStatus, string> = {
   cancelled: COLORS.coral,
 };
 
-// A dropdown sheet rather than a horizontally-scrolling chip row – 9 statuses made for a long
-// scroll, and a separate fulfillment-type row duplicated concepts already visible per-order
-// (each row already tags itself Pickup/Delivery) – one combined filter control instead.
-const STATUS_TABS: { key: NurseryOrderStatus | 'all'; label: string }[] = [
-  { key: 'all', label: 'All' },
+const STATUS_TABS: { key: NurseryOrderStatus | null; label: string }[] = [
+  { key: null, label: 'All' },
   { key: 'confirmed', label: 'New' },
   { key: 'packed', label: 'Preparing' },
   { key: 'ready_for_pickup', label: 'Ready for pickup' },
-  { key: 'picked_up', label: 'Picked up' },
   { key: 'out_for_delivery', label: 'Out for delivery' },
+  { key: 'picked_up', label: 'Picked up' },
   { key: 'delivered', label: 'Delivered' },
   { key: 'plantation_verified', label: 'Plantation verified' },
   { key: 'cancelled', label: 'Cancelled' },
 ];
 
-function OrderRow({ order, navigation }: { order: ApiNurseryOrder; navigation: any }) {
+function OrderRow({
+  order,
+  navigation,
+  selectMode,
+  onToggle,
+  onLongPress,
+}: {
+  order: ApiNurseryOrder;
+  navigation: any;
+  selectMode?: boolean;
+  onToggle?: () => void;
+  onLongPress?: () => void;
+}) {
   return (
-    <TouchableOpacity onPress={() => navigation.navigate('NurseryOrderDetail', { orderId: order.id })} activeOpacity={0.85}>
+    <TouchableOpacity
+      onPress={() => (selectMode ? onToggle?.() : navigation.navigate('NurseryOrderDetail', { orderId: order.id }))}
+      onLongPress={onLongPress}
+      activeOpacity={0.85}
+    >
       <BorderCard noPadding style={styles.row}>
         <View style={{ flex: 1 }}>
           <Text style={styles.customer}>{order.user.name}</Text>
@@ -83,25 +98,28 @@ function OrderRow({ order, navigation }: { order: ApiNurseryOrder; navigation: a
 
 export function NurseryOrdersScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const [statusTab, setStatusTab] = useState<NurseryOrderStatus | 'all'>('confirmed');
-  const [showStatusSheet, setShowStatusSheet] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const query = useNurseryOrders({
-    status: statusTab === 'all' ? undefined : statusTab,
-  });
+  const [search, setSearch] = useState('');
+  const [statusTab, setStatusTab] = useState<NurseryOrderStatus | null>(null);
+  const [sort, setSort] = useState<'newest' | 'oldest' | 'highest' | 'scheduled'>('newest');
+  const q = useDebouncedValue(search.trim());
+  const query = useNurseryOrders({ q: q || undefined, status: statusTab ?? undefined, sort });
   const { isLoading, refetch } = query;
   const orders = useMemo(() => flattenPages(query.data), [query.data]);
-  const { refreshing, onRefresh } = usePullToRefresh(refetch);
+  const summaryQuery = useNurseryOrdersSummary();
+  const summary = summaryQuery.data;
+  const { refreshing, onRefresh } = usePullToRefresh([refetch, summaryQuery.refetch]);
+  const bulk = useBulkSelection();
+  const packMutation = usePackOrder();
+  const isFiltering = !!q || !!statusTab;
 
-  const filteredOrders = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return orders;
-    return orders.filter(
-      (o) => o.user.name.toLowerCase().includes(q) || o.items.some((i) => i.species.toLowerCase().includes(q)),
-    );
-  }, [orders, searchQuery]);
-
-  const currentStatusLabel = STATUS_TABS.find((t) => t.key === statusTab)?.label ?? 'All';
+  // Packing is the one safe repeatable action; cancelling refunds money, so it stays per order on the detail screen.
+  const bulkActions = [
+    {
+      label: 'Mark as packed',
+      confirmText: 'Only new orders can be packed – any others in your selection are skipped.',
+      run: (id: string) => packMutation.mutateAsync(id),
+    },
+  ];
 
   return (
     <View style={styles.container}>
@@ -110,68 +128,66 @@ export function NurseryOrdersScreen({ navigation }: any) {
 
       <ScreenHeader title="Orders" subtitle="Marketplace purchases to fulfil" onBack={navigation?.canGoBack?.() ? () => navigation.goBack() : undefined} />
 
-      <View style={styles.filterRow}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="eg - Search customer or species"
-          placeholderTextColor={COLORS.textLight}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        <TouchableOpacity style={styles.filterButton} onPress={() => setShowStatusSheet(true)} activeOpacity={0.85}>
-          <Text style={styles.filterButtonText} numberOfLines={1}>{currentStatusLabel}</Text>
-          <Text style={styles.filterButtonChevron}>▾</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Sheet visible={showStatusSheet} onClose={() => setShowStatusSheet(false)} title="Filter by status" scrollable>
-        {STATUS_TABS.map((t) => {
-          const active = statusTab === t.key;
-          return (
-            <TouchableOpacity
-              key={t.key}
-              style={styles.sheetOption}
-              onPress={() => {
-                setStatusTab(t.key);
-                setShowStatusSheet(false);
-              }}
-            >
-              <Text
-                style={[
-                  styles.sheetOptionText,
-                  { color: COLORS.textPrimary },
-                  active && { color: COLORS.forest, fontWeight: '700' },
-                ]}
-              >
-                {t.label}
-              </Text>
-              {active && <Text style={[styles.sheetCheck, { color: COLORS.forest }]}>✓</Text>}
-            </TouchableOpacity>
-          );
-        })}
-      </Sheet>
+      <ListFilterBar
+        query={search}
+        onQueryChange={setSearch}
+        placeholder="Search customer, sapling, city or order #"
+        options={STATUS_TABS}
+        value={statusTab}
+        onChange={setStatusTab}
+        rows={[
+          {
+            label: 'Sort',
+            options: [
+              { key: 'newest', label: 'Newest' },
+              { key: 'oldest', label: 'Oldest' },
+              { key: 'highest', label: 'Highest value' },
+              { key: 'scheduled', label: 'Scheduled soonest' },
+            ],
+            value: sort,
+            onChange: (k) => setSort((k ?? 'newest') as 'newest' | 'oldest' | 'highest' | 'scheduled'),
+          },
+        ]}
+      />
 
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 20 }} />
-      ) : filteredOrders.length === 0 ? (
+      ) : orders.length === 0 ? (
         <EmptyState
           icon="🚚"
-          title="Nothing here"
-          body={searchQuery.trim() && orders.length > 0 ? 'No orders match your search.' : 'Orders in this stage will show up here.'}
+          title={isFiltering ? 'No orders match' : 'No orders yet'}
+          body={isFiltering ? 'Try a different search or filter.' : 'Orders from the marketplace will show up here.'}
         />
       ) : (
         <ScrollView
-          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
+          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 + (bulk.selected.size > 0 ? 90 : 0) }]}
           showsVerticalScrollIndicator={false}
           {...infiniteScrollProps(query)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
-          {filteredOrders.map((o) => (
-            <OrderRow key={o.id} order={o} navigation={navigation} />
-          ))}
+          {orders.map((o) => {
+            const waitingDays = o.readyForPickupAt ? (Date.now() - new Date(o.readyForPickupAt).getTime()) / 86_400_000 : 0;
+            const attention =
+              o.status === 'confirmed' ? 'New – ready to pack' : o.status === 'ready_for_pickup' && waitingDays > 2 ? 'Waiting for pickup' : null;
+            return (
+              <View key={o.id}>
+                {bulk.selectMode && <SelectBox selected={bulk.selected.has(o.id)} />}
+                <OrderRow
+                  order={o}
+                  navigation={navigation}
+                  selectMode={bulk.selectMode}
+                  onToggle={() => bulk.toggle(o.id)}
+                  onLongPress={() => bulk.beginSelect(o.id)}
+                />
+                {attention && <AttentionBadge text={attention} />}
+              </View>
+            );
+          })}
           <PageFooter loading={query.isFetchingNextPage} />
         </ScrollView>
       )}
+
+      <BulkActionBar count={bulk.selected.size} actions={bulkActions} busy={bulk.busy} onAction={bulk.onAction} bottomOffset={insets.bottom} />
     </View>
   );
 }
