@@ -5,7 +5,8 @@ import { requireNgoProfile } from '../services/ngo.service';
 import { saveNgoLogo, saveNgoVerificationDocument, saveNgoPastWorkPhoto } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
 import { BadRequestError } from '../utils/errors';
-import { updateProfileSchema, donationsQuerySchema } from '../schemas/ngo.schema';
+import { updateProfileSchema, donationsQuerySchema, reportQuerySchema } from '../schemas/ngo.schema';
+import { getNgoReport } from '../services/ngoReport.service';
 import { getReputationSummary } from '../services/ngoReputation.service';
 import { getOrgStreakSummary } from '../services/orgStreak.service';
 
@@ -220,6 +221,13 @@ export default async function ngoRoutes(fastify: FastifyInstance) {
   fastify.delete<{ Params: { userId: string } }>('/volunteers/:userId', async (request, reply) => {
     const result = await ngoService.removeVolunteer(fastify.prisma, request.user!.id, request.params.userId);
     reply.send(result);
+  });
+
+  // Date-ranged, filterable report (the plain /reports above stays as the legacy all-time payload).
+  fastify.get('/reports/range', async (request, reply) => {
+    const parsed = reportQuerySchema.safeParse(request.query);
+    if (!parsed.success) throw new BadRequestError('Invalid report filters');
+    reply.send(await getNgoReport(fastify.prisma, request.user!.id, parsed.data));
   });
 
   fastify.get('/reports', async (request, reply) => {

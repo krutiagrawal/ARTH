@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/colors';
+import { AnimatedButton } from '../components/common/AnimatedButton';
 import { RADIUS, SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
@@ -76,6 +77,15 @@ export function NurseryStockAnalyticsScreen({ navigation }: any) {
             <EcoWidget icon="🤝" value={analytics.reservationsFulfilled} label="Requests fulfilled" color={COLORS.xpBlue} delay={120} style={styles.gridTile} fill />
             <EcoWidget icon="📦" value={analytics.currentTotalQuantity} label="Currently in stock" color={COLORS.earth} delay={180} style={styles.gridTile} fill />
           </View>
+
+          <AnimatedButton
+            label="📈  Full report by date"
+            onPress={() => navigation.navigate('NurseryReports')}
+            variant="secondary"
+            size="md"
+            fullWidth
+            style={{ marginTop: 14 }}
+          />
 
           <Text style={styles.sectionTitle}>Recent Activity</Text>
           {ledgerLoading ? (

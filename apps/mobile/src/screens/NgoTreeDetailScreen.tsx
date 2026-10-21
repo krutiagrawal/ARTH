@@ -12,7 +12,7 @@ import { usePlantedTree, useHealthCheckHistory, useLogHealthCheck, useNgoProfile
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import { resolveMediaUrl, ApiError } from '../api/client';
 import { useConfirm } from '../context/ConfirmDialogContext';
-import { STATUS_META, ACTIONABLE_STATUSES } from '../constants/treeHealth';
+import { STATUS_META, STATUS_TEXT_ON_FILL, STATUS_TEXT_ON_LIGHT, ACTIONABLE_STATUSES } from '../constants/treeHealth';
 import type { ApiTreeHealthCheck } from '../api/plantedTrees';
 import { TEXT } from '../constants/typography';
 
@@ -140,7 +140,7 @@ export function NgoTreeDetailScreen({ navigation, route }: any) {
             <LinearGradient colors={['transparent', 'rgba(0,0,0,0.65)']} style={styles.heroShade} />
             <View style={styles.heroBottom}>
               <View style={[styles.heroPill, { backgroundColor: status.color }]}>
-                <Text style={styles.heroPillText}>{status.emoji} {status.label}</Text>
+                <Text style={[styles.heroPillText, { color: STATUS_TEXT_ON_FILL[tree.latestStatus] }]}>{status.emoji} {status.label}</Text>
               </View>
               <Text style={styles.heroTitle} numberOfLines={2}>
                 {tree.speciesName}{tree.label ? ` – ${tree.label}` : ''}
@@ -284,7 +284,7 @@ export function NgoTreeDetailScreen({ navigation, route }: any) {
                     </View>
                     <View style={styles.timelineBody}>
                       <View style={styles.timelineTop}>
-                        <Text style={[styles.timelineStatus, { color: meta.color }]}>{meta.emoji} {meta.label}</Text>
+                        <Text style={[styles.timelineStatus, { color: STATUS_TEXT_ON_LIGHT[check.status] }]}>{meta.emoji} {meta.label}</Text>
                         <Text style={styles.timelineDate}>{fmtDate(check.checkedAt)}</Text>
                       </View>
                       {check.notes ? <Text style={styles.timelineNote}>{check.notes}</Text> : null}
@@ -308,7 +308,7 @@ export function NgoTreeDetailScreen({ navigation, route }: any) {
                       <Text style={styles.obsWho}>{OBSERVER_LABEL[o.observerRole]}</Text>
                       <Text style={styles.timelineDate}>{fmtDate(o.createdAt)}</Text>
                     </View>
-                    <Text style={[styles.timelineStatus, { color: meta.color, marginTop: 4 }]}>{meta.emoji} {meta.label}</Text>
+                    <Text style={[styles.timelineStatus, { color: STATUS_TEXT_ON_LIGHT[o.status], marginTop: 4 }]}>{meta.emoji} {meta.label}</Text>
                     {o.note ? <Text style={styles.timelineNote}>{o.note}</Text> : null}
                     {obsPhoto ? <Image source={{ uri: obsPhoto }} style={styles.timelinePhoto} resizeMode="cover" /> : null}
                   </BorderCard>

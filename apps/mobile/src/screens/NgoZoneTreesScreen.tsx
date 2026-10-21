@@ -11,9 +11,11 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { StatusModal } from '../components/common/StatusModal';
 import { Sheet } from '../components/common/Sheet';
+import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
 import { ApiError } from '../api/client';
-import { usePlantedTrees, useLogBulkHealthChecks, useMoveTreesToZone, useZonesForDrive, useCreateZone, useNgoProfile } from '../hooks/useApiQueries';
+import { runBulkHealthCheck } from '../utils/bulkHealth';
+import { usePlantedTrees, useLogBulkHealthChecks, useMoveTreesToZone, useDeletePlantedTrees, useRenameZone, useDeleteZone, useZonesForDrive, useCreateZone, useNgoProfile } from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
 import type { TreeHealthStatus } from '../api/plantedTrees';
 import { useSlideUp } from '../hooks/useAnimations';
@@ -21,7 +23,7 @@ import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import { PageFooter } from '../components/common/PageFooter';
-import { STATUS_META, ACTIONABLE_STATUSES } from '../constants/treeHealth';
+import { STATUS_META, STATUS_TEXT_ON_LIGHT, ACTIONABLE_STATUSES } from '../constants/treeHealth';
 
 import { TEXT } from '../constants/typography';
 function FadeInRow({ delay, children }: { delay: number; children: React.ReactNode }) {
@@ -40,6 +42,15 @@ export function NgoZoneTreesScreen({ navigation, route }: any) {
   const { data, isLoading, refetch } = listQuery;
   const bulkMutation = useLogBulkHealthChecks();
   const moveMutation = useMoveTreesToZone();
+  const deleteMutation = useDeletePlantedTrees();
+  const renameZoneMutation = useRenameZone();
+  const deleteZoneMutation = useDeleteZone();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
+  const [renameError, setRenameError] = useState<string | null>(null);
+  // Shown in the header; updated locally after a rename (the route param doesn't change).
+  const [shownName, setShownName] = useState(zoneName);
   const createZoneMutation = useCreateZone();
   const { data: zonesData } = useZonesForDrive(driveId);
   const [moveOpen, setMoveOpen] = useState(false);
@@ -74,8 +85,11 @@ export function NgoZoneTreesScreen({ navigation, route }: any) {
       {
         text: 'Confirm',
         onPress: async () => {
-          await bulkMutation.mutateAsync({ plantedTreeIds: Array.from(selected), status });
-          setSelected(new Set());
+          await runBulkHealthCheck(
+            confirm,
+            (onConflict) => bulkMutation.mutateAsync({ plantedTreeIds: Array.from(selected), status, onConflict }),
+            () => setSelected(new Set()),
+          );
         },
       },
     ]);
@@ -93,6 +107,74 @@ export function NgoZoneTreesScreen({ navigation, route }: any) {
     } catch (e) {
       setMoveError(e instanceof ApiError ? e.message : 'Could not move these trees.');
     }
+  });
+
+  const handleRenameZone = guard(async () => {
+    const name = renameValue.trim();
+    if (!zoneId || !name) return;
+    setRenameError(null);
+    try {
+      await renameZoneMutation.mutateAsync({ zoneId, name });
+      setShownName(name);
+      setRenameOpen(false);
+    } catch (e) {
+      setRenameError(e instanceof ApiError ? e.message : 'Could not rename this zone.');
+    }
+  });
+
+  const handleDeleteZone = guard(() => {
+    confirm(
+      `Delete "${shownName}"?`,
+      trees.length > 0
+        ? 'The zone is removed. Its trees stay in the plantation and move to Unzoned.'
+        : 'This zone is empty, so nothing else changes.',
+      [
+        { text: 'Keep it', style: 'cancel' },
+        {
+          text: 'Delete zone',
+          style: 'destructive',
+          onPress: async () => {
+            if (!zoneId) return;
+            try {
+              await deleteZoneMutation.mutateAsync(zoneId);
+              navigation.goBack();
+            } catch (e) {
+              confirm('Could not delete this zone', e instanceof ApiError ? e.message : 'Please try again.');
+            }
+          },
+        },
+      ],
+    );
+  });
+
+  const removeSelected = guard(() => {
+    const n = selected.size;
+    confirm(
+      `Remove ${n} tree${n === 1 ? '' : 's'}?`,
+      'Use this for trees logged by mistake. They are deleted for good, along with their health checks, and survival numbers update. Adopted trees, or ones supplied through a nursery order, are skipped.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const result = await deleteMutation.mutateAsync(Array.from(selected));
+              setSelected(new Set());
+              if (result.skipped.length > 0) {
+                const reasons = Array.from(new Set(result.skipped.map((s) => s.reason))).join(', ');
+                confirm(
+                  `${result.deletedCount} removed, ${result.skipped.length} kept`,
+                  `${result.skipped.length} tree${result.skipped.length === 1 ? ' was' : 's were'} not removed (${reasons}).`,
+                );
+              }
+            } catch (e) {
+              confirm('Could not remove trees', e instanceof ApiError ? e.message : 'Please try again.');
+            }
+          },
+        },
+      ],
+    );
   });
 
   const moveToNewZone = guard(async () => {
@@ -119,8 +201,17 @@ export function NgoZoneTreesScreen({ navigation, route }: any) {
             <Text style={styles.backIcon}>←</Text>
           </View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>{zoneName}</Text>
-        <View style={styles.addButton} />
+        <Text style={styles.headerTitle} numberOfLines={1}>{shownName}</Text>
+        {/* Rename / delete only make sense for a real zone, not the Unzoned bucket. */}
+        {zoneId ? (
+          <TouchableOpacity onPress={() => setMenuOpen((o) => !o)} style={styles.addButton} accessibilityRole="button" accessibilityLabel="Zone options">
+            <View style={styles.backBlur}>
+              <Text style={styles.menuDots}>⋯</Text>
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.addButton} />
+        )}
       </View>
 
       {/* Explicit height (not just contentContainerStyle) – a horizontal ScrollView here was
@@ -190,7 +281,7 @@ export function NgoZoneTreesScreen({ navigation, route }: any) {
                       </Text>
                     </View>
                     <View style={[styles.statusPill, { backgroundColor: `${meta.color}22`, borderColor: meta.color }]}>
-                      <Text style={[styles.statusPillText, { color: meta.color }]}>{meta.emoji} {meta.label}</Text>
+                      <Text style={[styles.statusPillText, { color: STATUS_TEXT_ON_LIGHT[tree.latestStatus] }]} numberOfLines={1}>{meta.emoji} {meta.label}</Text>
                     </View>
                   </View>
                 </BorderCard>
@@ -216,8 +307,52 @@ export function NgoZoneTreesScreen({ navigation, route }: any) {
               <Text style={styles.moveButtonText}>📍 Move to zone…</Text>
             </TouchableOpacity>
           )}
+          <TouchableOpacity style={[styles.moveButton, { borderColor: COLORS.dangerDark }]} onPress={removeSelected} disabled={deleteMutation.isPending}>
+            <Text style={[styles.moveButtonText, { color: COLORS.dangerDark }]}>🗑 Remove trees</Text>
+          </TouchableOpacity>
         </View>
       )}
+
+      {menuOpen && (
+        <>
+          <TouchableOpacity style={styles.menuBackdrop} activeOpacity={1} onPress={() => setMenuOpen(false)} />
+          <View style={[styles.menu, { top: insets.top + 52 }]}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuOpen(false);
+                setRenameValue(shownName);
+                setRenameError(null);
+                setRenameOpen(true);
+              }}
+            >
+              <Text style={styles.menuItemText}>✏️  Rename zone</Text>
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuOpen(false);
+                handleDeleteZone();
+              }}
+            >
+              <Text style={[styles.menuItemText, { color: COLORS.dangerDark }]}>🗑  Delete zone</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+
+      <Sheet visible={renameOpen} onClose={() => setRenameOpen(false)} title="Rename zone">
+        <FormField maxLength={100} required label="Zone name" value={renameValue} onChangeText={setRenameValue} placeholder="e.g. North bank" />
+        {renameError && <Text style={styles.moveError}>{renameError}</Text>}
+        <AnimatedButton
+          label={renameZoneMutation.isPending ? 'Saving…' : 'Save name'}
+          onPress={handleRenameZone}
+          disabled={renameZoneMutation.isPending || !renameValue.trim()}
+          fullWidth
+          style={{ marginTop: 12 }}
+        />
+      </Sheet>
 
       <Sheet visible={moveOpen} onClose={() => setMoveOpen(false)} title={`Move ${selected.size} tree${selected.size === 1 ? '' : 's'} to…`} scrollable>
         <View style={{ gap: 4 }}>
@@ -257,7 +392,26 @@ const styles = StyleSheet.create({
   selectBar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingBottom: 8 },
   selectHint: { flex: 1, fontSize: 12, color: COLORS.textSecondary },
   selectAll: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
-  moveButton: { marginTop: 10, alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 12, borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.forest },
+  menuDots: { fontSize: 24, color: COLORS.textPrimary, fontWeight: '800', marginTop: -6 },
+  menuBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  menu: {
+    position: 'absolute',
+    right: 20,
+    minWidth: 190,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.cream,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 107, 71, 0.25)',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  menuItem: { paddingVertical: 14, paddingHorizontal: 16 },
+  menuItemText: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary },
+  menuDivider: { height: 1, backgroundColor: 'rgba(139, 107, 71, 0.15)' },
+  moveButton: { marginTop: 10, marginRight: 8, alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 12, borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.forest },
   moveButtonText: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
   moveRow: { paddingVertical: 14, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: 'rgba(139, 107, 71, 0.12)' },
   moveRowText: { fontSize: 15, fontWeight: '600', color: COLORS.forest },
@@ -290,9 +444,10 @@ const styles = StyleSheet.create({
   checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: COLORS.sand, alignItems: 'center', justifyContent: 'center' },
   checkboxChecked: { backgroundColor: COLORS.sage, borderColor: COLORS.sage },
   checkmark: { color: COLORS.white, fontSize: 13, fontWeight: '700' },
-  cardTitle: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
+  cardTitle: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, flexShrink: 1 },
   cardMeta: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
-  statusPill: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: RADIUS.full, borderWidth: 1 },
+  // flexShrink: 0 keeps the pill at its full width – next to a long species name it was squeezed down to just the emoji.
+  statusPill: { flexShrink: 0, paddingVertical: 6, paddingHorizontal: 10, borderRadius: RADIUS.full, borderWidth: 1 },
   statusPillText: { fontSize: 11, lineHeight: 15, fontWeight: '700' },
   actionBar: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: COLORS.cream, borderTopWidth: 1.5, borderTopColor: COLORS.warmBrown, paddingTop: 12, paddingHorizontal: 20, gap: 8 },
   actionBarLabel: { fontSize: 12, color: COLORS.textPrimary, fontWeight: '600' },

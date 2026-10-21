@@ -42,6 +42,10 @@ export const createZoneSchema = z.object({
   name: z.string().min(1).max(100),
 });
 
+export const deletePlantedTreesSchema = z.object({
+  plantedTreeIds: z.array(z.string().uuid()).min(1).max(500),
+});
+
 export const moveTreesToZoneSchema = z.object({
   plantedTreeIds: z.array(z.string().uuid()).min(1).max(500),
   // null = take the trees out of their zone (back to "Unzoned").
@@ -56,9 +60,12 @@ export const listZonesQuerySchema = z.object({
   driveId: z.string().uuid(),
 });
 
+const onConflictEnum = z.enum(['ask', 'override', 'skip']).default('ask');
+
 export const zoneBulkHealthCheckSchema = z.object({
   status: healthStatusEnum,
   notes: z.string().max(1000).optional(),
+  onConflict: onConflictEnum,
 });
 
 export const singleHealthCheckSchema = z.object({
@@ -69,10 +76,14 @@ export const singleHealthCheckSchema = z.object({
   updateExisting: z.coerce.boolean().optional(),
 });
 
+// What to do about trees that already have a health check today: ask (409 with counts), override
+// today's check with the new status, or skip those and only check the rest.
+
 export const bulkHealthCheckSchema = z.object({
   plantedTreeIds: z.array(z.string().uuid()).min(1).max(500),
   status: healthStatusEnum,
   notes: z.string().max(1000).optional(),
+  onConflict: onConflictEnum,
 });
 
 export const survivalStatsQuerySchema = z.object({

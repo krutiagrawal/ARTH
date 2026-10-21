@@ -94,6 +94,14 @@ export function NurseryImpactScreen({ navigation }: any) {
             fullWidth
             style={{ marginTop: 20 }}
           />
+          <AnimatedButton
+            label="📈  Full report by date"
+            onPress={() => navigation.navigate('NurseryReports')}
+            variant="secondary"
+            size="lg"
+            fullWidth
+            style={{ marginTop: 10 }}
+          />
         </ScrollView>
       )}
     </View>

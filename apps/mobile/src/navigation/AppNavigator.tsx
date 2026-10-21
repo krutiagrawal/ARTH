@@ -61,6 +61,7 @@ import { DeliveryPartnerQueueScreen } from '../screens/DeliveryPartnerQueueScree
 import { DeliveryPartnerProfileScreen } from '../screens/DeliveryPartnerProfileScreen';
 import { useDeliveryLocationReporting } from '../hooks/useDeliveryLocationReporting';
 import { NurseryImpactScreen } from '../screens/NurseryImpactScreen';
+import { NurseryReportsScreen } from '../screens/NurseryReportsScreen';
 import { NgoBulkRequirementsScreen } from '../screens/NgoBulkRequirementsScreen';
 import { CorporateRegisterScreen } from '../screens/CorporateRegisterScreen';
 import { CorporateDashboardScreen } from '../screens/CorporateDashboardScreen';
@@ -413,6 +414,7 @@ export type RootStackParamList = {
   NurseryDeliveryPartners: undefined;
   DeliveryPartnerMain: undefined;
   NurseryImpact: undefined;
+  NurseryReports: undefined;
   NgoBulkRequirements: { openRequirementId?: string } | undefined;
   MyAdoptions: undefined;
   NurseryFollowers: undefined;
@@ -1096,6 +1098,7 @@ export function AppNavigator() {
         <Stack.Screen name="NurseryBulkRequirementDetail" component={NurseryBulkRequirementDetailScreen} />
         <Stack.Screen name="NurseryDeliveryPartners" component={NurseryDeliveryPartnersScreen} />
         <Stack.Screen name="NurseryImpact" component={NurseryImpactScreen} />
+        <Stack.Screen name="NurseryReports" component={NurseryReportsScreen} />
         <Stack.Screen name="NgoBulkRequirements" component={NgoBulkRequirementsScreen} />
         <Stack.Screen name="NurseryPostUpdate" component={PostComposerScreen} />
         <Stack.Screen name="FollowingFeed" component={FollowingFeedScreen} />

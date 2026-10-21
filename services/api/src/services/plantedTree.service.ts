@@ -226,10 +226,13 @@ export async function getPlantedTreeDetail(prisma: PrismaClient, ngoUserId: stri
   const now = Date.now();
   const plantedMs = tree.plantedAt.getTime();
   const checkTimes = checks.map((c) => c.checkedAt.getTime());
-  // A milestone counts as covered when a check was logged on or after its date.
+  // A milestone counts as covered when a check was logged on or after its due day.
   const milestones = CHECK_MILESTONE_DAYS.map((days) => {
     const due = plantedMs + days * 86_400_000;
-    return { days, dueAt: new Date(due), passed: due <= now, checked: checkTimes.some((t) => t >= due) };
+    // A check anywhere on the due day counts, not only after the exact planting time-of-day.
+    const dueDayStart = new Date(due);
+    dueDayStart.setHours(0, 0, 0, 0);
+    return { days, dueAt: new Date(due), passed: due <= now, checked: checkTimes.some((t) => t >= dueDayStart.getTime()) };
   });
   const nextMilestone = milestones.find((m) => !m.checked) ?? null;
 
@@ -322,7 +325,7 @@ export async function logHealthCheck(
 export async function logBulkHealthChecks(
   prisma: PrismaClient,
   ngoUserId: string,
-  input: { plantedTreeIds: string[]; status: ActionableHealthStatus; notes?: string },
+  input: { plantedTreeIds: string[]; status: ActionableHealthStatus; notes?: string; onConflict?: 'ask' | 'override' | 'skip' },
 ) {
   const ngo = await requireApprovedNgoProfile(prisma, ngoUserId);
 
@@ -332,11 +335,46 @@ export async function logBulkHealthChecks(
   });
   if (owned.length === 0) throw new NotFoundError('No matching planted trees found');
 
-  await prisma.treeHealthCheck.createMany({
-    data: owned.map((t) => ({ plantedTreeId: t.id, status: input.status, notes: input.notes })),
+  // Trees that already have a health check today (a tree gets one per day, like the single-tree flow).
+  const start = startOfToday();
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  const todays = await prisma.treeHealthCheck.findMany({
+    where: { plantedTreeId: { in: owned.map((t) => t.id) }, checkedAt: { gte: start, lt: end } },
+    orderBy: { checkedAt: 'desc' },
+    select: { id: true, plantedTreeId: true },
+  });
+  const latestTodayByTree = new Map<string, string>();
+  for (const c of todays) if (!latestTodayByTree.has(c.plantedTreeId)) latestTodayByTree.set(c.plantedTreeId, c.id);
+
+  const mode = input.onConflict ?? 'ask';
+  if (latestTodayByTree.size > 0 && mode === 'ask') {
+    throw new ConflictError('Some of these trees already have a health check today.', {
+      alreadyCheckedCount: latestTodayByTree.size,
+      totalCount: owned.length,
+    });
+  }
+
+  const fresh = owned.filter((t) => !latestTodayByTree.has(t.id));
+  await prisma.$transaction(async (tx) => {
+    if (fresh.length) {
+      await tx.treeHealthCheck.createMany({ data: fresh.map((t) => ({ plantedTreeId: t.id, status: input.status, notes: input.notes })) });
+    }
+    if (mode === 'override' && latestTodayByTree.size > 0) {
+      await tx.treeHealthCheck.updateMany({
+        where: { id: { in: Array.from(latestTodayByTree.values()) } },
+        data: { status: input.status, ...(input.notes !== undefined ? { notes: input.notes } : {}) },
+      });
+    }
   });
 
-  return { updatedCount: owned.length };
+  const overridden = mode === 'override' ? latestTodayByTree.size : 0;
+  return {
+    updatedCount: fresh.length + overridden,
+    createdCount: fresh.length,
+    overriddenCount: overridden,
+    skippedCount: mode === 'skip' ? latestTodayByTree.size : 0,
+  };
 }
 
 // Latest-status-per-tree aggregation — never a raw count of all health-check
@@ -371,4 +409,32 @@ export async function computeSurvivalStats(
 export async function getSurvivalStats(prisma: PrismaClient, ngoUserId: string, filter: { driveId?: string } = {}) {
   const ngo = await requireNgoProfile(prisma, ngoUserId);
   return computeSurvivalStats(prisma, ngo.id, filter);
+}
+
+/**
+ * Permanently removes planted trees logged by mistake. Health checks and updates go with them
+ * (survival stats follow). Skipped, with the reason, when a tree can't safely vanish: it is
+ * currently adopted, or it was supplied through a nursery order (that record points at it).
+ */
+export async function deletePlantedTrees(prisma: PrismaClient, ngoUserId: string, plantedTreeIds: string[]) {
+  const ngo = await requireApprovedNgoProfile(prisma, ngoUserId);
+  const trees = await prisma.plantedTree.findMany({
+    where: { id: { in: plantedTreeIds }, ngoId: ngo.id },
+    select: {
+      id: true,
+      sourceUnit: { select: { id: true } },
+      adoptableListings: { select: { status: true } },
+    },
+  });
+  if (trees.length !== new Set(plantedTreeIds).size) throw new NotFoundError('Some of these trees were not found');
+
+  const skipped: { id: string; reason: string }[] = [];
+  const deletable: string[] = [];
+  for (const t of trees) {
+    if (t.adoptableListings.some((l) => l.status === 'adopted')) skipped.push({ id: t.id, reason: 'currently adopted' });
+    else if (t.sourceUnit) skipped.push({ id: t.id, reason: 'supplied through a nursery order' });
+    else deletable.push(t.id);
+  }
+  if (deletable.length) await prisma.plantedTree.deleteMany({ where: { id: { in: deletable } } });
+  return { deletedCount: deletable.length, skipped };
 }

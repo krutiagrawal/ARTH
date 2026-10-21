@@ -114,11 +114,21 @@ export async function logHealthCheck(
   return apiFetch(`/api/ngo/planted-trees/${plantedTreeId}/health-checks`, { method: 'POST', body: form, isForm: true });
 }
 
+export type BulkHealthConflictMode = 'ask' | 'override' | 'skip';
+export interface BulkHealthResult {
+  updatedCount: number;
+  createdCount: number;
+  overriddenCount: number;
+  skippedCount: number;
+}
+
 export async function logBulkHealthChecks(input: {
   plantedTreeIds: string[];
   status: ActionableHealthStatus;
   notes?: string;
-}): Promise<{ updatedCount: number }> {
+  /** Trees already checked today: ask (server replies 409 with counts), override, or skip them. */
+  onConflict?: BulkHealthConflictMode;
+}): Promise<BulkHealthResult> {
   return apiFetch('/api/ngo/planted-trees/health-checks/bulk', { method: 'POST', body: input });
 }
 
@@ -207,11 +217,17 @@ export async function bulkMarkZoneHealth(
   zoneId: string,
   status: ActionableHealthStatus,
   notes?: string,
-): Promise<{ updatedCount: number }> {
-  return apiFetch(`/api/ngo/planted-trees/zones/${zoneId}/health-checks/bulk`, { method: 'POST', body: { status, notes } });
+  onConflict?: BulkHealthConflictMode,
+): Promise<BulkHealthResult> {
+  return apiFetch(`/api/ngo/planted-trees/zones/${zoneId}/health-checks/bulk`, { method: 'POST', body: { status, notes, onConflict } });
 }
 
 /** Moves logged trees into a zone of their drive, or back to Unzoned with `zoneId: null`. */
 export async function moveTreesToZone(input: { plantedTreeIds: string[]; zoneId: string | null }): Promise<{ movedCount: number }> {
   return apiFetch('/api/ngo/planted-trees/move-to-zone', { method: 'POST', body: input });
+}
+
+/** Permanently removes planted trees logged by mistake; the server skips (and reports) any that can't be removed. */
+export async function deletePlantedTrees(plantedTreeIds: string[]): Promise<{ deletedCount: number; skipped: { id: string; reason: string }[] }> {
+  return apiFetch('/api/ngo/planted-trees/bulk-delete', { method: 'POST', body: { plantedTreeIds } });
 }

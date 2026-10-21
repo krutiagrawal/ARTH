@@ -13,10 +13,11 @@ import { StatusModal } from '../components/common/StatusModal';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useZonesForDrive, useCreateZone, useBulkMarkZoneHealth, useNgoProfile } from '../hooks/useApiQueries';
 import { useApprovalGate } from '../hooks/useApprovalGate';
+import { runBulkHealthCheck } from '../utils/bulkHealth';
 import { useSlideUp } from '../hooks/useAnimations';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { useConfirm } from '../context/ConfirmDialogContext';
-import { STATUS_META, ACTIONABLE_STATUSES, formatDueDate } from '../constants/treeHealth';
+import { STATUS_META, STATUS_TEXT_ON_LIGHT, ACTIONABLE_STATUSES, formatDueDate } from '../constants/treeHealth';
 import type { ApiPlantationZone } from '../api/plantedTrees';
 
 import { TEXT } from '../constants/typography';
@@ -31,19 +32,31 @@ function ZoneCard({ zone, onOpen, onMark }: { zone: ApiPlantationZone; onOpen: (
       <BorderCard style={styles.card}>
         <Text style={styles.cardTitle}>{zone.name}</Text>
         <Text style={styles.cardMeta}>
-          {zone.total} trees · {zone.counts.healthy}/{zone.counts.struggling}/{zone.counts.dead}/{zone.counts.removed} H/S/D/R
-          {zone.counts.not_checked > 0 ? ` · ${zone.counts.not_checked} not checked` : ''}
+          {zone.total} {zone.total === 1 ? 'tree' : 'trees'} · {zone.survivalRate}% survival
         </Text>
-        <Text style={styles.cardMeta}>
-          {zone.survivalRate}% survival · Next check: {formatDueDate(zone.nextCheckDue)}
-        </Text>
-        {zone.id && zone.total > 0 && (
-          <View style={styles.markRow}>
-            {ACTIONABLE_STATUSES.map((status) => (
-              <TouchableOpacity key={status} style={[styles.markButton, { borderColor: STATUS_META[status].color }]} onPress={() => onMark(status)}>
-                <Text style={styles.markButtonText}>{STATUS_META[status].emoji}</Text>
-              </TouchableOpacity>
+        {/* Spelled out per status (only the ones present) – single-letter codes meant nothing to anyone but the developer. */}
+        <View style={styles.countRow}>
+          {(['healthy', 'struggling', 'dead', 'removed', 'not_checked'] as const)
+            .filter((status) => zone.counts[status] > 0)
+            .map((status) => (
+              <View key={status} style={[styles.countPill, { backgroundColor: `${STATUS_META[status].color}1F` }]}>
+                <Text style={[styles.countPillText, { color: STATUS_TEXT_ON_LIGHT[status] }]}>
+                  {STATUS_META[status].emoji} {zone.counts[status]} {STATUS_META[status].label}
+                </Text>
+              </View>
             ))}
+        </View>
+        <Text style={styles.cardMeta}>Next health check: {formatDueDate(zone.nextCheckDue)}</Text>
+        {zone.id && zone.total > 0 && (
+          <View>
+            <Text style={styles.markCaption}>Mark every tree in this zone as</Text>
+            <View style={styles.markRow}>
+              {ACTIONABLE_STATUSES.map((status) => (
+                <TouchableOpacity key={status} style={[styles.markButton, { borderColor: STATUS_META[status].color }]} onPress={() => onMark(status)}>
+                  <Text style={styles.markButtonText}>{STATUS_META[status].emoji} {STATUS_META[status].label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         )}
       </BorderCard>
@@ -78,7 +91,10 @@ export function NgoZonesScreen({ navigation, route }: any) {
   const handleMark = guard((zoneId: string, zoneNameLabel: string, status: (typeof ACTIONABLE_STATUSES)[number]) => {
     confirm(`Mark ${zoneNameLabel} as ${STATUS_META[status].label.toLowerCase()}?`, 'Every tree currently in this zone gets a new health check.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Confirm', onPress: () => bulkMarkMutation.mutateAsync({ zoneId, status }) },
+      {
+        text: 'Confirm',
+        onPress: () => runBulkHealthCheck(confirm, (onConflict) => bulkMarkMutation.mutateAsync({ zoneId, status, onConflict })),
+      },
     ]);
   });
 
@@ -136,13 +152,15 @@ export function NgoZonesScreen({ navigation, route }: any) {
           </FadeInRow>
         ))}
       </ScrollView>
-
-      <StatusModal {...statusModalProps} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  countRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+  countPill: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: RADIUS.full },
+  countPillText: { fontSize: 12, lineHeight: 16, fontWeight: '700' },
+  markCaption: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 0.4, marginTop: 12 },
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
   backButton: { width: 40, height: 40 },
@@ -168,7 +186,7 @@ const styles = StyleSheet.create({
   card: { marginBottom: 10 },
   cardTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
   cardMeta: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
-  markRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  markRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   markButton: { paddingVertical: 6, paddingHorizontal: 10, borderRadius: RADIUS.md, borderWidth: 1.5, backgroundColor: 'transparent' },
-  markButtonText: { fontSize: 15 },
+  markButtonText: { fontSize: 12, fontWeight: '600', color: COLORS.textPrimary },
 });

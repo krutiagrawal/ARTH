@@ -13,6 +13,7 @@ import {
   survivalStatsQuerySchema,
   createZoneSchema,
   moveTreesToZoneSchema,
+  deletePlantedTreesSchema,
   renameZoneSchema,
   listZonesQuerySchema,
   zoneBulkHealthCheckSchema,
@@ -84,6 +85,12 @@ export default async function plantedTreesRoutes(fastify: FastifyInstance) {
     reply.status(201).send(zone);
   });
 
+  fastify.post('/bulk-delete', async (request, reply) => {
+    const parsed = deletePlantedTreesSchema.safeParse(request.body);
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+    reply.send(await plantedTreeService.deletePlantedTrees(fastify.prisma, request.user!.id, parsed.data.plantedTreeIds));
+  });
+
   fastify.post('/move-to-zone', async (request, reply) => {
     const parsed = moveTreesToZoneSchema.safeParse(request.body);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
@@ -119,6 +126,7 @@ export default async function plantedTreesRoutes(fastify: FastifyInstance) {
       request.params.id,
       parsed.data.status,
       parsed.data.notes,
+      parsed.data.onConflict,
     );
     reply.send(result);
   });

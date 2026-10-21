@@ -120,6 +120,14 @@ function describe(n: ApiNotification): string {
       const d = n.data as any;
       return `released ${d?.treeNickname ?? 'a tree'}${d?.reason ? ` (${d.reason})` : ''}. It is available for adoption again.`;
     }
+    case 'ngo_health_check_due': {
+      const d = n.data as any;
+      const days = d?.thresholdDays ?? 30;
+      const where = d?.placeName ? ` – ${d.placeName}` : '';
+      return d?.count > 1
+        ? `${d.count} trees are due for their ${days}-day health check${where}`
+        : `A tree is due for its ${days}-day health check${where}`;
+    }
     case 'ngo_streak_at_risk':
       return 'Your Updates Streak needs you this week 🔥';
     case 'ngo_streak_broken':
@@ -211,6 +219,8 @@ function iconFor(n: ApiNotification): string {
     case 'tree_update_received':
     case 'tree_update_decided':
       return '🌳';
+    case 'ngo_health_check_due':
+      return '🩺';
     case 'ngo_streak_at_risk':
       return '🔥';
     case 'ngo_streak_broken':
@@ -270,6 +280,7 @@ function NotificationRow({
     notification.type === 'nursery_impact_milestone' ||
     notification.type === 'order_fulfillment_today' ||
     notification.type === 'bulk_requirement_response_received' ||
+    notification.type === 'ngo_health_check_due' ||
     notification.type === 'ngo_streak_at_risk' ||
     notification.type === 'ngo_streak_broken' ||
     notification.type === 'ngo_impact_milestone' ||
@@ -430,6 +441,16 @@ export function NotificationsScreen({ navigation }: any) {
       }
       if (n.type === 'streak_at_risk' || n.type === 'streak_broken') {
         navigation.navigate('StreakProtection');
+        return;
+      }
+      if (n.type === 'ngo_health_check_due') {
+        const d = n.data as any;
+        if (d?.treeId) {
+          navigation.navigate('NgoTreeDetail', { treeId: d.treeId });
+        } else {
+          // A zone, a plantation's unzoned trees (zoneId null + driveId), or independent plantings (both null).
+          navigation.navigate('NgoZoneTrees', { zoneId: d?.zoneId ?? null, zoneName: d?.placeName ?? 'Trees', driveId: d?.driveId ?? null });
+        }
         return;
       }
       if (n.type === 'ngo_streak_at_risk' || n.type === 'ngo_streak_broken' || n.type === 'ngo_impact_milestone') {

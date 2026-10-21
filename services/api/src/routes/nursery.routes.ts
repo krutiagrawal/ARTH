@@ -5,6 +5,7 @@ import { saveNurseryLogo, saveNurseryCoverPhoto, saveStockPhoto } from '../servi
 import { splitMultipartBody } from '../utils/multipart';
 import { BadRequestError } from '../utils/errors';
 import { toCsv } from '../utils/csv';
+import { getNurseryReport } from '../services/nurseryReport.service';
 import {
   updateNurseryProfileSchema,
   createSaplingStockSchema,
@@ -258,6 +259,16 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
   });
 
   // ---------- Marketplace orders (paid cart checkouts — distinct from the free /reservations flow) ----------
+
+  // Date-ranged, filterable report: KPIs with previous-period comparison, series and breakdowns.
+  fastify.get<{ Querystring: { from?: string; to?: string; fulfillmentType?: string; species?: string } }>('/reports', async (request, reply) => {
+    const profile = await nurseryService.getOwnProfile(fastify.prisma, request.user!.id);
+    const from = request.query.from ? new Date(request.query.from) : undefined;
+    const to = request.query.to ? new Date(request.query.to) : undefined;
+    if ((from && Number.isNaN(from.getTime())) || (to && Number.isNaN(to.getTime()))) throw new BadRequestError('Invalid date');
+    const fulfillmentType = request.query.fulfillmentType === 'pickup' || request.query.fulfillmentType === 'delivery' ? request.query.fulfillmentType : undefined;
+    reply.send(await getNurseryReport(fastify.prisma, profile.id, { from, to, fulfillmentType, species: request.query.species?.trim() || undefined }));
+  });
 
   fastify.get('/orders/summary', async (request, reply) => {
     const profile = await nurseryService.getOwnProfile(fastify.prisma, request.user!.id);

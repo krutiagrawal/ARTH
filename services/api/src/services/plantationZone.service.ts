@@ -285,7 +285,14 @@ export async function listPublicPlantingSummary(prisma: PrismaClient, ngoId: str
 // Marks every tree currently in a zone with one health status in a single bulk write — the
 // primary "check 500 trees in one tap" action. Delegates to the existing per-tree-id bulk
 // endpoint so the exception-flow and zone-flow write through the exact same code path.
-export async function bulkMarkZoneHealth(prisma: PrismaClient, ngoUserId: string, zoneId: string, status: ActionableHealthStatus, notes?: string) {
+export async function bulkMarkZoneHealth(
+  prisma: PrismaClient,
+  ngoUserId: string,
+  zoneId: string,
+  status: ActionableHealthStatus,
+  notes?: string,
+  onConflict?: 'ask' | 'override' | 'skip',
+) {
   const ngo = await requireApprovedNgoProfile(prisma, ngoUserId);
   const zone = await prisma.plantationZone.findFirst({ where: { id: zoneId, ngoId: ngo.id } });
   if (!zone) throw new NotFoundError('Zone not found');
@@ -293,7 +300,7 @@ export async function bulkMarkZoneHealth(prisma: PrismaClient, ngoUserId: string
   const trees = await prisma.plantedTree.findMany({ where: { zoneId }, select: { id: true } });
   if (trees.length === 0) throw new NotFoundError('This zone has no trees to check');
 
-  return logBulkHealthChecks(prisma, ngoUserId, { plantedTreeIds: trees.map((t) => t.id), status, notes });
+  return logBulkHealthChecks(prisma, ngoUserId, { plantedTreeIds: trees.map((t) => t.id), status, notes, onConflict });
 }
 
 /**

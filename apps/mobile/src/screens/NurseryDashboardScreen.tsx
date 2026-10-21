@@ -311,6 +311,7 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
     { key: 'followers', emoji: '👥', color: COLORS.xpBlue, title: 'Followers', onPress: () => navigation.navigate('NurseryFollowers') },
     { key: 'streak', emoji: '🔥', color: COLORS.sage, title: 'Growth & Trust', onPress: () => navigation.navigate('NurseryStreakBadges') },
     { key: 'learn', emoji: '🎓', color: COLORS.coral, title: 'Learn & play', onPress: () => navigation.navigate('Games') },
+    { key: 'reports', emoji: '📈', color: COLORS.xpBlue, title: 'Reports', onPress: () => navigation.navigate('NurseryReports') },
     { key: 'analytics', emoji: '📊', color: COLORS.golden, title: 'Stock Analytics', onPress: () => navigation.navigate('NurseryStockAnalytics') },
     { key: 'map', emoji: '🗺️', color: COLORS.coral, title: 'View on Map', onPress: () => navigation.navigate('NurseryMap') },
     { key: 'pickupDelivery', emoji: '🚴', color: COLORS.xpBlue, title: 'Pickup & Delivery', onPress: guard(() => navigation.navigate('NurseryPickupDeliveryConfig')) },

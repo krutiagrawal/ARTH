@@ -1,4 +1,6 @@
+import { fetchNgoRangeReport, fetchNurseryReport, type NgoReportFilters, type NurseryReportFilters } from '../api/reports';
 import type { OwnedListSummary } from '../api/client';
+import type { BulkHealthConflictMode } from '../api/plantedTrees';
 import { fetchStockSummary, exportStock, archiveStock, fetchNurseryOrdersSummary, exportNurseryOrders } from '../api/nursery';
 import { fetchMyOrdersSummary, exportMyOrders, type MyOrdersFilter } from '../api/orders';
 import { exportMyDonations } from '../api/donations';
@@ -172,6 +174,7 @@ import {
   fetchZoneDetail,
   createZone,
   moveTreesToZone,
+  deletePlantedTrees,
   renameZone,
   deleteZone,
   bulkMarkZoneHealth,
@@ -1716,7 +1719,7 @@ export function useLogHealthCheck() {
 export function useLogBulkHealthChecks() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { plantedTreeIds: string[]; status: ActionableHealthStatus; notes?: string }) => logBulkHealthChecks(input),
+    mutationFn: (input: { plantedTreeIds: string[]; status: ActionableHealthStatus; notes?: string; onConflict?: BulkHealthConflictMode }) => logBulkHealthChecks(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ngo', 'planted-trees'] });
       queryClient.invalidateQueries({ queryKey: ['ngo', 'survival-stats'] });
@@ -1806,6 +1809,20 @@ export function useMoveTreesToZone() {
   });
 }
 
+export function useDeletePlantedTrees() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (plantedTreeIds: string[]) => deletePlantedTrees(plantedTreeIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'planted-trees'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'zones'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'zone'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'plantations'] });
+      queryClient.invalidateQueries({ queryKey: ['ngo', 'survival-stats'] });
+    },
+  });
+}
+
 export function useRenameZone() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -1842,8 +1859,8 @@ export function useNgoPlantingMap(ngoId: string | null) {
 export function useBulkMarkZoneHealth() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ zoneId, status, notes }: { zoneId: string; status: ActionableHealthStatus; notes?: string }) =>
-      bulkMarkZoneHealth(zoneId, status, notes),
+    mutationFn: ({ zoneId, status, notes, onConflict }: { zoneId: string; status: ActionableHealthStatus; notes?: string; onConflict?: BulkHealthConflictMode }) =>
+      bulkMarkZoneHealth(zoneId, status, notes, onConflict),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ngo', 'zones'] });
       queryClient.invalidateQueries({ queryKey: ['ngo', 'zone'] });
@@ -3416,5 +3433,27 @@ export function useArchiveStock() {
   return useMutation({
     mutationFn: ({ id, archived }: { id: string; archived: boolean }) => archiveStock(id, archived),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['nursery', 'stock'] }),
+  });
+}
+
+// ---------- Reports (date-ranged, filterable) ----------
+
+export function useNgoRangeReport(filters: NgoReportFilters) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ngo', 'reports', 'range', filters],
+    queryFn: () => fetchNgoRangeReport(filters),
+    enabled: isAuthenticated,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useNurseryReport(filters: NurseryReportFilters) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nursery', 'reports', filters],
+    queryFn: () => fetchNurseryReport(filters),
+    enabled: isAuthenticated,
+    placeholderData: keepPreviousData,
   });
 }

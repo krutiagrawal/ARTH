@@ -90,6 +90,13 @@ export const updateProfileSchema = z.object({
   participantTypes: commaList(),
 });
 
+export const reportQuerySchema = z.object({
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
+  driveId: z.string().uuid().optional(),
+  campaignId: z.string().uuid().optional(),
+});
+
 export const donationsQuerySchema = z.object({
   campaignId: z.string().uuid().optional(),
   status: z.enum(['pending', 'succeeded', 'failed', 'refunded']).optional(),

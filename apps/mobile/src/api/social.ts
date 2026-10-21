@@ -133,6 +133,7 @@ export type NotificationType =
   | 'tree_observation_logged'
   | 'tree_update_received'
   | 'tree_update_decided'
+  | 'ngo_health_check_due'
   | 'ngo_streak_at_risk'
   | 'ngo_streak_broken'
   | 'ngo_impact_milestone'
