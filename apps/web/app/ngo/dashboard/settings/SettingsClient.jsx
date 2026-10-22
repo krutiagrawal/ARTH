@@ -215,6 +215,7 @@ export default function SettingsClient() {
           title: a.title.trim(),
           ...(a.year !== '' && a.year != null ? { year: Number(a.year) } : {}),
           ...(a.issuer?.trim() ? { issuer: a.issuer.trim() } : {}),
+          ...(a.certificateUrl ? { certificateUrl: a.certificateUrl } : {}),
         }))
 
       const payload = {

@@ -24,7 +24,7 @@ interface UpdateProfileInput {
   city?: string;
   foundedYear?: number;
   volunteerCountEstimate?: number;
-  awards?: { title: string; year?: number; issuer?: string }[];
+  awards?: { title: string; year?: number; issuer?: string; certificateUrl?: string }[];
   followPolicy?: 'open' | 'approval';
 
   orgType?: NgoOrgType;

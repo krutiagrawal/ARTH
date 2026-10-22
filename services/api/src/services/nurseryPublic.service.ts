@@ -168,6 +168,7 @@ async function assembleNurseryProfile(prisma: PrismaClient, nursery: { id: strin
     isFollowing: follow?.status === 'accepted',
     followStatus: follow?.status ?? null,
     blockedByMe,
+    isOwn: viewerUserId != null && nursery.userId === viewerUserId,
     recentPosts: recentPosts.map((p) => serializePost(p as any, viewerUserId)),
     stock,
   };

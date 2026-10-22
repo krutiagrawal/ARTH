@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { ORG_ROLES } from '../constants/roles';
 import * as ngoService from '../services/ngo.service';
 import { requireNgoProfile } from '../services/ngo.service';
-import { saveNgoLogo, saveNgoVerificationDocument, saveNgoPastWorkPhoto } from '../services/upload.service';
+import { saveNgoLogo, saveNgoVerificationDocument, saveNgoPastWorkPhoto, saveNgoAwardCertificate } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
 import { BadRequestError } from '../utils/errors';
 import { updateProfileSchema, donationsQuerySchema, reportQuerySchema, removeVolunteerSchema } from '../schemas/ngo.schema';
@@ -160,6 +160,16 @@ export default async function ngoRoutes(fastify: FastifyInstance) {
     const fileUrl = docType === 'past_work_photo' ? await saveNgoPastWorkPhoto(input) : await saveNgoVerificationDocument(input);
     const profile = await ngoService.addVerificationDocument(fastify.prisma, request.user!.id, docType, fileUrl);
     reply.send(serializeNgoProfile(profile));
+  });
+
+  // Stores an award's certificate image and returns its URL; the client attaches it to the award and
+  // saves it with the rest of the awards through PATCH /profile.
+  fastify.post('/profile/award-certificate', async (request, reply) => {
+    const { file } = splitMultipartBody(request.body as any, 'file');
+    if (!file) throw new BadRequestError('Attach an image');
+    const buffer = await file.toBuffer();
+    const url = await saveNgoAwardCertificate({ filename: file.filename, mimetype: file.mimetype, buffer });
+    reply.send({ url });
   });
 
   fastify.delete<{ Params: { id: string } }>('/profile/documents/:id', async (request, reply) => {

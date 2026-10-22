@@ -56,11 +56,36 @@ async function assertTargetExists(prisma: PrismaClient, targetType: ReportTarget
   if (!exists) throw new NotFoundError('That content no longer exists');
 }
 
+/** True when the reporter owns the target: their account (user/ngo/nursery/corporate) or something they/their org authored. */
+async function isOwnContent(prisma: PrismaClient, reporterId: string, targetType: ReportTargetType, targetId: string) {
+  switch (targetType) {
+    case 'user':
+      return targetId === reporterId;
+    case 'ngo':
+      return !!(await prisma.ngoProfile.findFirst({ where: { id: targetId, userId: reporterId }, select: { id: true } }));
+    case 'nursery':
+      return !!(await prisma.nurseryProfile.findFirst({ where: { id: targetId, userId: reporterId }, select: { id: true } }));
+    case 'corporate':
+      return !!(await prisma.corporateProfile.findFirst({ where: { id: targetId, userId: reporterId }, select: { id: true } }));
+    case 'post':
+      return !!(await prisma.post.findFirst({
+        where: { id: targetId, OR: [{ userId: reporterId }, { ngo: { userId: reporterId } }, { nursery: { userId: reporterId } }] },
+        select: { id: true },
+      }));
+    case 'portfolio_entry':
+      return !!(await prisma.ngoPortfolioEntry.findFirst({ where: { id: targetId, ngo: { userId: reporterId } }, select: { id: true } }));
+    default:
+      return false;
+  }
+}
+
 export async function createReport(prisma: PrismaClient, reporterId: string, input: ReportInput) {
   await assertTargetExists(prisma, input.targetType, input.targetId);
 
-  if (input.targetType === 'user' && input.targetId === reporterId) {
-    throw new BadRequestError('You cannot report yourself');
+  if (await isOwnContent(prisma, reporterId, input.targetType, input.targetId)) {
+    throw new BadRequestError(
+      input.targetType === 'post' || input.targetType === 'story' ? 'You cannot report your own post' : 'You cannot report yourself',
+    );
   }
 
   try {

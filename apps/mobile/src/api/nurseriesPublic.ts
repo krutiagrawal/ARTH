@@ -53,6 +53,7 @@ export interface ApiPublicNurseryProfile {
   followStatus: 'pending' | 'accepted' | null;
   /** True when the viewer has blocked this nursery. */
   blockedByMe?: boolean;
+  isOwn?: boolean;
   recentPosts: ApiPost[];
   stock: ApiSaplingStock[];
 }

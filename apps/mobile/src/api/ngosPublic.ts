@@ -43,6 +43,7 @@ export interface ApiPublicNgoProfile {
   followStatus: FollowStatus | null;
   /** True when the viewer has blocked this NGO. */
   blockedByMe?: boolean;
+  isOwn?: boolean;
   // Full ApiDrive shape (same as GET /api/drives/:id returns), not a trimmed summary – lets the
   // client seed its drive-detail cache from these list entries instead of re-fetching on tap.
   featuredDrives: ApiDrive[];

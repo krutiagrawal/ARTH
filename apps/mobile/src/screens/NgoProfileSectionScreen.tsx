@@ -31,7 +31,9 @@ import { EMPTY_NGO_DETAILS, detailsFromProfile, detailsToInput, type NgoDetailsF
 import { NGO_PROFILE_SECTIONS, type NgoProfileSectionId } from '../constants/ngoProfileSections';
 import { isValidPhone, isValidWebsite, isValidEmail, isValidPan, isValidYear } from '../utils/validation';
 import type { Award } from '../api/ngo';
-import { ApiError } from '../api/client';
+import { ApiError, resolveMediaUrl } from '../api/client';
+import { uploadAwardCertificate } from '../api/ngo';
+import { PhotoPickerField, type PickedPhoto } from '../components/common/PhotoPickerField';
 import { useConfirm } from '../context/ConfirmDialogContext';
 
 // Whole-form snapshot used to tell whether anything has been edited since the profile last loaded.
@@ -112,6 +114,20 @@ export function NgoProfileSectionScreen({ navigation, route }: any) {
   const updateAward = (index: number, patch: Partial<Award>) =>
     setAwards((prev) => prev.map((a, i) => (i === index ? { ...a, ...patch } : a)));
 
+  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
+  const uploadCertificate = async (index: number, file: PickedPhoto) => {
+    setError(null);
+    setUploadingIndex(index);
+    try {
+      const url = await uploadAwardCertificate(file);
+      updateAward(index, { certificateUrl: url });
+    } catch (e) {
+      setError(e instanceof ApiError || e instanceof Error ? e.message : 'Could not upload this certificate.');
+    } finally {
+      setUploadingIndex(null);
+    }
+  };
+
   const handleSave = async () => {
     setError(null);
     if (website.trim() && !isValidWebsite(website)) {
@@ -141,7 +157,6 @@ export function NgoProfileSectionScreen({ navigation, route }: any) {
         awards: awards.filter((a) => a.title.trim()),
       });
       confirm('Saved', `${meta.title} updated.`);
-      navigation?.goBack?.();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not save your profile. Please try again.');
     }
@@ -209,31 +224,52 @@ export function NgoProfileSectionScreen({ navigation, route }: any) {
 
           {section === 'awards' && (
             <View>
-            <View style={styles.subCard}>
+              {awards.length === 0 && (
+                <View style={styles.emptyAwards}>
+                  <Text style={styles.emptyAwardsEmoji}>🏆</Text>
+                  <Text style={styles.emptyAwardsText}>No awards yet. Add the honours your organisation has received.</Text>
+                </View>
+              )}
               {awards.map((award, i) => (
-                <View key={i} style={styles.listItem}>
+                <View key={i} style={styles.awardCard}>
                   <View style={styles.listItemHeader}>
-                    <Text style={styles.listItemTitle}>Award {i + 1}</Text>
-                    <TouchableOpacity onPress={() => removeAward(i)}>
+                    <Text style={styles.awardCardTitle}>🏆 Award {i + 1}</Text>
+                    <TouchableOpacity onPress={() => removeAward(i)} hitSlop={8}>
                       <Text style={styles.removeText}>Remove</Text>
                     </TouchableOpacity>
                   </View>
                   <FormField maxLength={200} label="Title" value={award.title} onChangeText={(v: string) => updateAward(i, { title: v })} placeholder="eg - Award title" />
-                  <FormField
-                    label="Year"
-                    value={award.year ? String(award.year) : ''}
-                    onChangeText={(v: string) => updateAward(i, { year: v ? Number(v.replace(/[^0-9]/g, '')) : undefined })}
-                    keyboardType="number-pad"
-                    placeholder="eg - Year"
+                  <View style={styles.row2}>
+                    <FormField
+                      style={styles.flex1}
+                      label="Year"
+                      maxLength={4}
+                      value={award.year ? String(award.year) : ''}
+                      onChangeText={(v: string) => updateAward(i, { year: v ? Number(v.replace(/[^0-9]/g, '')) : undefined })}
+                      keyboardType="number-pad"
+                      placeholder="eg - 2024"
+                    />
+                    <FormField style={styles.flex1} maxLength={200} label="Issued by" value={award.issuer ?? ''} onChangeText={(v: string) => updateAward(i, { issuer: v })} placeholder="eg - Issuing body" />
+                  </View>
+                  <PhotoPickerField
+                    label="Certificate image"
+                    mode="gallery"
+                    hint="Tap to upload a photo of the certificate"
+                    photo={null}
+                    existingUri={resolveMediaUrl(award.certificateUrl)}
+                    onChange={(file) => uploadCertificate(i, file)}
                   />
-                  <FormField maxLength={200} label="Issued by" value={award.issuer ?? ''} onChangeText={(v: string) => updateAward(i, { issuer: v })} placeholder="eg - Issuing body" />
+                  {uploadingIndex === i && <ActivityIndicator color={COLORS.sage} style={{ marginTop: 6 }} />}
+                  {award.certificateUrl && uploadingIndex !== i && (
+                    <TouchableOpacity onPress={() => updateAward(i, { certificateUrl: undefined })}>
+                      <Text style={styles.removeText}>Remove certificate</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               ))}
-              <TouchableOpacity style={styles.addButton} onPress={addAward}>
+              <TouchableOpacity style={styles.addAwardButton} onPress={addAward} activeOpacity={0.8}>
                 <Text style={styles.addButtonText}>+ Add award</Text>
               </TouchableOpacity>
-            </View>
-
             </View>
           )}
 
@@ -424,6 +460,26 @@ const styles = StyleSheet.create({
   listItemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   listItemTitle: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase' },
   removeText: { fontSize: 12, color: COLORS.coral, fontWeight: '600' },
+  awardCard: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
+    borderRadius: RADIUS.md,
+    padding: 14,
+    marginBottom: 14,
+  },
+  awardCardTitle: { fontSize: 14, fontWeight: '800', color: COLORS.textPrimary },
+  addAwardButton: {
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: COLORS.sage,
+    borderRadius: RADIUS.md,
+  },
+  emptyAwards: { alignItems: 'center', paddingVertical: 24, gap: 6 },
+  emptyAwardsEmoji: { fontSize: 32 },
+  emptyAwardsText: { fontSize: 13, color: COLORS.textMuted, textAlign: 'center' },
   addButton: { alignSelf: 'flex-start', marginTop: 4 },
   addButtonText: { fontSize: 13, color: COLORS.sage, fontWeight: '700' },
   saveBar: {

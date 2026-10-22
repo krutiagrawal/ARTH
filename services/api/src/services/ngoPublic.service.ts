@@ -155,6 +155,8 @@ async function assembleNgoProfile(prisma: PrismaClient, ngo: { id: string } & Re
     // Distinct from isFollowing so the button can read "Requested" on an approval-gated NGO.
     followStatus: follow?.status ?? null,
     blockedByMe,
+    // The viewer is looking at their own organisation, so follow/block/report don't apply.
+    isOwn: viewerUserId != null && ngo.userId === viewerUserId,
     featuredDrives: featuredDrives.map(withRsvpFlag),
     upcomingDrives: upcomingDrives.map(withRsvpFlag),
     cancelledDrives: cancelledDrives.map(withRsvpFlag),

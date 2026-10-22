@@ -22,6 +22,7 @@ const awardSchema = z.object({
   title: z.string().min(1).max(200),
   year: z.coerce.number().int().min(1900).max(2200).optional(),
   issuer: z.string().max(200).optional(),
+  certificateUrl: z.string().max(500).optional(),
 });
 
 export const updateProfileSchema = z.object({

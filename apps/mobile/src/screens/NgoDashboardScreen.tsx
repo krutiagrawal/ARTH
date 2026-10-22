@@ -444,7 +444,6 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
         )}
 
         {gamesStatus ? <DailyGamesCard games={gamesStatus.games} navigation={navigation} blurTarget={blurTargetRef} theme={theme} /> : null}
-        <EcoInsightSection navigation={navigation} blurTarget={blurTargetRef} theme={theme} />
 
         <Text style={[styles.sectionTitle, { color: seamText.primary }]}>Quick Actions</Text>
         <View style={styles.dockGrid}>
@@ -457,6 +456,8 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
             />
           ))}
         </View>
+
+        <EcoInsightSection navigation={navigation} blurTarget={blurTargetRef} theme={theme} />
       </ScrollView>
 
       <View style={styles.ambientLayer} pointerEvents="none">

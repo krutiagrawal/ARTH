@@ -68,9 +68,10 @@ export function UserProfileScreen({ route, navigation }: any) {
   const friendRequestId: string | undefined = route?.params?.friendRequestId;
   const friendRequestFromName: string | undefined = route?.params?.friendRequestFromName;
   const followRequest: { kind: 'ngo' | 'nursery'; followId: string } | undefined = route?.params?.followRequest;
-  const isOwn = !userId;
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  // Opening your own profile by id (e.g. from a post) is the same as your own profile tab.
+  const isOwn = !userId || userId === user?.id;
   const confirm = useConfirm();
   const { playSound } = useSoundSystem();
   const respondFriendRequest = useRespondFriendRequest();

@@ -67,6 +67,8 @@ export interface Award {
   title: string;
   year?: number;
   issuer?: string;
+  /** Server-relative path of the uploaded certificate image. */
+  certificateUrl?: string;
 }
 
 export type NgoDocumentType =
@@ -366,6 +368,13 @@ export async function uploadNgoDocument(docType: NgoDocumentType, file: { uri: s
   form.append('docType', docType);
   form.append('file', await toFormBlob(file.uri, file.type, 'Document'), file.name);
   return apiFetch<ApiNgoProfile>('/api/ngo/profile/documents', { method: 'POST', body: form, isForm: true });
+}
+
+export async function uploadAwardCertificate(file: { uri: string; name: string; type: string }): Promise<string> {
+  const form = new FormData();
+  form.append('file', await toFormBlob(file.uri, file.type, 'Certificate'), file.name);
+  const res = await apiFetch<{ url: string }>('/api/ngo/profile/award-certificate', { method: 'POST', body: form, isForm: true });
+  return res.url;
 }
 
 export async function deleteNgoDocument(id: string): Promise<ApiNgoProfile> {

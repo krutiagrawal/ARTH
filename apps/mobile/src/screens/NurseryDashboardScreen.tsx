@@ -472,22 +472,6 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
 
         {profile && <StatusBanner status={profile.status} seamText={seamText} navigation={navigation} />}
 
-        {gamesStatus ? <DailyGamesCard games={gamesStatus.games} navigation={navigation} blurTarget={blurTargetRef} theme={theme} /> : null}
-        <EcoInsightSection navigation={navigation} blurTarget={blurTargetRef} theme={theme} />
-
-        <Text style={[styles.sectionTitle, { color: seamText.primary }]}>Quick Actions</Text>
-        <View style={styles.dockGrid}>
-          {dockRows.map((row, i) => (
-            <DockRow
-              key={i}
-              theme={theme}
-              seamText={seamText}
-              delayStart={120 + i * 90}
-              items={row.length === 3 ? row : [...row, ...Array(3 - row.length).fill(null)]}
-            />
-          ))}
-        </View>
-
         {today && (
           <>
             <Text style={[styles.sectionTitle, { color: seamText.primary }]}>Recent Activity</Text>
@@ -540,6 +524,23 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
             </View>
           </>
         )}
+
+        {gamesStatus ? <DailyGamesCard games={gamesStatus.games} navigation={navigation} blurTarget={blurTargetRef} theme={theme} /> : null}
+
+        <Text style={[styles.sectionTitle, { color: seamText.primary }]}>Quick Actions</Text>
+        <View style={styles.dockGrid}>
+          {dockRows.map((row, i) => (
+            <DockRow
+              key={i}
+              theme={theme}
+              seamText={seamText}
+              delayStart={120 + i * 90}
+              items={row.length === 3 ? row : [...row, ...Array(3 - row.length).fill(null)]}
+            />
+          ))}
+        </View>
+
+        <EcoInsightSection navigation={navigation} blurTarget={blurTargetRef} theme={theme} />
       </ScrollView>
 
       <View style={styles.ambientLayer} pointerEvents="none">

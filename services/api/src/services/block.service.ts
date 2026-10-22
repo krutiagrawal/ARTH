@@ -116,6 +116,7 @@ export async function blockTarget(
 
   const ngo = await prisma.ngoProfile.findUnique({ where: { id: input.ngoId } });
   if (!ngo) throw new NotFoundError('NGO not found');
+  if (ngo.userId === viewerId) throw new BadRequestError('You cannot block yourself');
   await prisma.block.upsert({
     where: { blockerId_blockedNgoId: { blockerId: viewerId, blockedNgoId: input.ngoId! } },
     create: { blockerId: viewerId, blockedNgoId: input.ngoId! },

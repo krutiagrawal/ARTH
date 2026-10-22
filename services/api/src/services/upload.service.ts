@@ -122,6 +122,10 @@ export function saveNgoVerificationDocument(photo: PhotoInput): Promise<string> 
   return saveDocument(photo, 'ngo-verification-docs');
 }
 
+export function saveNgoAwardCertificate(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'ngo-awards');
+}
+
 export function saveNgoPastWorkPhoto(photo: PhotoInput): Promise<string> {
   return saveImage(photo, 'ngo-past-work');
 }

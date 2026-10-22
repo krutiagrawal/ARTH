@@ -18,8 +18,8 @@ const AUTO_HIDE_REPORT_THRESHOLD = 3;
 
 export const postInclude = {
   user: { select: { id: true, name: true, handle: true, avatarEmoji: true } },
-  ngo: { select: { id: true, orgName: true, logoUrl: true } },
-  nursery: { select: { id: true, nurseryName: true, logoUrl: true } },
+  ngo: { select: { id: true, userId: true, orgName: true, logoUrl: true } },
+  nursery: { select: { id: true, userId: true, nurseryName: true, logoUrl: true } },
   drive: { select: { id: true, title: true } },
   tree: {
     select: {
@@ -94,7 +94,8 @@ export function serializePost(post: PostWithRelations, viewerId?: string) {
     likedByMe: (post.likes?.length ?? 0) > 0,
     savedByMe: (post.saves?.length ?? 0) > 0,
     isHidden: post.isHidden,
-    isMine: viewerId != null && post.userId === viewerId,
+    // Org posts have no userId; they're "mine" for the owner of the NGO/nursery profile.
+    isMine: viewerId != null && (post.userId === viewerId || post.ngo?.userId === viewerId || post.nursery?.userId === viewerId),
     createdAt: post.createdAt,
 
     // --- legacy NgoUpdate keys, kept for apps/web ---
@@ -432,7 +433,16 @@ export async function getSocialFeed(
   const nurseryIds = follows.map((f) => f.nurseryId).filter((id): id is string => id != null);
   const friendIds = friendships.map((f) => (f.requesterId === viewerId ? f.addresseeId : f.requesterId));
 
+  // Org posts are authored by the NGO/nursery profile (userId is null), so "my own posts" must also
+  // match the viewer's own org profile or an NGO never sees what it posted.
+  const [ownNgo, ownNursery] = await Promise.all([
+    prisma.ngoProfile.findUnique({ where: { userId: viewerId }, select: { id: true } }),
+    prisma.nurseryProfile.findUnique({ where: { userId: viewerId }, select: { id: true } }),
+  ]);
+
   const authorClauses: Prisma.PostWhereInput[] = [{ userId: viewerId }];
+  if (ownNgo) authorClauses.push({ ngoId: ownNgo.id });
+  if (ownNursery) authorClauses.push({ nurseryId: ownNursery.id });
   if (ngoIds.length) authorClauses.push({ ngoId: { in: ngoIds } });
   if (nurseryIds.length) authorClauses.push({ nurseryId: { in: nurseryIds } });
   if (friendIds.length) authorClauses.push({ userId: { in: friendIds } });

@@ -121,7 +121,11 @@ export function NurseryProfileScreen({ route, navigation }: any) {
   const isFollowingOrPending = followStatus === 'accepted' || followStatus === 'pending';
   const followersCount = isOwn ? undefined : publicProfile.data?.followersCount ?? 0;
 
+  // Opened via the public route but it's this account's own nursery: no follow/block/report.
+  const selfView = !isOwn && !!publicProfile.data?.isOwn;
+
   const toggleFollow = () => {
+    if (selfView) return;
     if (!nurseryId) return;
     if (isFollowingOrPending) {
       const pending = followStatus === 'pending';
@@ -186,7 +190,7 @@ export function NurseryProfileScreen({ route, navigation }: any) {
               ]
         }
         primaryAction={
-          isOwn
+          isOwn || selfView
             ? { label: 'Edit profile', onPress: () => navigation.navigate('NurserySettings'), variant: 'outline' }
             : {
                 label: followLabel(followStatus, followersCount ?? 0),
@@ -292,11 +296,13 @@ export function NurseryProfileScreen({ route, navigation }: any) {
         )}
         {isOwn ? null : (
           <View style={styles.headerActions}>
+            {!selfView && (
             <TouchableOpacity onPress={() => setMenuOpen(true)} style={styles.iconButton} hitSlop={8}>
               <View style={styles.iconBlur}>
                 <Text style={styles.iconText}>⋯</Text>
               </View>
             </TouchableOpacity>
+            )}
             <TouchableOpacity onPress={() => navigation.navigate('Cart')} style={styles.iconButton}>
               <View style={styles.iconBlur}>
                 <Text style={styles.iconText}>🛒</Text>

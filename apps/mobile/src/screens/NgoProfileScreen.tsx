@@ -256,8 +256,11 @@ export function NgoProfileScreen({ route, navigation }: any) {
     ? (ownTrees.data ?? []).filter((t) => t.status !== 'removed' && !t.isArchived)
     : publicProfile.data?.adoptableTrees ?? [];
 
+  // Opened via the public route but it's this account's own organisation: no follow/block/report.
+  const selfView = !isOwn && !!publicProfile.data?.isOwn;
+
   const toggleFollow = () => {
-    if (!ngoId) return;
+    if (!ngoId || selfView) return;
     if (isFollowingOrPending) {
       const pending = followStatus === 'pending';
       confirm(pending ? 'Cancel follow request?' : 'Unfollow?', pending ? `Your request to follow ${name} will be withdrawn.` : `Are you sure you want to unfollow ${name}?`, [
@@ -299,7 +302,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
         ) : (
           <View style={styles.iconButton} />
         )}
-        {isOwn ? null : (
+        {isOwn || selfView ? null : (
           <TouchableOpacity onPress={() => setMenuOpen(true)} style={styles.iconButton} hitSlop={8}>
             <Text style={styles.menuDots}>⋯</Text>
           </TouchableOpacity>
@@ -368,7 +371,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
                       ]
                 }
                 primaryAction={
-                  isOwn
+                  isOwn || selfView
                     ? { label: 'Edit profile', onPress: () => navigation.navigate('Settings'), variant: 'outline' }
                     : {
                         label: followLabel(followStatus, followersCount ?? 0),
@@ -378,7 +381,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
                       }
                 }
                 hint={
-                  !isOwn && followStatus === 'pending'
+                  !isOwn && !selfView && followStatus === 'pending'
                     ? `${name} approves each follower. Tap again to cancel your request.`
                     : null
                 }
