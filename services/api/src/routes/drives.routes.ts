@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { toCsv } from '../utils/csv';
 import { FastifyInstance } from 'fastify';
 import { ORG_ROLES } from '../constants/roles';
@@ -46,6 +47,14 @@ export function serializeDrive(entry: any) {
     confirmedCount: d._count?.rsvps ?? 0,
     status: d.status,
     cancelReason: d.cancelReason ?? null,
+    relaunchedToId: d.relaunches?.[0]?.id ?? null,
+    whatToBring: d.whatToBring || null,
+    providedByNgo: d.providedByNgo || null,
+    contactName: d.contactName || null,
+    contactPhone: d.contactPhone || null,
+    minAge: d.minAge ?? null,
+    effortLevel: d.effortLevel ?? null,
+    goingPreview: (d.goingPreview ?? []).map((u: any) => ({ avatarEmoji: u.avatarEmoji, avatarUrl: u.avatarUrl ?? null })),
     hasEnded: d.startsAt ? driveService.hasDriveEnded(d) : false,
     isRsvped: d.isRsvped,
     featured: d.featured,
@@ -55,6 +64,8 @@ export function serializeDrive(entry: any) {
     updatedAt: d.updatedAt,
   };
 }
+
+const relaunchSchema = z.object({ startsAt: z.coerce.date(), notifyPrevious: z.boolean().default(false) });
 
 export default async function drivesRoutes(fastify: FastifyInstance) {
   fastify.get('/', async (request, reply) => {
@@ -88,6 +99,18 @@ export default async function drivesRoutes(fastify: FastifyInstance) {
     { preHandler: [fastify.requireRole(...ORG_ROLES)] },
     async (request, reply) => {
       reply.status(201).send(serializeDrive(await driveService.duplicateDrive(fastify.prisma, request.user!.id, request.params.id)));
+    },
+  );
+
+  // Cancelled drive -> brand-new upcoming drive on a new date (see relaunchDrive).
+  fastify.post<{ Params: { id: string }; Body: unknown }>(
+    '/:id/relaunch',
+    { preHandler: [fastify.requireRole(...ORG_ROLES)] },
+    async (request, reply) => {
+      const parsed = relaunchSchema.safeParse(request.body);
+      if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+      const drive = await driveService.relaunchDrive(fastify.prisma, request.user!.id, request.params.id, parsed.data);
+      reply.status(201).send(serializeDrive(drive));
     },
   );
 

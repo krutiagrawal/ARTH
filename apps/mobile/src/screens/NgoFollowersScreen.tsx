@@ -13,6 +13,7 @@ import { useNgoFollowers, useRemoveFollower } from '../hooks/useSocialQueries';
 import type { ApiFollower } from '../api/ngoFollowers';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { PageFooter } from '../components/common/PageFooter';
 
 function FollowerRow({ follower, onRemove }: { follower: ApiFollower; onRemove: () => void }) {
@@ -39,12 +40,13 @@ function FollowerRow({ follower, onRemove }: { follower: ApiFollower; onRemove: 
 }
 
 /** The accepted-followers list, with search and a silent remove action. */
-export function NgoFollowersScreen({ navigation }: any) {
+export function NgoFollowersScreen({ navigation, onOpenRequests }: any) {
   const [query, setQuery] = useState('');
   const clearance = useBottomNavClearance();
+  const debouncedQuery = useDebouncedValue(query.trim());
   const listQuery = useNgoFollowers({
     status: 'accepted',
-    q: query.trim() || undefined,
+    q: debouncedQuery || undefined,
   });
   const { data, isLoading, refetch } = listQuery;
   const removeFollower = useRemoveFollower();
@@ -85,8 +87,19 @@ export function NgoFollowersScreen({ navigation }: any) {
         title="Followers"
         onBack={navigation?.canGoBack?.() ? () => navigation.goBack() : undefined}
         right={
-          <TouchableOpacity onPress={() => navigation?.navigate('NgoFollowerRequests')} style={styles.requestsButton} activeOpacity={0.8}>
-            <Text style={styles.requestsText}>Requests{data?.pendingCount ? ` (${data.pendingCount})` : ''}</Text>
+          <TouchableOpacity
+            onPress={() => (onOpenRequests ? onOpenRequests() : navigation?.navigate('NgoFollowerRequests'))}
+            style={styles.requestsButton}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`Follow requests${data?.pendingCount ? `, ${data.pendingCount} pending` : ''}`}
+          >
+            <Text style={styles.requestsText}>Requests</Text>
+            {data?.pendingCount ? (
+              <View style={styles.bubble}>
+                <Text style={styles.bubbleText}>{data.pendingCount > 99 ? '99+' : data.pendingCount}</Text>
+              </View>
+            ) : null}
           </TouchableOpacity>
         }
       />
@@ -144,6 +157,21 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.forest,
   },
   requestsText: { fontSize: 12, fontWeight: '700', color: COLORS.white },
+  bubble: {
+    position: 'absolute',
+    top: -7,
+    right: -7,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    backgroundColor: COLORS.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: COLORS.cream,
+  },
+  bubbleText: { fontSize: 10, fontWeight: '900', color: COLORS.white },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',

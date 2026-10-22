@@ -263,7 +263,14 @@ export interface ApiDonation {
   createdAt: string;
   campaignId: string;
   campaignTitle: string;
-  donor: { name: string; handle: string };
+  donor: { id: string; name: string; handle: string; avatarEmoji: string; city: string | null };
+  /** Note the donor left for the NGO. */
+  message: string | null;
+  /** Hidden from other donors; the NGO still sees the name. */
+  isAnonymous: boolean;
+  receiptNumber: string | null;
+  /** A PAN was supplied for the 80G receipt. */
+  hasPan: boolean;
 }
 
 export interface DonationsFilter {
@@ -301,17 +308,56 @@ export interface ApiVolunteer {
   handle: string;
   drivesAttended: number;
   lastActiveAt: string | null;
+  avatarEmoji: string;
+  avatarUrl: string | null;
+  city: string | null;
+  level: number;
+  treesPlanted: number;
+  /** From their most recent RSVP form; null if none of their RSVPs recorded one. */
+  phone: string | null;
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
+  rsvpCount: number;
+  noShows: number;
+  hoursLogged: number;
+  roles: string[];
+  volunteeringSince: string | null;
+  /** How many upcoming drives they are signed up for (`upcoming` lists the next three). */
+  upcomingCount: number;
+  upcoming: { driveId: string; title: string; startsAt: string; city: string | null }[];
+  recent: { driveId: string; title: string; startsAt: string; cancelled: boolean; attended: boolean | null }[];
 }
 
-export async function fetchNgoVolunteers(cursor?: string): Promise<Page<ApiVolunteer>> {
-  return apiFetch<Page<ApiVolunteer>>(pagedPath('/api/ngo/volunteers', cursor, {}, 30));
+export type VolunteerFilter = 'all' | 'upcoming' | 'inactive' | 'new' | 'noshow' | 'regular';
+export type VolunteerSort = 'recent' | 'oldest' | 'active' | 'name';
+
+export interface VolunteerQuery {
+  search?: string;
+  filter?: VolunteerFilter;
+  sort?: VolunteerSort;
+  driveId?: string;
+}
+
+export type VolunteerCounts = Record<VolunteerFilter, number>;
+
+export interface VolunteerPage extends Page<ApiVolunteer> {
+  /** People matching the current filter (not just the loaded page). */
+  total: number;
+  /** Chip counts for the current search / drive scope. */
+  counts: VolunteerCounts;
+}
+
+export async function fetchNgoVolunteers(cursor?: string, q: VolunteerQuery = {}): Promise<VolunteerPage> {
+  return apiFetch<VolunteerPage>(
+    pagedPath('/api/ngo/volunteers', cursor, { search: q.search?.trim(), filter: q.filter, sort: q.sort, driveId: q.driveId }, 30),
+  );
 }
 
 /** Cancels this person's confirmed RSVPs to the NGO's *upcoming* drives only – past attendance
  * history is untouched, so someone whose only participation was in the past will still show up
  * here afterward. */
-export async function removeNgoVolunteer(userId: string): Promise<{ cancelledCount: number }> {
-  return apiFetch<{ cancelledCount: number }>(`/api/ngo/volunteers/${userId}`, { method: 'DELETE' });
+export async function removeNgoVolunteer(userId: string, reason: string): Promise<{ cancelledCount: number }> {
+  return apiFetch<{ cancelledCount: number }>(`/api/ngo/volunteers/${userId}`, { method: 'DELETE', body: { reason } });
 }
 
 /** Uploads/replaces one verification document. Legal documents are refused once the NGO is approved. */

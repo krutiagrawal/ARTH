@@ -24,8 +24,10 @@ import { getSceneryMode, RainEffect, WindEffect } from '../components/common/Wea
 import { useTimeTheme, type TimeTheme, type TimePeriod } from '../hooks/useTimeTheme';
 import { useDeviceWeather } from '../hooks/useDeviceWeather';
 import { useAuth } from '../context/AuthContext';
-import { useNgoStats, useNgoStreakCalendar, useNgoProfile, useSettings, useStreakStatus } from '../hooks/useApiQueries';
+import { useNgoStats, useNgoStreakCalendar, useNgoProfile, useSettings, useStreakStatus, useGamesStatus } from '../hooks/useApiQueries';
 import { isOrgAtRiskDays } from '../api/orgStreaks';
+import { DailyGamesCard } from '../components/home/DailyGamesCard';
+import { EcoInsightSection } from '../components/home/EcoInsightSection';
 import { useFadeIn, useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -233,6 +235,7 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
   const recentWeeks = (streakData?.weeks ?? []).slice(-STREAK_WEEKS_SHOWN);
   const statsAnim = useFadeIn(80);
   const blurTargetRef = useRef<View>(null);
+  const { data: gamesStatus } = useGamesStatus();
 
   // The page below the hero follows the illustration's ground tone, exactly as the user-facing
   // Home screen does – a fixed cream page made every period look identical below the fold.
@@ -276,7 +279,6 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
     { key: 'plantedTrees', emoji: '🌳', color: COLORS.forest, title: 'Log planted trees', onPress: guard(() => navigation.navigate('NgoLogPlantedTrees')) },
     { key: 'bulkRequirements', emoji: '🤝', color: COLORS.amber, title: 'Bulk requirements', onPress: () => navigation.navigate('NgoBulkRequirements') },
     { key: 'streak', emoji: '🔥', color: COLORS.sage, title: 'Growth & Trust', onPress: () => navigation.navigate('NgoStreakBadges') },
-    { key: 'learn', emoji: '🎓', color: COLORS.xpBlue, title: 'Learn & play', onPress: () => navigation.navigate('Games') },
     { key: 'volunteers', emoji: '🙋', color: COLORS.coral, title: 'Volunteers', onPress: () => navigation.navigate('NgoVolunteers') },
     { key: 'staff', emoji: '🧑‍🤝‍🧑', color: COLORS.warmBrown, title: 'Staff roster', onPress: () => navigation.navigate('NgoStaff') },
     { key: 'donations', emoji: '💸', color: COLORS.sageDark, title: 'Donations', onPress: () => navigation.navigate('NgoDonations') },
@@ -440,6 +442,9 @@ export function NgoDashboardScreen({ navigation, onNavigateTab, previewPeriod }:
             </Animated.View>
           </>
         )}
+
+        {gamesStatus ? <DailyGamesCard games={gamesStatus.games} navigation={navigation} blurTarget={blurTargetRef} theme={theme} /> : null}
+        <EcoInsightSection navigation={navigation} blurTarget={blurTargetRef} theme={theme} />
 
         <Text style={[styles.sectionTitle, { color: seamText.primary }]}>Quick Actions</Text>
         <View style={styles.dockGrid}>

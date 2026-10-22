@@ -33,13 +33,13 @@ function describe(n: ApiNotification): string {
     case 'friend_request_accepted':
       return 'accepted your friend request';
     case 'follow_request':
-      return 'asked to follow you';
+      return 'would love to follow you 👋 Take a look and say yes?';
     case 'follow_accepted':
-      return 'accepted your follow request';
+      return 'accepted your follow request 🤝';
     case 'new_follower':
-      return 'started following you';
+      return 'is now following you 🎉 Your circle is growing!';
     case 'post_like':
-      return 'liked your post';
+      return 'loved your post ❤️';
     case 'tree_observation_logged':
       return 'added an observation on your tree';
     case 'tree_update_received':
@@ -47,18 +47,20 @@ function describe(n: ApiNotification): string {
     case 'tree_update_decided':
       return (n.data as any)?.decision === 'accepted' ? 'accepted your tree update' : 'reviewed your tree update';
     case 'new_post_from_followed':
-      return 'shared a new update';
+      return 'shared something new 📸 Come and see!';
     case 'drive_reminder':
       // A cancelled drive carries a full, ready-written message (apology + the NGO's reason).
       return (n.data as any)?.kind === 'cancelled' && (n.data as any)?.message
         ? (n.data as any).message
-        : 'has a drive coming up';
+        : (n.data as any)?.kind === 'relaunched' && (n.data as any)?.message
+          ? (n.data as any).message
+          : 'has a drive coming up 🌳 Hope to see you there!';
     case 'report_resolved':
       return 'Your report has been reviewed';
     case 'moderation_action':
       return 'Action was taken on your content';
     case 'reservation_requested':
-      return 'requested saplings from your stock';
+      return 'is asking for saplings from your stock 🌿 Ready to help?';
     case 'reservation_fulfilled':
       return 'fulfilled your sapling request';
     case 'reservation_declined':
@@ -73,7 +75,7 @@ function describe(n: ApiNotification): string {
       return 'You left something in your cart 🛒';
     // ---- Marketplace order lifecycle (planter-facing) ----
     case 'order_placed':
-      return 'placed a new order with you';
+      return 'placed an order with you 🛒 Time to get packing!';
     case 'order_confirmed':
       return (n.data as any)?.stage === 'packed' ? 'Your order was packed 📦' : 'Your order was confirmed';
     case 'order_out_for_delivery':
@@ -89,53 +91,57 @@ function describe(n: ApiNotification): string {
     case 'order_plantation_verified':
       return "This order's saplings are now verified ARTH Trees 🌳";
     case 'order_fulfillment_today':
-      return 'You have an order due today';
+      return 'You have an order due today 📦 Don\'t keep them waiting!';
     case 'wishlist_back_in_stock':
       return 'A species on your wishlist is back in stock';
     // ---- Nursery-flow (nursery-received) ----
     case 'stock_low':
-      return 'One of your species is running low on stock';
+      return 'One of your species is running low 📉 Time to restock!';
     case 'stock_out_of_stock':
-      return 'One of your species just ran out of stock';
+      return 'A species just sold out 🚫 Restock to keep the orders coming!';
     case 'bulk_requirement_nearby':
-      return 'An NGO nearby is looking for saplings';
+      return 'An NGO nearby needs saplings 🌿 Could you help them grow?';
     case 'bulk_requirement_response_received':
-      return 'A nursery offered to supply your bulk requirement';
+      return `A nursery offered to supply ${(n.data as any)?.quantityOffered ? `${Number((n.data as any).quantityOffered).toLocaleString('en-IN')} saplings` : 'your bulk requirement'} 🌱 See if it fits!`;
     case 'bulk_requirement_response_accepted':
-      return 'Your bulk-supply offer was accepted';
+      return 'Your offer was accepted 🎉 Those saplings are headed to a great home!';
+    case 'bulk_requirement_updated':
+      return `✏️ ${(n.data as any)?.message ?? 'An NGO changed a bulk requirement you offered on.'}`;
     case 'sapling_planted':
-      return 'A sapling you supplied was planted';
+      return 'A sapling from your nursery just got planted 🌱 Your impact is taking root!';
     case 'nursery_tree_milestone':
-      return 'A tree you supplied hit a growth milestone 🌳';
+      return 'A tree you supplied hit a growth milestone 🌳 Look how it grows!';
     case 'nursery_impact_milestone':
-      return 'You hit an impact milestone 🏆';
+      return 'You hit an impact milestone 🏆 Congratulations – that\'s a lot of green!';
     // ---- NGO-flow (NGO-received) ----
     case 'ngo_donation_received':
-      return `donated ₹${(((n.data as any)?.amountCents ?? 0) / 100).toLocaleString('en-IN')} to your campaign`;
+      return `just donated ₹${(((n.data as any)?.amountCents ?? 0) / 100).toLocaleString('en-IN')} to “${(n.data as any)?.campaignTitle ?? 'your campaign'}” 💚 Someone believes in your work!`;
     case 'ngo_drive_rsvp':
-      return (n.data as any)?.cancelled ? 'cancelled their RSVP to your drive' : "RSVP'd to your drive";
+      return (n.data as any)?.cancelled
+        ? `had to cancel their RSVP${(n.data as any)?.driveTitle ? ` to “${(n.data as any).driveTitle}”` : ' to your drive'} 😕`
+        : `is joining${(n.data as any)?.driveTitle ? ` “${(n.data as any).driveTitle}”` : ' your drive'} 🙌 One more planter on the team!`;
     case 'ngo_tree_adopted':
-      return 'adopted a tree from you';
+      return `adopted ${(n.data as any)?.treeNickname ?? 'a tree'} 🌳 A new tree parent just joined the family!`;
     case 'ngo_tree_released': {
       const d = n.data as any;
-      return `released ${d?.treeNickname ?? 'a tree'}${d?.reason ? ` (${d.reason})` : ''}. It is available for adoption again.`;
+      return `released ${d?.treeNickname ?? 'a tree'}${d?.reason ? ` (${d.reason})` : ''} 🍃 It's open for adoption again.`;
     }
     case 'ngo_health_check_due': {
       const d = n.data as any;
       const days = d?.thresholdDays ?? 30;
       const where = d?.placeName ? ` – ${d.placeName}` : '';
       return d?.count > 1
-        ? `${d.count} trees are due for their ${days}-day health check${where}`
-        : `A tree is due for its ${days}-day health check${where}`;
+        ? `🩺 ${d.count} trees are due for their ${days}-day health check${where} – time for a visit!`
+        : `🩺 A tree is due for its ${days}-day health check${where} – time for a visit!`;
     }
     case 'ngo_streak_at_risk':
-      return 'Your Updates Streak needs you this week 🔥';
+      return 'Your Updates Streak is on the line 🔥 Post an update this week to keep it alive!';
     case 'ngo_streak_broken':
-      return 'Your Updates Streak broke – start a new one 💔';
+      return 'Your Updates Streak broke 💔 Every great streak starts again – post an update to begin a new one!';
     case 'ngo_impact_milestone':
-      return 'You hit a Growth Level milestone 🏆';
+      return 'You just reached a new Growth Level 🏆 Look how far you\'ve come!';
     case 'bulk_requirement_deadline_passed':
-      return "Your bulk requirement deadline passed without being fulfilled";
+      return 'Time ran out on a bulk requirement ⏰ Reschedule it to get offers flowing again.';
     default:
       return 'sent you an update';
   }
@@ -202,6 +208,8 @@ function iconFor(n: ApiNotification): string {
       return '🤝';
     case 'bulk_requirement_response_accepted':
       return '✅';
+    case 'bulk_requirement_updated':
+      return '✏️';
     case 'sapling_planted':
       return '🌱';
     case 'nursery_tree_milestone':
@@ -246,6 +254,127 @@ function dayLabel(iso: string): string {
   return date.toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
 }
 
+interface Presentation {
+  /** Small uppercase tag above the text - what kind of thing this is. */
+  label: string;
+  /** Colours the icon tile, the tag, the accent bar and the call to action. */
+  color: string;
+  /** A big figure worth seeing at a glance (an amount, a quantity). */
+  highlight?: string;
+  /** The thing it is about: a campaign, a drive, a tree. */
+  subject?: string;
+  /** A message someone left, shown as a quote. */
+  quote?: string;
+  /** What tapping does, when it goes somewhere specific. */
+  cta?: string;
+}
+
+/** Look and feel per notification: a colour family, a label and the one detail that matters. */
+function present(n: ApiNotification): Presentation {
+  const d = (n.data ?? {}) as any;
+  const rupees = (cents?: number) => `₹${((cents ?? 0) / 100).toLocaleString('en-IN')}`;
+
+  switch (n.type) {
+    // ---- money & supporters ----
+    case 'ngo_donation_received':
+      return { label: 'Donation', color: COLORS.forest, highlight: `💰 ${rupees(d.amountCents)}`, subject: d.campaignTitle, quote: d.message || undefined, cta: 'View campaign' };
+    case 'ngo_drive_rsvp':
+      return { label: d.cancelled ? 'RSVP cancelled' : 'New RSVP', color: d.cancelled ? COLORS.coral : COLORS.golden, subject: d.driveTitle, cta: 'View drive' };
+    case 'ngo_tree_adopted':
+      return { label: 'Tree adopted', color: COLORS.forest, subject: d.treeNickname ? `🌳 ${d.treeNickname}` : undefined };
+    case 'ngo_tree_released':
+      return { label: 'Tree released', color: COLORS.earth, subject: d.treeNickname ? `🌳 ${d.treeNickname}` : undefined };
+    case 'drive_reminder':
+      return d.kind === 'cancelled'
+        ? { label: 'Drive cancelled', color: COLORS.coral, subject: d.driveTitle, cta: 'View drive' }
+        : d.kind === 'relaunched'
+          ? { label: 'Drive is back on', color: COLORS.forest, subject: d.driveTitle, cta: 'RSVP again' }
+          : { label: 'Drive reminder', color: COLORS.golden, subject: d.driveTitle, cta: 'View drive' };
+
+    // ---- bulk saplings ----
+    case 'bulk_requirement_nearby':
+      return { label: 'Bulk request nearby', color: COLORS.golden, cta: 'View requirement' };
+    case 'bulk_requirement_response_received':
+      return { label: 'New offer', color: COLORS.golden, highlight: d.quantityOffered ? `🌱 ${Number(d.quantityOffered).toLocaleString('en-IN')} saplings` : undefined, cta: 'Review offer' };
+    case 'bulk_requirement_response_accepted':
+      return { label: 'Offer accepted', color: COLORS.forest, highlight: d.quantityOffered ? `🌱 ${Number(d.quantityOffered).toLocaleString('en-IN')} saplings` : undefined, cta: 'Prepare handoff' };
+    case 'bulk_requirement_updated':
+      return { label: 'Requirement updated', color: COLORS.earth, cta: 'See changes' };
+    case 'bulk_requirement_deadline_passed':
+      return { label: 'Deadline passed', color: COLORS.coral, cta: 'Reschedule' };
+
+    // ---- nursery stock & orders ----
+    case 'stock_low':
+      return { label: 'Low stock', color: COLORS.golden, cta: 'Manage stock' };
+    case 'stock_out_of_stock':
+      return { label: 'Out of stock', color: COLORS.coral, cta: 'Manage stock' };
+    case 'reservation_requested':
+      return { label: 'Sapling request', color: COLORS.golden, cta: 'Review request' };
+    case 'sapling_planted':
+      return { label: 'Sapling planted', color: COLORS.forest };
+    case 'nursery_tree_milestone':
+      return { label: 'Growth milestone', color: COLORS.forest };
+    case 'nursery_impact_milestone':
+    case 'ngo_impact_milestone':
+      return { label: 'Milestone', color: COLORS.golden, cta: n.type === 'ngo_impact_milestone' ? 'See badges' : undefined };
+    case 'order_placed':
+    case 'order_fulfillment_today':
+      return { label: n.type === 'order_placed' ? 'New order' : 'Due today', color: COLORS.xpBlue, cta: 'View order' };
+    case 'order_cancelled':
+      return { label: 'Order cancelled', color: COLORS.coral, cta: 'View order' };
+    case 'order_confirmed':
+    case 'order_out_for_delivery':
+    case 'order_delivered':
+    case 'order_ready_for_pickup':
+    case 'order_picked_up':
+    case 'order_plantation_verified':
+      return { label: 'Your order', color: COLORS.xpBlue, cta: 'View order' };
+
+    // ---- care & streaks ----
+    case 'ngo_health_check_due':
+      return { label: 'Health check due', color: COLORS.sage, cta: 'Log checks' };
+    case 'ngo_streak_at_risk':
+    case 'streak_at_risk':
+      return { label: 'Streak at risk', color: COLORS.streakGold, cta: 'Keep it alive' };
+    case 'ngo_streak_broken':
+    case 'streak_broken':
+      return { label: 'Streak broken', color: COLORS.coral };
+
+    // ---- people ----
+    case 'follow_request':
+      return { label: 'Follow request', color: COLORS.sage, cta: 'Review request' };
+    case 'friend_request':
+      return { label: 'Friend request', color: COLORS.sage, cta: 'Review request' };
+    case 'new_follower':
+    case 'follow_accepted':
+    case 'friend_request_accepted':
+      return { label: 'New connection', color: COLORS.sage };
+    case 'post_like':
+      return { label: 'Like', color: COLORS.coral };
+    case 'new_post_from_followed':
+      return { label: 'New post', color: COLORS.sage };
+    case 'tree_observation_logged':
+    case 'tree_update_received':
+    case 'tree_update_decided':
+      return { label: 'Tree update', color: COLORS.forest };
+
+    case 'report_resolved':
+    case 'moderation_action':
+      return { label: 'Moderation', color: COLORS.earth };
+    default:
+      return { label: 'Update', color: COLORS.earth };
+  }
+}
+
+/** "now" / "12 min ago" / "3 h ago" for today, a clock time otherwise (the section header gives the day). */
+function timeAgo(iso: string): string {
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins} min ago`;
+  if (mins < 60 * 6) return `${Math.round(mins / 60)} h ago`;
+  return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
 function NotificationRow({
   notification,
   onPress,
@@ -255,6 +384,7 @@ function NotificationRow({
 }) {
   const actorImage = resolveMediaUrl(notification.actor?.imageUrl);
   const thumb = resolveMediaUrl(notification.postThumbnailUrl);
+  const look = present(notification);
   // Types with no actor (system-generated, not from another user) read as a full sentence on their own.
   const standalone =
     notification.type === 'report_resolved' ||
@@ -275,6 +405,7 @@ function NotificationRow({
     notification.type === 'stock_out_of_stock' ||
     notification.type === 'bulk_requirement_nearby' ||
     notification.type === 'bulk_requirement_response_accepted' ||
+    notification.type === 'bulk_requirement_updated' ||
     notification.type === 'sapling_planted' ||
     notification.type === 'nursery_tree_milestone' ||
     notification.type === 'nursery_impact_milestone' ||
@@ -288,41 +419,59 @@ function NotificationRow({
 
   return (
     <TouchableOpacity
-      style={[styles.row, !notification.read && styles.rowUnread]}
+      style={[styles.row, { borderColor: notification.read ? 'rgba(107, 68, 35, 0.25)' : `${look.color}88` }, !notification.read && { backgroundColor: `${look.color}12` }]}
       activeOpacity={0.8}
       onPress={onPress}
+      accessibilityRole="button"
     >
-      <View style={styles.avatar}>
+      <View style={[styles.accent, { backgroundColor: look.color, opacity: notification.read ? 0.35 : 1 }]} />
+
+      <View style={[styles.tile, { backgroundColor: `${look.color}26` }]}>
         {actorImage ? (
-          <Image source={{ uri: actorImage }} style={styles.avatarImage} />
+          <Image source={{ uri: actorImage }} style={styles.tileImage} />
         ) : (
-          <Text style={styles.avatarEmoji}>
-            {notification.actor?.avatarEmoji ?? iconFor(notification)}
-          </Text>
+          <Text style={styles.tileEmoji}>{notification.actor?.avatarEmoji ?? iconFor(notification)}</Text>
         )}
-        <View style={styles.typeBadge}>
-          <Text style={styles.typeBadgeText}>{iconFor(notification)}</Text>
-        </View>
+        {(actorImage || notification.actor?.avatarEmoji) && (
+          <View style={[styles.typeBadge, { backgroundColor: look.color }]}>
+            <Text style={styles.typeBadgeText}>{iconFor(notification)}</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.rowText}>
+        <View style={styles.topLine}>
+          <Text style={[styles.label, { color: look.color }]} numberOfLines={1}>{look.label}</Text>
+          <Text style={styles.time}>{timeAgo(notification.createdAt)}</Text>
+        </View>
+
         <Text style={styles.body}>
-          {!standalone && notification.actor ? (
-            <Text style={styles.actorName}>{notification.actor.name} </Text>
-          ) : null}
+          {!standalone && notification.actor ? <Text style={styles.actorName}>{notification.actor.name} </Text> : null}
           {describe(notification)}
         </Text>
-        <Text style={styles.time}>
-          {new Date(notification.createdAt).toLocaleTimeString(undefined, {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true,
-          })}
-        </Text>
+
+        {look.highlight || look.subject ? (
+          <View style={styles.detailRow}>
+            {look.highlight ? (
+              <View style={[styles.highlight, { backgroundColor: `${look.color}22` }]}>
+                <Text style={[styles.highlightText, { color: look.color }]}>{look.highlight}</Text>
+              </View>
+            ) : null}
+            {look.subject ? <Text style={styles.subject} numberOfLines={1}>{look.subject}</Text> : null}
+          </View>
+        ) : null}
+
+        {look.quote ? (
+          <View style={[styles.quote, { borderLeftColor: look.color }]}>
+            <Text style={styles.quoteText} numberOfLines={3}>“{look.quote}”</Text>
+          </View>
+        ) : null}
+
+        {look.cta ? <Text style={[styles.cta, { color: look.color }]}>{look.cta} ›</Text> : null}
       </View>
 
       {thumb ? <Image source={{ uri: thumb }} style={styles.thumb} /> : null}
-      {!notification.read && <View style={styles.unreadDot} />}
+      {!notification.read && <View style={[styles.unreadDot, { backgroundColor: look.color }]} />}
     </TouchableOpacity>
   );
 }
@@ -407,7 +556,7 @@ export function NotificationsScreen({ navigation }: any) {
         navigation.navigate('NurseryStock');
         return;
       }
-      if (n.type === 'bulk_requirement_nearby' || n.type === 'bulk_requirement_response_accepted') {
+      if (n.type === 'bulk_requirement_nearby' || n.type === 'bulk_requirement_response_accepted' || n.type === 'bulk_requirement_updated') {
         const requirementId = (n.data as any)?.requirementId;
         if (requirementId) navigation.navigate('NurseryBulkRequirementDetail', { requirementId });
         else navigation.navigate('NurseryBulkRequirements');
@@ -541,48 +690,46 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 12,
     backgroundColor: 'transparent',
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: 'rgba(107, 68, 35, 0.35)',
-    padding: 12,
-    marginBottom: 8,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1.5,
+    paddingVertical: 14,
+    paddingLeft: 18,
+    paddingRight: 12,
+    marginBottom: 10,
+    overflow: 'hidden',
   },
-  rowUnread: { borderColor: COLORS.earth, backgroundColor: 'rgba(107, 68, 35, 0.06)' },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.beige,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarImage: { width: '100%', height: '100%', borderRadius: 22 },
-  avatarEmoji: { fontSize: 21 },
+  accent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5 },
+  tile: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  tileImage: { width: '100%', height: '100%', borderRadius: 16 },
+  tileEmoji: { fontSize: 24 },
   typeBadge: {
     position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: COLORS.white,
+    bottom: -4,
+    right: -4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  typeBadgeText: { fontSize: 10 },
-  rowText: { flex: 1 },
+  typeBadgeText: { fontSize: 11 },
+  rowText: { flex: 1, gap: 4 },
+  topLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  label: { flex: 1, fontSize: 10, fontWeight: '900', letterSpacing: 0.9, textTransform: 'uppercase' },
+  time: { fontSize: 11, color: COLORS.textMuted },
   body: { fontSize: 14, lineHeight: 20, color: COLORS.textSecondary },
   actorName: { fontFamily: FONTS.display, color: COLORS.textPrimary },
-  time: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
-  thumb: { width: 40, height: 40, borderRadius: RADIUS.sm },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.forest,
-  },
+  detailRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 2 },
+  highlight: { borderRadius: 999, paddingHorizontal: 11, paddingVertical: 3 },
+  highlightText: { fontSize: 14, fontWeight: '900' },
+  subject: { flexShrink: 1, fontSize: 12, fontWeight: '600', color: COLORS.textSecondary },
+  quote: { borderLeftWidth: 3, paddingLeft: 10, paddingVertical: 2, marginTop: 2 },
+  quoteText: { fontSize: 13, lineHeight: 18, fontStyle: 'italic', color: COLORS.textPrimary },
+  cta: { fontSize: 12, fontWeight: '800', marginTop: 4 },
+  thumb: { width: 44, height: 44, borderRadius: RADIUS.sm },
+  unreadDot: { position: 'absolute', top: 12, right: 10, width: 9, height: 9, borderRadius: 5 },
   footer: { marginVertical: SPACING.md },
 });

@@ -9,6 +9,7 @@ import { notify } from './notification.service';
 import { recordNgoContribution, recomputeReputation } from './ngoReputation.service';
 import { getLatestStatusByTree } from './plantedTree.service';
 import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
+import { notRescheduled } from './driveRules';
 
 interface PickupPointInput {
   address: string;
@@ -88,6 +89,8 @@ export const driveInclude = {
   ngo: true,
   _count: { select: { rsvps: { where: { status: 'confirmed' as const } } } },
   pickupPoints: { orderBy: { order: 'asc' as const } },
+  // At most one replacement is ever made (relaunchDrive refuses a second), so one row is enough.
+  relaunches: { select: { id: true }, take: 1 },
   plants: {
     orderBy: { order: 'asc' as const },
     include: { _count: { select: { sponsorships: { where: { status: 'succeeded' as const } } } } },
@@ -310,6 +313,7 @@ export async function listDrives(prisma: PrismaClient, filter: NearbyFilter, use
   const drives = await prisma.drive.findMany({
     where: {
       status: filter.includePast ? { in: ['upcoming', 'completed', 'cancelled'] as DriveStatus[] } : 'upcoming',
+      ...notRescheduled,
       ngo: { status: 'approved' },
       ...(filter.ngoId ? { ngoId: filter.ngoId } : {}),
     },
@@ -349,13 +353,20 @@ export async function listDrives(prisma: PrismaClient, filter: NearbyFilter, use
 export async function getDrive(prisma: PrismaClient, driveId: string, userId?: string) {
   // Independent of each other (the rsvp lookup only needs driveId/userId, not the drive row
   // itself), so run them concurrently instead of paying two sequential DB round trips.
-  const [drive, rsvp] = await Promise.all([
+  const [drive, rsvp, going] = await Promise.all([
     prisma.drive.findUnique({ where: { id: driveId }, include: driveInclude }),
     userId ? prisma.driveRsvp.findUnique({ where: { driveId_userId: { driveId, userId } } }) : Promise.resolve(null),
+    // A few avatars (no names) so "who else is going" is visible without exposing the attendee list.
+    prisma.driveRsvp.findMany({
+      where: { driveId, status: 'confirmed' },
+      orderBy: { createdAt: 'asc' },
+      take: 5,
+      select: { user: { select: { avatarEmoji: true, avatarUrl: true } } },
+    }),
   ]);
   if (!drive) throw new NotFoundError('Drive not found');
 
-  return { ...drive, isRsvped: rsvp?.status === 'confirmed' };
+  return { ...drive, isRsvped: rsvp?.status === 'confirmed', goingPreview: going.map((g) => g.user) };
 }
 
 /** Drives a regular user has RSVP'd to — for their profile's Drives tab. */
@@ -402,7 +413,9 @@ export async function listOwnedDrives(prisma: PrismaClient, ngoUserId: string, f
       // "Ended" = still marked upcoming but its start has passed, matching how the app labels it.
       ...(filter.status === 'upcoming' ? { status: 'upcoming' as const, startsAt: { gt: new Date() } } : {}),
       ...(filter.status === 'ended' ? { status: 'upcoming' as const, startsAt: { lte: new Date() } } : {}),
-      ...(filter.status === 'completed' || filter.status === 'cancelled' ? { status: filter.status } : {}),
+      ...(filter.status === 'completed' ? { status: 'completed' as const } : {}),
+      // Drives that were relaunched are rescheduled, not off - they don't belong under Cancelled.
+      ...(filter.status === 'cancelled' ? { status: 'cancelled' as const, ...notRescheduled } : {}),
     },
     include: driveInclude,
     orderBy: [{ startsAt: filter.sort === 'oldest' || filter.sort === 'soonest' ? 'asc' : 'desc' }, { id: 'desc' }],
@@ -753,7 +766,7 @@ export async function getOwnedDriveSummary(prisma: PrismaClient, ngoUserId: stri
     prisma.drive.count({ where: { ...base, status: 'upcoming', startsAt: { gt: now } } }),
     prisma.drive.count({ where: { ...base, status: 'upcoming', startsAt: { lte: now } } }),
     prisma.drive.count({ where: { ...base, status: 'completed' } }),
-    prisma.drive.count({ where: { ...base, status: 'cancelled' } }),
+    prisma.drive.count({ where: { ...base, status: 'cancelled', ...notRescheduled } }),
     prisma.drive.count({ where: { ngoId: ngo.id, archivedAt: { not: null } } }),
     // Starting within a week with nobody signed up yet.
     prisma.drive.count({
@@ -764,18 +777,24 @@ export async function getOwnedDriveSummary(prisma: PrismaClient, ngoUserId: stri
 }
 
 /** Clones a drive (details, pickup points, plants) one week later, as a fresh upcoming drive with no RSVPs or sponsorships. */
-export async function duplicateDrive(prisma: PrismaClient, ngoUserId: string, driveId: string) {
+export async function duplicateDrive(
+  prisma: PrismaClient,
+  ngoUserId: string,
+  driveId: string,
+  opts: { startsAt?: Date; keepTitle?: boolean; relaunchedFromId?: string } = {},
+) {
   const source = await findOwnedDriveOrThrow(prisma, ngoUserId, driveId);
   const full = await prisma.drive.findUniqueOrThrow({ where: { id: source.id }, include: { pickupPoints: true, plants: true } });
 
   const WEEK = 7 * 86_400_000;
-  const startsAt = new Date(Math.max(full.startsAt.getTime() + WEEK, Date.now() + 86_400_000));
+  const startsAt = opts.startsAt ?? new Date(Math.max(full.startsAt.getTime() + WEEK, Date.now() + 86_400_000));
   const shift = startsAt.getTime() - full.startsAt.getTime();
 
   return prisma.drive.create({
     data: {
       ngoId: full.ngoId,
-      title: `${full.title} (copy)`.slice(0, 120),
+      relaunchedFromId: opts.relaunchedFromId,
+      title: opts.keepTitle ? full.title : `${full.title} (copy)`.slice(0, 120),
       description: full.description,
       instructions: full.instructions,
       photoUrl: full.photoUrl,
@@ -787,6 +806,12 @@ export async function duplicateDrive(prisma: PrismaClient, ngoUserId: string, dr
       startsAt,
       durationMinutes: full.durationMinutes,
       capacity: full.capacity,
+      whatToBring: full.whatToBring,
+      providedByNgo: full.providedByNgo,
+      contactName: full.contactName,
+      contactPhone: full.contactPhone,
+      minAge: full.minAge,
+      effortLevel: full.effortLevel,
       pickupPoints: full.pickupPoints.length
         ? { create: full.pickupPoints.map((p) => ({ address: p.address, arrivalBy: new Date(p.arrivalBy.getTime() + shift), order: p.order })) }
         : undefined,
@@ -860,4 +885,51 @@ export async function exportMySponsorships(prisma: PrismaClient, userId: string)
     amountRupees: r.amountCents / 100,
     status: r.status,
   }));
+}
+
+/**
+ * Brings a cancelled drive back as a NEW upcoming drive on a new date, rather than reopening the
+ * cancelled one: its RSVPs were already told it was off and its sponsorships refunded, so reviving
+ * it in place would leave that history wrong. The cancelled drive stays as a record. Optionally
+ * tells the volunteers who had signed up to the cancelled one that it is back on.
+ */
+export async function relaunchDrive(
+  prisma: PrismaClient,
+  ngoUserId: string,
+  driveId: string,
+  input: { startsAt: Date; notifyPrevious: boolean },
+) {
+  const source = await findOwnedDriveOrThrow(prisma, ngoUserId, driveId);
+  if (source.status !== 'cancelled') throw new ConflictError('Only a cancelled drive can be relaunched');
+  if (input.startsAt.getTime() <= Date.now()) throw new BadRequestError('Pick a start time in the future');
+  // One relaunch per cancelled drive - a second would put two live copies in front of volunteers.
+  // If the replacement is itself cancelled later, relaunch that one instead.
+  if (await prisma.drive.findFirst({ where: { relaunchedFromId: source.id }, select: { id: true } })) {
+    throw new ConflictError('This drive has already been relaunched');
+  }
+
+  const drive = await duplicateDrive(prisma, ngoUserId, driveId, { startsAt: input.startsAt, keepTitle: true, relaunchedFromId: source.id });
+
+  if (input.notifyPrevious) {
+    const ngo = await requireNgoProfile(prisma, ngoUserId);
+    const rsvps = await prisma.driveRsvp.findMany({ where: { driveId: source.id, status: 'confirmed' }, select: { userId: true } });
+    const when = input.startsAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    await Promise.all(
+      rsvps.map((r) =>
+        notify(prisma, {
+          userId: r.userId,
+          type: 'drive_reminder',
+          data: {
+            driveId: drive.id,
+            driveTitle: drive.title,
+            kind: 'relaunched',
+            message: `Good news 🌱 “${drive.title}” is back on! ${ngo.orgName ?? 'The organiser'} rescheduled it for ${when}. Tap to RSVP again 💚`,
+          },
+          push: { title: 'Drive is back on 🌳', body: `“${drive.title}” has been rescheduled for ${when}. Tap to RSVP again.` },
+        }),
+      ),
+    );
+  }
+
+  return drive;
 }

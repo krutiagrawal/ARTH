@@ -21,7 +21,15 @@ import { ForestThemesPicker } from '../components/profile/ForestThemesPicker';
 import { useAuth } from '../context/AuthContext';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { useSoundSystem } from '../hooks/useSoundSystem';
-import { useUserPosts, useBlockTarget, useUnblockTarget } from '../hooks/useSocialQueries';
+import {
+  useUserPosts,
+  useBlockTarget,
+  useUnblockTarget,
+  useAcceptFollowRequest,
+  useDeclineFollowRequest,
+  useAcceptNurseryFollowRequest,
+  useDeclineNurseryFollowRequest,
+} from '../hooks/useSocialQueries';
 import { BlockedProfileNotice } from '../components/social/BlockedProfileNotice';
 import {
   useAchievements,
@@ -59,6 +67,7 @@ export function UserProfileScreen({ route, navigation }: any) {
   const userId: string | undefined = route?.params?.userId;
   const friendRequestId: string | undefined = route?.params?.friendRequestId;
   const friendRequestFromName: string | undefined = route?.params?.friendRequestFromName;
+  const followRequest: { kind: 'ngo' | 'nursery'; followId: string } | undefined = route?.params?.followRequest;
   const isOwn = !userId;
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -67,7 +76,12 @@ export function UserProfileScreen({ route, navigation }: any) {
   const respondFriendRequest = useRespondFriendRequest();
   const blockTarget = useBlockTarget();
   const unblockTarget = useUnblockTarget();
-  const [pendingRequest, setPendingRequest] = useState(!!friendRequestId);
+  const [pendingRequest, setPendingRequest] = useState(!!friendRequestId || !!followRequest);
+  const acceptNgoFollow = useAcceptFollowRequest();
+  const declineNgoFollow = useDeclineFollowRequest();
+  const acceptNurseryFollow = useAcceptNurseryFollowRequest();
+  const declineNurseryFollow = useDeclineNurseryFollowRequest();
+  const followBusy = acceptNgoFollow.isPending || declineNgoFollow.isPending || acceptNurseryFollow.isPending || declineNurseryFollow.isPending;
   const [menuOpen, setMenuOpen] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -166,6 +180,16 @@ export function UserProfileScreen({ route, navigation }: any) {
   };
 
   const acceptRequest = () => {
+    if (followRequest) {
+      const accept = followRequest.kind === 'ngo' ? acceptNgoFollow : acceptNurseryFollow;
+      accept.mutate(followRequest.followId, {
+        onSuccess: () => {
+          setPendingRequest(false);
+          setToastMessage(`${name} is now following you!`);
+        },
+      });
+      return;
+    }
     if (!friendRequestId) return;
     respondFriendRequest.mutate(
       { id: friendRequestId, action: 'accept' },
@@ -180,6 +204,11 @@ export function UserProfileScreen({ route, navigation }: any) {
   };
 
   const declineRequest = () => {
+    if (followRequest) {
+      const decline = followRequest.kind === 'ngo' ? declineNgoFollow : declineNurseryFollow;
+      decline.mutate(followRequest.followId, { onSuccess: () => navigation.goBack() });
+      return;
+    }
     if (!friendRequestId) return;
     respondFriendRequest.mutate({ id: friendRequestId, action: 'decline' }, { onSuccess: () => navigation.goBack() });
   };
@@ -279,20 +308,21 @@ export function UserProfileScreen({ route, navigation }: any) {
           ListHeaderComponent={
             <>
               {pendingRequest && (
-                <View style={styles.requestBanner}>
-                  <Text style={styles.requestBannerText}>Wants to be your friend</Text>
+                <View style={[styles.requestBanner, { marginTop: insets.top + 56 }]}>
+                  <Text style={styles.requestBannerText}>{followRequest ? 'Wants to follow you' : 'Wants to be your friend'}</Text>
                   <View style={styles.requestBannerActions}>
-                    <TouchableOpacity style={styles.requestBannerAccept} onPress={acceptRequest} disabled={respondFriendRequest.isPending}>
+                    <TouchableOpacity style={styles.requestBannerAccept} onPress={acceptRequest} disabled={respondFriendRequest.isPending || followBusy}>
                       <Text style={styles.requestBannerAcceptText}>✓ Accept</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.requestBannerDecline} onPress={declineRequest} disabled={respondFriendRequest.isPending}>
+                    <TouchableOpacity style={styles.requestBannerDecline} onPress={declineRequest} disabled={respondFriendRequest.isPending || followBusy}>
                       <Text style={styles.requestBannerDeclineText}>✕ Decline</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
               )}
               <ProfileHeader
-                topInset={insets.top}
+                // The request banner already sits below the status bar, so the vine doesn't need its own inset.
+                topInset={pendingRequest ? 0 : insets.top}
                 avatarUrl={avatarUrl}
                 avatarEmoji={avatarEmoji ?? '🧑‍🌾'}
                 xpProgress={isOwn ? { progress: getXpProgress(xp, level).progress, level } : null}
@@ -441,7 +471,7 @@ const styles = StyleSheet.create({
   iconText: { fontSize: 18, color: COLORS.textPrimary, fontWeight: '700' },
   requestBanner: {
     marginHorizontal: 20,
-    marginBottom: 12,
+    marginBottom: 4,
     padding: 14,
     borderRadius: RADIUS.lg,
     borderWidth: 1,

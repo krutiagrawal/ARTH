@@ -10,10 +10,13 @@ const MIN_INTERVAL_MS = 1100;
 const USER_AGENT = 'Arth-App/1.0 (tree planting platform; contact: support@arth.app)';
 
 // The product only launches in Pune right now (see CityPickerField.tsx), so address-field
-// search-as-you-type suggestions are boxed to Pune city plus its nearby villages/suburbs —
-// left,top,right,bottom in lon/lat — rather than surfacing same-named places anywhere on earth.
-// `bounded=1` makes Nominatim enforce this as a hard filter instead of just a ranking hint.
-const PUNE_VIEWBOX = '73.65,18.75,74.05,18.30';
+// search-as-you-type suggestions favour Pune city plus its nearby villages/suburbs —
+// left,top,right,bottom in lon/lat. A wider box than the city proper so outlying localities
+// (Hinjewadi, Wagholi, Lonavala road villages…) are still "local". Results from this box are
+// listed first; anywhere else in India fills in after, so small localities that OSM tags outside
+// the box (or users planting beyond Pune) still find a match instead of an empty list.
+const PUNE_VIEWBOX = '73.45,18.85,74.30,18.15';
+const PUNE_CENTER = { lat: 18.5204, lng: 73.8567 };
 
 let queue: Promise<unknown> = Promise.resolve();
 let lastCallAt = 0;
@@ -82,7 +85,7 @@ export async function searchAddress(query: string, near?: { lat: number; lng: nu
   // means a few keystrokes can time out into an empty list. Photon (OSM-based, built for
   // search-as-you-type, no throttle needed) runs alongside it; Photon results come first since
   // they're biased to the user's own position, then Nominatim fills any gaps.
-  const [photon, nominatim] = await Promise.all([searchPhoton(trimmed, near), searchNominatim(trimmed)]);
+  const [photon, nominatim] = await Promise.all([searchPhoton(trimmed, near ?? PUNE_CENTER), searchNominatim(trimmed)]);
 
   const merged: AddressSuggestion[] = [];
   for (const s of [...photon, ...nominatim]) {
@@ -91,18 +94,18 @@ export async function searchAddress(query: string, near?: { lat: number; lng: nu
     );
     if (!duplicate) merged.push(s);
   }
-  return merged.slice(0, 12);
+  return merged.slice(0, 15);
 }
 
 const PHOTON_URL = 'https://photon.komoot.io/api/';
 
-async function searchPhoton(query: string, near?: { lat: number; lng: number }): Promise<AddressSuggestion[]> {
+async function searchPhoton(query: string, near: { lat: number; lng: number }): Promise<AddressSuggestion[]> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    // With the user's position, bias results toward it; otherwise box to the Pune area.
-    const area = near ? `&lat=${near.lat}&lon=${near.lng}` : '&bbox=73.65,18.30,74.05,18.75';
-    const response = await fetch(`${PHOTON_URL}?limit=10&lang=en&q=${encodeURIComponent(query)}${area}`, {
+    // Bias (not restrict) toward the user's position, or Pune - nearby hits rank first, but a
+    // locality elsewhere in India still comes back. Over-fetch since non-India hits are dropped.
+    const response = await fetch(`${PHOTON_URL}?limit=20&lang=en&location_bias_scale=0.6&q=${encodeURIComponent(query)}&lat=${near.lat}&lon=${near.lng}`, {
       signal: controller.signal,
       headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
     });
@@ -117,9 +120,10 @@ async function searchPhoton(query: string, near?: { lat: number; lng: number }):
     for (const f of data.features ?? []) {
       const [lng, lat] = f.geometry?.coordinates ?? [];
       const p = f.properties ?? {};
+      if (p.countrycode && p.countrycode !== 'IN') continue;
       if (lat === undefined || lng === undefined || !Number.isFinite(lat) || !Number.isFinite(lng)) continue;
       const street = [p.housenumber, p.street].filter(Boolean).join(' ');
-      const parts = [p.name, street, p.district ?? p.locality, p.city ?? p.county, p.state, p.postcode, p.country]
+      const parts = [p.name, street, p.locality, p.district, p.city ?? p.county, p.state, p.postcode, p.country]
         .filter((part, i, arr): part is string => !!part && arr.indexOf(part) === i);
       if (!parts.length) continue;
       out.push({ label: parts.join(', '), lat, lng, city: p.city ?? p.county ?? p.district ?? null });
@@ -133,7 +137,16 @@ async function searchPhoton(query: string, near?: { lat: number; lng: number }):
 }
 
 async function searchNominatim(trimmed: string): Promise<AddressSuggestion[]> {
-  const url = `${NOMINATIM_URL}?format=json&addressdetails=1&limit=10&viewbox=${PUNE_VIEWBOX}&bounded=1&q=${encodeURIComponent(trimmed)}`;
+  const q = encodeURIComponent(trimmed);
+  // Inside the Pune box first (hard filter); only if that is thin, widen to all of India with the
+  // box as a ranking hint. Skips the second throttled call whenever the first already has enough.
+  const local = await nominatimQuery(`${NOMINATIM_URL}?format=json&addressdetails=1&limit=10&viewbox=${PUNE_VIEWBOX}&bounded=1&q=${q}`);
+  if (local.length >= 6) return local;
+  const wide = await nominatimQuery(`${NOMINATIM_URL}?format=json&addressdetails=1&limit=10&countrycodes=in&viewbox=${PUNE_VIEWBOX}&q=${q}`);
+  return [...local, ...wide];
+}
+
+async function nominatimQuery(url: string): Promise<AddressSuggestion[]> {
   const response = await throttledFetch(url);
   if (!response) return [];
 

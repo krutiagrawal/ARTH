@@ -12,6 +12,8 @@ const entrySchema = z.object({
   description: z.string().max(4000).optional(),
   happenedOn: z.coerce.date(),
   locationLabel: z.string().max(200).optional(),
+  lat: z.coerce.number().min(-90).max(90).optional(),
+  lng: z.coerce.number().min(-180).max(180).optional(),
   city: z.string().max(100).optional(),
   treesPlanted: z.coerce.number().int().min(0).max(10_000_000).optional(),
   volunteersInvolved: z.coerce.number().int().min(0).max(1_000_000).optional(),

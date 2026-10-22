@@ -18,24 +18,28 @@ import {
 import type { ApiFollower } from '../api/nurseryFollowers';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { PageFooter } from '../components/common/PageFooter';
 
-function FollowerRow({ follower, isPending, onAccept, onDecline, onRemove }: {
+function FollowerRow({ follower, isPending, onOpenProfile, onAccept, onDecline, onRemove }: {
   follower: ApiFollower;
   isPending: boolean;
+  onOpenProfile: () => void;
   onAccept?: () => void;
   onDecline?: () => void;
   onRemove?: () => void;
 }) {
   return (
     <View style={styles.row}>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarEmoji}>{follower.user.avatarEmoji}</Text>
-      </View>
-      <View style={styles.rowText}>
-        <Text style={styles.name} numberOfLines={1}>{follower.user.name}</Text>
-        <Text style={styles.meta} numberOfLines={1}>@{follower.user.handle} · {follower.user.treesPlantedCount} trees planted</Text>
-      </View>
+      <TouchableOpacity style={styles.profileTap} onPress={onOpenProfile} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`View ${follower.user.name}'s profile`}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarEmoji}>{follower.user.avatarEmoji}</Text>
+        </View>
+        <View style={styles.rowText}>
+          <Text style={styles.name} numberOfLines={1}>{follower.user.name}</Text>
+          <Text style={styles.meta} numberOfLines={1}>@{follower.user.handle} · {follower.user.treesPlantedCount} trees planted</Text>
+        </View>
+      </TouchableOpacity>
       {isPending ? (
         <View style={styles.actionsRow}>
           <TouchableOpacity style={styles.declineBtn} onPress={onDecline}>
@@ -58,7 +62,8 @@ export function NurseryFollowersScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<'accepted' | 'pending'>('accepted');
   const [query, setQuery] = useState('');
-  const listQuery = useNurseryFollowers({ status: tab, q: query.trim() || undefined });
+  const debouncedQuery = useDebouncedValue(query.trim());
+  const listQuery = useNurseryFollowers({ status: tab, q: debouncedQuery || undefined });
   const { data, isLoading, refetch } = listQuery;
   const acceptMutation = useAcceptNurseryFollowRequest();
   const declineMutation = useDeclineNurseryFollowRequest();
@@ -111,6 +116,12 @@ export function NurseryFollowersScreen({ navigation }: any) {
             <FollowerRow
               follower={item}
               isPending={tab === 'pending'}
+              onOpenProfile={() =>
+                navigation.navigate('UserPublicProfile', {
+                  userId: item.user.id,
+                  ...(tab === 'pending' ? { followRequest: { kind: 'nursery', followId: item.followId } } : {}),
+                })
+              }
               onAccept={() => acceptMutation.mutate(item.followId)}
               onDecline={() => declineMutation.mutate(item.followId)}
               onRemove={() => confirmRemove(item)}
@@ -140,6 +151,7 @@ const styles = StyleSheet.create({
   search: { paddingVertical: 10, fontSize: 14, color: COLORS.textPrimary },
   list: { padding: SPACING.md, gap: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown, borderRadius: RADIUS.md, padding: 12 },
+  profileTap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: COLORS.mintLight, alignItems: 'center', justifyContent: 'center' },
   avatarEmoji: { fontSize: 21 },
   rowText: { flex: 1 },

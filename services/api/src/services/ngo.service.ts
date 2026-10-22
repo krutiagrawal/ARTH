@@ -4,6 +4,7 @@ import { notify } from './notification.service';
 import { computeSurvivalStats } from './plantedTree.service';
 import { parseTake } from '../utils/pagination';
 import { getNgoImpactTotals } from './treeImpact.service';
+import { notRescheduled } from './driveRules';
 
 const RECENT_ACTIVITY_LIMIT = 10;
 
@@ -292,7 +293,7 @@ export async function getOwnStats(prisma: PrismaClient, userId: string) {
       distinct: ['userId'],
     }),
     // Total drives, all-time — vs. upcomingDrives above which filters status:'upcoming'.
-    prisma.drive.count({ where: { ngoId: ngo.id } }),
+    prisma.drive.count({ where: { ngoId: ngo.id, ...notRescheduled } }),
     prisma.plantedTree.count({ where: { ngoId: ngo.id } }),
     prisma.driveRsvp.findMany({
       where: { status: 'confirmed', drive: { ngoId: ngo.id } },
@@ -406,8 +407,12 @@ export async function getOwnDonations(prisma: PrismaClient, userId: string, filt
         currency: true,
         status: true,
         createdAt: true,
+        message: true,
+        isAnonymous: true,
+        receiptNumber: true,
+        donorPan: true,
         campaign: { select: { id: true, title: true } },
-        user: { select: { name: true, handle: true } },
+        user: { select: { id: true, name: true, handle: true, avatarEmoji: true, city: true } },
       },
     }),
     prisma.donation.count({ where }),
@@ -423,7 +428,13 @@ export async function getOwnDonations(prisma: PrismaClient, userId: string, filt
       createdAt: d.createdAt,
       campaignId: d.campaign.id,
       campaignTitle: d.campaign.title,
+      // The NGO always sees who gave; `isAnonymous` only hides the name from other donors.
       donor: d.user,
+      message: d.message?.trim() || null,
+      isAnonymous: d.isAnonymous,
+      receiptNumber: d.receiptNumber,
+      // Whether a PAN was given for the 80G receipt - the number itself isn't needed on this list.
+      hasPan: !!d.donorPan,
     })),
   };
 }
@@ -459,48 +470,224 @@ export async function getOwnDonationsSummary(prisma: PrismaClient, userId: strin
 // for volunteersInvolved: any user with a confirmed RSVP to one of this
 // NGO's drives. This aggregates that into a per-person list for the
 // Volunteers dashboard page.
-export async function getOwnVolunteers(prisma: PrismaClient, userId: string, q: { cursor?: string; take?: number | string } = {}) {
+export type VolunteerFilter = 'all' | 'upcoming' | 'inactive' | 'new' | 'noshow' | 'regular';
+export type VolunteerSort = 'recent' | 'oldest' | 'active' | 'name';
+
+export interface VolunteerQuery {
+  cursor?: string;
+  take?: number | string;
+  search?: string;
+  filter?: string;
+  sort?: string;
+  driveId?: string;
+}
+
+const NEW_VOLUNTEER_DAYS = 30;
+const REGULAR_MIN_DRIVES = 3;
+const MAX_ROSTER = 5000;
+
+interface RollupRow {
+  userId: string;
+  rsvpCount: number;
+  firstAt: Date;
+  lastAt: Date;
+  drivesAttended: number;
+  noShows: number;
+  hasUpcoming: boolean;
+}
+
+/**
+ * One row per volunteer, built from a handful of grouped queries over the NGO's confirmed RSVPs.
+ * Search / drive scoping narrow which people are included; the per-person numbers are always their
+ * full history with this NGO (so "3 drives attended" never changes with the drive filter).
+ */
+async function volunteerRollup(prisma: PrismaClient, ngoId: string, q: VolunteerQuery): Promise<RollupRow[]> {
+  const search = q.search?.trim();
+  const digits = search?.replace(/\D/g, '') ?? '';
+  const scope = { status: 'confirmed' as const, drive: { ngoId } };
+
+  let userIds: string[] | undefined;
+  if (search || q.driveId) {
+    const matches = await prisma.driveRsvp.findMany({
+      where: {
+        ...scope,
+        ...(q.driveId ? { driveId: q.driveId } : {}),
+        ...(search
+          ? {
+              OR: [
+                { user: { name: { contains: search, mode: 'insensitive' as const } } },
+                { user: { handle: { contains: search, mode: 'insensitive' as const } } },
+                ...(digits.length >= 3 ? [{ phone: { contains: digits } }] : []),
+              ],
+            }
+          : {}),
+      },
+      select: { userId: true },
+      distinct: ['userId'],
+      take: MAX_ROSTER,
+    });
+    userIds = matches.map((m) => m.userId);
+    if (userIds.length === 0) return [];
+  }
+
+  const where = { ...scope, ...(userIds ? { userId: { in: userIds } } : {}) };
+  const now = new Date();
+  const [all, recorded, attended, missed, upcoming] = await Promise.all([
+    prisma.driveRsvp.groupBy({ by: ['userId'], where, _count: { _all: true }, _min: { createdAt: true }, _max: { createdAt: true } }),
+    prisma.driveRsvp.groupBy({ by: ['userId'], where: { ...where, attended: { not: null } }, _count: { _all: true } }),
+    prisma.driveRsvp.groupBy({ by: ['userId'], where: { ...where, attended: true }, _count: { _all: true } }),
+    prisma.driveRsvp.groupBy({ by: ['userId'], where: { ...where, attended: false }, _count: { _all: true } }),
+    prisma.driveRsvp.groupBy({
+      by: ['userId'],
+      where: { ...where, drive: { ngoId, status: 'upcoming', startsAt: { gt: now } } },
+      _count: { _all: true },
+    }),
+  ]);
+  const recordedBy = new Map(recorded.map((r) => [r.userId, r._count._all]));
+  const attendedBy = new Map(attended.map((r) => [r.userId, r._count._all]));
+  const missedBy = new Map(missed.map((r) => [r.userId, r._count._all]));
+  const upcomingSet = new Set(upcoming.map((r) => r.userId));
+
+  return all.slice(0, MAX_ROSTER).map((g) => ({
+    userId: g.userId,
+    rsvpCount: g._count._all,
+    firstAt: g._min.createdAt as Date,
+    lastAt: g._max.createdAt as Date,
+    // Once the NGO has recorded attendance for this person, that's the real count; until then,
+    // the RSVP count is the best available signal.
+    drivesAttended: (recordedBy.get(g.userId) ?? 0) > 0 ? attendedBy.get(g.userId) ?? 0 : g._count._all,
+    noShows: missedBy.get(g.userId) ?? 0,
+    hasUpcoming: upcomingSet.has(g.userId),
+  }));
+}
+
+function matchesVolunteerFilter(r: RollupRow, filter: VolunteerFilter, now: number) {
+  switch (filter) {
+    case 'upcoming': return r.hasUpcoming;
+    case 'inactive': return !r.hasUpcoming;
+    case 'new': return now - r.firstAt.getTime() <= NEW_VOLUNTEER_DAYS * 86_400_000;
+    case 'noshow': return r.noShows > 0;
+    case 'regular': return r.drivesAttended >= REGULAR_MIN_DRIVES;
+    default: return true;
+  }
+}
+
+/** Adds the person and their RSVP details (phone, upcoming / recent drives, ...) to rollup rows. */
+async function hydrateVolunteers(prisma: PrismaClient, ngoId: string, rows: RollupRow[]) {
+  const ids = rows.map((r) => r.userId);
+  if (ids.length === 0) return [];
+
+  const [users, rsvps] = await Promise.all([
+    prisma.user.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true, handle: true, avatarEmoji: true, avatarUrl: true, city: true, level: true, treesPlantedCount: true },
+    }),
+    // Every RSVP these people made to this NGO's drives - the roster rows are built from them.
+    prisma.driveRsvp.findMany({
+      where: { status: 'confirmed', drive: { ngoId }, userId: { in: ids } },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        userId: true,
+        createdAt: true,
+        attended: true,
+        hoursLogged: true,
+        role: true,
+        phone: true,
+        emergencyContactName: true,
+        emergencyContactPhone: true,
+        drive: { select: { id: true, title: true, startsAt: true, status: true, city: true } },
+      },
+    }),
+  ]);
+  const userById = new Map(users.map((u) => [u.id, u]));
+  const now = Date.now();
+  const rsvpsByUser = new Map<string, typeof rsvps>();
+  for (const r of rsvps) {
+    const list = rsvpsByUser.get(r.userId) ?? [];
+    list.push(r);
+    rsvpsByUser.set(r.userId, list);
+  }
+
+  return rows.map((row) => {
+    const u = userById.get(row.userId);
+    const list = rsvpsByUser.get(row.userId) ?? []; // newest first
+    const isUpcoming = (r: (typeof list)[number]) => r.drive.status === 'upcoming' && r.drive.startsAt.getTime() > now;
+    const upcoming = list.filter(isUpcoming).sort((a, b) => a.drive.startsAt.getTime() - b.drive.startsAt.getTime());
+    const past = list.filter((r) => !isUpcoming(r));
+    const emergency = list.find((r) => r.emergencyContactName && r.emergencyContactPhone);
+    return {
+      userId: row.userId,
+      name: u?.name ?? 'Unknown',
+      handle: u?.handle ?? '',
+      avatarEmoji: u?.avatarEmoji ?? '🧑',
+      avatarUrl: u?.avatarUrl ?? null,
+      city: u?.city ?? null,
+      level: u?.level ?? 1,
+      treesPlanted: u?.treesPlantedCount ?? 0,
+      drivesAttended: row.drivesAttended,
+      lastActiveAt: row.lastAt,
+      // Most recent RSVP that has them, since people change numbers.
+      phone: list.find((r) => r.phone)?.phone ?? null,
+      emergencyContactName: emergency?.emergencyContactName ?? null,
+      emergencyContactPhone: emergency?.emergencyContactPhone ?? null,
+      rsvpCount: row.rsvpCount,
+      noShows: row.noShows,
+      hoursLogged: Math.round(list.reduce((sum, r) => sum + (r.hoursLogged ?? 0), 0) * 10) / 10,
+      roles: [...new Set(list.map((r) => r.role).filter((x): x is string => !!x))],
+      volunteeringSince: row.firstAt,
+      upcomingCount: upcoming.length,
+      upcoming: upcoming.slice(0, 3).map((r) => ({ driveId: r.drive.id, title: r.drive.title, startsAt: r.drive.startsAt, city: r.drive.city })),
+      recent: past.slice(0, 3).map((r) => ({
+        driveId: r.drive.id,
+        title: r.drive.title,
+        startsAt: r.drive.startsAt,
+        cancelled: r.drive.status === 'cancelled',
+        attended: r.attended,
+      })),
+    };
+  });
+}
+
+/** Filter + sort the rollup. Returns every matching row (unpaged) plus the chip counts. */
+async function filteredVolunteerRows(prisma: PrismaClient, ngoId: string, q: VolunteerQuery) {
+  const rows = await volunteerRollup(prisma, ngoId, q);
+  const now = Date.now();
+  const filters: VolunteerFilter[] = ['all', 'upcoming', 'inactive', 'new', 'noshow', 'regular'];
+  const counts = Object.fromEntries(filters.map((f) => [f, rows.filter((r) => matchesVolunteerFilter(r, f, now)).length])) as Record<VolunteerFilter, number>;
+
+  const filter = (filters as string[]).includes(q.filter ?? '') ? (q.filter as VolunteerFilter) : 'all';
+  const matched = rows.filter((r) => matchesVolunteerFilter(r, filter, now));
+
+  const sort: VolunteerSort = ['recent', 'oldest', 'active', 'name'].includes(q.sort ?? '') ? (q.sort as VolunteerSort) : 'recent';
+  if (sort === 'name') {
+    const names = await prisma.user.findMany({ where: { id: { in: matched.map((r) => r.userId) } }, select: { id: true, name: true } });
+    const nameById = new Map(names.map((n) => [n.id, n.name.toLowerCase()]));
+    matched.sort((a, b) => (nameById.get(a.userId) ?? '').localeCompare(nameById.get(b.userId) ?? ''));
+  } else if (sort === 'oldest') {
+    matched.sort((a, b) => a.firstAt.getTime() - b.firstAt.getTime());
+  } else if (sort === 'active') {
+    matched.sort((a, b) => b.drivesAttended - a.drivesAttended || b.rsvpCount - a.rsvpCount || b.lastAt.getTime() - a.lastAt.getTime());
+  } else {
+    matched.sort((a, b) => b.lastAt.getTime() - a.lastAt.getTime());
+  }
+  return { matched, counts };
+}
+
+export async function getOwnVolunteers(prisma: PrismaClient, userId: string, q: VolunteerQuery = {}) {
   const ngo = await requireNgoProfile(prisma, userId);
   const take = parseTake(q.take, 30, 100);
   // A volunteer has no record of their own, so the page is a window over the per-user rollup of
   // RSVPs; the cursor is just the offset into that ordering.
   const offset = Math.max(Number.parseInt(q.cursor ?? '0', 10) || 0, 0);
-  const where = { status: 'confirmed' as const, drive: { ngoId: ngo.id } };
 
-  const grouped = await prisma.driveRsvp.groupBy({
-    by: ['userId'],
-    where,
-    _count: { _all: true },
-    _max: { createdAt: true },
-    orderBy: [{ _max: { createdAt: 'desc' } }, { userId: 'asc' }],
-    take: take + 1,
-    skip: offset,
-  });
-  const hasMore = grouped.length > take;
-  const page = hasMore ? grouped.slice(0, take) : grouped;
-  const ids = page.map((g) => g.userId);
-
-  // Attendance for just this page's volunteers: how many rows have a recorded value, and how many were attended.
-  const [recorded, attended, users] = await Promise.all([
-    prisma.driveRsvp.groupBy({ by: ['userId'], where: { ...where, userId: { in: ids }, attended: { not: null } }, _count: { _all: true } }),
-    prisma.driveRsvp.groupBy({ by: ['userId'], where: { ...where, userId: { in: ids }, attended: true }, _count: { _all: true } }),
-    prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, handle: true } }),
-  ]);
-  const recordedBy = new Map(recorded.map((r) => [r.userId, r._count._all]));
-  const attendedBy = new Map(attended.map((r) => [r.userId, r._count._all]));
-  const userById = new Map(users.map((u) => [u.id, u]));
+  const { matched, counts } = await filteredVolunteerRows(prisma, ngo.id, q);
+  const page = matched.slice(offset, offset + take);
 
   return {
-    items: page.map((g) => ({
-      userId: g.userId,
-      name: userById.get(g.userId)?.name ?? 'Unknown',
-      handle: userById.get(g.userId)?.handle ?? '',
-      // Once the NGO has recorded attendance for this person, that's the real count; until then,
-      // the RSVP count is the best available signal.
-      drivesAttended: (recordedBy.get(g.userId) ?? 0) > 0 ? attendedBy.get(g.userId) ?? 0 : g._count._all,
-      lastActiveAt: g._max.createdAt,
-    })),
-    nextCursor: hasMore ? String(offset + take) : null,
+    items: await hydrateVolunteers(prisma, ngo.id, page),
+    nextCursor: offset + take < matched.length ? String(offset + take) : null,
+    total: matched.length,
+    counts,
   };
 }
 
@@ -511,7 +698,7 @@ export async function getOwnVolunteers(prisma: PrismaClient, userId: string, q: 
  * whose only participation was in the past will still show up in the volunteers list afterward,
  * since that history is exactly what makes them a volunteer.
  */
-export async function removeVolunteer(prisma: PrismaClient, ngoUserId: string, targetUserId: string) {
+export async function removeVolunteer(prisma: PrismaClient, ngoUserId: string, targetUserId: string, reason: string) {
   const ngo = await requireNgoProfile(prisma, ngoUserId);
 
   const rsvps = await prisma.driveRsvp.findMany({
@@ -522,7 +709,8 @@ export async function removeVolunteer(prisma: PrismaClient, ngoUserId: string, t
   if (rsvps.length > 0) {
     await prisma.driveRsvp.updateMany({
       where: { id: { in: rsvps.map((r) => r.id) } },
-      data: { status: 'cancelled' },
+      // cancelReason marks who ended it; the organiser's own words go in cancelNote.
+      data: { status: 'cancelled', cancelReason: 'removed_by_organizer', cancelNote: reason },
     });
 
     for (const r of rsvps) {
@@ -530,8 +718,14 @@ export async function removeVolunteer(prisma: PrismaClient, ngoUserId: string, t
         userId: targetUserId,
         type: 'drive_reminder',
         actorNgoId: ngo.id,
-        data: { driveId: r.drive.id, driveTitle: r.drive.title, kind: 'removed_by_ngo' },
-        push: { title: r.drive.title, body: 'Your RSVP was cancelled by the organizer.' },
+        data: {
+          driveId: r.drive.id,
+          driveTitle: r.drive.title,
+          kind: 'removed_by_ngo',
+          reason,
+          message: `${ngo.orgName} cancelled your RSVP to “${r.drive.title}”. Reason: “${reason}”.`,
+        },
+        push: { title: r.drive.title, body: `Your RSVP was cancelled by the organizer: ${reason}` },
       });
     }
   }

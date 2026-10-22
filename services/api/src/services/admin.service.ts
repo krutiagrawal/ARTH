@@ -9,6 +9,7 @@ import { getReputationSummary } from './nurseryReputation.service';
 import { maybeMarkOrderPlantationVerified } from './order.service';
 import { notify } from './notification.service';
 import { refreshUserCo2 } from './treeImpact.service';
+import { notRescheduled } from './driveRules';
 
 // An NGO/nursery that was rejected can fix its profile and resubmit, which clears the profile's own
 // rejectionReason - so the earlier rejections live only in AdminActionLog (written by
@@ -142,7 +143,7 @@ export async function getNgoSummary(prisma: PrismaClient, ngoId: string) {
   if (!profile) throw new NotFoundError('NGO not found');
 
   const [drivesCount, campaignsCount, treesCount, donations] = await Promise.all([
-    prisma.drive.count({ where: { ngoId } }),
+    prisma.drive.count({ where: { ngoId, ...notRescheduled } }),
     prisma.donationCampaign.count({ where: { ngoId } }),
     prisma.adoptableTree.count({ where: { ngoId } }),
     prisma.donation.findMany({ where: { status: 'succeeded', campaign: { ngoId } }, select: { amountCents: true } }),

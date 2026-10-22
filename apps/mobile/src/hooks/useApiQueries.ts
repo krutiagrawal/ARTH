@@ -9,11 +9,11 @@ import { fetchMyAdoptionsSummary, exportMyAdoptions, type MyAdoptionsFilter } fr
 import { fetchMySponsorshipsSummary, exportMySponsorships, type MySponsorshipsFilter } from '../api/drives';
 import { uploadNgoDocument, deleteNgoDocument, type NgoDocumentType } from '../api/ngo';
 import { updateCampaign, deleteCampaign, fetchOwnedCampaignSummary, exportOwnedCampaigns, duplicateCampaign, archiveCampaign, type UpdateCampaignInput, type OwnedCampaignFilter } from '../api/donations';
-import { updateDrive, deleteDrive, fetchOwnedDriveSummary, exportOwnedDrives, duplicateDrive, archiveDrive, type UpdateDriveInput, type OwnedDriveFilter } from '../api/drives';
+import { updateDrive, deleteDrive, fetchOwnedDriveSummary, exportOwnedDrives, duplicateDrive, relaunchDrive, archiveDrive, type UpdateDriveInput, type OwnedDriveFilter } from '../api/drives';
 import { updateAdoptableTree, deleteAdoptableTree, relistAdoptableTree, fetchOwnedTreeSummary, exportOwnedTrees, duplicateAdoptableTree, archiveAdoptableTree, type UpdateAdoptableTreeInput, type OwnedTreeFilter } from '../api/adoptions';
 import { fetchOrgStreakStatus, reviveOrgStreak, protectOrgStreak } from '../api/orgStreaks';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
-import { pageParams, totalPageParams, mergePages, totalInfinite, flatItems, arrayPageParams, flatArrays } from './useInfiniteList';
+import { pageParams, totalPageParams, mergePages, totalInfinite, flatItems, arrayPageParams, flatArrays, LIST_STALE_MS } from './useInfiniteList';
 import type { ApiPublicFollowersPage } from '../api/publicFollowers';
 import { useAuth } from '../context/AuthContext';
 import { fetchTrees, plantTree, verifyPlantingPhoto, fetchTreesMap, fetchTreePassport, fetchNearbyTrees, logOwnObservation, type PlantTreeInput, type LogOwnObservationInput } from '../api/trees';
@@ -137,6 +137,8 @@ import {
   fetchNgoDonations,
   fetchNgoDonationsSummary,
   fetchNgoVolunteers,
+  type VolunteerQuery,
+  type ApiVolunteer,
   removeNgoVolunteer,
   UpdateNgoProfileInput,
   DonationsFilter,
@@ -220,6 +222,9 @@ import {
   fetchNurseryDashboardToday,
   fetchNurseryImpact,
   fetchNurseryBulkRequirements,
+  fetchNurseryBulkRequirement,
+  type NurseryRequirementQuery,
+  type ApiBulkRequirement,
   respondToBulkRequirement,
   withdrawBulkResponse,
   markBulkResponseHandedOff,
@@ -244,8 +249,12 @@ import {
 import { fetchMyPartnerProfile, fetchMyDeliveryQueue, startDelivery, reportMyLocation, completeDelivery } from '../api/deliveryPartnerApp';
 import {
   fetchNgoBulkRequirements,
+  type RequirementQuery,
+  type ApiNgoBulkRequirement,
   fetchNgoBulkRequirement,
   createNgoBulkRequirement,
+  updateNgoBulkRequirement,
+  type UpdateNgoBulkRequirementInput,
   cancelNgoBulkRequirement,
   rescheduleNgoBulkRequirement,
   acceptNgoBulkResponse,
@@ -1464,13 +1473,13 @@ export function useCreateDonationIntent() {
   });
 }
 
-export function useMyCampaigns(filter: OwnedCampaignFilter = {}) {
+export function useMyCampaigns(filter: OwnedCampaignFilter = {}, enabled: boolean = true) {
   const { isAuthenticated } = useAuth();
   return useInfiniteQuery({
     placeholderData: keepPreviousData,
     queryKey: ['campaigns', 'mine', filter],
     queryFn: ({ pageParam }) => fetchMyCampaigns(pageParam, OWNED_PAGE_SIZE, filter),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && enabled,
     ...arrayPageParams<Awaited<ReturnType<typeof fetchMyCampaigns>>[number]>(OWNED_PAGE_SIZE),
     select: flatArrays,
   });
@@ -1605,6 +1614,9 @@ export function useNgoDonations(filter: DonationsFilter = {}, enabled = true) {
     queryKey: ['ngo', 'donations', filter],
     queryFn: ({ pageParam }) => fetchNgoDonations({ ...filter, page: pageParam, take: 30 }),
     enabled: isAuthenticated && enabled,
+    // Switching the status chip keeps the old rows on screen until the new ones arrive.
+    placeholderData: keepPreviousData,
+    staleTime: LIST_STALE_MS,
     ...totalInfinite<Awaited<ReturnType<typeof fetchNgoDonations>>, 'donations'>('donations'),
   });
 }
@@ -1618,21 +1630,29 @@ export function useNgoDonationsSummary() {
   });
 }
 
-export function useNgoVolunteers() {
+/** The volunteer roster, searched / filtered / sorted on the server so it stays fast with hundreds of people. */
+export function useNgoVolunteers(query: VolunteerQuery = {}) {
   const { isAuthenticated } = useAuth();
   return useInfiniteQuery({
-    queryKey: ['ngo', 'volunteers'],
-    queryFn: ({ pageParam }) => fetchNgoVolunteers(pageParam),
+    // Keep showing the previous results while a new search or filter loads, instead of flashing empty.
+    placeholderData: keepPreviousData,
+    queryKey: ['ngo', 'volunteers', query],
+    queryFn: ({ pageParam }) => fetchNgoVolunteers(pageParam, query),
     enabled: isAuthenticated,
-    ...pageParams<Awaited<ReturnType<typeof fetchNgoVolunteers>>['items'][number]>(),
-    select: flatItems,
+    staleTime: LIST_STALE_MS,
+    ...pageParams<ApiVolunteer>(),
+    select: (data) => ({
+      items: data.pages.flatMap((p) => p.items),
+      total: data.pages[0]?.total ?? 0,
+      counts: data.pages[0]?.counts,
+    }),
   });
 }
 
 export function useRemoveNgoVolunteer() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (userId: string) => removeNgoVolunteer(userId),
+    mutationFn: ({ userId, reason }: { userId: string; reason: string }) => removeNgoVolunteer(userId, reason),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ngo', 'volunteers'] }),
   });
 }
@@ -1959,12 +1979,24 @@ export function useBrowseNgos(params: { q?: string; city?: string } = {}) {
   });
 }
 
+/**
+ * A follow request is answered on the other person's phone, which this app never hears about, so a
+ * cached "Requested" would stay put. Always re-read the profile when it opens, and keep re-checking
+ * while it is still waiting on an answer.
+ */
+const PENDING_FOLLOW_REFRESH = {
+  refetchOnMount: 'always' as const,
+  refetchInterval: (query: { state: { data?: unknown } }) =>
+    (query.state.data as { followStatus?: string | null } | undefined)?.followStatus === 'pending' ? 15_000 : false,
+};
+
 export function useNgoPublicProfile(id: string | null) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['ngos', 'public', id],
     queryFn: () => fetchNgoPublicProfile(id as string),
     enabled: isAuthenticated && !!id,
+    ...PENDING_FOLLOW_REFRESH,
   });
 }
 
@@ -2594,12 +2626,22 @@ export function useSaplingStock(filter: StockFilter = {}) {
   });
 }
 
+/**
+ * Stock changes also change what the nursery can offer on a bulk requirement ("you have 120 in
+ * stock"), which is cached with each requirement - so refresh those too, or the offer form keeps
+ * saying there isn't enough right after the inventory was topped up.
+ */
+function invalidateStockDependents(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: ['nursery', 'stock'] });
+  queryClient.invalidateQueries({ queryKey: ['nursery', 'bulkRequirements'] });
+}
+
 export function useCreateSaplingStock() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: SaplingStockInput) => createSaplingStock(input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['nursery', 'stock'] });
+      invalidateStockDependents(queryClient);
       queryClient.invalidateQueries({ queryKey: ['nursery', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['nursery', 'badges'] });
     },
@@ -2611,7 +2653,7 @@ export function useUpdateSaplingStock() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: Partial<SaplingStockInput> }) => updateSaplingStock(id, input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['nursery', 'stock'] });
+      invalidateStockDependents(queryClient);
       queryClient.invalidateQueries({ queryKey: ['nursery', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['nursery', 'badges'] });
     },
@@ -2623,7 +2665,7 @@ export function useDeleteSaplingStock() {
   return useMutation({
     mutationFn: (id: string) => deleteSaplingStock(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['nursery', 'stock'] });
+      invalidateStockDependents(queryClient);
       queryClient.invalidateQueries({ queryKey: ['nursery', 'stats'] });
     },
   });
@@ -2672,7 +2714,7 @@ export function useFulfillReservation() {
     mutationFn: (id: string) => fulfillReservationApi(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['nursery', 'reservations'] });
-      queryClient.invalidateQueries({ queryKey: ['nursery', 'stock'] });
+      invalidateStockDependents(queryClient);
       queryClient.invalidateQueries({ queryKey: ['nursery', 'stats'] });
       queryClient.invalidateQueries({ queryKey: ['nursery', 'badges'] });
     },
@@ -2889,14 +2931,21 @@ export function useRespondToReview() {
 
 // ---------- Bulk requirements (nursery side) ----------
 
-export function useNurseryBulkRequirements(status?: BulkRequirementStatus) {
+/** Requirements for the nursery, searched / filtered / sorted on the server and paged. */
+export function useNurseryBulkRequirements(query: NurseryRequirementQuery = {}) {
   const { isAuthenticated } = useAuth();
   return useInfiniteQuery({
-    queryKey: ['nursery', 'bulkRequirements', status],
-    queryFn: ({ pageParam }) => fetchNurseryBulkRequirements(status, pageParam),
+    placeholderData: keepPreviousData,
+    queryKey: ['nursery', 'bulkRequirements', 'list', query],
+    queryFn: ({ pageParam }) => fetchNurseryBulkRequirements(pageParam, query),
     enabled: isAuthenticated,
-    ...pageParams<Awaited<ReturnType<typeof fetchNurseryBulkRequirements>>['items'][number]>(),
-    select: flatItems,
+    staleTime: LIST_STALE_MS,
+    ...pageParams<ApiBulkRequirement>(),
+    select: (data) => ({
+      items: data.pages.flatMap((p) => p.items),
+      total: data.pages[0]?.total ?? 0,
+      counts: data.pages[0]?.counts,
+    }),
   });
 }
 
@@ -2911,36 +2960,15 @@ export function useMyBulkResponses() {
   });
 }
 
-/** There's no `GET /api/nursery/bulk-requirements/:id` route – the nursery side only exposes a
- * list (see api/nursery.ts's `fetchNurseryBulkRequirements`). This fetches the two status sets
- * that cover every tab the nursery UI shows (the default open/partially_fulfilled set, plus
- * fulfilled) and merges them, so both the list screen and the "detail" screen (which just looks
- * up one id out of this combined set) share the same cached data. */
-export function useNurseryBulkRequirementsCombined() {
-  const openQuery = useNurseryBulkRequirements();
-  const fulfilledQuery = useNurseryBulkRequirements('fulfilled');
-
-  const byId = new Map<string, import('../api/nursery').ApiBulkRequirement>();
-  for (const r of openQuery.data ?? []) byId.set(r.id, r);
-  for (const r of fulfilledQuery.data ?? []) byId.set(r.id, r);
-
-  return {
-    data: Array.from(byId.values()),
-    isLoading: openQuery.isLoading || fulfilledQuery.isLoading,
-    refetch: () => Promise.all([openQuery.refetch(), fulfilledQuery.refetch()]),
-    // The list screen shows both sets together, so "more" means either set has another page.
-    hasNextPage: !!openQuery.hasNextPage || !!fulfilledQuery.hasNextPage,
-    isFetchingNextPage: openQuery.isFetchingNextPage || fulfilledQuery.isFetchingNextPage,
-    fetchNextPage: () => {
-      if (openQuery.hasNextPage && !openQuery.isFetchingNextPage) openQuery.fetchNextPage();
-      if (fulfilledQuery.hasNextPage && !fulfilledQuery.isFetchingNextPage) fulfilledQuery.fetchNextPage();
-    },
-  };
-}
-
+/** One requirement, fetched by id - so a deep link or a notification works even when it is not in any loaded list page. */
 export function useNurseryBulkRequirement(id: string | null) {
-  const { data, isLoading, refetch } = useNurseryBulkRequirementsCombined();
-  return { data: id ? data.find((r) => r.id === id) : undefined, isLoading, refetch };
+  const { isAuthenticated } = useAuth();
+  const query = useQuery({
+    queryKey: ['nursery', 'bulkRequirements', 'one', id],
+    queryFn: () => fetchNurseryBulkRequirement(id as string),
+    enabled: isAuthenticated && !!id,
+  });
+  return { data: query.data, isLoading: query.isLoading, refetch: query.refetch };
 }
 
 function invalidateNurseryBulkRequirements(queryClient: ReturnType<typeof useQueryClient>) {
@@ -2973,14 +3001,21 @@ export function useMarkBulkResponseHandedOff() {
 
 // ---------- Bulk requirements (NGO side) ----------
 
-export function useNgoBulkRequirements(status?: BulkRequirementStatus) {
+/** The NGO's requirements, searched / filtered / sorted on the server. */
+export function useNgoBulkRequirements(query: RequirementQuery = {}) {
   const { isAuthenticated } = useAuth();
   return useInfiniteQuery({
-    queryKey: ['ngo', 'bulkRequirements', status],
-    queryFn: ({ pageParam }) => fetchNgoBulkRequirements(status, pageParam),
+    placeholderData: keepPreviousData,
+    queryKey: ['ngo', 'bulkRequirements', query],
+    queryFn: ({ pageParam }) => fetchNgoBulkRequirements(pageParam, query),
     enabled: isAuthenticated,
-    ...pageParams<Awaited<ReturnType<typeof fetchNgoBulkRequirements>>['items'][number]>(),
-    select: flatItems,
+    staleTime: LIST_STALE_MS,
+    ...pageParams<ApiNgoBulkRequirement>(),
+    select: (data) => ({
+      items: data.pages.flatMap((p) => p.items),
+      total: data.pages[0]?.total ?? 0,
+      counts: data.pages[0]?.counts,
+    }),
   });
 }
 
@@ -3001,6 +3036,14 @@ export function useCreateNgoBulkRequirement() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateNgoBulkRequirementInput) => createNgoBulkRequirement(input),
+    onSuccess: () => invalidateNgoBulkRequirements(queryClient),
+  });
+}
+
+export function useUpdateNgoBulkRequirement() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateNgoBulkRequirementInput }) => updateNgoBulkRequirement(id, input),
     onSuccess: () => invalidateNgoBulkRequirements(queryClient),
   });
 }
@@ -3085,6 +3128,7 @@ export function useNurseryPublicProfile(id: string | null) {
     queryKey: ['nurseries', 'public', id],
     queryFn: () => fetchNurseryPublicProfile(id as string),
     enabled: isAuthenticated && !!id,
+    ...PENDING_FOLLOW_REFRESH,
   });
 }
 
@@ -3384,6 +3428,14 @@ export function useDuplicateDrive() {
   const queryClient = useQueryClient();
   return useMutation({ mutationFn: (id: string) => duplicateDrive(id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['drives'] }) });
 }
+export function useRelaunchDrive() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, startsAt, notifyPrevious }: { id: string; startsAt: string; notifyPrevious: boolean }) =>
+      relaunchDrive(id, { startsAt, notifyPrevious }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['drives'] }),
+  });
+}
 export function useDuplicateCampaign() {
   const queryClient = useQueryClient();
   return useMutation({ mutationFn: (id: string) => duplicateCampaign(id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['campaigns'] }) });
@@ -3432,7 +3484,7 @@ export function useArchiveStock() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, archived }: { id: string; archived: boolean }) => archiveStock(id, archived),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['nursery', 'stock'] }),
+    onSuccess: () => invalidateStockDependents(queryClient),
   });
 }
 

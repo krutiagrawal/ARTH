@@ -7,12 +7,16 @@ import { BadRequestError } from '../utils/errors';
 export default async function nurseryBulkRequirementsRoutes(fastify: FastifyInstance) {
   fastify.addHook('preHandler', fastify.requireRole('nursery'));
 
-  fastify.get<{ Querystring: { status?: string; cursor?: string; take?: string } }>('/', async (request, reply) => {
+  fastify.get<{ Querystring: bulkRequirementService.NurseryRequirementQuery }>('/', async (request, reply) => {
     reply.send(await bulkRequirementService.listRelevantForNursery(fastify.prisma, request.user!.id, request.query));
   });
 
   fastify.get<{ Querystring: { cursor?: string; take?: string } }>('/responses/mine', async (request, reply) => {
     reply.send(await bulkRequirementService.listMyResponses(fastify.prisma, request.user!.id, request.query));
+  });
+
+  fastify.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
+    reply.send(await bulkRequirementService.getRequirementForNursery(fastify.prisma, request.user!.id, request.params.id));
   });
 
   fastify.post<{ Params: { id: string } }>('/:id/respond', async (request, reply) => {

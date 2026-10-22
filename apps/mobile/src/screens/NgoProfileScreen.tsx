@@ -22,7 +22,7 @@ import { CampaignsTabContent } from '../components/profile/CampaignsTabContent';
 import { AdoptableTreesTabContent } from '../components/profile/AdoptableTreesTabContent';
 import { useAuth } from '../context/AuthContext';
 import { useConfirm } from '../context/ConfirmDialogContext';
-import { useBlockTarget, useUnblockTarget, useNgoPosts, useMyPortfolio } from '../hooks/useSocialQueries';
+import { useBlockTarget, useUnblockTarget, useNgoPosts, useMyPortfolio, useNgoFollowers } from '../hooks/useSocialQueries';
 import { BlockedProfileNotice } from '../components/social/BlockedProfileNotice';
 import {
   useNgoProfile,
@@ -35,6 +35,8 @@ import {
   useFollowNgo,
   useUnfollowNgo,
   useMyDrives,
+  useMyCampaigns,
+  useMyAdoptableTrees,
   useRingStatus,
   useTogglePortfolioLike,
 } from '../hooks/useApiQueries';
@@ -48,10 +50,7 @@ import type { ApiCampaign } from '../api/donations';
 import type { ApiAdoptableTree } from '../api/adoptions';
 import type { ApiDrive } from '../api/drives';
 import { formatKg } from '../utils/impact';
-
-function formatPastWorkDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-}
+import { PastWorkFlipCard, formatPastWorkFullDate } from '../components/ngo/PastWorkFlipCard';
 
 /** A "past work" entry as shown on an NGO's profile – same fields as the NGO's own private
  * management card (NgoPortfolioScreen's EntryCard). A visitor gets Like/Report, matching how a
@@ -72,7 +71,7 @@ function PastWorkCard({
   const cover = resolveMediaUrl(entry.media[0]?.url);
 
   return (
-    <View style={styles.pastWorkCard}>
+    <PastWorkFlipCard entry={entry} cardStyle={styles.pastWorkCard} wrapperStyle={styles.pastWorkWrap}>
       {cover ? (
         <Image source={{ uri: cover }} style={styles.pastWorkCover} />
       ) : (
@@ -82,7 +81,7 @@ function PastWorkCard({
       )}
 
       <View style={styles.pastWorkBody}>
-        <Text style={styles.pastWorkDate}>{formatPastWorkDate(entry.happenedOn)}</Text>
+        <Text style={styles.pastWorkDate}>{formatPastWorkFullDate(entry.happenedOn)}</Text>
         <Text style={styles.pastWorkTitle} numberOfLines={2}>
           {entry.title}
         </Text>
@@ -116,7 +115,7 @@ function PastWorkCard({
           </View>
         )}
       </View>
-    </View>
+    </PastWorkFlipCard>
   );
 }
 
@@ -174,6 +173,10 @@ export function NgoProfileScreen({ route, navigation }: any) {
   const ownLeaderboard = useNgoLeaderboard(50, isOwn);
   const ownDrives = useMyDrives(isOwn);
   const ownPortfolio = useMyPortfolio(isOwn);
+  const ownCampaigns = useMyCampaigns({}, isOwn);
+  const ownTrees = useMyAdoptableTrees(isOwn);
+  // Same query (and cache entry) the Community tab's Followers segment uses.
+  const ownFollowers = useNgoFollowers({ status: 'accepted' }, isOwn);
 
   const publicProfile = useNgoPublicProfile(isOwn ? null : ngoId ?? null);
   const publicAchievements = useNgoPublicAchievements(isOwn ? undefined : ngoId);
@@ -198,7 +201,7 @@ export function NgoProfileScreen({ route, navigation }: any) {
 
   const { refreshing, onRefresh } = usePullToRefresh(
     isOwn
-      ? [ownProfile.refetch, ownStats.refetch, ownStreak.refetch, ownAchievements.refetch, ownLeaderboard.refetch, ownDrives.refetch, ownPortfolio.refetch]
+      ? [ownProfile.refetch, ownStats.refetch, ownStreak.refetch, ownAchievements.refetch, ownLeaderboard.refetch, ownDrives.refetch, ownPortfolio.refetch, ownCampaigns.refetch, ownTrees.refetch]
       : [publicProfile.refetch, publicAchievements.refetch],
   );
 
@@ -239,13 +242,19 @@ export function NgoProfileScreen({ route, navigation }: any) {
   // onPressDrive below seed the drive-detail cache instead of forcing a re-fetch on tap.
   const drives: ApiDrive[] = isOwn
     ? ownDrives.data ?? []
-    : [...(publicProfile.data?.upcomingDrives ?? []), ...(publicProfile.data?.featuredDrives ?? [])].sort(
+    : [...(publicProfile.data?.upcomingDrives ?? []), ...(publicProfile.data?.featuredDrives ?? []), ...(publicProfile.data?.cancelledDrives ?? [])].sort(
         (a: ApiDrive, b: ApiDrive) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime(),
       );
 
-  // NGOs manage these via their own dashboard, not this profile screen – nothing to show here yet.
-  const campaigns: ApiCampaign[] = isOwn ? [] : publicProfile.data?.campaigns ?? [];
-  const adoptableTrees: ApiAdoptableTree[] = isOwn ? [] : publicProfile.data?.adoptableTrees ?? [];
+  // The NGO sees its own profile exactly as a visitor does: running campaigns and listed trees only
+  // (the full set, including closed / archived ones, stays under Manage).
+  const now = Date.now();
+  const campaigns: ApiCampaign[] = isOwn
+    ? (ownCampaigns.data ?? []).filter((c) => c.status === 'active' && !c.isArchived && (!c.endsAt || new Date(c.endsAt).getTime() > now))
+    : publicProfile.data?.campaigns ?? [];
+  const adoptableTrees: ApiAdoptableTree[] = isOwn
+    ? (ownTrees.data ?? []).filter((t) => t.status !== 'removed' && !t.isArchived)
+    : publicProfile.data?.adoptableTrees ?? [];
 
   const toggleFollow = () => {
     if (!ngoId) return;
@@ -339,7 +348,11 @@ export function NgoProfileScreen({ route, navigation }: any) {
                 stats={
                   isOwn
                     ? [
-                        { value: ownStats.data?.totalDrives ?? 0, label: 'Drives' },
+                        {
+                          value: ownFollowers.data?.total ?? 0,
+                          label: 'Followers',
+                          onPress: () => navigation.navigate('NgoFollowers'),
+                        },
                         { value: streakCurrent, label: 'Streak' },
                         { value: badgesCount, label: 'Badges', onPress: () => setTab('achievements') },
                         { value: myRank ? `#${myRank}` : '–', label: 'Rank' },
@@ -554,8 +567,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(139, 107, 71, 0.30)',
     overflow: 'hidden',
-    marginBottom: 12,
   },
+  pastWorkWrap: { marginBottom: 12 },
   pastWorkCover: { width: '100%', height: 140, backgroundColor: COLORS.mintLight },
   pastWorkCoverEmpty: { alignItems: 'center', justifyContent: 'center' },
   pastWorkCoverEmptyIcon: { fontSize: 30, opacity: 0.5 },

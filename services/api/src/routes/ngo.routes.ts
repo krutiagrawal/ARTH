@@ -5,7 +5,7 @@ import { requireNgoProfile } from '../services/ngo.service';
 import { saveNgoLogo, saveNgoVerificationDocument, saveNgoPastWorkPhoto } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
 import { BadRequestError } from '../utils/errors';
-import { updateProfileSchema, donationsQuerySchema, reportQuerySchema } from '../schemas/ngo.schema';
+import { updateProfileSchema, donationsQuerySchema, reportQuerySchema, removeVolunteerSchema } from '../schemas/ngo.schema';
 import { getNgoReport } from '../services/ngoReport.service';
 import { getReputationSummary } from '../services/ngoReputation.service';
 import { getOrgStreakSummary } from '../services/orgStreak.service';
@@ -213,13 +213,18 @@ export default async function ngoRoutes(fastify: FastifyInstance) {
     reply.header('Content-Type', 'text/csv').header('Content-Disposition', 'attachment; filename="donations.csv"').send(csv);
   });
 
-  fastify.get<{ Querystring: { cursor?: string; take?: string } }>('/volunteers', async (request, reply) => {
-    const volunteers = await ngoService.getOwnVolunteers(fastify.prisma, request.user!.id, request.query);
-    reply.send(volunteers);
-  });
+  fastify.get<{ Querystring: { cursor?: string; take?: string; search?: string; filter?: string; sort?: string; driveId?: string } }>(
+    '/volunteers',
+    async (request, reply) => {
+      const volunteers = await ngoService.getOwnVolunteers(fastify.prisma, request.user!.id, request.query);
+      reply.send(volunteers);
+    },
+  );
 
-  fastify.delete<{ Params: { userId: string } }>('/volunteers/:userId', async (request, reply) => {
-    const result = await ngoService.removeVolunteer(fastify.prisma, request.user!.id, request.params.userId);
+  fastify.delete<{ Params: { userId: string }; Body: unknown }>('/volunteers/:userId', async (request, reply) => {
+    const parsed = removeVolunteerSchema.safeParse(request.body);
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Please give a reason for removing this volunteer');
+    const result = await ngoService.removeVolunteer(fastify.prisma, request.user!.id, request.params.userId, parsed.data.reason);
     reply.send(result);
   });
 

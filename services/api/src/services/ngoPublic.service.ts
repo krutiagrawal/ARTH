@@ -6,6 +6,7 @@ import { getPortfolioImpact, listPublicPortfolio } from './portfolio.service';
 import { listCampaigns } from './donation.service';
 import { listAdoptableTrees } from './adoption.service';
 import { driveInclude } from './drive.service';
+import { notRescheduled } from './driveRules';
 
 interface BrowseFilter {
   q?: string;
@@ -58,6 +59,7 @@ async function assembleNgoProfile(prisma: PrismaClient, ngo: { id: string } & Re
     follow,
     featuredDrives,
     upcomingDrives,
+    cancelledDrives,
     recentPosts,
     impact,
     staff,
@@ -90,6 +92,13 @@ async function assembleNgoProfile(prisma: PrismaClient, ngo: { id: string } & Re
         take: 12,
         include: driveInclude,
       }),
+      // Cancelled drives stay visible (with their reason) so a visitor sees what happened to it.
+      prisma.drive.findMany({
+        where: { ngoId: ngo.id, status: 'cancelled', ...notRescheduled },
+        orderBy: { startsAt: 'desc' },
+        take: 12,
+        include: driveInclude,
+      }),
       prisma.post.findMany({
         where: { ngoId: ngo.id, isHidden: false },
         orderBy: { createdAt: 'desc' },
@@ -113,7 +122,7 @@ async function assembleNgoProfile(prisma: PrismaClient, ngo: { id: string } & Re
   // Same per-viewer isRsvped flag `getDrive`/`listDrives` attach — needed so a seeded cache entry
   // is indistinguishable from what `getDrive` would have returned for this same viewer.
   let rsvpedDriveIds = new Set<string>();
-  const driveIds = [...featuredDrives, ...upcomingDrives].map((d) => d.id);
+  const driveIds = [...featuredDrives, ...upcomingDrives, ...cancelledDrives].map((d) => d.id);
   if (viewerUserId && driveIds.length > 0) {
     const rsvps = await prisma.driveRsvp.findMany({
       where: { userId: viewerUserId, status: 'confirmed', driveId: { in: driveIds } },
@@ -148,6 +157,7 @@ async function assembleNgoProfile(prisma: PrismaClient, ngo: { id: string } & Re
     blockedByMe,
     featuredDrives: featuredDrives.map(withRsvpFlag),
     upcomingDrives: upcomingDrives.map(withRsvpFlag),
+    cancelledDrives: cancelledDrives.map(withRsvpFlag),
     recentUpdates,
     staff,
     portfolio,

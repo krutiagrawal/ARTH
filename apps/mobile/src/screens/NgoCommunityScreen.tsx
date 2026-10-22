@@ -119,7 +119,7 @@ export function NgoCommunityScreen({ navigation }: any) {
 
       <View style={styles.body}>
         {segment === 'posts' && <NgoOwnPostsScreen navigation={navigation} />}
-        {segment === 'followers' && <NgoFollowersScreen />}
+        {segment === 'followers' && <NgoFollowersScreen onOpenRequests={() => setSegment('requests')} />}
         {segment === 'requests' && <NgoFollowerRequestsScreen navigation={navigation} />}
       </View>
     </View>

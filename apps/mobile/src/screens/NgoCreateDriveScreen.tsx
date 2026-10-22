@@ -4,13 +4,13 @@ import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLORS } from '../constants/colors';
 import { RADIUS } from '../constants/theme';
 import { useCreateDrive, useUpdateDrive } from '../hooks/useApiQueries';
-import type { ApiDrive } from '../api/drives';
+import type { ApiDrive, DriveEffortLevel } from '../api/drives';
 import { ApiError } from '../api/client';
 import { PhotoPickerField, PickedPhoto } from '../components/common/PhotoPickerField';
+import { DateTimeField as DateField } from '../components/common/DateTimeField';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField, FormFieldShell } from '../components/common/FormField';
 import { AddressSearchField } from '../components/common/AddressSearchField';
@@ -27,55 +27,6 @@ interface PickupPointDraft {
 interface PlantDraft {
   speciesName: string;
   priceRupees: string;
-}
-
-function DateField({ label, required, value, onChange }: { label: string; required?: boolean; value: Date; onChange: (d: Date) => void }) {
-  // Android has no real combined "datetime" mode – the library fakes it by chaining a date
-  // dialog into a time dialog internally, and unmounting the picker as soon as the first
-  // (date) callback fires – which we used to do via `setShowPicker(false)` – tears down that
-  // chain mid-flight and crashes with "Cannot read property 'dismiss' of undefined". Driving
-  // the date→time sequence ourselves keeps the component mounted across both native dialogs.
-  const [step, setStep] = useState<'date' | 'time' | null>(null);
-
-  const handleChange = (event: any, selected?: Date) => {
-    if (Platform.OS === 'ios') {
-      if (selected) onChange(selected);
-      return;
-    }
-    if (event.type !== 'set' || !selected) {
-      setStep(null);
-      return;
-    }
-    if (step === 'date') {
-      const next = new Date(value);
-      next.setFullYear(selected.getFullYear(), selected.getMonth(), selected.getDate());
-      onChange(next);
-      setStep('time');
-    } else {
-      const next = new Date(value);
-      next.setHours(selected.getHours(), selected.getMinutes());
-      onChange(next);
-      setStep(null);
-    }
-  };
-
-  return (
-    <>
-      <TouchableOpacity activeOpacity={0.8} onPress={() => setStep('date')}>
-        <FormFieldShell label={label} required={required}>
-          <Text style={styles.inputText}>{value.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</Text>
-        </FormFieldShell>
-      </TouchableOpacity>
-      {step && (
-        <DateTimePicker
-          value={value}
-          mode={Platform.OS === 'ios' ? 'datetime' : step}
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleChange}
-        />
-      )}
-    </>
-  );
 }
 
 /** Edit mode: opened with `{ drive }` route params; otherwise creates a new drive. */
@@ -100,6 +51,12 @@ export function NgoCreateDriveScreen({ navigation, route }: any) {
   const [startsAt, setStartsAt] = useState(editing ? new Date(editing.startsAt) : new Date(Date.now() + 24 * 60 * 60 * 1000));
   const [durationMinutes, setDurationMinutes] = useState(editing?.durationMinutes ? String(editing.durationMinutes) : '');
   const [capacity, setCapacity] = useState(editing?.capacity ? String(editing.capacity) : '');
+  const [whatToBring, setWhatToBring] = useState(editing?.whatToBring ?? '');
+  const [providedByNgo, setProvidedByNgo] = useState(editing?.providedByNgo ?? '');
+  const [contactName, setContactName] = useState(editing?.contactName ?? '');
+  const [contactPhone, setContactPhone] = useState(editing?.contactPhone ?? '');
+  const [minAge, setMinAge] = useState(editing?.minAge ? String(editing.minAge) : '');
+  const [effortLevel, setEffortLevel] = useState<DriveEffortLevel | null>(editing?.effortLevel ?? null);
   const [photo, setPhoto] = useState<PickedPhoto | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -117,6 +74,10 @@ export function NgoCreateDriveScreen({ navigation, route }: any) {
     setError(null);
     if (!title.trim() || !description.trim() || !address.trim() || !city.trim()) {
       setError('Title, description, address, and city are required.');
+      return;
+    }
+    if (contactPhone.trim() && !/^[0-9+\-\s()]{7,20}$/.test(contactPhone.trim())) {
+      setError('Enter a valid contact phone number, or leave it empty.');
       return;
     }
     if (transportMode === 'ngo_provided' && pickupPoints.length === 0) {
@@ -144,6 +105,12 @@ export function NgoCreateDriveScreen({ navigation, route }: any) {
           startsAt: startsAt.toISOString(),
           durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
           capacity: capacity ? Number(capacity) : undefined,
+          whatToBring: whatToBring.trim(),
+          providedByNgo: providedByNgo.trim(),
+          contactName: contactName.trim(),
+          contactPhone: contactPhone.trim(),
+          minAge: minAge ? Number(minAge) : null,
+          effortLevel,
           photo: photo ?? undefined,
         });
         confirm('Drive updated', 'Your changes are saved.');
@@ -167,6 +134,12 @@ export function NgoCreateDriveScreen({ navigation, route }: any) {
         startsAt: startsAt.toISOString(),
         durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
         capacity: capacity ? Number(capacity) : undefined,
+        whatToBring: whatToBring.trim() || undefined,
+        providedByNgo: providedByNgo.trim() || undefined,
+        contactName: contactName.trim() || undefined,
+        contactPhone: contactPhone.trim() || undefined,
+        minAge: minAge ? Number(minAge) : undefined,
+        effortLevel: effortLevel ?? undefined,
         photo: photo ?? undefined,
       });
       confirm('Drive created', 'Your drive is live.');
@@ -313,6 +286,55 @@ export function NgoCreateDriveScreen({ navigation, route }: any) {
             placeholder="eg - No limit"
           />
 
+          <Text style={styles.sectionLabel}>Details for volunteers</Text>
+          <FormField
+            label="What to bring"
+            value={whatToBring}
+            onChangeText={setWhatToBring}
+            placeholder="eg - Water bottle, cap, closed shoes, gloves"
+            maxLength={500}
+            multiline
+          />
+          <FormField
+            label="What we provide"
+            value={providedByNgo}
+            onChangeText={setProvidedByNgo}
+            placeholder="eg - Saplings, tools, snacks, first-aid"
+            maxLength={500}
+            multiline
+          />
+          <FormField label="Contact person" value={contactName} onChangeText={setContactName} placeholder="eg - Rohan (site coordinator)" maxLength={100} />
+          <FormField
+            label="Contact phone"
+            value={contactPhone}
+            onChangeText={(v: string) => setContactPhone(v.replace(/[^0-9+\-\s()]/g, ''))}
+            keyboardType="phone-pad"
+            placeholder="eg - 98765 43210"
+            maxLength={20}
+          />
+          <FormField
+            label="Minimum age"
+            value={minAge}
+            onChangeText={(v: string) => setMinAge(v.replace(/[^0-9]/g, '').slice(0, 2))}
+            keyboardType="number-pad"
+            placeholder="eg - 12 (leave empty for all ages)"
+          />
+          <Text style={styles.sectionLabel}>How physical is it?</Text>
+          <View style={styles.chipRow}>
+            {(['easy', 'moderate', 'strenuous'] as const).map((level) => (
+              <TouchableOpacity
+                key={level}
+                style={[styles.transportChip, effortLevel === level && styles.transportChipSelected]}
+                onPress={() => setEffortLevel(effortLevel === level ? null : level)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.transportChipText, effortLevel === level && styles.transportChipTextSelected]}>
+                  {level === 'easy' ? 'Easy' : level === 'moderate' ? 'Moderate' : 'Demanding'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
           {error && <Text style={styles.error}>{error}</Text>}
 
           <AnimatedButton
@@ -340,7 +362,6 @@ const styles = StyleSheet.create({
   // behind now-transparent fields would put the light block straight back where it was removed.
   subCard: { borderRadius: RADIUS.md, paddingHorizontal: 0, paddingVertical: 4, marginTop: 4, gap: 8 },
   sectionLabel: { fontSize: 13, fontWeight: '700', color: COLORS.textSecondary, marginTop: 20 },
-  inputText: { fontSize: 15, color: COLORS.textPrimary, paddingVertical: 4 },
   chipRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
   transportChip: { flex: 1, borderRadius: RADIUS.md, paddingVertical: 10, paddingHorizontal: 10, backgroundColor: COLORS.beige, borderWidth: 1.5, borderColor: 'transparent' },
   transportChipSelected: { borderColor: COLORS.sage, backgroundColor: 'rgba(135,168,120,0.25)' },

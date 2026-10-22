@@ -37,6 +37,16 @@ export interface ApiDrive {
   status: 'upcoming' | 'cancelled' | 'completed';
   /** Why the NGO cancelled the drive (only set when status is 'cancelled'). */
   cancelReason?: string | null;
+  /** Set on a cancelled drive once it has been relaunched - the id of its replacement. */
+  relaunchedToId?: string | null;
+  whatToBring?: string | null;
+  providedByNgo?: string | null;
+  contactName?: string | null;
+  contactPhone?: string | null;
+  minAge?: number | null;
+  effortLevel?: DriveEffortLevel | null;
+  /** A few confirmed volunteers' avatars (no names) - only on the single-drive response. */
+  goingPreview?: { avatarEmoji: string; avatarUrl: string | null }[];
   /** Server-computed: marked completed, or its scheduled end has passed. Locked for RSVP/sponsoring. */
   hasEnded?: boolean;
   isRsvped?: boolean;
@@ -208,6 +218,8 @@ export interface CreateDrivePlantInput {
   priceCents: number;
 }
 
+export type DriveEffortLevel = 'easy' | 'moderate' | 'strenuous';
+
 export interface CreateDriveInput {
   title: string;
   description: string;
@@ -220,6 +232,13 @@ export interface CreateDriveInput {
   startsAt: string; // ISO datetime
   durationMinutes?: number;
   capacity?: number;
+  whatToBring?: string;
+  providedByNgo?: string;
+  contactName?: string;
+  contactPhone?: string;
+  /** null clears it on update. */
+  minAge?: number | null;
+  effortLevel?: DriveEffortLevel | null;
   photo?: { uri: string; name: string; type: string };
 }
 
@@ -286,6 +305,12 @@ export async function createDrive(input: CreateDriveInput): Promise<ApiDrive> {
   form.append('startsAt', input.startsAt);
   if (input.durationMinutes) form.append('durationMinutes', String(input.durationMinutes));
   if (input.capacity) form.append('capacity', String(input.capacity));
+  if (input.whatToBring) form.append('whatToBring', input.whatToBring);
+  if (input.providedByNgo) form.append('providedByNgo', input.providedByNgo);
+  if (input.contactName) form.append('contactName', input.contactName);
+  if (input.contactPhone) form.append('contactPhone', input.contactPhone);
+  if (input.minAge) form.append('minAge', String(input.minAge));
+  if (input.effortLevel) form.append('effortLevel', input.effortLevel);
   if (input.photo) {
     form.append('photo', toFormFile(input.photo.uri), input.photo.name);
   }
@@ -309,6 +334,13 @@ export async function updateDrive(id: string, input: UpdateDriveInput): Promise<
   if (input.startsAt !== undefined) form.append('startsAt', input.startsAt);
   if (input.durationMinutes) form.append('durationMinutes', String(input.durationMinutes));
   if (input.capacity) form.append('capacity', String(input.capacity));
+  // On edit an emptied field must clear the stored value, so '' is sent rather than skipped.
+  if (input.whatToBring !== undefined) form.append('whatToBring', input.whatToBring);
+  if (input.providedByNgo !== undefined) form.append('providedByNgo', input.providedByNgo);
+  if (input.contactName !== undefined) form.append('contactName', input.contactName);
+  if (input.contactPhone !== undefined) form.append('contactPhone', input.contactPhone);
+  if (input.minAge !== undefined) form.append('minAge', input.minAge == null ? '' : String(input.minAge));
+  if (input.effortLevel !== undefined) form.append('effortLevel', input.effortLevel ?? '');
   if (input.photo) form.append('photo', toFormFile(input.photo.uri), input.photo.name);
   return apiFetch<ApiDrive>(`/api/drives/${id}`, { method: 'PATCH', body: form, isForm: true });
 }
@@ -326,6 +358,9 @@ export async function exportOwnedDrives(): Promise<OwnedExport> {
 }
 export async function duplicateDrive(id: string): Promise<ApiDrive> {
   return apiFetch<ApiDrive>(`/api/drives/${id}/duplicate`, { method: 'POST' });
+}
+export async function relaunchDrive(id: string, input: { startsAt: string; notifyPrevious: boolean }): Promise<ApiDrive> {
+  return apiFetch<ApiDrive>(`/api/drives/${id}/relaunch`, { method: 'POST', body: input });
 }
 export async function archiveDrive(id: string, archived: boolean): Promise<ApiDrive> {
   return apiFetch<ApiDrive>(`/api/drives/${id}/archive`, { method: 'POST', body: { archived } });

@@ -15,6 +15,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { CampaignSummary } from '../components/campaigns/CampaignSummary';
 
 import { TEXT } from '../constants/typography';
 // Loaded only once a donation is actually in flight – see PaymentSheetRunner's own comment for
@@ -161,19 +162,10 @@ export function CampaignDetailScreen({ navigation, route }: any) {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
-          <BorderCard style={styles.card}>
-            <Text style={styles.title}>{campaign.title}</Text>
-            <Text style={styles.ngoName}>{campaign.ngoName}</Text>
-            <View style={styles.divider} />
-            <Text style={styles.description}>{campaign.description}</Text>
-            <Text style={styles.raisedText}>
-              {formatRupees(campaign.raisedAmountCents)}
-              {campaign.goalAmountCents ? ` raised of ${formatRupees(campaign.goalAmountCents)}` : ' raised so far'}
-            </Text>
-            {campaign.anonymousRaisedCents > 0 && (
-              <Text style={styles.anonText}>🕶️ {formatRupees(campaign.anonymousRaisedCents)} of this was given anonymously</Text>
-            )}
-          </BorderCard>
+          <CampaignSummary
+            campaign={campaign}
+            onOpenNgo={() => navigation.navigate(isOwnCampaign ? 'NgoProfile' : 'NgoPublicProfile', isOwnCampaign ? undefined : { ngoId: campaign.ngoId })}
+          />
 
           {isOwnCampaign ? (
             <>
@@ -184,9 +176,20 @@ export function CampaignDetailScreen({ navigation, route }: any) {
                 <Text style={styles.description}>No donations yet.</Text>
               ) : (
                 donationsQuery.data!.donations.map((d) => (
-                  <View key={d.id} style={styles.donorRow}>
-                    <Text style={styles.donorName}>{d.donor.name}</Text>
-                    <Text style={styles.donorAmount}>{formatRupees(d.amountCents)}</Text>
+                  <View key={d.id} style={styles.donorBlock}>
+                    <View style={styles.donorRowInner}>
+                      <Text style={styles.donorName} numberOfLines={1}>
+                        {d.donor.name}
+                        {d.isAnonymous ? '  🕶️' : ''}
+                      </Text>
+                      <Text style={styles.donorAmount}>{formatRupees(d.amountCents)}</Text>
+                    </View>
+                    <Text style={styles.donorWhen}>
+                      {new Date(d.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })},{' '}
+                      {new Date(d.createdAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                      {d.status !== 'succeeded' ? `  ·  ${d.status}` : ''}
+                    </Text>
+                    {d.message ? <Text style={styles.donorMessage}>“{d.message}”</Text> : null}
                   </View>
                 ))
               )}
@@ -352,6 +355,10 @@ const styles = StyleSheet.create({
   capHintActive: { color: COLORS.dangerDark, fontWeight: '600' },
   anonText: { fontSize: 12, color: COLORS.textMuted, marginTop: 6 },
   raisedText: { fontSize: 14, color: COLORS.forest, fontWeight: '700' },
+  donorBlock: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(94,133,80,0.12)', gap: 3 },
+  donorRowInner: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
+  donorWhen: { fontSize: 11, color: COLORS.textMuted },
+  donorMessage: { fontSize: 13, lineHeight: 19, fontStyle: 'italic', color: COLORS.textPrimary, marginTop: 2 },
   donorRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(94,133,80,0.12)' },
   donorName: { fontSize: 14, color: COLORS.textPrimary, fontWeight: '600' },
   donorAmount: { fontSize: 14, color: COLORS.forest, fontWeight: '700' },

@@ -20,18 +20,20 @@ import { PageFooter } from '../components/common/PageFooter';
 
 function RequestRow({
   request,
+  onOpenProfile,
   onAccept,
   onDecline,
   busy,
 }: {
   request: ApiFollower;
+  onOpenProfile: () => void;
   onAccept: () => void;
   onDecline: () => void;
   busy: boolean;
 }) {
   return (
     <View style={styles.row}>
-      <View style={styles.topRow}>
+      <TouchableOpacity style={styles.topRow} onPress={onOpenProfile} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`View ${request.user.name}'s profile`}>
         <View style={styles.avatar}>
           <Text style={styles.avatarEmoji}>{request.user.avatarEmoji}</Text>
         </View>
@@ -43,7 +45,8 @@ function RequestRow({
             @{request.user.handle} · {request.user.treesPlantedCount} trees planted
           </Text>
         </View>
-      </View>
+        <Text style={styles.viewProfile}>View profile ›</Text>
+      </TouchableOpacity>
 
       <View style={styles.actions}>
         <TouchableOpacity
@@ -124,6 +127,9 @@ export function NgoFollowerRequestsScreen({ navigation }: any) {
           <RequestRow
             request={item}
             busy={busy}
+            onOpenProfile={() =>
+              navigation.navigate('UserPublicProfile', { userId: item.user.id, followRequest: { kind: 'ngo', followId: item.followId } })
+            }
             onAccept={() => accept.mutate(item.followId)}
             onDecline={() => decline.mutate(item.followId)}
           />
@@ -147,6 +153,7 @@ export function NgoFollowerRequestsScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  viewProfile: { fontSize: 12, fontWeight: '700', color: COLORS.forest },
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   policyNote: {
     margin: SPACING.md,

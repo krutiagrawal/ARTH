@@ -1,11 +1,12 @@
 import {
+  keepPreviousData,
   useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
-import { totalPageParams, mergePages, totalInfinite, pageParams, flatItems } from './useInfiniteList';
+import { totalPageParams, mergePages, totalInfinite, pageParams, flatItems, LIST_STALE_MS } from './useInfiniteList';
 import type { ApiFollowersPage } from '../api/ngoFollowers';
 import {
   createPost,
@@ -46,6 +47,7 @@ import {
   deletePortfolioEntry,
   fetchMyPortfolio,
   fetchNgoPortfolio,
+  fetchNgoPortfolioMap,
   updatePortfolioEntry,
   type PortfolioInput,
 } from '../api/portfolio';
@@ -330,12 +332,16 @@ export function useToggleSave() {
 
 // ---------------------------------------------------------------- NGO followers
 
-export function useNgoFollowers(params: { status?: FollowStatus; q?: string } = {}) {
+export function useNgoFollowers(params: { status?: FollowStatus; q?: string } = {}, enabled: boolean = true) {
   const { isAuthenticated } = useAuth();
   return useInfiniteQuery({
     queryKey: socialKeys.followers(params.status, params.q),
     queryFn: ({ pageParam }) => fetchFollowers({ ...params, page: pageParam, take: 30 }),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && enabled,
+    // Searching shouldn't blank the list between keystrokes, and returning to the screen shouldn't
+    // re-request every loaded page.
+    placeholderData: keepPreviousData,
+    staleTime: LIST_STALE_MS,
     ...totalPageParams<ApiFollowersPage>((p) => p.followers),
     select: mergePages<ApiFollowersPage, 'followers'>('followers'),
   });
@@ -364,6 +370,8 @@ export function useNurseryFollowers(params: { status?: FollowStatus; q?: string 
     queryKey: socialKeys.nurseryFollowers(params.status, params.q),
     queryFn: ({ pageParam }) => fetchNurseryFollowers({ ...params, page: pageParam, take: 30 }),
     enabled: isAuthenticated,
+    placeholderData: keepPreviousData,
+    staleTime: LIST_STALE_MS,
     ...totalPageParams<ApiFollowersPage>((p) => p.followers),
     select: mergePages<ApiFollowersPage, 'followers'>('followers'),
   });
@@ -405,7 +413,17 @@ export function useNgoPortfolio(ngoId: string | undefined) {
   });
 }
 
+/** Past work with a location, as pins for one NGO's map. */
+export function useNgoPortfolioMap(ngoId: string | null) {
+  return useQuery({
+    queryKey: ['ngos', 'portfolio-map', ngoId] as const,
+    queryFn: () => fetchNgoPortfolioMap(ngoId as string),
+    enabled: !!ngoId,
+  });
+}
+
 function invalidatePortfolio(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: ['ngos', 'portfolio-map'] });
   queryClient.invalidateQueries({ queryKey: socialKeys.portfolio });
   queryClient.invalidateQueries({ queryKey: ['ngos', 'portfolio'] });
   queryClient.invalidateQueries({ queryKey: ['ngos', 'public'] });

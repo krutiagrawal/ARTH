@@ -43,6 +43,8 @@ import type { ApiAdoptableTree } from '../api/adoptions';
 import type { ApiDrive } from '../api/drives';
 import type { ApiApprovedLocation } from '../api/plantingLocations';
 import type { ApiPlantingMapEntry } from '../api/plantedTrees';
+import type { ApiPortfolioEntry } from '../api/portfolio';
+import { useNgoPortfolioMap } from '../hooks/useSocialQueries';
 import { NOT_APPROVED_MESSAGE } from '../constants/plantingLocation';
 import { getCurrentPositionWithTimeout } from '../utils/location';
 
@@ -258,6 +260,22 @@ function PlantingMarker({ entry, onPress }: { entry: ApiPlantingMapEntry; onPres
             <Text style={styles.markerEmoji}>🌲</Text>
           </View>
           <View style={[styles.markerPin, { borderTopColor: COLORS.forest }]} />
+        </View>
+      </TouchableOpacity>
+    </Marker>
+  );
+}
+
+/** Past work (archived drives) with a resolved location, shown when the map is scoped to one NGO. */
+function PortfolioMarker({ entry, onPress }: { entry: ApiPortfolioEntry & { lat: number; lng: number }; onPress: () => void }) {
+  return (
+    <Marker id={`portfolio-${entry.id}`} lngLat={[entry.lng, entry.lat]} anchor="bottom">
+      <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+        <View style={styles.markerContainer}>
+          <View style={[styles.markerBubble, styles.portfolioBubble]}>
+            <Text style={styles.markerEmoji}>🏆</Text>
+          </View>
+          <View style={[styles.markerPin, { borderTopColor: COLORS.golden }]} />
         </View>
       </TouchableOpacity>
     </Marker>
@@ -582,6 +600,8 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
   const { data: myDrives = [] } = useMyDrives(isNgo);
   const drives = isNgo ? myDrives : publicDrives;
   const { data: plantingPins = [] } = useNgoPlantingMap(!isNgo && scopeNgoId ? scopeNgoId : null);
+  const { data: portfolioPins = [] } = useNgoPortfolioMap(!isNgo && scopeNgoId ? scopeNgoId : null);
+  const [infoPortfolio, setInfoPortfolio] = useState<ApiPortfolioEntry | null>(null);
   const { data: nurseriesData } = useBrowseNurseries();
   const nurseries = isNgo ? [] : nurseriesData?.nurseries ?? [];
   const { data: approvedLocations = [] } = useApprovedPlantingLocations(!isNgo);
@@ -637,7 +657,7 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
   }, [locationTrackingEnabled, detectLocation]);
 
   const ngoPoints = isNgo || scopeNgoId
-    ? ([...drives, ...adoptableTrees, ...plantingPins] as Array<{ lat: number | null; lng: number | null }>)
+    ? ([...drives, ...adoptableTrees, ...plantingPins, ...portfolioPins] as Array<{ lat: number | null; lng: number | null }>)
         .filter((p) => p.lat != null && p.lng != null)
         .map((p) => ({ lat: p.lat as number, lng: p.lng as number }))
     : [];
@@ -785,6 +805,11 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
     if (showNgo && !isNgo && scopeNgoId) {
       for (const e of plantingPins) fallbackPins.push({ id: `planting:${e.driveId}`, lat: e.lat, lng: e.lng, emoji: '🌲', border: COLORS.forest });
     }
+    if (showNgo && !isNgo && scopeNgoId) {
+      for (const e of portfolioPins) {
+        if (e.lat != null && e.lng != null) fallbackPins.push({ id: `portfolio:${e.id}`, lat: e.lat, lng: e.lng, emoji: '🏆', border: COLORS.golden });
+      }
+    }
     for (const n of showNurseries ? nurseries : []) {
       if (n.lat != null && n.lng != null) fallbackPins.push({ id: `nursery:${n.id}`, lat: Number(n.lat), lng: Number(n.lng), emoji: NURSERY_EMOJI, border: COLORS.earth });
     }
@@ -810,6 +835,9 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
     } else if (kind === 'planting') {
       const entry = plantingPins.find((e) => e.driveId === id);
       if (entry) setSelectedPlanting(entry);
+    } else if (kind === 'portfolio') {
+      const entry = portfolioPins.find((e) => e.id === id);
+      if (entry) setInfoPortfolio(entry);
     } else if (kind === 'nursery') {
       navigation.navigate('NurseryPublicProfile', { nurseryId: id });
     } else if (kind === 'approved') {
@@ -888,6 +916,16 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
               onPress={() => setSelectedPlanting(entry)}
             />
           ))}
+
+          {showNgo && !isNgo && scopeNgoId && portfolioPins
+            .filter((e) => e.lat != null && e.lng != null)
+            .map((e) => (
+              <PortfolioMarker
+                key={`portfolio_${e.id}`}
+                entry={e as ApiPortfolioEntry & { lat: number; lng: number }}
+                onPress={() => setInfoPortfolio(e)}
+              />
+            ))}
 
           {showNurseries && nurseries
             .filter((n) => n.lat != null && n.lng != null)
@@ -1137,6 +1175,20 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
         />
       )}
 
+      {infoPortfolio && (
+        <StatusModal
+          visible
+          onClose={() => setInfoPortfolio(null)}
+          icon="🏆"
+          title={infoPortfolio.title}
+          message={[
+            new Date(infoPortfolio.happenedOn).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }),
+            infoPortfolio.locationLabel,
+            infoPortfolio.treesPlanted != null ? `${infoPortfolio.treesPlanted} trees planted` : null,
+          ].filter(Boolean).join(', ')}
+        />
+      )}
+
       {infoLocation && (
         <StatusModal
           visible
@@ -1190,6 +1242,10 @@ const styles = StyleSheet.create({
   },
   approvedBubble: {
     backgroundColor: ZONE_COLOR,
+    borderColor: 'rgba(255,255,255,0.85)',
+  },
+  portfolioBubble: {
+    backgroundColor: COLORS.golden,
     borderColor: 'rgba(255,255,255,0.85)',
   },
   plantingBubble: {

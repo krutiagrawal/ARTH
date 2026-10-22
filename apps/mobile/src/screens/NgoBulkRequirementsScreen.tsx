@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Platform } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -21,6 +21,7 @@ import {
   useNgoBulkRequirements,
   useNgoBulkRequirement,
   useCreateNgoBulkRequirement,
+  useUpdateNgoBulkRequirement,
   useCancelNgoBulkRequirement,
   useRescheduleNgoBulkRequirement,
   useAcceptNgoBulkResponse,
@@ -30,10 +31,11 @@ import {
   useCreateSpecies,
 } from '../hooks/useApiQueries';
 import { ApiError } from '../api/client';
-import type { ApiNgoBulkRequirement } from '../api/ngoBulkRequirements';
+import type { ApiNgoBulkRequirement, ApiNgoBulkResponse, RequirementFilter, RequirementSort, UpdateNgoBulkRequirementInput } from '../api/ngoBulkRequirements';
+import { BulkRequirementCard, STATUS_STYLE, deadlineInfo, requirementTitle } from '../components/ngo/BulkRequirementCard';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PageFooter } from '../components/common/PageFooter';
-import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import { isBulkRequirementOverdue } from '../utils/bulkRequirement';
 import { reverseGeocode } from '../api/geocode';
 import { SPECIES_EMOJI_OPTIONS } from '../api/species';
@@ -41,33 +43,13 @@ import { fuzzyMatch } from '../utils/fuzzyMatch';
 
 import { TEXT } from '../constants/typography';
 import { useRequireApproval } from '../hooks/useRequireApproval';
-function RequirementCard({ item, onPress }: { item: ApiNgoBulkRequirement; onPress: () => void }) {
-  const overdue = isBulkRequirementOverdue(item);
-  return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-      <BorderCard style={styles.row}>
-        <Text style={styles.species}>{item.species?.commonName ?? item.speciesNote ?? 'Any species'}</Text>
-        <Text style={styles.meta}>
-          {item.quantityFulfilled}/{item.quantityNeeded} fulfilled
-          {item.neededByDate ? (
-            <Text style={overdue ? styles.metaOverdue : undefined}> · Needed by {new Date(item.neededByDate).toLocaleDateString()}</Text>
-          ) : null}
-        </Text>
-        <View style={[styles.statusBadge, badgeColor(item.status)]}>
-          <Text style={styles.statusBadgeText}>{item.status.replace('_', ' ')}</Text>
-        </View>
-      </BorderCard>
-    </TouchableOpacity>
-  );
-}
-
 function badgeColor(status: string) {
   if (status === 'fulfilled') return { backgroundColor: 'rgba(94,133,80,0.15)' };
   if (status === 'cancelled' || status === 'expired') return { backgroundColor: 'rgba(194,74,59,0.12)' };
   return { backgroundColor: 'rgba(212,168,83,0.18)' };
 }
 
-function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
+function DetailSheet({ id, onClose, onEdit }: { id: string | null; onClose: () => void; onEdit: (req: ApiNgoBulkRequirement) => void }) {
   const guard = useRequireApproval();
   const { data: req, isLoading } = useNgoBulkRequirement(id);
   const cancelMutation = useCancelNgoBulkRequirement();
@@ -85,28 +67,126 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
     setShowReschedulePicker(false);
   }, [id]);
 
+  // Accepting commits the NGO to that quantity and price, and declining can't be taken back - so both ask first.
+  const confirmAccept = (r: ApiNgoBulkResponse) => {
+    const total = r.priceCents != null ? ` for ₹${((r.priceCents * r.quantityOffered) / 100).toLocaleString('en-IN')}` : ' free of charge';
+    confirm(
+      'Accept this offer?',
+      `${r.nursery.nurseryName} will supply ${r.quantityOffered.toLocaleString('en-IN')} saplings${total}. They'll be told straight away and will arrange the handoff.`,
+      [
+        { text: 'Back', style: 'cancel' },
+        { text: 'Accept offer', onPress: guard(() => acceptMutation.mutate(r.id)) },
+      ],
+    );
+  };
+
+  const confirmDecline = (r: ApiNgoBulkResponse) => {
+    confirm(
+      'Decline this offer?',
+      `${r.nursery.nurseryName} will be told their offer of ${r.quantityOffered.toLocaleString('en-IN')} saplings was declined. This can't be undone.`,
+      [
+        { text: 'Back', style: 'cancel' },
+        { text: 'Decline offer', style: 'destructive', onPress: guard(() => declineMutation.mutate(r.id)) },
+      ],
+    );
+  };
+
   return (
     <Sheet visible={!!id} onClose={onClose} title="Requirement" scrollable maxHeight={560}>
       {isLoading || !req ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginVertical: 20 }} />
       ) : (
         <View style={{ gap: 12 }}>
-          <Text style={styles.sheetSpecies}>{req.species?.commonName ?? req.speciesNote ?? 'Any species'}</Text>
-          <Text style={styles.sheetMeta}>
-            {req.quantityFulfilled}/{req.quantityNeeded} fulfilled
-            {req.neededByDate ? (
-              <Text style={isBulkRequirementOverdue(req) ? styles.metaOverdue : undefined}> · Needed by {new Date(req.neededByDate).toLocaleDateString()}</Text>
-            ) : null}
-          </Text>
-          {req.notes ? <Text style={styles.sheetNotes}>{req.notes}</Text> : null}
+          <View style={styles.sheetHead}>
+            <View style={styles.sheetEmojiTile}>
+              <Text style={{ fontSize: 26 }}>{req.species?.emoji ?? '🌱'}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sheetSpecies}>{requirementTitle(req)}</Text>
+              {req.species && req.speciesNote ? <Text style={styles.sheetMeta}>{req.speciesNote}</Text> : null}
+            </View>
+            <View style={[styles.statusBadge, { backgroundColor: `${(STATUS_STYLE[req.status] ?? STATUS_STYLE.open).color}26`, marginTop: 0 }]}>
+              <Text style={[styles.statusBadgeText, { color: (STATUS_STYLE[req.status] ?? STATUS_STYLE.open).color }]}>
+                {(STATUS_STYLE[req.status] ?? STATUS_STYLE.open).label}
+              </Text>
+            </View>
+          </View>
 
-          <Text style={styles.sheetSectionTitle}>Nursery offers</Text>
+          <View>
+            <View style={styles.sheetProgressHead}>
+              <Text style={styles.sheetMeta}>
+                <Text style={styles.sheetQtyStrong}>{req.quantityFulfilled.toLocaleString('en-IN')}</Text> of {req.quantityNeeded.toLocaleString('en-IN')} received
+              </Text>
+              <Text style={styles.sheetPercent}>{req.quantityNeeded ? Math.min(100, Math.round((req.quantityFulfilled / req.quantityNeeded) * 100)) : 0}%</Text>
+            </View>
+            <View style={styles.sheetTrack}>
+              <View style={[styles.sheetFill, { width: `${req.quantityNeeded ? Math.min(100, Math.round((req.quantityFulfilled / req.quantityNeeded) * 100)) : 0}%` }]} />
+            </View>
+          </View>
+
+          <View style={styles.factGrid}>
+            <View style={styles.fact}>
+              <Text style={styles.factLabel}>Still needed</Text>
+              <Text style={styles.factValue}>{Math.max(req.quantityNeeded - req.quantityFulfilled, 0).toLocaleString('en-IN')}</Text>
+            </View>
+            <View style={styles.fact}>
+              <Text style={styles.factLabel}>Needed by</Text>
+              <Text style={[styles.factValue, deadlineInfo(req)?.urgent && { color: COLORS.coral }]}>
+                {req.neededByDate ? new Date(req.neededByDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : 'No deadline'}
+              </Text>
+              {deadlineInfo(req) ? <Text style={[styles.factSub, deadlineInfo(req)!.urgent && { color: COLORS.coral }]}>{deadlineInfo(req)!.text}</Text> : null}
+            </View>
+            <View style={styles.fact}>
+              <Text style={styles.factLabel}>Deliver to</Text>
+              <Text style={styles.factValue}>{req.city ?? 'Not set'}</Text>
+            </View>
+            <View style={styles.fact}>
+              <Text style={styles.factLabel}>Posted</Text>
+              <Text style={styles.factValue}>{new Date(req.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
+            </View>
+          </View>
+
+          <View style={styles.tagRow}>
+            {req.nativePreferred ? (
+              <View style={styles.tag}>
+                <Text style={styles.tagText}>🌿 Native species preferred</Text>
+              </View>
+            ) : null}
+            {req.drive ? (
+              <View style={styles.tag}>
+                <Text style={styles.tagText}>🌳 For drive: {req.drive.title}</Text>
+              </View>
+            ) : null}
+          </View>
+
+          {req.notes ? (
+            <View style={styles.notesBox}>
+              <Text style={styles.factLabel}>Notes</Text>
+              <Text style={styles.sheetNotes}>{req.notes}</Text>
+            </View>
+          ) : null}
+
+          {['open', 'partially_fulfilled'].includes(req.status) && (
+            <TouchableOpacity style={styles.editButton} onPress={guard(() => onEdit(req))} activeOpacity={0.8} accessibilityRole="button">
+              <Text style={styles.editButtonText}>✏️  Edit requirement</Text>
+            </TouchableOpacity>
+          )}
+
+          <Text style={styles.sheetSectionTitle}>Nursery offers{req.responses?.length ? ` (${req.responses.length})` : ''}</Text>
           {!req.responses || req.responses.length === 0 ? (
             <Text style={styles.sheetEmpty}>No offers yet.</Text>
           ) : (
             req.responses.map((r) => (
               <BorderCard key={r.id} style={styles.offerCard}>
                 <Text style={styles.offerNursery}>{r.nursery.nurseryName}</Text>
+                {r.nursery.city || r.nursery.avgRating ? (
+                  <Text style={styles.offerMeta}>
+                    {r.nursery.city ? `📍 ${r.nursery.city}` : ''}
+                    {r.nursery.city && r.nursery.avgRating ? '  ·  ' : ''}
+                    {r.nursery.avgRating ? `⭐ ${Number(r.nursery.avgRating).toFixed(1)}` : ''}
+                    {`  ·  Offered ${new Date(r.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`}
+                  </Text>
+                ) : null}
                 <Text style={styles.offerMeta}>
                   {r.quantityOffered} offered
                   {r.priceCents != null
@@ -120,10 +200,10 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
                 </View>
                 {r.status === 'proposed' && (
                   <View style={styles.offerActions}>
-                    <TouchableOpacity onPress={() => acceptMutation.mutate(r.id)} style={styles.offerAcceptButton}>
+                    <TouchableOpacity onPress={() => confirmAccept(r)} style={styles.offerAcceptButton}>
                       <Text style={styles.offerAcceptText}>Accept</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => declineMutation.mutate(r.id)} style={styles.offerDeclineButton}>
+                    <TouchableOpacity onPress={() => confirmDecline(r)} style={styles.offerDeclineButton}>
                       <Text style={styles.offerDeclineText}>Decline</Text>
                     </TouchableOpacity>
                   </View>
@@ -141,7 +221,7 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
                       keyboardType="number-pad"
                     />
                     <TouchableOpacity
-                      onPress={() => confirmReceivedMutation.mutate({ responseId: r.id, code: (codeDrafts[r.id] ?? '').trim() })}
+                      onPress={guard(() => confirmReceivedMutation.mutate({ responseId: r.id, code: (codeDrafts[r.id] ?? '').trim() }))}
                       style={styles.offerAcceptButton}
                       disabled={confirmReceivedMutation.isPending}
                     >
@@ -184,7 +264,7 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
                 </TouchableOpacity>
               )}
               <TouchableOpacity
-                onPress={() => rescheduleDate && rescheduleMutation.mutate({ id: req.id, neededByDate: rescheduleDate.toISOString() })}
+                onPress={guard(() => rescheduleDate && rescheduleMutation.mutate({ id: req.id, neededByDate: rescheduleDate.toISOString() }))}
                 style={styles.offerAcceptButton}
                 disabled={!rescheduleDate || rescheduleMutation.isPending}
               >
@@ -201,7 +281,7 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
               onPress={() =>
                 confirm('Cancel this requirement?', 'Nurseries will no longer be able to respond.', [
                   { text: 'Back', style: 'cancel' },
-                  { text: 'Cancel requirement', style: 'destructive', onPress: () => cancelMutation.mutate(req.id) },
+                  { text: 'Cancel requirement', style: 'destructive', onPress: guard(() => cancelMutation.mutate(req.id)) },
                 ])
               }
               style={styles.cancelLink}
@@ -215,11 +295,42 @@ function DetailSheet({ id, onClose }: { id: string | null; onClose: () => void }
   );
 }
 
+const REQUIREMENT_FILTERS: { key: RequirementFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'attention', label: 'Needs attention' },
+  { key: 'open', label: 'Open' },
+  { key: 'partially_fulfilled', label: 'Partly filled' },
+  { key: 'fulfilled', label: 'Fulfilled' },
+  { key: 'expired', label: 'Expired' },
+  { key: 'cancelled', label: 'Cancelled' },
+];
+
+const REQUIREMENT_SORTS: { key: RequirementSort; label: string }[] = [
+  { key: 'newest', label: 'Newest first' },
+  { key: 'oldest', label: 'Oldest first' },
+  { key: 'deadline', label: 'Deadline (soonest)' },
+  { key: 'biggest', label: 'Largest quantity' },
+];
+
 export function NgoBulkRequirementsScreen({ navigation, route }: any) {
   const guard = useRequireApproval();
   const insets = useSafeAreaInsets();
-  const listQuery = useNgoBulkRequirements();
-  const { data: requirements = [], isLoading, refetch } = listQuery;
+  const [searchText, setSearchText] = useState('');
+  const debouncedSearch = useDebouncedValue(searchText.trim());
+  const [filter, setFilter] = useState<RequirementFilter>('all');
+  const [sort, setSort] = useState<RequirementSort>('newest');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+  const listQuery = useNgoBulkRequirements({ search: debouncedSearch, filter, sort });
+  const { data, isLoading, isFetching, refetch } = listQuery;
+  const requirements = data?.items ?? [];
+  const counts = data?.counts;
+  const isFiltering = !!debouncedSearch || filter !== 'all';
+  const activeFilterCount = (filter !== 'all' ? 1 : 0) + (sort !== 'newest' ? 1 : 0);
+  const clearAll = () => {
+    setSearchText('');
+    setFilter('all');
+  };
   const createMutation = useCreateNgoBulkRequirement();
   const { data: speciesCatalog = [] } = useSpecies();
   const createSpeciesMutation = useCreateSpecies();
@@ -254,6 +365,18 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
   const [locationNotice, setLocationNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // Set while the form is editing an existing requirement instead of creating one.
+  const [editing, setEditing] = useState<ApiNgoBulkRequirement | null>(null);
+  const updateMutation = useUpdateNgoBulkRequirement();
+  const confirm = useConfirm();
+
+  // Offers limit what may change: nobody should be able to pull the species or quantity out from
+  // under a nursery that has already priced an offer (the server enforces the same rules).
+  const liveOffers = (editing?.responses ?? []).filter((r) => ['proposed', 'accepted', 'handed_off', 'fulfilled'].includes(r.status));
+  const pendingOffers = (editing?.responses ?? []).filter((r) => r.status === 'proposed');
+  const promisedQty = (editing?.responses ?? []).filter((r) => ['accepted', 'handed_off', 'fulfilled'].includes(r.status)).reduce((n, r) => n + r.quantityOffered, 0);
+  const speciesLocked = !!editing && liveOffers.length > 0;
+  const minQuantity = editing ? Math.max(editing.quantityFulfilled, promisedQty, pendingOffers.length > 0 ? editing.quantityNeeded : 0) : 0;
 
   // Fuzzy (not just substring) so a typo or near-miss spelling ("roze", "gulmohr") still surfaces
   // the existing catalog entry instead of nudging the NGO toward adding a near-duplicate.
@@ -305,7 +428,113 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
     }
   };
 
+  const resetForm = () => {
+    setEditing(null);
+    setSpeciesId(null);
+    setSpeciesQuery('');
+    setShowAddSpecies(false);
+    setNewSpeciesEmoji(null);
+    setSpeciesNote('');
+    setQuantityNeeded('');
+    setNeededByDate(null);
+    setCity('');
+    setAddress('');
+    setCoords(null);
+    setLocationNotice(null);
+    setNotes('');
+    setError(null);
+  };
+
+  const startEdit = (req: ApiNgoBulkRequirement) => {
+    resetForm();
+    setSelectedId(null);
+    setEditing(req);
+    setSpeciesId(req.speciesId);
+    setSpeciesNote(req.speciesNote ?? '');
+    setQuantityNeeded(String(req.quantityNeeded));
+    setNeededByDate(req.neededByDate ? new Date(req.neededByDate) : null);
+    setCity(req.city ?? '');
+    setCoords(req.lat != null && req.lng != null ? { lat: req.lat, lng: req.lng } : null);
+    setNotes(req.notes ?? '');
+    setShowCreate(true);
+  };
+
+  const closeForm = () => {
+    setShowCreate(false);
+    // A half-finished new requirement is kept as a draft; an edit is not, or it would leak into the next "New".
+    if (editing) resetForm();
+  };
+
+  const handleEdit = async () => {
+    if (!editing) return;
+    setError(null);
+    const qty = Number(quantityNeeded);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      setError('Enter a valid quantity needed.');
+      return;
+    }
+    if (qty < minQuantity) {
+      setError(
+        pendingOffers.length > 0 && minQuantity === editing.quantityNeeded
+          ? `Nurseries have offered against ${editing.quantityNeeded.toLocaleString('en-IN')} saplings, so the quantity can only go up.`
+          : `The quantity can't go below ${minQuantity.toLocaleString('en-IN')} – that much is already received or promised.`,
+      );
+      return;
+    }
+
+    // Send only what actually changed.
+    const input: UpdateNgoBulkRequirementInput = {};
+    if (!speciesLocked) {
+      if ((speciesId ?? null) !== (editing.speciesId ?? null)) input.speciesId = speciesId;
+      if (speciesNote.trim() !== (editing.speciesNote ?? '')) input.speciesNote = speciesNote.trim() || null;
+    }
+    if (qty !== editing.quantityNeeded) input.quantityNeeded = qty;
+    const oldDay = editing.neededByDate ? new Date(editing.neededByDate).toDateString() : null;
+    if ((neededByDate ? neededByDate.toDateString() : null) !== oldDay) input.neededByDate = neededByDate ? neededByDate.toISOString() : null;
+    if (city.trim() !== (editing.city ?? '')) input.city = city.trim() || null;
+    if ((coords?.lat ?? null) !== (editing.lat ?? null) || (coords?.lng ?? null) !== (editing.lng ?? null)) {
+      input.lat = coords?.lat ?? null;
+      input.lng = coords?.lng ?? null;
+    }
+    if (notes.trim() !== (editing.notes ?? '')) input.notes = notes.trim() || null;
+
+    if (Object.keys(input).length === 0) {
+      closeForm();
+      return;
+    }
+
+    const save = async () => {
+      try {
+        await updateMutation.mutateAsync({ id: editing.id, input });
+        setShowCreate(false);
+        resetForm();
+      } catch (e) {
+        setError(e instanceof ApiError ? e.message : 'Could not save your changes. Please try again.');
+      }
+    };
+
+    // Every nursery with a live offer is notified of what changed - say so before sending that.
+    const notifies = liveOffers.length > 0 && ('quantityNeeded' in input || 'neededByDate' in input || 'city' in input || 'lat' in input || 'notes' in input);
+    if (notifies) {
+      const nurseries = new Set(liveOffers.map((r) => r.nurseryId)).size;
+      confirm(
+        'Save these changes?',
+        `${nurseries} nurser${nurseries === 1 ? 'y has' : 'ies have'} already made an offer. ${nurseries === 1 ? 'They' : 'Each of them'} will be notified of what changed.`,
+        [
+          { text: 'Back', style: 'cancel' },
+          { text: 'Save & notify', onPress: save },
+        ],
+      );
+      return;
+    }
+    await save();
+  };
+
   const handleCreate = async () => {
+    if (editing) {
+      await handleEdit();
+      return;
+    }
     setError(null);
     const qty = Number(quantityNeeded);
     if (!Number.isFinite(qty) || qty <= 0) {
@@ -323,18 +552,7 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
         lng: coords?.lng,
         notes: notes.trim() || undefined,
       });
-      setSpeciesId(null);
-      setSpeciesQuery('');
-      setShowAddSpecies(false);
-      setNewSpeciesEmoji(null);
-      setSpeciesNote('');
-      setQuantityNeeded('');
-      setNeededByDate(null);
-      setCity('');
-      setAddress('');
-      setCoords(null);
-      setLocationNotice(null);
-      setNotes('');
+      resetForm();
       setShowCreate(false);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not post this requirement. Please try again.');
@@ -357,29 +575,138 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
         }
       />
 
-      {isLoading ? (
-        <ActivityIndicator color={COLORS.sage} style={{ marginTop: 20 }} />
-      ) : requirements.length === 0 ? (
-        <EmptyState icon="🤝" title="No requirements yet" body="Post one to ask nurseries nearby for bulk saplings." actionLabel="Post a requirement" onAction={() => setShowCreate(true)} />
-      ) : (
-        <ScrollView
-          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          {...infiniteScrollProps(listQuery)}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
-        >
-          {requirements.map((r) => (
-            <RequirementCard key={r.id} item={r} onPress={() => setSelectedId(r.id)} />
-          ))}
-          <PageFooter loading={listQuery.isFetchingNextPage} />
-        </ScrollView>
-      )}
+      <FlatList
+        data={requirements}
+        keyExtractor={(r) => r.id}
+        renderItem={({ item }) => <BulkRequirementCard item={item} onPress={() => setSelectedId(item.id)} />}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        initialNumToRender={8}
+        windowSize={9}
+        onEndReached={() => {
+          if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) listQuery.fetchNextPage();
+        }}
+        onEndReachedThreshold={0.6}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
+        ListHeaderComponent={
+          <View style={styles.controls}>
+            <View style={styles.searchRow}>
+              <View style={styles.searchBox}>
+                <Text style={styles.searchIcon}>🔍</Text>
+                <TextInput
+                  style={styles.searchField}
+                  value={searchText}
+                  onChangeText={setSearchText}
+                  placeholder="Search species, notes or city"
+                  placeholderTextColor={COLORS.textLight}
+                  autoCorrect={false}
+                  returnKeyType="search"
+                />
+                {searchText ? (
+                  <TouchableOpacity onPress={() => setSearchText('')} hitSlop={8} accessibilityLabel="Clear search">
+                    <Text style={styles.clearX}>✕</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+              <TouchableOpacity
+                style={[styles.filterBtn, (filtersOpen || activeFilterCount > 0) && styles.filterBtnActive]}
+                onPress={() => setFiltersOpen((x) => !x)}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Filters and sort"
+              >
+                <View style={{ gap: 3, alignItems: 'center' }}>
+                  {[18, 12, 6].map((w) => (
+                    <View key={w} style={{ width: w, height: 2, borderRadius: 1, backgroundColor: filtersOpen || activeFilterCount > 0 ? COLORS.white : COLORS.textSecondary }} />
+                  ))}
+                </View>
+                {activeFilterCount > 0 && (
+                  <View style={styles.filterBadge}>
+                    <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
 
-      <Sheet visible={showCreate} onClose={() => setShowCreate(false)} title="New bulk requirement" scrollable maxHeight={560}>
+            {filtersOpen && (
+              <View style={styles.panel}>
+                <Text style={styles.panelLabel}>Show</Text>
+                <View style={styles.chipWrap}>
+                  {REQUIREMENT_FILTERS.map((f) => {
+                    const active = filter === f.key;
+                    return (
+                      <TouchableOpacity key={f.key} style={[styles.filterChip, active && styles.filterChipActive]} onPress={() => setFilter(f.key)} activeOpacity={0.8}>
+                        <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                          {f.label}
+                          {counts ? `  ${counts[f.key]}` : ''}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                <Text style={styles.panelLabel}>Sort by</Text>
+                <TouchableOpacity style={styles.select} onPress={() => setSortOpen(true)} activeOpacity={0.8}>
+                  <Text style={styles.selectText}>{REQUIREMENT_SORTS.find((x) => x.key === sort)?.label}</Text>
+                  <Text style={styles.selectChevron}>▾</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <View style={styles.summaryRow}>
+              <Text style={styles.summary}>
+                {data ? `${data.total} requirement${data.total === 1 ? '' : 's'}` : ' '}
+                {isFiltering && data ? ' match' : ''}
+              </Text>
+              {isFiltering ? (
+                <TouchableOpacity onPress={clearAll} hitSlop={8}>
+                  <Text style={styles.clearAll}>Clear filters</Text>
+                </TouchableOpacity>
+              ) : isFetching && !isLoading ? (
+                <ActivityIndicator size="small" color={COLORS.sage} />
+              ) : null}
+            </View>
+          </View>
+        }
+        ListEmptyComponent={
+          isLoading ? (
+            <ActivityIndicator color={COLORS.sage} style={{ marginTop: 20 }} />
+          ) : isFiltering ? (
+            <EmptyState icon="🔎" title="No matches" body="Try a different search or clear the filters." actionLabel="Clear filters" onAction={clearAll} />
+          ) : (
+            <EmptyState icon="🤝" title="No requirements yet" body="Post one to ask nurseries nearby for bulk saplings." actionLabel="Post a requirement" onAction={() => setShowCreate(true)} />
+          )
+        }
+        ListFooterComponent={<PageFooter loading={listQuery.isFetchingNextPage} />}
+      />
+
+      <Sheet visible={sortOpen} onClose={() => setSortOpen(false)} title="Sort by">
+        {REQUIREMENT_SORTS.map((o) => (
+          <TouchableOpacity
+            key={o.key}
+            style={styles.option}
+            onPress={() => {
+              setSort(o.key);
+              setSortOpen(false);
+            }}
+          >
+            <Text style={[styles.optionText, sort === o.key && styles.optionTextActive]}>{o.label}</Text>
+            {sort === o.key ? <Text style={styles.optionTick}>✓</Text> : null}
+          </TouchableOpacity>
+        ))}
+      </Sheet>
+
+      <Sheet visible={showCreate} onClose={closeForm} title={editing ? 'Edit requirement' : 'New bulk requirement'} scrollable maxHeight={560}>
         <View style={{ gap: 4 }}>
-          <Text style={styles.formLabel}>Species (optional)</Text>
-          {speciesId ? (
+          {speciesLocked ? (
+            <View style={styles.lockBox}>
+              <Text style={styles.lockTitle}>🔒 {editing?.species?.commonName ?? editing?.speciesNote ?? 'Any species'}</Text>
+              <Text style={styles.lockText}>The species is fixed because nurseries have already made offers on it. To change it, cancel this requirement and post a new one.</Text>
+            </View>
+          ) : null}
+          {!speciesLocked && <Text style={styles.formLabel}>Species (optional)</Text>}
+          {speciesLocked ? null : speciesId ? (
             <View style={styles.selectedSpeciesRow}>
               <Text style={styles.selectedSpeciesText}>
                 {speciesCatalog.find((s) => s.id === speciesId)?.emoji} {speciesCatalog.find((s) => s.id === speciesId)?.commonName}
@@ -456,11 +783,22 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
               )}
             </>
           )}
-          <Text style={styles.fieldHint}>
-            Matching a catalog species lets nurseries' existing stock be checked when they respond – leave blank for open-ended asks like "any native species".
-          </Text>
-          <FormField maxLength={200} label="Additional description (optional)" value={speciesNote} onChangeText={setSpeciesNote} placeholder="eg - Native shade trees" />
+          {!speciesLocked && (
+            <>
+              <Text style={styles.fieldHint}>
+                Matching a catalog species lets nurseries' existing stock be checked when they respond – leave blank for open-ended asks like "any native species".
+              </Text>
+              <FormField maxLength={200} label="Additional description (optional)" value={speciesNote} onChangeText={setSpeciesNote} placeholder="eg - Native shade trees" />
+            </>
+          )}
           <FormField required label="Quantity needed" value={quantityNeeded} onChangeText={setQuantityNeeded} placeholder="eg - 0" keyboardType="number-pad" />
+          {editing && minQuantity > 0 && (
+            <Text style={styles.fieldHint}>
+              {pendingOffers.length > 0 && minQuantity === editing.quantityNeeded
+                ? `Offers are pending against ${editing.quantityNeeded.toLocaleString('en-IN')} saplings, so this can only go up.`
+                : `Can't go below ${minQuantity.toLocaleString('en-IN')} – already received or promised.`}
+            </Text>
+          )}
           <FormFieldShell label="Needed by (optional)">
             <TouchableOpacity onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
               <Text style={[styles.dateValue, !neededByDate && styles.datePlaceholder]}>
@@ -519,9 +857,9 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
           <FormField maxLength={1000} label="Notes (optional)" value={notes} onChangeText={setNotes} placeholder="eg - Anything nurseries should know" multiline />
           {error && <Text style={styles.errorText}>{error}</Text>}
           <AnimatedButton
-            label={createMutation.isPending ? 'Posting…' : 'Post requirement'}
+            label={editing ? (updateMutation.isPending ? 'Saving…' : 'Save changes') : createMutation.isPending ? 'Posting…' : 'Post requirement'}
             onPress={handleCreate}
-            disabled={createMutation.isPending}
+            disabled={createMutation.isPending || updateMutation.isPending}
             variant="primary"
             size="lg"
             fullWidth
@@ -530,12 +868,64 @@ export function NgoBulkRequirementsScreen({ navigation, route }: any) {
         </View>
       </Sheet>
 
-      <DetailSheet id={selectedId} onClose={() => setSelectedId(null)} />
+      <DetailSheet id={selectedId} onClose={() => setSelectedId(null)} onEdit={startEdit} />
     </View>
   );
 }
 
+const border = 'rgba(139, 107, 71, 0.30)';
+
 const styles = StyleSheet.create({
+  editButton: { alignSelf: 'flex-start', borderRadius: 999, borderWidth: 1.5, borderColor: COLORS.forest, paddingHorizontal: 16, paddingVertical: 8 },
+  editButtonText: { fontSize: 13, fontWeight: '800', color: COLORS.forest },
+  lockBox: { borderWidth: 1, borderColor: 'rgba(139,107,71,0.3)', borderRadius: RADIUS.md, padding: 12, gap: 4, marginBottom: 8 },
+  lockTitle: { fontSize: 15, fontWeight: '800', color: COLORS.textPrimary },
+  lockText: { fontSize: 12, lineHeight: 17, color: COLORS.textSecondary },
+  controls: { gap: 12, paddingBottom: 12 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: border, borderRadius: 14, paddingHorizontal: 12, height: 46 },
+  searchIcon: { fontSize: 14 },
+  searchField: { flex: 1, fontSize: 14, color: COLORS.textPrimary, paddingVertical: 0 },
+  clearX: { fontSize: 14, color: COLORS.textMuted },
+  filterBtn: { width: 46, height: 46, borderRadius: 14, borderWidth: 1.5, borderColor: border, alignItems: 'center', justifyContent: 'center' },
+  filterBtnActive: { backgroundColor: COLORS.forest, borderColor: COLORS.forest },
+  filterBadge: { position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, backgroundColor: COLORS.golden, alignItems: 'center', justifyContent: 'center' },
+  filterBadgeText: { fontSize: 10, fontWeight: '800', color: COLORS.white },
+  panel: { gap: 8, borderWidth: 1, borderColor: border, borderRadius: 14, padding: 14 },
+  panelLabel: { fontSize: 11, fontWeight: '800', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 4 },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  filterChip: { borderRadius: 999, borderWidth: 1.5, borderColor: border, paddingHorizontal: 13, paddingVertical: 7 },
+  filterChipActive: { backgroundColor: COLORS.forest, borderColor: COLORS.forest },
+  filterChipText: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
+  filterChipTextActive: { color: COLORS.white },
+  select: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  selectText: { flex: 1, fontSize: 13, fontWeight: '600', color: COLORS.textPrimary },
+  selectChevron: { fontSize: 12, color: COLORS.textMuted, marginLeft: 8 },
+  summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 20 },
+  summary: { fontSize: 12, fontWeight: '700', color: COLORS.textMuted },
+  clearAll: { fontSize: 12, fontWeight: '700', color: COLORS.forest },
+  option: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: border },
+  optionText: { fontSize: 15, color: COLORS.textPrimary },
+  optionTextActive: { fontWeight: '800', color: COLORS.forest },
+  optionTick: { fontSize: 16, color: COLORS.forest, fontWeight: '800' },
+
+  sheetHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  sheetEmojiTile: { width: 52, height: 52, borderRadius: 14, borderWidth: 1, borderColor: border, alignItems: 'center', justifyContent: 'center' },
+  sheetProgressHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 },
+  sheetQtyStrong: { fontSize: 16, fontWeight: '800', color: COLORS.forest },
+  sheetPercent: { fontSize: 13, fontWeight: '800', color: COLORS.forest },
+  sheetTrack: { height: 8, borderRadius: 4, backgroundColor: 'rgba(94,133,80,0.15)', overflow: 'hidden' },
+  sheetFill: { height: '100%', backgroundColor: COLORS.sage, borderRadius: 4 },
+  factGrid: { flexDirection: 'row', flexWrap: 'wrap', borderWidth: 1, borderColor: border, borderRadius: RADIUS.md },
+  fact: { width: '50%', padding: 12, gap: 2 },
+  factLabel: { fontSize: 10, fontWeight: '800', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 0.6 },
+  factValue: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
+  factSub: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tag: { borderRadius: 999, backgroundColor: 'rgba(94,133,80,0.12)', paddingHorizontal: 11, paddingVertical: 5 },
+  tagText: { fontSize: 12, fontWeight: '700', color: COLORS.forest },
+  notesBox: { gap: 4 },
+
   container: { flex: 1 },
   formLabel: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted, marginBottom: 6 },
   searchInput: {

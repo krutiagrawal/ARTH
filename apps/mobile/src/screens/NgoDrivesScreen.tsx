@@ -7,6 +7,8 @@ import { FONTS, TEXT } from '../constants/typography';
 
 import { BorderCard } from '../components/common/BorderCard';
 import { EmptyState } from '../components/common/EmptyState';
+import { RelaunchDriveSheet } from '../components/drives/RelaunchDriveSheet';
+import type { ApiDrive } from '../api/drives';
 import { StatusModal } from '../components/common/StatusModal';
 import {
   useMyDrivesPaged,
@@ -35,11 +37,12 @@ function FadeInRow({ delay, children, style }: { delay: number; children: React.
   return <Animated.View style={[animStyle, style]}>{children}</Animated.View>;
 }
 
-const DRIVE_STATUS_COLORS: Record<'upcoming' | 'cancelled' | 'completed' | 'ended', string> = {
+const DRIVE_STATUS_COLORS: Record<'upcoming' | 'cancelled' | 'completed' | 'ended' | 'rescheduled', string> = {
   upcoming: COLORS.golden,
   ended: COLORS.sage,
   completed: COLORS.forest,
   cancelled: COLORS.coral,
+  rescheduled: COLORS.earth,
 };
 
 function StatusPill({ label, color }: { label: string; color: string }) {
@@ -62,6 +65,7 @@ function MetaRow({ icon, text, style }: { icon: string; text: string; style?: an
 export function NgoDrivesScreen({ navigation }: any) {
   const bottomClearance = useBottomNavClearance();
   const [search, setSearch] = React.useState('');
+  const [relaunching, setRelaunching] = React.useState<ApiDrive | null>(null);
   const [view, setView] = React.useState<OwnedDriveStatus | 'archived' | null>(null);
   const [sort, setSort] = React.useState<'newest' | 'oldest' | 'soonest'>('newest');
   const [when, setWhen] = React.useState<'next7' | 'next30' | 'past30' | null>(null);
@@ -182,7 +186,7 @@ export function NgoDrivesScreen({ navigation }: any) {
           const photoUrl = resolveMediaUrl(drive.photoUri);
           // The server leaves status as 'upcoming' until someone marks the drive complete, so a
           // drive past its date would still wear the Upcoming pill – show it as Ended instead.
-          const displayStatus = drive.status === 'upcoming' && drive.hasEnded ? 'ended' : drive.status;
+          const displayStatus = drive.status === 'upcoming' && drive.hasEnded ? 'ended' : drive.status === 'cancelled' && drive.relaunchedToId ? 'rescheduled' : drive.status;
           const startsInDays = (startsAt.getTime() - Date.now()) / 86_400_000;
           const attention =
             drive.status === 'upcoming' && drive.hasEnded
@@ -236,6 +240,17 @@ export function NgoDrivesScreen({ navigation }: any) {
                             <Text style={styles.actionText}>Edit</Text>
                           </TouchableOpacity>
                         )}
+                        {drive.status === 'cancelled' && !drive.isArchived && (
+                          drive.relaunchedToId ? (
+                            <TouchableOpacity onPress={() => navigation.navigate('DriveDetail', { driveId: drive.relaunchedToId })}>
+                              <Text style={styles.actionText}>Relaunched →</Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <TouchableOpacity onPress={guard(() => setRelaunching(drive))}>
+                              <Text style={styles.actionText}>Relaunch</Text>
+                            </TouchableOpacity>
+                          )
+                        )}
                         <TouchableOpacity onPress={() => handleDuplicate(drive.id)} disabled={duplicateMutation.isPending}>
                           <Text style={styles.actionText}>Duplicate</Text>
                         </TouchableOpacity>
@@ -268,6 +283,15 @@ export function NgoDrivesScreen({ navigation }: any) {
       </ScrollView>
 
       <BulkActionBar count={bulk.selected.size} actions={bulkActions} busy={bulk.busy} onAction={bulk.onAction} bottomOffset={bottomClearance} />
+
+      <RelaunchDriveSheet
+        drive={relaunching}
+        onClose={() => setRelaunching(null)}
+        onRelaunched={(created) => {
+          setRelaunching(null);
+          navigation.navigate('DriveDetail', { driveId: created.id });
+        }}
+      />
 
       <StatusModal {...statusModalProps} />
     </View>

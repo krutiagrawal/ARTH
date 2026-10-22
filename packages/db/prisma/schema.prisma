@@ -448,6 +448,7 @@ enum NotificationType {
   bulk_requirement_response_accepted
   bulk_requirement_response_fulfilled
   bulk_requirement_deadline_passed
+  bulk_requirement_updated
   sapling_planted
   nursery_tree_milestone
   nursery_impact_milestone
@@ -1988,14 +1989,26 @@ model Drive {
   status          DriveStatus        @default(upcoming)
   // Why the NGO cancelled — required when cancelling, shown to RSVP'd volunteers.
   cancelReason    String?            @map("cancel_reason")
+  // Practical details volunteers ask about before RSVPing / on the day.
+  whatToBring     String?            @map("what_to_bring")
+  providedByNgo   String?            @map("provided_by_ngo")
+  contactName     String?            @map("contact_name")
+  contactPhone    String?            @map("contact_phone")
+  minAge          Int?               @map("min_age")
+  // easy | moderate | strenuous
+  effortLevel     String?            @map("effort_level")
   // NGO-curated flag for highlighting a completed drive on its public profile "past drives" showcase.
   featured        Boolean            @default(false)
   // Set when the NGO archives it – hidden from the NGO's own Manage list (see "Archived" filter), still public as before.
   archivedAt DateTime? @map("archived_at")
+  // Set on a drive created by relaunching a cancelled one - lets the cancelled drive show (and lock) its replacement.
+  relaunchedFromId String? @map("relaunched_from_id")
   createdAt       DateTime           @default(now()) @map("created_at")
   updatedAt       DateTime           @updatedAt @map("updated_at")
 
   ngo              NgoProfile         @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  relaunchedFrom   Drive?             @relation("DriveRelaunch", fields: [relaunchedFromId], references: [id], onDelete: SetNull)
+  relaunches       Drive[]            @relation("DriveRelaunch")
   rsvps            DriveRsvp[]
   pickupPoints     DrivePickupPoint[]
   plants           DrivePlant[]
@@ -2006,6 +2019,7 @@ model Drive {
   bulkRequirements BulkRequirement[]
 
   @@index([ngoId])
+  @@index([relaunchedFromId])
   @@index([lat, lng])
   @@index([startsAt])
   @@map("drives")
@@ -2253,6 +2267,8 @@ model Donation {
   @@index([campaignId])
   @@index([userId])
   @@index([userId, createdAt(sort: Desc)])
+  // The NGO donations page: one campaign's donations by status, newest first.
+  @@index([campaignId, status, createdAt(sort: Desc)])
   @@map("donations")
 }
 
@@ -2405,6 +2421,9 @@ model NgoPortfolioEntry {
   description        String?
   happenedOn         DateTime @map("happened_on")
   locationLabel      String?  @map("location_label")
+  // Resolved from the picked search suggestion (or geocoded server-side) so the entry can be pinned on the map.
+  lat                Decimal? @db.Decimal(9, 6)
+  lng                Decimal? @db.Decimal(9, 6)
   city               String?
   treesPlanted       Int?     @map("trees_planted")
   volunteersInvolved Int?     @map("volunteers_involved")

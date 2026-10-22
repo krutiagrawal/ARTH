@@ -16,6 +16,18 @@ function jsonArray<T extends z.ZodTypeAny>(arraySchema: T) {
   }, arraySchema);
 }
 
+// Empty string from a cleared form field means "unset" for the numeric / enum extras.
+const blankToNull = (v: unknown) => (v === '' ? null : v);
+
+const driveExtras = {
+  whatToBring: z.string().max(500).optional(),
+  providedByNgo: z.string().max(500).optional(),
+  contactName: z.string().max(100).optional(),
+  contactPhone: z.string().max(20).regex(/^([0-9+\-\s()]{7,20})?$/, 'Enter a valid contact phone number').optional(),
+  minAge: z.preprocess(blankToNull, z.union([z.null(), z.coerce.number().int().min(1).max(99)]).optional()),
+  effortLevel: z.preprocess(blankToNull, z.union([z.null(), z.enum(['easy', 'moderate', 'strenuous'])]).optional()),
+};
+
 const pickupPointSchema = z.object({
   address: z.string().min(1).max(300),
   arrivalBy: z.coerce.date(),
@@ -40,6 +52,7 @@ export const createDriveSchema = z
     startsAt: z.coerce.date(),
     durationMinutes: z.coerce.number().int().min(1).max(1440).optional(),
     capacity: z.coerce.number().int().min(1).max(100000).optional(),
+    ...driveExtras,
   })
   .refine((data) => data.transportMode !== 'ngo_provided' || (data.pickupPoints && data.pickupPoints.length > 0), {
     message: 'Add at least one pickup point, or switch to "users make their own way"',
@@ -58,6 +71,7 @@ export const updateDriveSchema = z.object({
   startsAt: z.coerce.date().optional(),
   durationMinutes: z.coerce.number().int().min(1).max(1440).optional(),
   capacity: z.union([z.coerce.number().int().min(1).max(100000), z.null()]).optional(),
+  ...driveExtras,
 });
 
 export const nearbyQuerySchema = z.object({

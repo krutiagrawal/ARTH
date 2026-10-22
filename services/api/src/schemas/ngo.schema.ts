@@ -105,3 +105,7 @@ export const donationsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
   take: z.coerce.number().int().min(1).max(200).optional(),
 });
+
+export const removeVolunteerSchema = z.object({
+  reason: z.string().trim().min(5, 'Please tell the volunteer why (at least a few words)').max(300),
+});

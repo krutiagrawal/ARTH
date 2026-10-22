@@ -1,5 +1,14 @@
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 
+/**
+ * How many pages an infinite list keeps in memory (and re-requests when it goes stale). Old pages
+ * beyond this are dropped, so a list of thousands never holds - or refetches - all of it at once.
+ */
+export const MAX_CACHED_PAGES = 30;
+
+/** Lists change slowly; serve them from cache this long before quietly refreshing in the background. */
+export const LIST_STALE_MS = 2 * 60_000;
+
 /** Cursor envelope returned by every paginated list endpoint (see services/api utils/pagination.ts). */
 export interface Page<T> {
   items: T[];
@@ -20,7 +29,7 @@ export function pageParams<T>() {
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last: Page<T>) => last.nextCursor ?? undefined,
     // Bound memory/refetch cost on very long lists: only the newest pages stay cached.
-    maxPages: 10,
+    maxPages: MAX_CACHED_PAGES,
   };
 }
 
@@ -48,11 +57,16 @@ export function infiniteScrollProps(q: { hasNextPage?: boolean; isFetchingNextPa
 export function totalPageParams<R extends { total: number }>(getItems: (r: R) => unknown[]) {
   return {
     initialPageParam: 1,
-    getNextPageParam: (last: R, all: R[]) => {
-      const loaded = all.reduce((n, p) => n + getItems(p).length, 0);
-      return getItems(last).length > 0 && loaded < last.total ? all.length + 1 : undefined;
+    // Works from the page number rather than from how many pages are held: once `maxPages` drops the
+    // oldest pages, `all.length` stops growing, so counting pages (or loaded rows) would ask for the
+    // same page again forever and never reach the end of a long list.
+    getNextPageParam: (last: R, all: R[], lastPageParam: number) => {
+      const lastLen = getItems(last).length;
+      if (lastLen === 0) return undefined;
+      const pageSize = all.length > 1 ? getItems(all[0]).length : lastLen;
+      return (lastPageParam - 1) * pageSize + lastLen < last.total ? lastPageParam + 1 : undefined;
     },
-    maxPages: 10,
+    maxPages: MAX_CACHED_PAGES,
   };
 }
 
@@ -97,8 +111,8 @@ export function flatItems<T>(data: { pages: Page<T>[] }): T[] {
 export function arrayPageParams<T>(take: number) {
   return {
     initialPageParam: 1,
-    getNextPageParam: (last: T[], all: T[][]) => (last.length === take ? all.length + 1 : undefined),
-    maxPages: 10,
+    getNextPageParam: (last: T[], _all: T[][], lastPageParam: number) => (last.length === take ? lastPageParam + 1 : undefined),
+    maxPages: MAX_CACHED_PAGES,
   };
 }
 

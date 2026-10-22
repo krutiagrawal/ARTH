@@ -3,6 +3,7 @@ import { BadRequestError, NotFoundError } from '../utils/errors';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
 import { createPost, deletePost, updatePostCaption } from './post.service';
 import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
+import { geocodeAddress } from '../utils/geocode';
 
 export const MAX_PORTFOLIO_MEDIA = 6;
 
@@ -17,6 +18,8 @@ export function serializePortfolioEntry(e: any, likedEntryIds?: Set<string>) {
     description: e.description,
     happenedOn: e.happenedOn,
     locationLabel: e.locationLabel,
+    lat: e.lat != null ? Number(e.lat) : null,
+    lng: e.lng != null ? Number(e.lng) : null,
     city: e.city,
     treesPlanted: e.treesPlanted,
     volunteersInvolved: e.volunteersInvolved,
@@ -115,6 +118,9 @@ interface PortfolioInput {
   description?: string;
   happenedOn: Date;
   locationLabel?: string;
+  /** From the picked search suggestion; when absent the label is geocoded server-side. */
+  lat?: number;
+  lng?: number;
   city?: string;
   treesPlanted?: number;
   volunteersInvolved?: number;
@@ -123,6 +129,14 @@ interface PortfolioInput {
   mediaUrls?: string[];
   /** Update only: ids of existing photos to drop. New `mediaUrls` are then appended, not swapped in. */
   removeMediaIds?: string[];
+}
+
+/** Coordinates for a location label: the picked suggestion's own, else a best-effort geocode. */
+async function resolveCoordinates(input: { locationLabel?: string; city?: string; lat?: number; lng?: number }) {
+  if (input.lat != null && input.lng != null) return { lat: input.lat, lng: input.lng };
+  const label = input.locationLabel?.trim();
+  if (!label) return null;
+  return geocodeAddress(input.city ? `${label}, ${input.city}` : label);
 }
 
 export async function createPortfolioEntry(prisma: PrismaClient, ngoUserId: string, input: PortfolioInput) {
@@ -135,6 +149,8 @@ export async function createPortfolioEntry(prisma: PrismaClient, ngoUserId: stri
     throw new BadRequestError('Past work must have a date in the past — use Drives for upcoming events');
   }
 
+  const coords = await resolveCoordinates(input);
+
   const entry = await prisma.ngoPortfolioEntry.create({
     data: {
       ngoId: ngo.id,
@@ -142,6 +158,8 @@ export async function createPortfolioEntry(prisma: PrismaClient, ngoUserId: stri
       description: input.description,
       happenedOn: input.happenedOn,
       locationLabel: input.locationLabel,
+      lat: coords?.lat,
+      lng: coords?.lng,
       city: input.city,
       treesPlanted: input.treesPlanted,
       volunteersInvolved: input.volunteersInvolved,
@@ -185,6 +203,15 @@ export async function updatePortfolioEntry(
 ) {
   const entry = await requireOwnEntry(prisma, ngoUserId, entryId);
 
+  // Re-pin only when the location actually changed; clearing the label drops the pin.
+  let coordData: { lat: number | null; lng: number | null } | undefined;
+  if (input.lat != null && input.lng != null) {
+    coordData = { lat: input.lat, lng: input.lng };
+  } else if (input.locationLabel !== undefined && input.locationLabel.trim() !== (entry.locationLabel ?? '')) {
+    const coords = await resolveCoordinates({ ...input, city: input.city ?? entry.city ?? undefined });
+    coordData = { lat: coords?.lat ?? null, lng: coords?.lng ?? null };
+  }
+
   const updated = await prisma.$transaction(async (tx) => {
     // Photos are edited incrementally: `removeMediaIds` drops specific ones, and any new files are
     // appended after the survivors. Omitting both leaves the photos alone.
@@ -209,6 +236,7 @@ export async function updatePortfolioEntry(
         description: input.description,
         happenedOn: input.happenedOn,
         locationLabel: input.locationLabel,
+        ...coordData,
         city: input.city,
         treesPlanted: input.treesPlanted,
         volunteersInvolved: input.volunteersInvolved,
@@ -235,4 +263,14 @@ export async function deletePortfolioEntry(prisma: PrismaClient, ngoUserId: stri
   // The mirrored Post has no reason to survive its past-work entry being deleted.
   if (entry.postId) await deletePost(prisma, ngoUserId, entry.postId);
   await prisma.ngoPortfolioEntry.delete({ where: { id: entry.id } });
+}
+
+/** Past work with a resolved location, for the NGO-scoped map. */
+export async function listPublicPortfolioPins(prisma: PrismaClient, ngoId: string) {
+  const entries = await prisma.ngoPortfolioEntry.findMany({
+    where: { ngoId, ngo: { status: 'approved' }, isHidden: false, lat: { not: null }, lng: { not: null } },
+    orderBy: portfolioOrder,
+    include: portfolioInclude,
+  });
+  return entries.map((e) => serializePortfolioEntry(e));
 }

@@ -122,6 +122,7 @@ export type NotificationType =
   | 'bulk_requirement_nearby'
   | 'bulk_requirement_response_received'
   | 'bulk_requirement_response_accepted'
+  | 'bulk_requirement_updated'
   | 'sapling_planted'
   | 'nursery_tree_milestone'
   | 'nursery_impact_milestone'

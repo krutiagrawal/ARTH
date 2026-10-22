@@ -5,7 +5,7 @@ import { listActiveNgoStories } from '../services/story.service';
 import { listPublicPlantingSummary } from '../services/plantationZone.service';
 import { browseQuerySchema, paginationQuerySchema } from '../schemas/ngosPublic.schema';
 import { BadRequestError } from '../utils/errors';
-import { listPublicPortfolio } from '../services/portfolio.service';
+import { listPublicPortfolio, listPublicPortfolioPins } from '../services/portfolio.service';
 import { serializeCampaign } from './donations.routes';
 import { serializeAdoptableTree } from './adoptions.routes';
 import { serializeDrive } from './drives.routes';
@@ -74,6 +74,7 @@ export default async function ngosPublicRoutes(fastify: FastifyInstance) {
         ...profile,
         featuredDrives: profile.featuredDrives.map(serializeDrive),
         upcomingDrives: profile.upcomingDrives.map(serializeDrive),
+        cancelledDrives: profile.cancelledDrives.map(serializeDrive),
         campaigns: profile.campaigns.map(serializeCampaign),
         adoptableTrees: profile.adoptableTrees.map((t) => serializeAdoptableTree(t)),
       });
@@ -96,6 +97,11 @@ export default async function ngosPublicRoutes(fastify: FastifyInstance) {
       reply.send(await listPublicPortfolio(fastify.prisma, request.params.id, request.user?.id));
     },
   );
+
+  // Past work that has a location, for pinning on the NGO-scoped map.
+  fastify.get<{ Params: { id: string } }>('/:id/portfolio-map', async (request, reply) => {
+    reply.send(await listPublicPortfolioPins(fastify.prisma, request.params.id));
+  });
 
   // Active stories for this NGO's profile — mirrors GET /api/users/:id/stories.
   fastify.get<{ Params: { id: string } }>('/:id/stories', async (request, reply) => {

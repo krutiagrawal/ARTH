@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -37,6 +38,14 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
   const { data: profile } = useNurseryProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
+
+  // Coming back from Manage Inventory: re-read the requirement so "your stock" reflects what was just
+  // added instead of the count from before the nursery left this screen.
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
 
   const [quantityOffered, setQuantityOffered] = useState('');
   const [priceCents, setPriceCents] = useState('');
@@ -135,6 +144,17 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
+          {req.notes ? (
+            <View style={styles.noteCallout} accessibilityRole="alert">
+              <View style={styles.noteHeader}>
+                <Text style={styles.noteIcon}>📝</Text>
+                <Text style={styles.noteLabel}>Message from {req.ngo.orgName}</Text>
+              </View>
+              <Text style={styles.noteText}>{req.notes}</Text>
+              <Text style={styles.noteHint}>Please read this before sending an offer.</Text>
+            </View>
+          ) : null}
+
           <BorderCard style={styles.card}>
             <Text style={styles.ngoName}>{req.ngo.orgName}</Text>
             <Text style={styles.species}>
@@ -164,37 +184,64 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
                 <Text style={styles.summaryValue}>{req.city}{req.distanceKm != null ? ` · ${req.distanceKm.toFixed(1)} km away` : ''}</Text>
               </View>
             )}
-            {req.notes && <Text style={styles.notes}>{req.notes}</Text>}
           </BorderCard>
 
           {req.myResponse && req.myResponse.status !== 'withdrawn' && req.myResponse.status !== 'declined' ? (
             <>
               <Text style={styles.sectionTitle}>Your offer</Text>
               <BorderCard style={styles.card}>
-                <View style={[styles.statusPill, pillColor(req.myResponse.status)]}>
-                  <Text style={styles.statusPillText}>{req.myResponse.status}</Text>
+                <View style={[styles.offerBanner, { backgroundColor: offerBanner(req.myResponse.status).tint }]}>
+                  <Text style={[styles.offerBannerText, { color: offerBanner(req.myResponse.status).color }]}>{offerBanner(req.myResponse.status).label}</Text>
                 </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Offered</Text>
-                  <Text style={styles.summaryValue}>{req.myResponse.quantityOffered}</Text>
+
+                <View style={styles.offerStats}>
+                  <View style={styles.offerStat}>
+                    <Text style={styles.offerStatValue}>{req.myResponse.quantityOffered.toLocaleString('en-IN')}</Text>
+                    <Text style={styles.offerStatLabel}>Saplings</Text>
+                  </View>
+                  <View style={styles.offerStatDivider} />
+                  <View style={styles.offerStat}>
+                    <Text style={styles.offerStatValue}>
+                      {req.myResponse.priceCents != null ? `₹${(req.myResponse.priceCents / 100).toLocaleString('en-IN')}` : 'Free'}
+                    </Text>
+                    <Text style={styles.offerStatLabel}>{req.myResponse.priceCents != null ? 'Per sapling' : 'No charge'}</Text>
+                  </View>
+                  <View style={styles.offerStatDivider} />
+                  <View style={styles.offerStat}>
+                    <Text style={styles.offerStatValue}>
+                      {req.myResponse.priceCents != null
+                        ? `₹${((req.myResponse.priceCents * req.myResponse.quantityOffered) / 100).toLocaleString('en-IN')}`
+                        : '—'}
+                    </Text>
+                    <Text style={styles.offerStatLabel}>Total</Text>
+                  </View>
                 </View>
-                {req.myResponse.priceCents != null && (
-                  <>
-                    <View style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>Price per unit</Text>
-                      <Text style={styles.summaryValue}>₹{(req.myResponse.priceCents / 100).toFixed(0)}</Text>
+
+                <View style={styles.offerChips}>
+                  {req.myResponse.canDeliver ? (
+                    <View style={styles.offerChip}>
+                      <Text style={styles.offerChipText}>🚚 Can deliver</Text>
                     </View>
-                    <View style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>Total value</Text>
-                      <Text style={styles.summaryValue}>₹{((req.myResponse.priceCents * req.myResponse.quantityOffered) / 100).toLocaleString('en-IN')}</Text>
+                  ) : null}
+                  {req.myResponse.canPickup ? (
+                    <View style={styles.offerChip}>
+                      <Text style={styles.offerChipText}>🏪 Pickup from nursery</Text>
                     </View>
-                  </>
-                )}
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Fulfilment</Text>
-                  <Text style={styles.summaryValue}>
-                    {[req.myResponse.canPickup && 'Pickup', req.myResponse.canDeliver && 'Delivery'].filter(Boolean).join(' + ') || '–'}
-                  </Text>
+                  ) : null}
+                  {!req.myResponse.canDeliver && !req.myResponse.canPickup ? (
+                    <Text style={styles.offerEmpty}>No fulfilment method selected</Text>
+                  ) : null}
+                </View>
+
+                <View style={styles.messageBlock}>
+                  <Text style={styles.messageLabel}>Your message to the NGO</Text>
+                  {req.myResponse.message ? (
+                    <View style={styles.messageQuote}>
+                      <Text style={styles.messageText}>“{req.myResponse.message}”</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.offerEmpty}>You didn't add a message with this offer.</Text>
+                  )}
                 </View>
 
                 {req.myResponse.status === 'proposed' && (
@@ -266,6 +313,23 @@ export function NurseryBulkRequirementDetailScreen({ route, navigation }: any) {
   );
 }
 
+function offerBanner(status: string): { label: string; color: string; tint: string } {
+  switch (status) {
+    case 'accepted':
+      return { label: '✅ Accepted — hand the saplings over to the NGO', color: COLORS.forest, tint: 'rgba(94,133,80,0.14)' };
+    case 'handed_off':
+      return { label: '📦 Handed off — waiting for the NGO to confirm receipt', color: COLORS.forest, tint: 'rgba(94,133,80,0.14)' };
+    case 'fulfilled':
+      return { label: '🎉 Fulfilled — the NGO confirmed receipt', color: COLORS.forest, tint: 'rgba(94,133,80,0.14)' };
+    case 'declined':
+      return { label: 'Declined by the NGO', color: COLORS.coral, tint: 'rgba(232,137,106,0.16)' };
+    case 'withdrawn':
+      return { label: 'Withdrawn', color: COLORS.textMuted, tint: 'rgba(139,107,71,0.12)' };
+    default:
+      return { label: "⏳ Awaiting the NGO's reply", color: COLORS.earth, tint: 'rgba(212,168,83,0.2)' };
+  }
+}
+
 function pillColor(status: string) {
   if (status === 'accepted' || status === 'fulfilled') return { backgroundColor: 'rgba(94,133,80,0.15)' };
   if (status === 'declined' || status === 'withdrawn') return { backgroundColor: 'rgba(194,74,59,0.12)' };
@@ -275,6 +339,21 @@ function pillColor(status: string) {
 
 
 const styles = StyleSheet.create({
+  offerBanner: { borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 14 },
+  offerBannerText: { fontSize: 13, fontWeight: '800' },
+  offerStats: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(139,107,71,0.25)', borderRadius: RADIUS.md, paddingVertical: 12, marginBottom: 12 },
+  offerStat: { flex: 1, alignItems: 'center' },
+  offerStatValue: { fontSize: 18, fontWeight: '800', color: COLORS.textPrimary },
+  offerStatLabel: { fontSize: 10, color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2 },
+  offerStatDivider: { width: 1, height: 28, backgroundColor: 'rgba(139,107,71,0.25)' },
+  offerChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
+  offerChip: { borderRadius: 999, backgroundColor: 'rgba(94,133,80,0.12)', paddingHorizontal: 11, paddingVertical: 5 },
+  offerChipText: { fontSize: 12, fontWeight: '700', color: COLORS.forest },
+  offerEmpty: { fontSize: 12, color: COLORS.textMuted },
+  messageBlock: { gap: 6 },
+  messageLabel: { fontSize: 10, fontWeight: '900', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 0.8 },
+  messageQuote: { borderLeftWidth: 4, borderLeftColor: COLORS.sage, backgroundColor: 'rgba(94,133,80,0.08)', borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 10 },
+  messageText: { fontSize: 14, lineHeight: 21, fontStyle: 'italic', color: COLORS.textPrimary },
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: SPACING.md, paddingTop: 4 },
   card: { marginBottom: 16 },
@@ -285,7 +364,20 @@ const styles = StyleSheet.create({
   summaryLabel: { fontSize: 13, color: COLORS.textSecondary },
   summaryValue: { fontSize: 13, color: COLORS.textPrimary, fontWeight: '600' },
   summaryValueOverdue: { color: COLORS.dangerDark },
-  notes: { fontSize: 13, color: COLORS.textPrimary, marginTop: 10, lineHeight: 19 },
+  noteCallout: {
+    backgroundColor: 'rgba(212,168,83,0.18)',
+    borderLeftWidth: 5,
+    borderLeftColor: COLORS.golden,
+    borderRadius: RADIUS.md,
+    padding: 14,
+    marginBottom: 14,
+    gap: 6,
+  },
+  noteHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  noteIcon: { fontSize: 16 },
+  noteLabel: { fontSize: 11, fontWeight: '900', color: COLORS.earth, textTransform: 'uppercase', letterSpacing: 0.8, flex: 1 },
+  noteText: { fontSize: 15, lineHeight: 22, fontWeight: '600', color: COLORS.textPrimary },
+  noteHint: { fontSize: 11, color: COLORS.textSecondary },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 8 },
   inlineRow: { flexDirection: 'row', gap: 12 },
   inlineField: { flex: 1 },

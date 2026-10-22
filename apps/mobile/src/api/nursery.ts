@@ -595,8 +595,11 @@ export interface ApiBulkRequirement {
   lng: number | null;
   notes: string | null;
   status: BulkRequirementStatus;
-  ngo: { orgName: string; logoUrl: string | null };
-  species: { commonName: string } | null;
+  ngo: { orgName: string; logoUrl: string | null; city?: string | null };
+  species: { commonName: string; emoji?: string } | null;
+  createdAt: string;
+  /** Nurseries with a live offer on this requirement (including this one). */
+  offerCount?: number;
   distanceKm: number | null;
   myResponse: ApiBulkResponse | null;
   /** Nursery's total SaplingStock quantity for this requirement's species – null means the
@@ -604,11 +607,53 @@ export interface ApiBulkRequirement {
   myStockQuantity: number | null;
 }
 
-/** No status filter returns only `open`/`partially_fulfilled` requirements server-side (see
- * bulkRequirement.service.ts's `listRelevantForNursery`) – there's no dedicated "everything"
- * mode, so a `fulfilled` requirement only shows up when explicitly requested with that status. */
-export async function fetchNurseryBulkRequirements(status?: BulkRequirementStatus, cursor?: string): Promise<Page<ApiBulkRequirement>> {
-  return apiFetch<Page<ApiBulkRequirement>>(pagedPath('/api/nursery/bulk-requirements', cursor, { status }));
+export type NurseryRequirementTab = 'all' | 'open' | 'responded' | 'accepted' | 'completed';
+export type NurseryRequirementSort = 'newest' | 'deadline' | 'nearest' | 'largest';
+
+export interface NurseryRequirementQuery {
+  search?: string;
+  tab?: NurseryRequirementTab;
+  sort?: NurseryRequirementSort;
+  speciesId?: string;
+  native?: boolean;
+  inStock?: boolean;
+  radiusKm?: number;
+  /** Which date the range applies to. */
+  dateField?: 'needed' | 'posted';
+  /** ISO dates (yyyy-mm-dd). */
+  from?: string;
+  to?: string;
+  minQty?: number;
+}
+
+export type NurseryRequirementCounts = Record<NurseryRequirementTab, number>;
+
+export interface NurseryRequirementPage extends Page<ApiBulkRequirement> {
+  total: number;
+  counts: NurseryRequirementCounts;
+}
+
+/** Everything this nursery can act on or has acted on - searched, filtered and sorted server-side. */
+export async function fetchNurseryBulkRequirements(cursor?: string, q: NurseryRequirementQuery = {}): Promise<NurseryRequirementPage> {
+  return apiFetch<NurseryRequirementPage>(
+    pagedPath('/api/nursery/bulk-requirements', cursor, {
+      search: q.search?.trim(),
+      tab: q.tab,
+      sort: q.sort,
+      speciesId: q.speciesId,
+      native: q.native ? 'true' : undefined,
+      inStock: q.inStock ? 'true' : undefined,
+      radiusKm: q.radiusKm ? String(q.radiusKm) : undefined,
+      dateField: q.from || q.to ? q.dateField : undefined,
+      from: q.from,
+      to: q.to,
+      minQty: q.minQty ? String(q.minQty) : undefined,
+    }),
+  );
+}
+
+export async function fetchNurseryBulkRequirement(id: string): Promise<ApiBulkRequirement> {
+  return apiFetch<ApiBulkRequirement>(`/api/nursery/bulk-requirements/${id}`);
 }
 
 export interface RespondToBulkRequirementInput {

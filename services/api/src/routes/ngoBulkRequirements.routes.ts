@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import * as bulkRequirementService from '../services/bulkRequirement.service';
-import { createBulkRequirementSchema, confirmBulkRequirementResponseSchema, rescheduleBulkRequirementSchema } from '../schemas/bulkRequirement.schema';
+import { updateBulkRequirementSchema, createBulkRequirementSchema, confirmBulkRequirementResponseSchema, rescheduleBulkRequirementSchema } from '../schemas/bulkRequirement.schema';
 import { BadRequestError } from '../utils/errors';
 
 // NGO side of section 10 (NGO<->Nursery bulk requirements). Nursery side lives in
@@ -9,7 +9,7 @@ import { BadRequestError } from '../utils/errors';
 export default async function ngoBulkRequirementsRoutes(fastify: FastifyInstance) {
   fastify.addHook('preHandler', fastify.requireRole('ngo'));
 
-  fastify.get<{ Querystring: { status?: string; cursor?: string; take?: string } }>('/', async (request, reply) => {
+  fastify.get<{ Querystring: { status?: string; cursor?: string; take?: string; filter?: string; search?: string; sort?: string } }>('/', async (request, reply) => {
     reply.send(await bulkRequirementService.listMyRequirements(fastify.prisma, request.user!.id, request.query.status, request.query));
   });
 
@@ -23,6 +23,13 @@ export default async function ngoBulkRequirementsRoutes(fastify: FastifyInstance
 
   fastify.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
     reply.send(await bulkRequirementService.getMyRequirement(fastify.prisma, request.user!.id, request.params.id));
+  });
+
+  fastify.patch<{ Params: { id: string } }>('/:id', async (request, reply) => {
+    const parsed = updateBulkRequirementSchema.safeParse(request.body);
+    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    reply.send(await bulkRequirementService.updateRequirement(fastify.prisma, request.user!.id, request.params.id, parsed.data));
   });
 
   fastify.post<{ Params: { id: string } }>('/:id/cancel', async (request, reply) => {

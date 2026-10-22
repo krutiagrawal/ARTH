@@ -21,10 +21,12 @@ import { getSceneryMode, RainEffect, WindEffect } from '../components/common/Wea
 import { useTimeTheme, type TimeTheme, type TimePeriod } from '../hooks/useTimeTheme';
 import { useDeviceWeather } from '../hooks/useDeviceWeather';
 import { useAuth } from '../context/AuthContext';
-import { useNurseryProfile, useNurseryStats, useNurseryReservations, useNurseryDashboardToday, useSettings } from '../hooks/useApiQueries';
+import { useNurseryProfile, useNurseryStats, useNurseryReservations, useNurseryDashboardToday, useSettings, useGamesStatus } from '../hooks/useApiQueries';
 import type { ApiNurseryActivityItem } from '../api/nursery';
 import { GROWTH_LEVEL_META } from '../components/common/GrowthLevelBadge';
 import { useUnreadNotificationCount } from '../hooks/useSocialQueries';
+import { DailyGamesCard } from '../components/home/DailyGamesCard';
+import { EcoInsightSection } from '../components/home/EcoInsightSection';
 import { useSlideUp } from '../hooks/useAnimations';
 import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { getHeroSeamColor, getHeroSeamTextColors } from '../utils/heroSeam';
@@ -270,6 +272,7 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
   const { data: today, refetch: refetchToday } = useNurseryDashboardToday();
   const { refreshing, onRefresh } = usePullToRefresh([refetchProfile, refetchStats, refetchReservations, refetchToday]);
   const blurTargetRef = useRef<View>(null);
+  const { data: gamesStatus } = useGamesStatus();
 
   const pageBackground = getHeroSeamColor(theme);
   const seamText = getHeroSeamTextColors(theme);
@@ -310,7 +313,6 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
     { key: 'post', emoji: '📝', color: COLORS.sageDark, title: 'Post an update', onPress: guard(() => navigation.navigate('NurseryPostUpdate')) },
     { key: 'followers', emoji: '👥', color: COLORS.xpBlue, title: 'Followers', onPress: () => navigation.navigate('NurseryFollowers') },
     { key: 'streak', emoji: '🔥', color: COLORS.sage, title: 'Growth & Trust', onPress: () => navigation.navigate('NurseryStreakBadges') },
-    { key: 'learn', emoji: '🎓', color: COLORS.coral, title: 'Learn & play', onPress: () => navigation.navigate('Games') },
     { key: 'reports', emoji: '📈', color: COLORS.xpBlue, title: 'Reports', onPress: () => navigation.navigate('NurseryReports') },
     { key: 'analytics', emoji: '📊', color: COLORS.golden, title: 'Stock Analytics', onPress: () => navigation.navigate('NurseryStockAnalytics') },
     { key: 'map', emoji: '🗺️', color: COLORS.coral, title: 'View on Map', onPress: () => navigation.navigate('NurseryMap') },
@@ -469,6 +471,9 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
         </View>
 
         {profile && <StatusBanner status={profile.status} seamText={seamText} navigation={navigation} />}
+
+        {gamesStatus ? <DailyGamesCard games={gamesStatus.games} navigation={navigation} blurTarget={blurTargetRef} theme={theme} /> : null}
+        <EcoInsightSection navigation={navigation} blurTarget={blurTargetRef} theme={theme} />
 
         <Text style={[styles.sectionTitle, { color: seamText.primary }]}>Quick Actions</Text>
         <View style={styles.dockGrid}>

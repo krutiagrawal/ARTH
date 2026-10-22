@@ -2,6 +2,7 @@ import { Prisma, PrismaClient, NgoStreakType, NgoGrowthLevel } from '@arth/db';
 import { startOfUtcDay, addDays } from './streak.service';
 import { recordOrgContribution } from './orgStreak.service';
 import { notify } from './notification.service';
+import { notRescheduled } from './driveRules';
 
 // Accepts either a live PrismaClient (read-only routes) or a transaction client (activity hooks) —
 // every function here is a pure read/derive over existing tables plus, where noted, a write onto
@@ -118,7 +119,8 @@ export async function getUpdatesStreakCurrent(db: Db, ngoId: string): Promise<nu
 // ---------- ARTH Trust Score ----------
 
 async function getDriveCompletionRatePct(db: Db, ngoId: string): Promise<number | null> {
-  const resolved = await db.drive.count({ where: { ngoId, status: { in: ['completed', 'cancelled'] } } });
+  // A cancelled drive that was relaunched was rescheduled, not abandoned - it doesn't count against the rate.
+  const resolved = await db.drive.count({ where: { ngoId, status: { in: ['completed', 'cancelled'] }, ...notRescheduled } });
   if (resolved < MIN_DRIVES_FOR_RATE_CRITERIA) return null;
   const completed = await db.drive.count({ where: { ngoId, status: 'completed' } });
   return Math.round((completed / resolved) * 100);

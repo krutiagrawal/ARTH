@@ -16,10 +16,7 @@ import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PageFooter } from '../components/common/PageFooter';
 import { useRequireApproval } from '../hooks/useRequireApproval';
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-}
+import { PastWorkFlipCard, formatPastWorkFullDate } from '../components/ngo/PastWorkFlipCard';
 
 function EntryCard({
   entry,
@@ -33,7 +30,7 @@ function EntryCard({
   const cover = resolveMediaUrl(entry.media[0]?.url);
 
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={onEdit}>
+    <PastWorkFlipCard entry={entry} cardStyle={styles.card}>
       {cover ? (
         <Image source={{ uri: cover }} style={styles.cover} />
       ) : (
@@ -43,7 +40,7 @@ function EntryCard({
       )}
 
       <View style={styles.cardBody}>
-        <Text style={styles.date}>{formatDate(entry.happenedOn)}</Text>
+        <Text style={styles.date}>{formatPastWorkFullDate(entry.happenedOn)}</Text>
         <Text style={styles.title} numberOfLines={2}>
           {entry.title}
         </Text>
@@ -83,7 +80,7 @@ function EntryCard({
           </TouchableOpacity>
         </View>
       </View>
-    </TouchableOpacity>
+    </PastWorkFlipCard>
   );
 }
 

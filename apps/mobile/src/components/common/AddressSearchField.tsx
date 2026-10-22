@@ -60,6 +60,8 @@ export function AddressSearchField({
 }: AddressSearchFieldProps) {
   const [suggestions, setSuggestions] = useState<ApiAddressSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
+  // 'error' = the request failed (network/API); 'empty' = it worked but nothing matched.
+  const [searchState, setSearchState] = useState<'idle' | 'error' | 'empty'>('idle');
   const [focused, setFocused] = useState(false);
   const requestIdRef = useRef(0);
   const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
@@ -118,6 +120,7 @@ export function AddressSearchField({
     const query = value.trim();
     if (!focused || query.length < MIN_QUERY_LENGTH) {
       setSuggestions([]);
+      setSearchState('idle');
       setLoading(false);
       return;
     }
@@ -127,9 +130,16 @@ export function AddressSearchField({
     const timer = setTimeout(async () => {
       try {
         const results = await searchAddress(query, near);
-        if (requestIdRef.current === id) setSuggestions(results);
-      } catch {
-        if (requestIdRef.current === id) setSuggestions([]);
+        if (requestIdRef.current === id) {
+          setSuggestions(results);
+          setSearchState(results.length ? 'idle' : 'empty');
+        }
+      } catch (e) {
+        console.warn('[AddressSearchField] search failed', e);
+        if (requestIdRef.current === id) {
+          setSuggestions([]);
+          setSearchState('error');
+        }
       } finally {
         if (requestIdRef.current === id) setLoading(false);
       }
@@ -165,7 +175,12 @@ export function AddressSearchField({
           style={[FORM_FIELD_VALUE_STYLE, dark && styles.inputDark, multiline && styles.multiline]}
           placeholderTextColor={dark ? ON_DARK_SURFACE.muted : COLORS.textLight}
           value={value}
-          onChangeText={onChangeText}
+          // Typing is proof the field is active even if the platform never delivers onFocus
+          // (seen with multiline inputs on some Android builds) - without this no search ever starts.
+          onChangeText={(text) => {
+            setFocused(true);
+            onChangeText(text);
+          }}
           placeholder={placeholder}
           multiline={multiline}
           maxLength={maxLength}
@@ -189,6 +204,13 @@ export function AddressSearchField({
         </TouchableOpacity>
       )}
       {locationError ? <Text style={styles.locationError}>{locationError}</Text> : null}
+
+      {focused && !loading && searchState === 'error' && (
+        <Text style={styles.locationError}>Couldn't load suggestions - check your connection, or type the address.</Text>
+      )}
+      {focused && !loading && searchState === 'empty' && (
+        <Text style={styles.locationError}>No matching places - try a nearby landmark or area name.</Text>
+      )}
 
       {focused && suggestions.length > 0 && (
         <View style={[styles.dropdown, inline && styles.dropdownInline, dark && styles.dropdownDark]}>

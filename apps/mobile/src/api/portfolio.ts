@@ -15,6 +15,8 @@ export interface ApiPortfolioEntry {
   description: string | null;
   happenedOn: string;
   locationLabel: string | null;
+  lat: number | null;
+  lng: number | null;
   city: string | null;
   treesPlanted: number | null;
   volunteersInvolved: number | null;
@@ -32,6 +34,9 @@ export interface PortfolioInput {
   /** ISO date. Must be in the past – upcoming work belongs in Drives. */
   happenedOn: string;
   locationLabel?: string;
+  /** From the picked search suggestion; the server geocodes the label when these are absent. */
+  lat?: number;
+  lng?: number;
   city?: string;
   treesPlanted?: number;
   volunteersInvolved?: number;
@@ -52,6 +57,8 @@ function toForm(input: Partial<PortfolioInput>, isUpdate = false): FormData {
     ['description', input.description],
     ['happenedOn', input.happenedOn],
     ['locationLabel', input.locationLabel],
+    ['lat', input.lat],
+    ['lng', input.lng],
     ['city', input.city],
     ['treesPlanted', input.treesPlanted],
     ['volunteersInvolved', input.volunteersInvolved],
@@ -75,6 +82,11 @@ export async function fetchMyPortfolio(cursor?: string): Promise<Page<ApiPortfol
 
 export async function fetchNgoPortfolio(ngoId: string): Promise<ApiPortfolioEntry[]> {
   return apiFetch<ApiPortfolioEntry[]>(`/api/ngos/${ngoId}/portfolio`);
+}
+
+/** Past work with a resolved location, for the NGO-scoped map. */
+export async function fetchNgoPortfolioMap(ngoId: string): Promise<ApiPortfolioEntry[]> {
+  return apiFetch<ApiPortfolioEntry[]>(`/api/ngos/${ngoId}/portfolio-map`);
 }
 
 export async function createPortfolioEntry(input: PortfolioInput): Promise<ApiPortfolioEntry> {

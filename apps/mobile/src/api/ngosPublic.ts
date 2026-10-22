@@ -49,6 +49,8 @@ export interface ApiPublicNgoProfile {
   /** Drives still to come – a freshly-created drive shows up here, not in `featuredDrives`
    * (which is completed-only, the "past work" showcase). */
   upcomingDrives: ApiDrive[];
+  /** Cancelled drives, shown on the profile's Drives tab with their reason. */
+  cancelledDrives?: ApiDrive[];
   recentUpdates: ApiPost[];
   staff: { id: string; name: string; role: string; photoUrl: string | null }[];
   portfolio: ApiPortfolioEntry[];

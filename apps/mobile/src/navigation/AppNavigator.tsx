@@ -427,7 +427,13 @@ export type RootStackParamList = {
   StreakProtection: undefined;
   Settings: undefined;
   Profile: undefined;
-  UserPublicProfile: { userId: string; friendRequestId?: string; friendRequestFromName?: string };
+  UserPublicProfile: {
+    userId: string;
+    friendRequestId?: string;
+    friendRequestFromName?: string;
+    /** Opened from an NGO's / nursery's follow-request list: shows Accept / Decline on the profile. */
+    followRequest?: { kind: 'ngo' | 'nursery'; followId: string };
+  };
   ChangePassword: undefined;
   Sessions: undefined;
   StaticContent: { title: string; body: string };

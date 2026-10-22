@@ -1,5 +1,6 @@
 import { Prisma, NgoAchievementCriteriaType } from '@arth/db';
 import { getUpdatesStreakCurrent } from './ngoReputation.service';
+import { notRescheduled } from './driveRules';
 
 async function computeNgoProgress(
   tx: Prisma.TransactionClient,
@@ -8,7 +9,7 @@ async function computeNgoProgress(
 ): Promise<number> {
   switch (type) {
     case 'drives_hosted': {
-      return tx.drive.count({ where: { ngoId } });
+      return tx.drive.count({ where: { ngoId, ...notRescheduled } });
     }
     case 'trees_planted': {
       return tx.plantedTree.count({ where: { ngoId } });

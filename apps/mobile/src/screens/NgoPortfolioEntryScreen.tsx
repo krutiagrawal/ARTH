@@ -49,6 +49,11 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
   );
   const [showPicker, setShowPicker] = useState(false);
   const [locationLabel, setLocationLabel] = useState(existing?.locationLabel ?? '');
+  // Pin from the picked suggestion. Typing over the label drops it, so a stale pin can't outlive
+  // the text; the server then geocodes whatever was typed.
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
+    existing?.lat != null && existing?.lng != null ? { lat: existing.lat, lng: existing.lng } : null,
+  );
   const [city, setCity] = useState(existing?.city || 'Pune');
   const [treesPlanted, setTreesPlanted] = useState(
     existing?.treesPlanted != null ? String(existing.treesPlanted) : '',
@@ -87,6 +92,7 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
       description: isEdit ? description.trim() : description.trim() || undefined,
       happenedOn: happenedOn.toISOString(),
       locationLabel: isEdit ? locationLabel.trim() : locationLabel.trim() || undefined,
+      ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
       city: isEdit ? city.trim() : city.trim() || undefined,
       treesPlanted: treesPlanted ? Number(treesPlanted) : undefined,
       volunteersInvolved: volunteers ? Number(volunteers) : undefined,
@@ -177,7 +183,14 @@ export function NgoPortfolioEntryScreen({ navigation, route }: any) {
             label="Location"
             placeholder="eg - Yamuna Bank, near Metro Station"
             value={locationLabel}
-            onChangeText={setLocationLabel}
+            onChangeText={(text) => {
+              setLocationLabel(text);
+              setCoords(null);
+            }}
+            onSelectSuggestion={(s) => {
+              setCoords({ lat: s.lat, lng: s.lng });
+            }}
+            allowCurrentLocation
           />
           <CityPickerField value={city} onChange={setCity} />
 

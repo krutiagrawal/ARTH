@@ -36,6 +36,15 @@ import { useConfirmDelete } from '../hooks/useConfirmDelete';
 import { DriveRsvpSheet } from '../components/drives/DriveRsvpSheet';
 import { AttendeeCard } from '../components/drives/AttendeeCard';
 import { CancelDriveSheet } from '../components/drives/CancelDriveSheet';
+import { RelaunchDriveSheet } from '../components/drives/RelaunchDriveSheet';
+import {
+  DriveStatusBanner,
+  DriveGoingRow,
+  DriveRequirementsRow,
+  DriveForecastRow,
+  DriveVolunteerInfo,
+  DriveActionsRow,
+} from '../components/drives/DriveDetailExtras';
 import { CancelRsvpSheet } from '../components/drives/CancelRsvpSheet';
 import type { DriveRsvpInput, RsvpCancelReason, ApiDrivePlantSponsor } from '../api/drives';
 
@@ -95,6 +104,7 @@ export function DriveDetailScreen({ navigation, route }: any) {
   const [rsvpSheetOpen, setRsvpSheetOpen] = useState(false);
   const [rsvpError, setRsvpError] = useState('');
   const [cancelDriveOpen, setCancelDriveOpen] = useState(false);
+  const [relaunchOpen, setRelaunchOpen] = useState(false);
   const [cancelDriveError, setCancelDriveError] = useState('');
   const [cancelSheetOpen, setCancelSheetOpen] = useState(false);
   const [cancelError, setCancelError] = useState('');
@@ -256,6 +266,8 @@ export function DriveDetailScreen({ navigation, route }: any) {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
+          <DriveStatusBanner drive={drive} />
+
           <BorderCard style={styles.card}>
             <Text style={styles.title}>{drive.title}</Text>
             <Text style={styles.ngoName}>Hosted by {drive.ngoName}</Text>
@@ -271,13 +283,12 @@ export function DriveDetailScreen({ navigation, route }: any) {
                 {drive.durationMinutes ? ` · ${drive.durationMinutes} min` : ''}
               </Text>
             </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>👥</Text>
-              <Text style={styles.infoText}>
-                {drive.confirmedCount} going{drive.capacity != null ? ` of ${drive.capacity} spots` : ' · open to everyone'}
-              </Text>
-            </View>
+            <DriveGoingRow drive={drive} />
+            <DriveRequirementsRow drive={drive} />
+            <DriveForecastRow drive={drive} />
           </BorderCard>
+
+          <DriveActionsRow drive={drive} />
 
           <LocationActions
             label={drive.transportMode === 'ngo_provided' ? 'Drive location' : 'Location'}
@@ -318,6 +329,8 @@ export function DriveDetailScreen({ navigation, route }: any) {
               ))}
             </>
           )}
+
+          <DriveVolunteerInfo drive={drive} />
 
           {drive.instructions && (
             <View style={styles.instructionsCard}>
@@ -389,6 +402,17 @@ export function DriveDetailScreen({ navigation, route }: any) {
                     <Text style={styles.ownerActionText}>Edit drive</Text>
                   </TouchableOpacity>
                 )}
+                {drive.status === 'cancelled' && (
+                  drive.relaunchedToId ? (
+                    <TouchableOpacity onPress={() => navigation.push('DriveDetail', { driveId: drive.relaunchedToId })}>
+                      <Text style={styles.ownerActionText}>Relaunched → View new drive</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity onPress={() => setRelaunchOpen(true)}>
+                      <Text style={styles.ownerActionText}>Relaunch drive</Text>
+                    </TouchableOpacity>
+                  )
+                )}
                 {drive.status === 'upcoming' && (
                   <>
                     <TouchableOpacity onPress={handleCompleteDrive} disabled={completeDriveMutation.isPending}>
@@ -435,12 +459,7 @@ export function DriveDetailScreen({ navigation, route }: any) {
                 ))
               )}
             </>
-          ) : isCancelled ? (
-            <View style={styles.cancelledBanner}>
-              <Text style={styles.cancelledText}>This drive has been cancelled by the organizer.</Text>
-              {drive.cancelReason ? <Text style={styles.cancelledText}>Reason: {drive.cancelReason}</Text> : null}
-            </View>
-          ) : isEnded ? (
+          ) : isCancelled ? null : isEnded ? (
             <View style={styles.cancelledBanner}>
               <Text style={styles.cancelledText}>This drive has already happened.</Text>
             </View>
@@ -477,6 +496,15 @@ export function DriveDetailScreen({ navigation, route }: any) {
           onSubmit={handleRsvpSubmit}
         />
       )}
+
+      <RelaunchDriveSheet
+        drive={relaunchOpen ? drive ?? null : null}
+        onClose={() => setRelaunchOpen(false)}
+        onRelaunched={(created) => {
+          setRelaunchOpen(false);
+          navigation.replace('DriveDetail', { driveId: created.id });
+        }}
+      />
 
       {drive && (
         <CancelDriveSheet
