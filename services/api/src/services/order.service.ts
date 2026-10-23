@@ -5,6 +5,7 @@ import { sendEmail } from './email.service';
 import { notify } from './notification.service';
 import { recordNurseryContribution, recomputeReputation, refreshFulfilmentStreak } from './nurseryReputation.service';
 import { evaluateNurseryAchievements } from './nurseryAchievement.service';
+import { alertOnStockBandChange } from './nursery.service';
 import { requireCheckoutableCart } from './cart.service';
 import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
 import { BadRequestError, ForbiddenError, NotFoundError, ServiceUnavailableError } from '../utils/errors';
@@ -296,6 +297,10 @@ export async function checkout(prisma: PrismaClient, userId: string, input: Chec
     if (paymentIntent) await stripe!.paymentIntents.cancel(paymentIntent.id).catch(() => {});
     throw e;
   }
+
+  // The units are held from the moment the order is placed, so this is when a nursery's stock
+  // actually drops - flag any item that just fell to its low-stock level (or to zero).
+  for (const item of items) await alertOnStockBandChange(prisma, item.stockId, item.stock.quantity);
 
   if (!stripe) {
     const fullOrder = await prisma.order.findUniqueOrThrow({
@@ -698,6 +703,8 @@ export async function getNurseryOrder(prisma: PrismaClient, nurseryId: string, o
       address: true,
       user: { select: { id: true, name: true, handle: true } },
       tracking: { select: { deliveryPartnerId: true, riderName: true, riderPhone: true } },
+      // Nursery-only: the buyer's serializeOrder() never includes this.
+      riderChanges: { orderBy: { createdAt: 'asc' } },
     },
   });
   if (!order) throw new NotFoundError('Order not found');
@@ -762,6 +769,21 @@ export async function markOrderPickedUp(prisma: PrismaClient, nurseryId: string,
   return prisma.order.findUniqueOrThrow({ where: { id: orderId } });
 }
 
+// Logs a swap of the delivery partner (nursery-only history, see OrderRiderChange). Only counts as
+// a change when the order already had a different partner - the first assignment isn't one.
+async function recordRiderChange(
+  tx: Prisma.TransactionClient,
+  orderId: string,
+  orderStatus: string,
+  previous: { deliveryPartnerId: string | null; riderName: string | null } | null,
+  next: { id: string; name: string },
+) {
+  if (!previous?.deliveryPartnerId || previous.deliveryPartnerId === next.id) return;
+  await tx.orderRiderChange.create({
+    data: { orderId, fromRiderName: previous.riderName, toRiderName: next.name, orderStatus },
+  });
+}
+
 export async function markOrderOutForDelivery(prisma: PrismaClient, nurseryId: string, orderId: string, deliveryPartnerId: string) {
   const order = await findNurseryOrderOrThrow(prisma, nurseryId, orderId);
   if (order.status !== 'packed') throw new BadRequestError('Only a packed order can be dispatched');
@@ -774,6 +796,8 @@ export async function markOrderOutForDelivery(prisma: PrismaClient, nurseryId: s
   if (!partner.isActive) throw new BadRequestError('This delivery partner is deactivated');
 
   const updated = await prisma.$transaction(async (tx) => {
+    const previous = await tx.deliveryTracking.findUnique({ where: { orderId }, select: { deliveryPartnerId: true, riderName: true } });
+    await recordRiderChange(tx, orderId, order.status, previous, { id: partner.id, name: partner.user.name });
     const o = await tx.order.update({ where: { id: orderId }, data: { status: 'out_for_delivery', outForDeliveryAt: new Date() } });
     // Snapshotted from the partner at dispatch time (same convention as OrderItem's
     // species/unitPriceCents snapshot) so serializeOrder()'s per-poll read never needs a join.
@@ -819,15 +843,19 @@ export async function reassignDeliveryPartner(prisma: PrismaClient, nurseryId: s
   if (!partner) throw new NotFoundError('Delivery partner not found');
   if (!partner.isActive) throw new BadRequestError('This delivery partner is deactivated');
 
-  await prisma.deliveryTracking.update({
-    where: { orderId },
-    data: {
-      deliveryPartnerId: partner.id,
-      riderName: partner.user.name,
-      riderPhone: partner.phone,
-      provider: 'nursery_staff',
-      updatedAt: new Date(),
-    },
+  await prisma.$transaction(async (tx) => {
+    const previous = await tx.deliveryTracking.findUnique({ where: { orderId }, select: { deliveryPartnerId: true, riderName: true } });
+    await recordRiderChange(tx, orderId, order.status, previous, { id: partner.id, name: partner.user.name });
+    await tx.deliveryTracking.update({
+      where: { orderId },
+      data: {
+        deliveryPartnerId: partner.id,
+        riderName: partner.user.name,
+        riderPhone: partner.phone,
+        provider: 'nursery_staff',
+        updatedAt: new Date(),
+      },
+    });
   });
 
   return prisma.order.findUniqueOrThrow({ where: { id: orderId } });

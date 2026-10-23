@@ -18,6 +18,7 @@ import {
 import type { ApiFollower } from '../api/nurseryFollowers';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useRequireApproval } from '../hooks/useRequireApproval';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { PageFooter } from '../components/common/PageFooter';
 
@@ -69,12 +70,13 @@ export function NurseryFollowersScreen({ navigation }: any) {
   const declineMutation = useDeclineNurseryFollowRequest();
   const removeMutation = useRemoveNurseryFollower();
   const confirm = useConfirm();
+  const requireApproval = useRequireApproval();
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const confirmRemove = (follower: ApiFollower) => {
     confirm(`Remove ${follower.user.name}?`, 'They will stop seeing your updates. They can follow you again later.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => removeMutation.mutate(follower.followId) },
+      { text: 'Remove', style: 'destructive', onPress: requireApproval(() => removeMutation.mutate(follower.followId)) },
     ]);
   };
 
@@ -122,8 +124,8 @@ export function NurseryFollowersScreen({ navigation }: any) {
                   ...(tab === 'pending' ? { followRequest: { kind: 'nursery', followId: item.followId } } : {}),
                 })
               }
-              onAccept={() => acceptMutation.mutate(item.followId)}
-              onDecline={() => declineMutation.mutate(item.followId)}
+              onAccept={requireApproval(() => acceptMutation.mutate(item.followId))}
+              onDecline={requireApproval(() => declineMutation.mutate(item.followId))}
               onRemove={() => confirmRemove(item)}
             />
           )}

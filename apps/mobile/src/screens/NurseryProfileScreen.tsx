@@ -285,15 +285,11 @@ export function NurseryProfileScreen({ route, navigation }: any) {
       <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
 
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        {!isOwn ? (
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
-            <View style={styles.iconBlur}>
-              <Text style={styles.iconText}>←</Text>
-            </View>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.iconButton} />
-        )}
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
+          <View style={styles.iconBlur}>
+            <Text style={styles.iconText}>←</Text>
+          </View>
+        </TouchableOpacity>
         {isOwn ? null : (
           <View style={styles.headerActions}>
             {!selfView && (

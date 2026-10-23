@@ -15,6 +15,7 @@ import { AnimatedButton } from '../components/common/AnimatedButton';
 import { StatusModal } from '../components/common/StatusModal';
 import { Toggle } from '../components/common/Toggle';
 import { StockDetailSheet } from '../components/nursery/StockDetailSheet';
+import { stockDetailBits } from '../utils/stockDetails';
 import type { PickedPhoto } from '../components/common/PhotoPickerField';
 import {
   useSaplingStock,
@@ -81,7 +82,7 @@ function StockRow({
     `${item.quantity} in stock`,
     item.isFree ? 'Free' : item.priceCents != null ? `₹${(item.priceCents / 100).toFixed(0)}` : 'Priced',
   ];
-  if (item.ageLabel) metaBits.push(item.ageLabel);
+  const detailBits = stockDetailBits(item);
   return (
     <BorderCard noPadding style={[styles.row, selected && { borderColor: COLORS.sage, borderWidth: 2 }]}>
       {selectMode && <SelectBox selected={!!selected} />}
@@ -90,9 +91,14 @@ function StockRow({
         <View style={styles.rowText}>
           <Text style={styles.species}>{item.speciesRef?.commonName ?? item.species}</Text>
           <Text style={styles.meta}>{metaBits.join(' · ')}</Text>
-          <View style={[styles.availBadge, { backgroundColor: `${AVAILABILITY_COLOR[item.availabilityStatus]}22` }]}>
-            <Text style={[styles.availBadgeText, { color: AVAILABILITY_COLOR[item.availabilityStatus] }]}>{AVAILABILITY_LABEL[item.availabilityStatus]}</Text>
-          </View>
+          {detailBits.length > 0 && <Text style={styles.meta}>{detailBits.join(' · ')}</Text>}
+          {item.availabilityStatus === 'low_stock' ? (
+            <Text style={styles.lowStockText}>Low stock – only {item.quantity} left</Text>
+          ) : (
+            <View style={[styles.availBadge, { backgroundColor: `${AVAILABILITY_COLOR[item.availabilityStatus]}22` }]}>
+              <Text style={[styles.availBadgeText, { color: AVAILABILITY_COLOR[item.availabilityStatus] }]}>{AVAILABILITY_LABEL[item.availabilityStatus]}</Text>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
       {!selectMode && (
@@ -132,6 +138,7 @@ export function NurseryStockScreen({ navigation }: any) {
   const [selectedSpeciesId, setSelectedSpeciesId] = useState<string | null>(null);
   const [showSpeciesResults, setShowSpeciesResults] = useState(false);
   const [showAddSpecies, setShowAddSpecies] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [quantity, setQuantity] = useState('');
   const [priceCents, setPriceCents] = useState('');
   const [photo, setPhoto] = useState<PickedPhoto | null>(null);
@@ -222,7 +229,12 @@ export function NurseryStockScreen({ navigation }: any) {
       setError('Pick a species, or add details for a new one.');
       return;
     }
-    const price = priceCents.trim() ? Number(priceCents) * 100 : undefined;
+    const priceRupees = priceCents.trim() ? Number(priceCents) : undefined;
+    if (priceRupees !== undefined && (!Number.isFinite(priceRupees) || priceRupees < 0)) {
+      setError(priceRupees !== undefined && priceRupees < 0 ? "Price can't be negative." : 'Enter a valid price.');
+      return;
+    }
+    const price = priceRupees !== undefined ? Math.round(priceRupees * 100) : undefined;
     try {
       await createMutation.mutateAsync({
         quantity: qty,
@@ -252,6 +264,7 @@ export function NurseryStockScreen({ navigation }: any) {
         lowStockThreshold: lowStockThreshold.trim() ? Number(lowStockThreshold) : undefined,
       });
       resetForm();
+      setShowAddForm(false);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not add this item. Please try again.');
     }
@@ -337,6 +350,22 @@ export function NurseryStockScreen({ navigation }: any) {
         )}
         ListHeaderComponent={
           <View style={styles.addCard}>
+            {!showAddForm ? (
+              <AnimatedButton
+                label="+ Add inventory"
+                onPress={guard(() => setShowAddForm(true))}
+                fullWidth
+                gradientColors={[COLORS.forest, COLORS.forestDeep]}
+                style={styles.addButton}
+              />
+            ) : (
+            <>
+            <View style={styles.addFormHeader}>
+              <Text style={styles.addFormTitle}>Add inventory</Text>
+              <TouchableOpacity onPress={() => { setShowAddForm(false); setError(null); }} hitSlop={8}>
+                <Text style={styles.changeLink}>✕ Close</Text>
+              </TouchableOpacity>
+            </View>
             <Text style={styles.formLabel}>Species</Text>
             {selectedSpeciesId ? (
               <View style={styles.selectedSpeciesRow}>
@@ -492,6 +521,8 @@ export function NurseryStockScreen({ navigation }: any) {
               gradientColors={[COLORS.forest, COLORS.forestDeep]}
               style={styles.addButton}
             />
+            </>
+            )}
           </View>
         }
         ListEmptyComponent={
@@ -501,13 +532,13 @@ export function NurseryStockScreen({ navigation }: any) {
             isFiltering ? (
             <EmptyState icon="🔍" title="No stock matches" body="Try a different search or filter." />
           ) : (
-            <EmptyState icon="🌱" title="No stock yet" body="Add your first species above to get started." />
+            <EmptyState icon="🌱" title="No stock yet" body="Tap + Add inventory above to list your first species." />
           )
           )
         }
       />
 
-      <BulkActionBar count={bulk.selected.size} actions={bulkActions} busy={bulk.busy} onAction={bulk.onAction} bottomOffset={insets.bottom} />
+      <BulkActionBar count={bulk.selected.size} actions={bulkActions} busy={bulk.busy} onAction={guard(bulk.onAction)} bottomOffset={insets.bottom} />
 
       <StatusModal {...statusModalProps} />
       <StockDetailSheet
@@ -521,6 +552,8 @@ export function NurseryStockScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  addFormHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  addFormTitle: { fontSize: 16, fontWeight: '800', color: COLORS.textPrimary },
   addCard: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 8 },
   formLabel: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted, marginBottom: 6 },
   searchInput: {
@@ -611,5 +644,6 @@ const styles = StyleSheet.create({
   meta: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   availBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, marginTop: 4 },
   availBadgeText: { fontSize: 10, fontWeight: '700' },
+  lowStockText: { fontSize: 10, fontWeight: '700', color: COLORS.danger, marginTop: 4 },
   deleteIcon: { fontSize: 18 },
 });

@@ -248,10 +248,11 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
     reply.send(await nurseryService.declineReservation(fastify.prisma, request.user!.id, request.params.id));
   });
 
-  fastify.get<{ Querystring: { page?: string; take?: string } }>('/stock/ledger', async (request, reply) => {
+  fastify.get<{ Querystring: { page?: string; take?: string; reasons?: string } }>('/stock/ledger', async (request, reply) => {
     const page = Number(request.query.page) || 1;
     const take = Number(request.query.take) || 30;
-    reply.send(await nurseryService.getStockLedger(fastify.prisma, request.user!.id, page, take));
+    const reasons = (request.query.reasons ?? '').split(',').map((r) => r.trim()).filter(Boolean);
+    reply.send(await nurseryService.getStockLedger(fastify.prisma, request.user!.id, page, take, reasons));
   });
 
   fastify.get('/stock/analytics', async (request, reply) => {

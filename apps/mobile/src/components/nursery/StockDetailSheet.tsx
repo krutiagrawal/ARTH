@@ -9,6 +9,7 @@ import { AnimatedButton } from '../common/AnimatedButton';
 import { COLORS } from '../../constants/colors';
 import { RADIUS } from '../../constants/theme';
 import { useUpdateSaplingStock } from '../../hooks/useApiQueries';
+import { useRequireApproval } from '../../hooks/useRequireApproval';
 import type { ApiSaplingStock } from '../../api/nursery';
 import type { PickedPhoto } from '../common/PhotoPickerField';
 import { ApiError, resolveMediaUrl } from '../../api/client';
@@ -46,6 +47,7 @@ interface StockDetailSheetProps {
  * details (editable in place, no separate view/edit mode toggle). */
 export function StockDetailSheet({ item, visible, onClose }: StockDetailSheetProps) {
   const updateMutation = useUpdateSaplingStock();
+  const requireApproval = useRequireApproval();
 
   const [quantity, setQuantity] = useState('');
   const [isFree, setIsFree] = useState(true);
@@ -102,13 +104,18 @@ export function StockDetailSheet({ item, visible, onClose }: StockDetailSheetPro
       setError('Enter a valid quantity.');
       return;
     }
+    const priceRupees = !isFree && priceCents.trim() ? Number(priceCents.trim()) : undefined;
+    if (priceRupees !== undefined && (!Number.isFinite(priceRupees) || priceRupees < 0)) {
+      setError(priceRupees < 0 ? "Price can't be negative." : 'Enter a valid price.');
+      return;
+    }
     try {
       await updateMutation.mutateAsync({
         id: item.id,
         input: {
           quantity: qty,
           isFree,
-          priceCents: !isFree && priceCents.trim() ? Number(priceCents.trim()) * 100 : undefined,
+          priceCents: priceRupees !== undefined ? Math.round(priceRupees * 100) : undefined,
           photo: photo ?? undefined,
           ageLabel: ageLabel.trim() || undefined,
           heightLabel: heightLabel.trim() || undefined,
@@ -199,7 +206,7 @@ export function StockDetailSheet({ item, visible, onClose }: StockDetailSheetPro
       {error && <Text style={styles.error}>{error}</Text>}
       <AnimatedButton
         label={updateMutation.isPending ? 'Saving…' : 'Save changes'}
-        onPress={handleSave}
+        onPress={requireApproval(handleSave)}
         disabled={updateMutation.isPending}
         fullWidth
         gradientColors={[COLORS.forest, COLORS.forestDeep]}

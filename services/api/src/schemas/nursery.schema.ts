@@ -104,23 +104,23 @@ const stockDetailFields = {
   potSize: z.string().max(60).optional(),
   suitableEnvironments: jsonValue(z.array(z.string().max(60)).max(12)).optional(),
   nurseryNotes: z.string().max(1000).optional(),
-  lowStockThreshold: z.coerce.number().int().min(0).max(100_000).optional(),
+  lowStockThreshold: z.coerce.number({ invalid_type_error: 'Enter a valid low stock level' }).int('Low stock level must be a whole number').min(0, "Low stock level can't be negative").max(100_000, 'Low stock level is too large').optional(),
 };
 
 export const createSaplingStockSchema = z
   .object({
-    quantity: z.coerce.number().int().min(0).max(1_000_000),
+    quantity: z.coerce.number({ invalid_type_error: 'Enter a valid quantity' }).int('Quantity must be a whole number').min(0, "Quantity can't be negative").max(1_000_000, 'Quantity is too large'),
     isFree: z.union([z.literal('true'), z.literal('false'), z.boolean()]).optional(),
-    priceCents: z.coerce.number().int().min(0).optional(),
+    priceCents: z.coerce.number({ invalid_type_error: 'Enter a valid price' }).int('Enter a valid price').min(0, "Price can't be negative").optional(),
     photoUrl: z.string().max(500).optional(),
     ...stockDetailFields,
   })
   .refine((v) => !!v.speciesId || !!v.species, { message: 'Provide either speciesId or species details', path: ['species'] });
 
 export const updateSaplingStockSchema = z.object({
-  quantity: z.coerce.number().int().min(0).max(1_000_000).optional(),
+  quantity: z.coerce.number({ invalid_type_error: 'Enter a valid quantity' }).int('Quantity must be a whole number').min(0, "Quantity can't be negative").max(1_000_000, 'Quantity is too large').optional(),
   isFree: z.union([z.literal('true'), z.literal('false'), z.boolean()]).optional(),
-  priceCents: z.coerce.number().int().min(0).optional(),
+  priceCents: z.coerce.number({ invalid_type_error: 'Enter a valid price' }).int('Enter a valid price').min(0, "Price can't be negative").optional(),
   photoUrl: z.string().max(500).optional(),
   ...stockDetailFields,
 });

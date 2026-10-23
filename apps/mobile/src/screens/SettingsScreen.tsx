@@ -332,14 +332,6 @@ export function SettingsScreen({ navigation }: any) {
             <>
               <SettingsDivider variant="light" />
               <SettingsRow variant="light"
-                icon="🌱"
-                label="My Sapling Reservations"
-                sublabel="Requests you've sent to nurseries"
-                accent={COLORS.earth}
-                onPress={() => navigation.navigate('MySaplingReservations')}
-              />
-              <SettingsDivider variant="light" />
-              <SettingsRow variant="light"
                 icon="📦"
                 label="My Orders"
                 sublabel="Saplings you've bought and their delivery status"

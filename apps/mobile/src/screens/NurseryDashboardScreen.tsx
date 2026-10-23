@@ -21,7 +21,7 @@ import { getSceneryMode, RainEffect, WindEffect } from '../components/common/Wea
 import { useTimeTheme, type TimeTheme, type TimePeriod } from '../hooks/useTimeTheme';
 import { useDeviceWeather } from '../hooks/useDeviceWeather';
 import { useAuth } from '../context/AuthContext';
-import { useNurseryProfile, useNurseryStats, useNurseryReservations, useNurseryDashboardToday, useSettings, useGamesStatus } from '../hooks/useApiQueries';
+import { useNurseryProfile, useNurseryStats, useNurseryDashboardToday, useSettings, useGamesStatus } from '../hooks/useApiQueries';
 import type { ApiNurseryActivityItem } from '../api/nursery';
 import { GROWTH_LEVEL_META } from '../components/common/GrowthLevelBadge';
 import { useUnreadNotificationCount } from '../hooks/useSocialQueries';
@@ -268,9 +268,8 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
   const { user } = useAuth();
   const { data: profile, refetch: refetchProfile } = useNurseryProfile();
   const { data: stats, isLoading, refetch: refetchStats } = useNurseryStats();
-  const { data: pendingReservations = [], refetch: refetchReservations } = useNurseryReservations('pending');
   const { data: today, refetch: refetchToday } = useNurseryDashboardToday();
-  const { refreshing, onRefresh } = usePullToRefresh([refetchProfile, refetchStats, refetchReservations, refetchToday]);
+  const { refreshing, onRefresh } = usePullToRefresh([refetchProfile, refetchStats, refetchToday]);
   const blurTargetRef = useRef<View>(null);
   const { data: gamesStatus } = useGamesStatus();
 
@@ -308,7 +307,6 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
   // circle, both camouflaged the icon against its own background.
   const dockActions: DockActionSpec[] = [
     { key: 'stock', emoji: '📦', color: COLORS.xpBlue, title: 'Manage inventory', onPress: () => navigation.navigate('NurseryStock') },
-    { key: 'reservations', emoji: '🤝', color: COLORS.forest, title: 'Reservations', badge: pendingReservations.length, onPress: () => navigation.navigate('NurseryReservations') },
     { key: 'reviews', emoji: '⭐', color: COLORS.coral, title: 'Reviews', onPress: () => navigation.navigate('NurseryReviews') },
     { key: 'post', emoji: '📝', color: COLORS.sageDark, title: 'Post an update', onPress: guard(() => navigation.navigate('NurseryPostUpdate')) },
     { key: 'followers', emoji: '👥', color: COLORS.xpBlue, title: 'Followers', onPress: () => navigation.navigate('NurseryFollowers') },

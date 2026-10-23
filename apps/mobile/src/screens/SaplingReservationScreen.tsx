@@ -10,6 +10,7 @@ import { BorderCard } from '../components/common/BorderCard';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { useHaptics } from '../hooks/useHaptics';
 import { useNurseryPublicProfile, useCreateReservation } from '../hooks/useApiQueries';
+import { stockDetailBits } from '../utils/stockDetails';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ApiError } from '../api/client';
 
@@ -79,6 +80,13 @@ export function SaplingReservationScreen({ navigation, route }: any) {
             <Text style={styles.stockLine}>
               {stock.quantity} available · {stock.isFree ? 'Free' : stock.priceCents != null ? `₹${(stock.priceCents / 100).toFixed(0)} each` : 'Priced'}
             </Text>
+            {stockDetailBits(stock).map((bit) => (
+              <Text key={bit} style={styles.detailLine}>{bit}</Text>
+            ))}
+            {stock.suitableEnvironments?.length ? (
+              <Text style={styles.detailLine}>Suits: {stock.suitableEnvironments.join(', ')}</Text>
+            ) : null}
+            {stock.nurseryNotes ? <Text style={styles.notesLine}>{stock.nurseryNotes}</Text> : null}
           </BorderCard>
 
           {requested ? (
@@ -143,6 +151,8 @@ const styles = StyleSheet.create({
   nurseryName: { fontSize: 14, color: COLORS.textSecondary, marginTop: 4 },
   divider: { height: 1, backgroundColor: 'rgba(94,133,80,0.15)', marginVertical: 14 },
   stockLine: { fontSize: 13, color: COLORS.textSecondary },
+  detailLine: { fontSize: 13, color: COLORS.textSecondary, marginTop: 4 },
+  notesLine: { fontSize: 12, fontStyle: 'italic', color: COLORS.textMuted, marginTop: 8, lineHeight: 17 },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 8, marginTop: 4 },
   stepperRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24, marginBottom: 16 },
   stepperButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.earth, alignItems: 'center', justifyContent: 'center' },

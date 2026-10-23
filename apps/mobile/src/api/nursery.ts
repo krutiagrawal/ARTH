@@ -416,8 +416,9 @@ export interface ApiStockLedgerEntry {
   createdAt: string;
 }
 
-export async function fetchStockLedger(page = 1, take = 30): Promise<ApiStockLedgerEntry[]> {
-  return apiFetch<ApiStockLedgerEntry[]>(`/api/nursery/stock/ledger?page=${page}&take=${take}`);
+export async function fetchStockLedger(page = 1, take = 30, reasons: ApiStockLedgerEntry['reason'][] = []): Promise<ApiStockLedgerEntry[]> {
+  const filter = reasons.length > 0 ? `&reasons=${reasons.join(',')}` : '';
+  return apiFetch<ApiStockLedgerEntry[]>(`/api/nursery/stock/ledger?page=${page}&take=${take}${filter}`);
 }
 
 export interface ApiStockAnalytics {
@@ -483,6 +484,9 @@ export interface ApiNurseryOrder {
    * assigned, confirming delivery with the customer's handoff code happens in the partner's own
    * app – this is read-only here so the nursery can see who they assigned. */
   tracking?: { deliveryPartnerId: string | null; riderName: string | null; riderPhone: string | null } | null;
+  /** Detail endpoint only, and only ever sent to the nursery (never the buyer): each time the
+   * delivery partner was swapped after one had already been assigned, oldest first. */
+  riderChanges?: { id: string; fromRiderName: string | null; toRiderName: string; orderStatus: string; createdAt: string }[];
 }
 
 export interface NurseryOrdersFilter {

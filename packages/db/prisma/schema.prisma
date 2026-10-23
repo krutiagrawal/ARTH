@@ -1247,6 +1247,7 @@ model Order {
   address  Address?          @relation(fields: [addressId], references: [id])
   items    OrderItem[]
   tracking DeliveryTracking?
+  riderChanges OrderRiderChange[]
   review   OrderReview?
 
   @@index([userId, createdAt(sort: Desc)])
@@ -1280,6 +1281,24 @@ model OrderItem {
 // riderName/riderPhone become a snapshot of that partner (taken at dispatch time, same convention
 // as OrderItem's species/unitPriceCents snapshot) rather than nursery-entered free text — kept
 // denormalized so serializeOrder()'s per-poll read never needs to join through to User.
+// One row each time a nursery swaps the delivery partner on an order that already had one.
+// Shown to the nursery only (never serialized for the buyer); the buyer just sees whoever ends up
+// delivering. Names are snapshots so a later partner rename/removal never rewrites history.
+model OrderRiderChange {
+  id            String   @id @default(uuid())
+  orderId       String   @map("order_id")
+  fromRiderName String?  @map("from_rider_name")
+  toRiderName   String   @map("to_rider_name")
+  // The order's status at the moment of the swap (e.g. out_for_delivery for a mid-flight change).
+  orderStatus   String   @map("order_status")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_rider_changes")
+}
+
 model DeliveryTracking {
   id                String           @id @default(uuid())
   orderId           String           @unique @map("order_id")

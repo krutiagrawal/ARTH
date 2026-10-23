@@ -1,6 +1,7 @@
 import { PrismaClient } from '@arth/db';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
 import { notify } from './notification.service';
+import { alertOnStockBandChange } from './nursery.service';
 import { requireApprovedNgoProfile } from './ngo.service';
 import { evaluateNurseryAchievements } from './nurseryAchievement.service';
 import { recordNurseryContribution, recomputeReputation } from './nurseryReputation.service';
@@ -733,7 +734,9 @@ export async function markResponseHandedOff(prisma: PrismaClient, nurseryUserId:
   await notify(prisma, {
     userId: response.requirement.ngo.userId,
     type: 'bulk_requirement_response_received',
-    data: { requirementId: response.requirementId, quantityOffered: response.quantityOffered },
+    // Same notification type as the first offer (no enum migration needed) - `stage` is what lets
+    // the app tell "a nursery made an offer" apart from "a nursery handed the saplings over".
+    data: { requirementId: response.requirementId, quantityOffered: response.quantityOffered, nurseryName: nursery.nurseryName, stage: 'handed_off' },
     push: { title: nursery.nurseryName, body: `Handed off ${response.quantityOffered} saplings — confirm receipt with the handoff code to complete it.` },
   });
 
@@ -758,6 +761,7 @@ export async function confirmResponseReceived(prisma: PrismaClient, ngoUserId: s
 
   const nursery = response.nursery;
 
+  let stockBefore: { stockId: string; quantity: number } | null = null;
   await prisma.$transaction(async (tx) => {
     await tx.bulkRequirementResponse.update({ where: { id: responseId }, data: { status: 'fulfilled', respondedAt: new Date() } });
 
@@ -783,6 +787,7 @@ export async function confirmResponseReceived(prisma: PrismaClient, ngoUserId: s
       });
       if (matchingStock && matchingStock.quantity > 0) {
         const deducted = Math.min(matchingStock.quantity, response.quantityOffered);
+        stockBefore = { stockId: matchingStock.id, quantity: matchingStock.quantity };
         await tx.saplingStock.update({ where: { id: matchingStock.id }, data: { quantity: { decrement: deducted } } });
         await tx.saplingStockLedger.create({
           data: {
@@ -809,6 +814,8 @@ export async function confirmResponseReceived(prisma: PrismaClient, ngoUserId: s
     await evaluateNurseryAchievements(tx, nursery.id);
     await recomputeReputation(tx, nursery.id);
   });
+
+  if (stockBefore) await alertOnStockBandChange(prisma, (stockBefore as { stockId: string }).stockId, (stockBefore as { quantity: number }).quantity);
 
   await notify(prisma, {
     userId: nursery.userId,

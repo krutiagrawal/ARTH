@@ -232,6 +232,7 @@ import {
   UpdateNurseryProfileInput,
   SaplingStockInput,
   StockFilter,
+  ApiStockLedgerEntry,
   ReservationStatus,
   NurseryOrderStatus,
   NurseryOrdersFilter,
@@ -2729,11 +2730,11 @@ export function useDeclineReservation() {
   });
 }
 
-export function useStockLedger(page = 1, take = 30) {
+export function useStockLedger(page = 1, take = 30, reasons: ApiStockLedgerEntry['reason'][] = []) {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: ['nursery', 'stock', 'ledger', page, take],
-    queryFn: () => fetchStockLedger(page, take),
+    queryKey: ['nursery', 'stock', 'ledger', page, take, reasons],
+    queryFn: () => fetchStockLedger(page, take, reasons),
     enabled: isAuthenticated,
   });
 }

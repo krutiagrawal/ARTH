@@ -1136,6 +1136,15 @@ Screen: `NotificationsScreen`.
 
 #### A16a. Marketplace (Sapling Reservations, Cart, Checkout, Orders, Wishlist, Addresses)
 
+> **ON HOLD — reservation flow removed from the app.** Free (price 0) saplings now go through the cart, checkout and delivery/pickup like any other sapling. The Request button, the nursery Reservations tile and the Individual "My Sapling Reservations" row are gone, and the API rejects new reservations. Skip the reservation cases in this section; see IND-CART-020 for the free-sapling path.
+
+#### IND-CART-020 — A free (price 0) sapling goes through the cart and checkout like a paid one
+- **Preconditions:** A nursery has a stock item with no price (shown as "Free").
+- **Steps:** 1) Open the nursery's profile → Saplings 2) The row shows "Free" with a normal "+ Add" button (not "Request") 3) Add it, open the cart, check out for pickup and again for delivery
+- **Expected Result:** The free item adds to the cart with a ₹0 line total. Checkout still charges the flat platform fee (and the delivery fee for delivery), so the total is above zero and payment works. The order then follows the normal confirmed → packed → ready/out for delivery → delivered flow, with a handoff code.
+- **Priority:** P0
+- **Test Type:** Positive
+
 #### IND-CART-001 — Reserve a sapling directly from a nursery (free reservation path)
 - **Steps:** 1) Open a nursery's stock item 2) Set quantity via stepper (bounded 1..stock.quantity) 3) Add optional message 4) Submit
 - **Expected Result:** In-page "Request sent!" banner (no navigation away); appears in `MySaplingReservationsScreen` as pending.
@@ -2444,8 +2453,9 @@ Screens: `NgoFollowersScreen` (accepted followers), `NgoFollowerRequestsScreen` 
 - **Test Type:** Validation
 
 #### NUR-REG-003 — Step 1: year established must be 4 digits if provided
+- **Steps:** 1) On step 1, expand "More about your nursery" 2) Enter the year in "Year established" 3) Continue
 - **Test Data:** `19` (2 digits)
-- **Expected Result:** Rejected if non-4-digit; field is optional so blank passes.
+- **Expected Result:** Rejected with "Enter a valid 4-digit year" shown under the field (the section opens automatically if collapsed); field is optional so blank passes, and a valid year such as `2012` passes.
 - **Priority:** P3
 - **Test Type:** Boundary
 
@@ -2505,6 +2515,8 @@ Screens: `NgoFollowersScreen` (accepted followers), `NgoFollowerRequestsScreen` 
 
 ### C3. Pending State
 
+> **Testing note for C3:** a pending nursery cannot create data, so cases 003–010 and 012 can be run in two ways: (a) tap the action and confirm the approval popup appears and nothing is saved — this works even with an empty account, because the add/save/confirm buttons are guarded before any data is needed; or (b) seed rows for the account (or set an already-approved nursery that has data back to `pending` in the admin console) and repeat the actions on real items. Every write is also refused by the API with `403 ACCOUNT_NOT_APPROVED`.
+
 #### NUR-PEND-001 — Dashboard shows a non-blocking status banner, all Quick Action tiles visible
 - **Expected Result:** Same pattern as NGO — banner is informational only; all 12 dock tiles remain tappable.
 - **Priority:** P0
@@ -2516,21 +2528,21 @@ Screens: `NgoFollowersScreen` (accepted followers), `NgoFollowerRequestsScreen` 
 - **Priority:** P0
 - **Test Type:** Permission
 
-#### NUR-PEND-003 — Edit an existing stock item's quantity/price/photo while pending is NOT blocked
+#### NUR-PEND-003 — Edit an existing stock item's quantity/price/photo while pending is blocked
 - **Preconditions:** At least one stock item exists (added before the nursery went pending, or seeded directly).
 - **Steps:** 1) While pending, open an existing stock item via `StockDetailSheet` 2) Change quantity/price/photo 3) Save
-- **Expected Result:** **Currently succeeds with no approval check** — inconsistent with Add/Delete, which are gated.
+- **Expected Result:** Tapping "Save changes" shows the "not available yet" popup and nothing is saved. The API also rejects the request (`403 ACCOUNT_NOT_APPROVED`) if called directly, so the quantity/price/photo stay unchanged. Same behaviour as Add/Delete.
 - **Priority:** P0
 - **Test Type:** Permission / Security
-- **Notes:** Confirmed code-level inconsistency — see Potential Issues. High-value case: a pending nursery could inflate quantity/price on already-listed stock.
+- **Notes:** Fixed — the app now blocks Save changes up front, and bulk archive/delete, bulk "Mark as packed" and follower accept/decline/remove are gated the same way. The API already blocked every non-GET request from an unapproved nursery (except own-profile edit and resubmit).
 
 #### NUR-PEND-004 — Delete a stock item while pending is blocked
-- **Expected Result:** `StatusModal` blocks it, unlike editing (NUR-PEND-003).
+- **Expected Result:** `StatusModal` blocks it, same as editing (NUR-PEND-003).
 - **Priority:** P1
 - **Test Type:** Permission
 
-#### NUR-PEND-005 — Fulfil/decline a reservation while pending is blocked
-- **Expected Result:** Gated correctly via `guard()`.
+#### NUR-PEND-005 — Fulfil/decline a reservation while pending is blocked (ON HOLD — reservations removed from the app)
+- **Expected Result:** Not testable in the UI; the API still returns `403 ACCOUNT_NOT_APPROVED` for the fulfil/decline endpoints.
 - **Priority:** P0
 - **Test Type:** Permission
 
@@ -2560,15 +2572,16 @@ Screens: `NgoFollowersScreen` (accepted followers), `NgoFollowerRequestsScreen` 
 - **Priority:** P2
 - **Test Type:** Permission
 
-#### NUR-PEND-011 — Posting to the community feed while pending publishes under the personal account
-- **Expected Result:** Same soft-gate pattern as NGO (NGO-PEND-007) — inline warning, then posts as the individual owner-user rather than the nursery org.
+#### NUR-PEND-011 — Posting to the community feed while pending is blocked
+- **Steps:** 1) While pending, tap "Post an update" on the dashboard (the approval popup appears) 2) If the composer is reached by any route, try to share a post or a story
+- **Expected Result:** The composer shows "Your nursery is still under review…" and the share button is disabled. Nothing is published under the nursery or the personal account, and no request is sent. (The API also returns `403 ACCOUNT_NOT_APPROVED` if called directly.)
 - **Priority:** P1
-- **Test Type:** State Transition
+- **Test Type:** Permission
 
-#### NUR-PEND-012 — Removing a follower is NOT gated
-- **Expected Result:** Succeeds regardless of approval status — arguably fine since it's not a business-verification-dependent action, but inconsistent with most other mutations. Confirm actual behavior.
-- **Priority:** P3
-- **Test Type:** Regression
+#### NUR-PEND-012 — Removing a follower (and accepting/declining requests) while pending is blocked
+- **Expected Result:** The "not available yet" popup appears and no change is made; the API also returns `403 ACCOUNT_NOT_APPROVED`.
+- **Priority:** P2
+- **Test Type:** Permission
 
 ---
 
@@ -2659,8 +2672,8 @@ Screens: `NgoFollowersScreen` (accepted followers), `NgoFollowerRequestsScreen` 
 - **Priority:** P1
 - **Test Type:** Positive
 
-#### NUR-DASH-002 — Dashboard 12-item Quick Actions dock — all tiles navigate correctly
-- **Expected Result:** Stock, Reservations, Reviews, Post, Followers, Growth & Trust, Stock Analytics, Map, Pickup & Delivery, Delivery Partners, Bulk Requirements, Impact all route correctly.
+#### NUR-DASH-002 — Dashboard 11-item Quick Actions dock — all tiles navigate correctly
+- **Expected Result:** Stock, Reviews, Post, Followers, Growth & Trust, Stock Analytics, Map, Pickup & Delivery, Delivery Partners, Bulk Requirements, Impact all route correctly.
 - **Priority:** P1
 - **Test Type:** Positive
 
@@ -2836,6 +2849,16 @@ Screens: `NgoFollowersScreen` (accepted followers), `NgoFollowerRequestsScreen` 
 ---
 
 ### C10. Individual-User Interactions
+
+> **ON HOLD — reservation flow removed from the app.** Free (price 0) saplings now go through the cart, checkout and delivery/pickup like any other sapling. The Request button, the nursery Reservations tile and the Individual "My Sapling Reservations" row are gone, and the API rejects new reservations. Skip the reservation cases in this section; reservation cases NUR-CUST-001..003 and NUR-INV-001 are on hold.
+
+
+#### NUR-CUST-020 — Changing the delivery partner is shown to the nursery only; the final rider is named on "Delivered"
+- **Preconditions:** A delivery order with partner A assigned, and a second active partner B.
+- **Steps:** 1) Dispatch the order with A 2) While it is out for delivery, reassign to B 3) Open the order as the nursery 4) Open the same order as the buyer 5) Have B complete the delivery and reopen both views
+- **Expected Result:** The nursery's order detail shows a "Rider changes" card ("A → B · Changed mid-delivery · date"); a swap before dispatch reads "Changed before dispatch"; the first assignment is not listed as a change. The buyer's order detail never shows the history, only the current rider. After delivery, the nursery banner reads "Delivered by B" and the buyer sees "Delivered by B".
+- **Priority:** P1
+- **Test Type:** Positive / Permission
 
 #### NUR-CUST-001 — Fulfil a pending sapling reservation
 - **Preconditions:** An individual has requested a reservation (IND-CART-001).
@@ -3134,7 +3157,7 @@ Covered in depth under C5 (Profile). Additional settings-specific cases:
 - **Test Type:** Boundary
 
 #### NUR-COMM-001 — Post/story composer for nursery — approved vs. not
-- **Expected Result:** Mirrors NGO-PEND-007/NGO-COMM-002 exactly: not gated at the button, but silently falls back to posting as the personal account when `status !== 'approved'`.
+- **Expected Result:** Approved: posts and stories publish as the nursery. Not approved: the composer shows a blocked notice and the share button is disabled — nothing is published (see NUR-PEND-011). Unlike the NGO composer, there is no personal-account fallback.
 - **Priority:** P1
 - **Test Type:** State Transition
 
@@ -3290,7 +3313,7 @@ These scenarios chain actions across two or more mobile apps/roles (with Admin s
 
 ### Individual ↔ Nursery
 
-#### CROSS-IN-001 — Free reservation: request → fulfil → stock decrements → individual sees it
+#### CROSS-IN-001 — Free reservation: request → fulfil → stock decrements → individual sees it (ON HOLD — reservations removed; use IND-CART-020)
 - **Steps:** 1) Individual reserves a sapling (IND-CART-001) 2) Nursery fulfils it (NUR-CUST-001) 3) Individual reopens `MySaplingReservationsScreen`
 - **Expected Result:** Status flips to `fulfilled` on the individual's side; stock ledger on the nursery's side shows the matching decrement (NUR-INV-001).
 - **Priority:** P0
@@ -3709,7 +3732,7 @@ Failure in any of these makes the app unusable, unsafe, or capable of corrupting
 - **Authentication & session integrity** (IND-AUTH-001/007/013/014/015/016, NGO-AUTH-002, NUR-AUTH-002): if login, session persistence, token refresh, or the account-blocked mechanism breaks, no role can use the app at all.
 - **Plant-photo anti-fraud controls** (IND-VERIFY-001/002/004/005): the mock-GPS check and the ARTH-zone eligibility check are the platform's core defense against fake/gamed tree-planting records — this is the product's entire trust model.
 - **Payment/order integrity** (IND-CHECKOUT-001, IND-DON-001, MOBILE-KILL-002): a failure here means real (test-mode) money moves with no matching order, or an order exists with no payment — the single worst class of bug for a marketplace feature.
-- **Approval-gate enforcement gaps** (NGO-PEND-003/006, NUR-PEND-003, NGO-BULK-012): the audit found several create/mutate actions that are **not** gated by NGO/Nursery approval status. Until product confirms these are intentional, they represent a live path for unverified organizations to publish content or transact — treated as P0 to force an explicit decision, not because a defect is assumed.
+- **Approval-gate enforcement gaps** (NGO-PEND-003/006, NGO-BULK-012): the audit found several create/mutate actions that are **not** gated by NGO/Nursery approval status. Until product confirms these are intentional, they represent a live path for unverified organizations to publish content or transact — treated as P0 to force an explicit decision, not because a defect is assumed.
 - **Marketplace/bulk-requirement handoff-code integrity** (NUR-CUST-005, NGO-BULK-007, NUR-BULK-007): these codes are the platform's only anti-fraud proof-of-handoff between two independent parties (buyer/nursery, nursery/NGO) — a bypass here breaks the trust chain for physical goods changing hands.
 - **Core registration wizards** (NGO-REG-001/012, NUR-REG-001/010): these are the only on-ramp for two of the three roles this document covers.
 
@@ -3806,7 +3829,7 @@ Implemented in the code but with no obvious, dedicated UAT case above — either
 Consolidated from every flag raised during the audit and while writing test cases. These are recorded as **findings that need a product/engineering decision**, not confirmed bugs — per the audit's explicit instruction not to assume intended behavior where it isn't clear from the code alone.
 
 1. **NGO approval gate has real gaps**: `NgoCreateDriveScreen`, `NgoCreateCampaignScreen`, `NgoCreateAdoptableTreeScreen`, and the entire `NgoBulkRequirementsScreen` flow have no `useApprovalGate` check of their own — only the *button that navigates to them* is gated in the screens the audit found. Any other path to these routes bypasses the gate entirely. *(NGO-PEND-003, NGO-PEND-006, NGO-BULK-012)*
-2. **Nursery stock-edit gate gap**: adding and deleting a stock item is approval-gated; editing an existing item's quantity/price/photo via `StockDetailSheet` is not. *(NUR-PEND-003)*
+2. ~~**Nursery stock-edit gate gap**~~ — fixed: editing via `StockDetailSheet` is now gated like add/delete. *(NUR-PEND-003)*
 3. **NGO has no working "resubmit after rejection" UI**, even though the API exists and the Nursery role has a fully working equivalent. *(NGO-REJ-001)*
 4. **No forgot/reset-password flow exists anywhere in the app**, for any role. *(IND-AUTH-011)*
 5. **No OTP/email verification at signup**, for any role — registration logs the user in immediately.

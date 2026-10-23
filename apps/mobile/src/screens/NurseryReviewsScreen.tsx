@@ -137,10 +137,10 @@ const styles = StyleSheet.create({
   respondText: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
   responseForm: { gap: 8 },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: 'transparent',
     borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: 'rgba(94,133,80,0.2)',
+    borderColor: 'rgba(94,133,80,0.35)',
     padding: 10,
     fontSize: 13,
     color: COLORS.textPrimary,

@@ -21,6 +21,7 @@ import {
   useUpdateSaplingStock,
 } from '../../hooks/useApiQueries';
 import type { ApiSaplingStock } from '../../api/nursery';
+import { stockDetailBits } from '../../utils/stockDetails';
 
 import { TEXT } from '../../constants/typography';
 /** The nursery owner uploading a new photo for one of their own listings – uploads immediately
@@ -75,19 +76,6 @@ function CartControls({ item }: { item: ApiSaplingStock }) {
         accessibilityState={{ disabled: true }}
       >
         <Text style={styles.addButtonText}>+ Add</Text>
-      </TouchableOpacity>
-    );
-  }
-
-  // Free saplings can't go in the cart (the API refuses them) – they're requested from the nursery
-  // through the reservation flow instead.
-  if (item.isFree) {
-    return (
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => navigation.navigate('SaplingReservation', { nurseryId: item.nurseryId, stockId: item.id })}
-      >
-        <Text style={styles.addButtonText}>Request</Text>
       </TouchableOpacity>
     );
   }
@@ -161,6 +149,8 @@ function WishlistHeart({ item }: { item: ApiSaplingStock }) {
 
 function SaplingRow({ item, isOwn }: { item: ApiSaplingStock; isOwn: boolean }) {
   const photoUri = resolveMediaUrl(item.photoUrl);
+  const detailBits = stockDetailBits(item);
+  const environments = item.suitableEnvironments?.length ? item.suitableEnvironments.join(', ') : null;
   return (
     <View style={styles.row}>
       {isOwn ? (
@@ -180,6 +170,9 @@ function SaplingRow({ item, isOwn }: { item: ApiSaplingStock; isOwn: boolean }) 
           )}{' '}
           · {item.isFree ? 'Free' : item.priceCents != null ? `₹${(item.priceCents / 100).toFixed(0)}` : 'Priced'}
         </Text>
+        {detailBits.length > 0 && <Text style={styles.meta}>{detailBits.join(' · ')}</Text>}
+        {environments && <Text style={styles.meta}>Suits: {environments}</Text>}
+        {item.nurseryNotes ? <Text style={styles.notes} numberOfLines={2}>{item.nurseryNotes}</Text> : null}
       </View>
       {!isOwn && <WishlistHeart item={item} />}
       {!isOwn && <CartControls item={item} />}
@@ -331,6 +324,7 @@ const styles = StyleSheet.create({
   addButton: { backgroundColor: COLORS.forest, borderRadius: RADIUS.full, minWidth: 84, paddingHorizontal: 14, paddingVertical: 8, alignItems: 'center' },
   addButtonText: { fontSize: 12, fontWeight: '700', color: COLORS.white },
   soldOutChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: RADIUS.full, backgroundColor: 'rgba(0,0,0,0.06)' },
+  notes: { fontSize: 11, fontStyle: 'italic', color: COLORS.textMuted, marginTop: 3 },
   soldOutInline: { fontWeight: '700', color: COLORS.dangerDark },
   addButtonDisabled: { opacity: 0.4 },
   stepperButtonDisabled: { opacity: 0.4 },

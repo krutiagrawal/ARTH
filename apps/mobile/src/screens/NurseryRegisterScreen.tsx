@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
-import { Text, TextInput } from '../components/common/AppText';
+import { Text } from '../components/common/AppText';
 import { FieldLabel } from '../components/common/RequiredMark';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -9,6 +9,15 @@ import { COLORS, ON_DARK_SURFACE } from '../constants/colors';
 import { TYPOGRAPHY, TEXT } from '../constants/typography';
 import { RADIUS, SPACING } from '../constants/theme';
 import { BorderCard } from '../components/common/BorderCard';
+import {
+  NgoField,
+  FormErrorProvider,
+  FieldGroup,
+  Disclosure,
+  RegistrationCard,
+  StepProgress,
+  StepTransition,
+} from '../components/ngo/NgoFormParts';
 import { PasswordInput } from '../components/common/PasswordInput';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { CityPickerField } from '../components/common/CityPickerField';
@@ -24,7 +33,7 @@ import { reverseGeocode } from '../api/geocode';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { useEmailField } from '../hooks/useEmailField';
 import { usePhoneField } from '../hooks/usePhoneField';
-import { isValidWebsite, isValidGstin } from '../utils/validation';
+import { isValidWebsite, isValidGstin, isValidYear } from '../utils/validation';
 
 function slugifyHandle(name: string): string {
   return name
@@ -86,8 +95,22 @@ function verificationFieldsFor(type: NurseryType | null): VerificationField[] {
   }
 }
 
+type StepError = { key: string; message: string };
+
+const VERIFICATION_META: Record<VerificationField, { icon: string; title: string; description: string; label: string }> = {
+  gstin: { icon: '🧾', title: 'GSTIN', description: 'Goods and services tax registration', label: 'GSTIN' },
+  businessReg: { icon: '📜', title: 'Business registration', description: 'Shop / business registration or license', label: 'Registration / license number' },
+  tradeLicense: { icon: '🌿', title: 'Nursery / trade license', description: 'Issued for running a plant nursery', label: 'License number' },
+  ngoReg: { icon: '🤝', title: 'NGO registration', description: 'For NGO / community nurseries', label: 'NGO registration number' },
+  govId: { icon: '🏛️', title: 'Government nursery ID', description: 'For government-run nurseries', label: 'Nursery ID' },
+};
+
 const STEPS = ['identity', 'location', 'person', 'stock', 'verification', 'photo', 'account'] as const;
 type Step = (typeof STEPS)[number];
+
+// Steps whose answers become read-only registration details once the account is created (the
+// Edit profile screen only lets a nursery change its name, address, phone and delivery settings).
+const LOCKED_STEPS: Step[] = ['identity', 'person', 'stock', 'verification', 'photo', 'account'];
 
 const STEP_COPY: Record<Step, { emoji: string; title: string; subtitle: string }> = {
   identity: { emoji: '🏪', title: 'Your nursery', subtitle: 'The basics – who you are and what kind of nursery you run.' },
@@ -98,16 +121,6 @@ const STEP_COPY: Record<Step, { emoji: string; title: string; subtitle: string }
   photo: { emoji: '📸', title: 'Show us your nursery', subtitle: 'One real-time photo of your name board with plants visible behind it.' },
   account: { emoji: '🔐', title: 'Create your login', subtitle: "Last step – you're almost in." },
 };
-
-function StepDots({ current }: { current: number }) {
-  return (
-    <View style={styles.dotsRow}>
-      {STEPS.map((_, i) => (
-        <View key={i} style={[styles.dot, i === current && styles.dotActive, i < current && styles.dotDone]} />
-      ))}
-    </View>
-  );
-}
 
 export function NurseryRegisterScreen({ navigation }: any) {
   const { registerNursery } = useAuth();
@@ -150,6 +163,9 @@ export function NurseryRegisterScreen({ navigation }: any) {
   const [tradeLicense, setTradeLicense] = useState('');
   const [ngoReg, setNgoReg] = useState('');
   const [govId, setGovId] = useState('');
+  const [verificationOn, setVerificationOn] = useState<Record<VerificationField, boolean>>({
+    gstin: false, businessReg: false, tradeLicense: false, ngoReg: false, govId: false,
+  });
 
   // Photo
   const [verificationPhoto, setVerificationPhoto] = useState<PickedPhoto | null>(null);
@@ -158,8 +174,19 @@ export function NurseryRegisterScreen({ navigation }: any) {
   const email = useEmailField();
   const [password, setPassword] = useState('');
 
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<(StepError & { id: number }) | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollYRef = useRef(0);
+  const showError = (e: StepError) => setError({ ...e, id: Date.now() });
+  const fail = (key: string, message: string): StepError => ({ key, message });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Bring the offending field into view: its on-screen y plus the current scroll offset.
+  const scrollToView = useCallback((view: View) => {
+    view.measureInWindow((_x, y) => {
+      scrollRef.current?.scrollTo({ y: Math.max(0, scrollYRef.current + y - 140), animated: true });
+    });
+  }, []);
 
   const visibleVerificationFields = useMemo(() => verificationFieldsFor(nurseryType), [nurseryType]);
 
@@ -170,7 +197,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        setError('Location permission is needed to place your nursery on the map.');
+        showError(fail('form', 'Location permission is needed to place your nursery on the map.'));
         return;
       }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
@@ -185,7 +212,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
         setLocationNotice({ ok: false, text: "Pin captured, but we couldn't find an address for it – please type your address above" });
       }
     } catch {
-      setError("Couldn't get your location. Please try again.");
+      showError(fail('form', "Couldn't get your location. Please try again."));
     } finally {
       setLocating(false);
     }
@@ -196,69 +223,62 @@ export function NurseryRegisterScreen({ navigation }: any) {
     setLocationNotice(null);
   };
 
-  const validateStep = (s: Step): string | null => {
+  const validateStep = (s: Step): StepError | null => {
     switch (s) {
       case 'identity':
-        if (!nurseryName.trim()) return 'Enter your nursery name';
-        if (!ownerName.trim()) return "Enter the owner's name";
-        if (!description.trim()) return 'Tell us what your nursery grows';
-        if (!nurseryType) return 'Pick the type that best describes your nursery';
+        if (!nurseryName.trim()) return fail('nurseryName', 'Enter your nursery name');
+        if (!ownerName.trim()) return fail('ownerName', "Enter the owner's name");
+        if (!description.trim()) return fail('description', 'Tell us what your nursery grows');
+        if (!nurseryType) return fail('nurseryType', 'Pick the type that best describes your nursery');
+        if (yearEstablished.trim() && !isValidYear(yearEstablished)) {
+          return fail('yearEstablished', `Enter a valid 4-digit year (1800–${new Date().getFullYear()})`);
+        }
         if (websiteUrl.trim() && !isValidWebsite(websiteUrl)) {
           setWebsiteTouched(true);
-          return 'Enter a valid website URL';
+          return fail('websiteUrl', 'Enter a valid website URL');
         }
         return null;
       case 'location':
-        if (!line1.trim()) return 'Add your nursery address';
-        if (!contactPhone.value) {
-          contactPhone.setTouched(true);
-          return 'Add a contact number';
-        }
-        if (!contactPhone.valid) {
-          contactPhone.setTouched(true);
-          return 'Enter a valid 10-digit mobile number';
-        }
-        if (contactPhone.taken) return 'This phone number is already registered';
+        if (!line1.trim()) return fail('line1', 'Add your nursery address');
+        if (!contactPhone.value) return fail('contactPhone', 'Add a contact number');
+        if (!contactPhone.valid) return fail('contactPhone', 'Enter a valid 10-digit mobile number');
+        if (contactPhone.taken) return fail('contactPhone', 'This phone number is already registered');
         return null;
       case 'person':
-        if (!sameAsOwner && !personName.trim()) return "Enter the responsible person's name";
+        if (!sameAsOwner && !personName.trim()) return fail('personName', "Enter the responsible person's name");
         if (!sameAsOwner) {
-          if (!personPhone.value) {
-            personPhone.setTouched(true);
-            return "Enter the responsible person's phone";
-          }
-          if (!personPhone.valid) {
-            personPhone.setTouched(true);
-            return 'Enter a valid 10-digit mobile number';
-          }
+          if (!personPhone.value) return fail('personPhone', "Enter the responsible person's phone");
+          if (!personPhone.valid) return fail('personPhone', 'Enter a valid 10-digit mobile number');
         }
         return null;
       case 'stock':
-        if (plantCategories.length === 0) return 'Pick at least one category you stock';
-        if (!approxPlantCount) return 'Pick roughly how many plants you have available';
+        if (plantCategories.length === 0) return fail('plantCategories', 'Pick at least one category you stock');
+        if (!approxPlantCount) return fail('approxPlantCount', 'Pick roughly how many plants you have available');
         return null;
       case 'verification':
-        if (gstin.trim() && !isValidGstin(gstin)) return 'Enter a valid GSTIN, or leave it blank';
+        if (visibleVerificationFields.includes('gstin') && verificationOn.gstin && gstin.trim() && !isValidGstin(gstin)) {
+          return fail('gstin', 'Enter a valid GSTIN, or leave it blank');
+        }
         return null;
       case 'photo':
-        if (!verificationPhoto) return 'A real-time photo of your nursery is required';
+        if (!verificationPhoto) return fail('verificationPhoto', 'A real-time photo of your nursery is required');
         return null;
       case 'account':
-        if (!email.value.trim()) return 'Enter an email';
+        if (!email.value.trim()) return fail('email', 'Enter an email');
         if (!email.valid) {
           email.setTouched(true);
-          return 'Enter a valid email address';
+          return fail('email', 'Enter a valid email address');
         }
-        if (email.taken) return 'This email is already registered';
-        if (password.length < 8) return 'Password must be at least 8 characters';
+        if (email.taken) return fail('email', 'This email is already registered');
+        if (password.length < 8) return fail('password', 'Password must be at least 8 characters');
         return null;
     }
   };
 
   const goNext = () => {
-    const message = validateStep(step);
-    if (message) {
-      setError(message);
+    const failure = validateStep(step);
+    if (failure) {
+      showError(failure);
       return;
     }
     setError(null);
@@ -270,10 +290,13 @@ export function NurseryRegisterScreen({ navigation }: any) {
     if (stepIndex > 0) setStepIndex(stepIndex - 1);
   };
 
+  const verificationValue = (field: VerificationField, value: string) =>
+    visibleVerificationFields.includes(field) && verificationOn[field] ? value.trim() || undefined : undefined;
+
   const handleRegister = async () => {
-    const message = validateStep('account');
-    if (message) {
-      setError(message);
+    const failure = validateStep('account');
+    if (failure) {
+      showError(failure);
       return;
     }
     setError(null);
@@ -301,20 +324,22 @@ export function NurseryRegisterScreen({ navigation }: any) {
         approxPlantCount: PLANT_COUNT_OPTIONS.find((o) => o.value === approxPlantCount)?.label,
         seasonalAvailability,
         bulkSupply,
-        gstin: gstin.trim() || undefined,
-        businessRegistrationNumber: businessReg.trim() || undefined,
-        tradeLicenseNumber: tradeLicense.trim() || undefined,
-        ngoRegistrationNumber: ngoReg.trim() || undefined,
-        governmentNurseryId: govId.trim() || undefined,
+        gstin: verificationValue('gstin', gstin),
+        businessRegistrationNumber: verificationValue('businessReg', businessReg),
+        tradeLicenseNumber: verificationValue('tradeLicense', tradeLicense),
+        ngoRegistrationNumber: verificationValue('ngoReg', ngoReg),
+        governmentNurseryId: verificationValue('govId', govId),
         verificationPhoto: verificationPhoto!,
       });
       navigation.reset({ index: 0, routes: [{ name: 'NurseryMain' }] });
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
+      showError(fail('form', e instanceof ApiError ? e.message : 'Something went wrong. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const openMore = error?.key === 'websiteUrl' || error?.key === 'yearEstablished';
 
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -325,6 +350,9 @@ export function NurseryRegisterScreen({ navigation }: any) {
         style={StyleSheet.absoluteFill}
       />
       <ScrollView
+        ref={scrollRef}
+        onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+        scrollEventThrottle={16}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
@@ -332,208 +360,234 @@ export function NurseryRegisterScreen({ navigation }: any) {
         <Text style={styles.logo}>ARTH</Text>
         <Text style={styles.tagline}>for nurseries</Text>
 
-        <StepDots current={stepIndex} />
-        <Text style={styles.stepCounter}>Step {stepIndex + 1} of {STEPS.length}</Text>
+        <StepProgress current={stepIndex} total={STEPS.length} title={STEP_COPY[step].title} />
 
         <BorderCard style={styles.card}>
-          <Text style={styles.title}>{STEP_COPY[step].emoji} {STEP_COPY[step].title}</Text>
-          <Text style={styles.subtitle}>{STEP_COPY[step].subtitle}</Text>
+          <View style={styles.header}>
+            <View style={styles.emojiBadge}>
+              <Text style={styles.emoji}>{STEP_COPY[step].emoji}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>{STEP_COPY[step].title}</Text>
+              <Text style={styles.subtitle}>{STEP_COPY[step].subtitle}</Text>
+            </View>
+          </View>
 
-          {step === 'identity' && (
-            <>
-              <FieldLabel label="Nursery / business name" required dark />
-              <TextInput maxLength={120} style={styles.input} placeholder="Nursery / business name" placeholderTextColor={ON_DARK_SURFACE.muted} value={nurseryName} onChangeText={setNurseryName} />
-              <FieldLabel label="Owner / proprietor name" required dark />
-              <TextInput maxLength={60} style={styles.input} placeholder="Owner / proprietor name" placeholderTextColor={ON_DARK_SURFACE.muted} value={ownerName} onChangeText={setOwnerName} />
-              <FieldLabel label="What does your nursery grow?" required dark />
-              <TextInput maxLength={2000}
-                style={[styles.input, styles.multiline]}
-                placeholder="What does your nursery grow?"
-                placeholderTextColor={ON_DARK_SURFACE.muted}
-                value={description}
-                onChangeText={setDescription}
-                multiline
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Year established (optional)"
-                placeholderTextColor={ON_DARK_SURFACE.muted}
-                value={yearEstablished}
-                onChangeText={setYearEstablished}
-                keyboardType="number-pad"
-                maxLength={4}
-              />
-              <SelectField dark required label="Nursery type" options={NURSERY_TYPE_OPTIONS} value={nurseryType} onChange={(v) => setNurseryType(v as NurseryType)} />
-              <TextInput maxLength={300}
-                style={styles.input}
-                placeholder="Website / social media (optional)"
-                placeholderTextColor={ON_DARK_SURFACE.muted}
-                autoCapitalize="none"
-                value={websiteUrl}
-                onChangeText={setWebsiteUrl}
-                onBlur={() => setWebsiteTouched(true)}
-              />
-              {websiteTouched && websiteUrl.trim() && !isValidWebsite(websiteUrl) && (
-                <Text style={styles.fieldError}>Enter a valid website URL</Text>
-              )}
-            </>
-          )}
-
-          {step === 'location' && (
-            <>
-              <AddressSearchField
-                dark
-                required
-                label="Full nursery address"
-                value={line1}
-                onChangeText={handleLine1Change}
-                placeholder="Street / area / landmark"
-                onSelectSuggestion={(s) => {
-                  setLine1(s.label);
-                  setLocationNotice(null);
-                }}
-              />
-              <TouchableOpacity style={styles.locationButton} onPress={useCurrentLocation} disabled={locating}>
-                <Text style={styles.locationButtonText}>{locating ? 'Locating…' : '📍 Or use my current location'}</Text>
-              </TouchableOpacity>
-              {locationNotice && (
-                <Text style={[styles.locationNotice, locationNotice.ok ? styles.locationNoticeOk : styles.locationNoticeWarn]}>
-                  {locationNotice.text}
+          <FormErrorProvider value={{ errorKey: error?.key ?? null, message: error?.message ?? null, id: error?.id ?? 0, scrollToView }}>
+          <StepTransition stepKey={step}>
+            {LOCKED_STEPS.includes(step) && (
+              <View style={styles.lockNotice}>
+                <Text style={styles.lockIcon}>⚠️</Text>
+                <Text style={styles.lockText}>
+                  {step === 'account'
+                    ? "Last check – the details you entered earlier can't be edited after you register."
+                    : "Please enter these details carefully – they can't be edited after you register."}
                 </Text>
-              )}
-              <CityPickerField value={city} onChange={setCity} variant="dark" />
-              <PhoneField
-                dark
-                required
-                label="Contact number"
-                value={contactPhone.value}
-                onChangeText={contactPhone.setValue}
-                onBlur={() => contactPhone.setTouched(true)}
-                error={
-                  contactPhone.touched
-                    ? contactPhone.error
-                    : contactPhone.checking
-                      ? 'Checking…'
-                      : null
-                }
-              />
-            </>
-          )}
-
-          {step === 'person' && (
-            <>
-              <View style={styles.toggleRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.toggleLabel}>Same as owner above</Text>
-                  <Text style={styles.toggleHint}>{ownerName.trim() || 'The owner'} handles order queries</Text>
-                </View>
-                <Toggle value={sameAsOwner} onValueChange={setSameAsOwner} offColor="rgba(255,255,255,0.25)" onColor={COLORS.mint} />
               </View>
-              {!sameAsOwner && (
-                <>
-                  <FieldLabel label="Full name" required dark />
-                  <TextInput maxLength={120} style={styles.input} placeholder="Full name" placeholderTextColor={ON_DARK_SURFACE.muted} value={personName} onChangeText={setPersonName} />
-                  <SelectField dark label="Role" options={RESPONSIBLE_ROLE_OPTIONS} value={personRole} onChange={setPersonRole} />
+            )}
+            {step === 'identity' && (
+              <>
+                <NgoField required name="nurseryName" label="Nursery / business name" placeholder="e.g. Green Leaf Nursery" maxLength={120} value={nurseryName} onChangeText={setNurseryName} />
+                <NgoField required name="ownerName" label="Owner / proprietor name" maxLength={60} value={ownerName} onChangeText={setOwnerName} />
+                <NgoField required name="description" label="What does your nursery grow?" placeholder="Tell planters what you grow and sell" maxLength={2000} multiline value={description} onChangeText={setDescription} />
+                <FieldGroup name="nurseryType">
+                  <SelectField dark required layout="list" label="Nursery type" options={NURSERY_TYPE_OPTIONS} value={nurseryType} onChange={(v) => setNurseryType(v as NurseryType)} />
+                </FieldGroup>
+
+                <Disclosure title="More about your nursery" subtitle="Year established, website or social media" forceOpen={openMore}>
+                  <NgoField name="yearEstablished" label="Year established" optional placeholder="e.g. 2012" value={yearEstablished} onChangeText={setYearEstablished} keyboardType="number-pad" maxLength={4} />
+                  <NgoField
+                    name="websiteUrl"
+                    label="Website / social media"
+                    optional
+                    placeholder="https://"
+                    maxLength={300}
+                    autoCapitalize="none"
+                    value={websiteUrl}
+                    onChangeText={setWebsiteUrl}
+                    onBlur={() => setWebsiteTouched(true)}
+                    error={websiteTouched && websiteUrl.trim() && !isValidWebsite(websiteUrl) ? 'Enter a valid website URL' : null}
+                  />
+                </Disclosure>
+              </>
+            )}
+
+            {step === 'location' && (
+              <>
+                <FieldGroup name="line1">
+                  <AddressSearchField
+                    dark
+                    required
+                    label="Full nursery address"
+                    value={line1}
+                    onChangeText={handleLine1Change}
+                    placeholder="Street / area / landmark"
+                    onSelectSuggestion={(s) => {
+                      setLine1(s.label);
+                      setLocationNotice(null);
+                    }}
+                  />
+                  <TouchableOpacity style={styles.locationButton} onPress={useCurrentLocation} disabled={locating}>
+                    <Text style={styles.locationButtonText}>{locating ? 'Locating…' : '📍 Or use my current location'}</Text>
+                  </TouchableOpacity>
+                  {locationNotice && (
+                    <Text style={[styles.locationNotice, locationNotice.ok ? styles.locationNoticeOk : styles.locationNoticeWarn]}>
+                      {locationNotice.text}
+                    </Text>
+                  )}
+                </FieldGroup>
+                <FieldGroup>
+                  <CityPickerField value={city} onChange={setCity} variant="dark" />
+                </FieldGroup>
+                <FieldGroup name="contactPhone">
                   <PhoneField
                     dark
                     required
-                    label="Phone"
-                    value={personPhone.value}
-                    onChangeText={personPhone.setValue}
-                    onBlur={() => personPhone.setTouched(true)}
-                    error={personPhone.touched ? personPhone.error : personPhone.checking ? 'Checking…' : null}
+                    label="Contact number"
+                    value={contactPhone.value}
+                    onChangeText={contactPhone.setValue}
+                    onBlur={() => contactPhone.setTouched(true)}
+                    error={contactPhone.checking ? 'Checking…' : null}
                   />
-                </>
-              )}
-            </>
-          )}
+                </FieldGroup>
+              </>
+            )}
 
-          {step === 'stock' && (
-            <>
-              <SelectField dark multi required label="What do you stock?" options={PLANT_CATEGORY_OPTIONS} value={plantCategories} onChange={setPlantCategories} />
-              <SelectField dark required label="Approximately how many plants do you have?" options={PLANT_COUNT_OPTIONS} value={approxPlantCount} onChange={setApproxPlantCount} />
-              <View style={styles.toggleRow}>
-                <Text style={styles.toggleLabel}>🍂 Availability changes by season</Text>
-                <Toggle value={seasonalAvailability} onValueChange={setSeasonalAvailability} offColor="rgba(255,255,255,0.25)" onColor={COLORS.mint} />
-              </View>
-              <View style={styles.toggleRow}>
-                <Text style={styles.toggleLabel}>📦 Can supply bulk quantities</Text>
-                <Toggle value={bulkSupply} onValueChange={setBulkSupply} offColor="rgba(255,255,255,0.25)" onColor={COLORS.mint} />
-              </View>
-            </>
-          )}
+            {step === 'person' && (
+              <>
+                <View style={styles.toggleRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.toggleLabel}>Same as owner above</Text>
+                    <Text style={styles.toggleHint}>{ownerName.trim() || 'The owner'} handles order queries</Text>
+                  </View>
+                  <Toggle value={sameAsOwner} onValueChange={setSameAsOwner} offColor="rgba(255,255,255,0.25)" onColor={COLORS.mint} />
+                </View>
+                {!sameAsOwner && (
+                  <>
+                    <NgoField required name="personName" label="Full name" maxLength={120} value={personName} onChangeText={setPersonName} />
+                    <FieldGroup>
+                      <SelectField dark layout="grid" label="Role" options={RESPONSIBLE_ROLE_OPTIONS} value={personRole} onChange={setPersonRole} />
+                    </FieldGroup>
+                    <FieldGroup name="personPhone">
+                      <PhoneField
+                        dark
+                        required
+                        label="Phone"
+                        value={personPhone.value}
+                        onChangeText={personPhone.setValue}
+                        onBlur={() => personPhone.setTouched(true)}
+                        error={personPhone.checking ? 'Checking…' : null}
+                      />
+                    </FieldGroup>
+                  </>
+                )}
+              </>
+            )}
 
-          {step === 'verification' && (
-            <>
-              {visibleVerificationFields.includes('gstin') && (
-                <>
-                  <TextInput maxLength={30} style={styles.input} placeholder="GSTIN (if applicable)" placeholderTextColor={ON_DARK_SURFACE.muted} autoCapitalize="characters" value={gstin} onChangeText={setGstin} />
-                  {gstin.trim() && !isValidGstin(gstin) && <Text style={styles.fieldError}>Doesn't look like a valid GSTIN</Text>}
-                </>
-              )}
-              {visibleVerificationFields.includes('businessReg') && (
-                <TextInput maxLength={60} style={styles.input} placeholder="Business registration / license (if applicable)" placeholderTextColor={ON_DARK_SURFACE.muted} value={businessReg} onChangeText={setBusinessReg} />
-              )}
-              {visibleVerificationFields.includes('tradeLicense') && (
-                <TextInput maxLength={60} style={styles.input} placeholder="Nursery / trade license (if applicable)" placeholderTextColor={ON_DARK_SURFACE.muted} value={tradeLicense} onChangeText={setTradeLicense} />
-              )}
-              {visibleVerificationFields.includes('ngoReg') && (
-                <TextInput maxLength={60} style={styles.input} placeholder="NGO registration number (if applicable)" placeholderTextColor={ON_DARK_SURFACE.muted} value={ngoReg} onChangeText={setNgoReg} />
-              )}
-              {visibleVerificationFields.includes('govId') && (
-                <TextInput maxLength={60} style={styles.input} placeholder="Government nursery ID (if applicable)" placeholderTextColor={ON_DARK_SURFACE.muted} value={govId} onChangeText={setGovId} />
-              )}
-              <Text style={styles.helperNote}>Pick your categories and rough stock level – the seasonal switch is optional.</Text>
-            </>
-          )}
+            {step === 'stock' && (
+              <>
+                <FieldGroup name="plantCategories">
+                  <SelectField dark multi required layout="list" hint="Select all that apply" label="What do you stock?" options={PLANT_CATEGORY_OPTIONS} value={plantCategories} onChange={setPlantCategories} />
+                </FieldGroup>
+                <FieldGroup name="approxPlantCount">
+                  <SelectField dark required layout="grid" label="Approximately how many plants do you have?" options={PLANT_COUNT_OPTIONS} value={approxPlantCount} onChange={setApproxPlantCount} />
+                </FieldGroup>
+                <View style={styles.toggleRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.toggleLabel}>🍂 Availability changes by season</Text>
+                  </View>
+                  <Toggle value={seasonalAvailability} onValueChange={setSeasonalAvailability} offColor="rgba(255,255,255,0.25)" onColor={COLORS.mint} />
+                </View>
+                <View style={styles.toggleRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.toggleLabel}>📦 Can supply bulk quantities</Text>
+                  </View>
+                  <Toggle value={bulkSupply} onValueChange={setBulkSupply} offColor="rgba(255,255,255,0.25)" onColor={COLORS.mint} />
+                </View>
+              </>
+            )}
 
-          {step === 'photo' && (
-            <>
-              <PhotoPickerField
-                dark
-                required
-                mode="camera"
-                photo={verificationPhoto}
-                onChange={setVerificationPhoto}
-                icon="📸"
-                label="Capture your nursery"
-                hint="Name board + plants visible behind it, taken live – no gallery uploads"
-                aspect={[4, 3]}
-              />
-            </>
-          )}
+            {step === 'verification' && (
+              <>
+                {visibleVerificationFields.map((field) => {
+                  const meta = VERIFICATION_META[field];
+                  const value = { gstin, businessReg, tradeLicense, ngoReg, govId }[field];
+                  const setValue = { gstin: setGstin, businessReg: setBusinessReg, tradeLicense: setTradeLicense, ngoReg: setNgoReg, govId: setGovId }[field];
+                  return (
+                    <RegistrationCard
+                      key={field}
+                      icon={meta.icon}
+                      title={meta.title}
+                      description={meta.description}
+                      value={verificationOn[field]}
+                      onValueChange={(v) => setVerificationOn((prev) => ({ ...prev, [field]: v }))}
+                    >
+                      <FieldGroup name={field === 'gstin' ? 'gstin' : undefined}>
+                        <NgoField
+                          label={meta.label}
+                          maxLength={field === 'gstin' ? 15 : 60}
+                          autoCapitalize="characters"
+                          value={value}
+                          onChangeText={(t) => setValue(field === 'gstin' ? t.toUpperCase() : t)}
+                          error={field === 'gstin' && gstin.trim() && !isValidGstin(gstin) ? "Doesn't look like a valid GSTIN" : null}
+                        />
+                      </FieldGroup>
+                    </RegistrationCard>
+                  );
+                })}
+                <Text style={styles.helperNote}>None of these are mandatory – adding what you have helps us approve you faster.</Text>
+              </>
+            )}
 
-          {step === 'account' && (
-            <>
-              <FieldLabel label="Email" required dark />
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor={ON_DARK_SURFACE.muted}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                value={email.value}
-                onChangeText={email.setValue}
-                onBlur={() => email.setTouched(true)}
-              />
-              {email.error ? (
-                <Text style={styles.fieldError}>{email.error}</Text>
-              ) : email.checking ? (
-                <Text style={styles.helperNote}>Checking…</Text>
-              ) : null}
-              <FieldLabel label="Password" required dark />
-              <PasswordInput
-                inputStyle={styles.input}
-                placeholder="Password (min. 8 characters)"
-                placeholderTextColor={ON_DARK_SURFACE.muted}
-                value={password}
-                onChangeText={setPassword}
-              />
-              <Text style={styles.helperNote}>Your account will be reviewed before your stock is visible to planters.</Text>
-            </>
-          )}
+            {step === 'photo' && (
+              <FieldGroup name="verificationPhoto">
+                <PhotoPickerField
+                  dark
+                  required
+                  mode="camera"
+                  photo={verificationPhoto}
+                  onChange={setVerificationPhoto}
+                  icon="📸"
+                  label="Capture your nursery"
+                  hint="Name board + plants visible behind it, taken live – no gallery uploads"
+                  aspect={[4, 3]}
+                />
+              </FieldGroup>
+            )}
 
-          {error && <Text style={styles.error}>{error}</Text>}
+            {step === 'account' && (
+              <>
+                <NgoField
+                  required
+                  name="email"
+                  label="Email"
+                  maxLength={254}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  value={email.value}
+                  onChangeText={email.setValue}
+                  onBlur={() => email.setTouched(true)}
+                  error={email.error || null}
+                  hint={!email.error && email.checking ? 'Checking…' : undefined}
+                />
+                <FieldGroup name="password">
+                  <FieldLabel label="Password" required dark />
+                  <PasswordInput
+                    inputStyle={styles.input}
+                    maxLength={72}
+                    placeholder="Password (min. 8 characters)"
+                    placeholderTextColor={ON_DARK_SURFACE.muted}
+                    value={password}
+                    onChangeText={setPassword}
+                  />
+                </FieldGroup>
+                <Text style={styles.helperNote}>Your account will be reviewed before your stock is visible to planters.</Text>
+              </>
+            )}
+          </StepTransition>
+          </FormErrorProvider>
+
+          {error?.key === 'form' && <Text style={styles.errorBanner}>{error.message}</Text>}
 
           <View style={styles.navRow}>
             {stepIndex > 0 && (
@@ -543,7 +597,7 @@ export function NurseryRegisterScreen({ navigation }: any) {
             )}
             <View style={{ flex: 1 }}>
               <AnimatedButton
-                label={step === 'account' ? (isSubmitting ? 'Creating account…' : '🌱 Create nursery account') : 'Continue →'}
+                label={step === 'account' ? (isSubmitting ? 'Creating account…' : '🌱 Create account') : 'Continue →'}
                 onPress={step === 'account' ? handleRegister : goNext}
                 disabled={isSubmitting}
                 fullWidth
@@ -597,36 +651,23 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: SPACING.md,
   },
-  dotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginBottom: 6 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.25)' },
-  dotActive: { backgroundColor: COLORS.mint, width: 20 },
-  dotDone: { backgroundColor: 'rgba(200,230,192,0.6)' },
-  stepCounter: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.7)',
-    textAlign: 'center',
-    marginBottom: SPACING.lg,
-    letterSpacing: 0.5,
-  },
   card: {
     width: '100%',
     borderWidth: 0,
+    padding: SPACING.lg,
   },
-  title: {
-    ...TYPOGRAPHY.h1,
-    fontSize: 22,
-    color: COLORS.white,
-    marginBottom: SPACING.xs,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: SPACING.lg },
+  emojiBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  subtitle: {
-    ...TYPOGRAPHY.bodySmall,
-    color: 'rgba(255,255,255,0.75)',
-    marginBottom: SPACING.lg,
-  },
+  emoji: { fontSize: 22 },
+  title: { ...TYPOGRAPHY.h1, fontSize: 22, color: COLORS.white },
+  subtitle: { ...TYPOGRAPHY.bodySmall, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
   input: {
     backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: RADIUS.md,
@@ -636,14 +677,25 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 15,
     color: COLORS.white,
-    marginBottom: SPACING.sm,
   },
-  multiline: { minHeight: 70, textAlignVertical: 'top' },
   locationButton: { paddingVertical: 6, marginBottom: 4 },
   locationButtonText: { fontSize: 13, fontWeight: '700', color: COLORS.mint },
   locationNotice: { fontSize: 12, lineHeight: 16, marginBottom: SPACING.sm },
   locationNoticeOk: { color: COLORS.mint },
   locationNoticeWarn: { color: COLORS.amberLight },
+  lockNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: 'rgba(232,184,75,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(232,184,75,0.45)',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  lockIcon: { fontSize: 14 },
+  lockText: { flex: 1, fontSize: 12, lineHeight: 17, color: COLORS.white, fontWeight: '600' },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -657,8 +709,7 @@ const styles = StyleSheet.create({
   toggleLabel: { fontSize: 14, fontWeight: '700', color: COLORS.white },
   toggleHint: { fontSize: 11, color: 'rgba(255,255,255,0.65)', marginTop: 2 },
   helperNote: { fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 4, marginBottom: SPACING.sm, lineHeight: 17 },
-  fieldError: { fontSize: 12, color: COLORS.amberLight, marginTop: -SPACING.xs, marginBottom: SPACING.sm },
-  error: {
+  errorBanner: {
     ...TYPOGRAPHY.bodySmall,
     color: COLORS.coral,
     marginBottom: SPACING.sm,

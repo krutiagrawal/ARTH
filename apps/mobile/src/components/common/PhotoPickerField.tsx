@@ -164,6 +164,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
     gap: 4,
+    paddingHorizontal: 16,
   },
   /** Dashed drop-zone look for the empty state. The border is dropped once a
    * photo is chosen so it doesn't frame the preview image. */
@@ -187,8 +188,8 @@ const styles = StyleSheet.create({
   replaceBadgeText: { color: '#fff', fontSize: 11, fontWeight: '600' },
   pressOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   pickerIcon: { fontSize: 26 },
-  pickerText: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '700' },
-  pickerHint: { color: COLORS.textMuted, fontSize: 12 },
-  pickerTextDark: { color: COLORS.white, fontSize: 15, fontWeight: '700' },
-  pickerHintDark: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
+  pickerText: { textAlign: 'center', color: COLORS.textPrimary, fontSize: 15, fontWeight: '700' },
+  pickerHint: { textAlign: 'center', color: COLORS.textMuted, fontSize: 12 },
+  pickerTextDark: { textAlign: 'center', color: COLORS.white, fontSize: 15, fontWeight: '700' },
+  pickerHintDark: { textAlign: 'center', color: 'rgba(255,255,255,0.7)', fontSize: 12 },
 });

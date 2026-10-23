@@ -78,7 +78,13 @@ export async function updateOwnProfile(prisma: PrismaClient, userId: string, inp
   // fresh device fix is always more precise than a text-address lookup.
   let geocodedLat: number | undefined;
   let geocodedLng: number | undefined;
-  if (input.line1 && input.lat == null && input.lng == null) {
+  // Only when the address text actually changed: the app re-sends the stored line1 on every save
+  // (radius, fees, hours...), and re-geocoding that unchanged text can fail - e.g. a label that came
+  // from reverse-geocoding a GPS fix - which blocked unrelated edits for a nursery that already has
+  // a perfectly good saved location.
+  const addressChanged = (input.line1 ?? '').trim() !== (profile.line1 ?? '').trim();
+  const hasSavedLocation = profile.lat != null && profile.lng != null;
+  if (input.line1 && input.lat == null && input.lng == null && (addressChanged || !hasSavedLocation)) {
     const query = [input.line1, input.city ?? profile.city].filter(Boolean).join(', ');
     const result = await geocodeAddress(query);
     if (!result) {
@@ -336,6 +342,39 @@ export async function createStock(prisma: PrismaClient, userId: string, input: S
   });
 }
 
+/**
+ * Low/out-of-stock nudge for stock that dropped outside the inventory screen (a marketplace order,
+ * a fulfilled reservation, a bulk-requirement supply). Call it after the writing transaction has
+ * committed, with the quantity the item had *before* the change; it re-reads the row and notifies
+ * the nursery only when the item crossed into the low-stock or out-of-stock band, same
+ * "don't spam every change" rule as updateStock. Never throws - an alert failing must not undo or
+ * fail the sale that caused it.
+ */
+export async function alertOnStockBandChange(prisma: PrismaClient, stockId: string, quantityBefore: number) {
+  try {
+    const stock = await prisma.saplingStock.findUnique({
+      where: { id: stockId },
+      include: { nursery: { select: { userId: true } } },
+    });
+    if (!stock) return;
+    const was = deriveAvailability(quantityBefore, stock.lowStockThreshold);
+    const now = deriveAvailability(stock.quantity, stock.lowStockThreshold);
+    if (now === was || now === 'available') return;
+    const type = now === 'out_of_stock' ? 'stock_out_of_stock' : 'stock_low';
+    await notify(prisma, {
+      userId: stock.nursery.userId,
+      type,
+      data: { stockId, species: stock.species, quantity: stock.quantity },
+      push:
+        type === 'stock_out_of_stock'
+          ? { title: 'Out of stock', body: `${stock.species} just ran out - update it once you restock.` }
+          : { title: 'Running low', body: `${stock.species} is down to ${stock.quantity} - restock soon.` },
+    });
+  } catch {
+    // best-effort
+  }
+}
+
 export async function updateStock(prisma: PrismaClient, userId: string, stockId: string, input: Partial<StockInput>) {
   const profile = await getOwnProfile(prisma, userId);
   const { speciesId, speciesDisplayName } = await resolveSpeciesLink(prisma, input);
@@ -495,6 +534,7 @@ export async function listReservations(prisma: PrismaClient, userId: string, sta
 export async function fulfillReservation(prisma: PrismaClient, userId: string, reservationId: string) {
   const profile = await getOwnProfile(prisma, userId);
 
+  let stockBefore: { stockId: string; quantity: number } | null = null;
   const updated = await prisma.$transaction(async (tx) => {
     const reservation = await tx.saplingReservation.findFirst({
       where: { id: reservationId, nurseryId: profile.id },
@@ -502,6 +542,7 @@ export async function fulfillReservation(prisma: PrismaClient, userId: string, r
     });
     if (!reservation) throw new NotFoundError('Reservation not found');
     if (reservation.status !== 'pending') throw new BadRequestError('This reservation has already been responded to');
+    stockBefore = { stockId: reservation.stockId, quantity: reservation.stock.quantity };
 
     // A reservation request is only ever checked against stock at the moment it's made
     // (createReservation) — by the time a nursery gets around to fulfilling it, another
@@ -540,6 +581,8 @@ export async function fulfillReservation(prisma: PrismaClient, userId: string, r
 
     return { ...result, species: reservation.stock.species, quantity: reservation.quantity };
   });
+
+  if (stockBefore) await alertOnStockBandChange(prisma, (stockBefore as { stockId: string }).stockId, (stockBefore as { quantity: number }).quantity);
 
   await notify(prisma, {
     userId: updated.userId,
@@ -580,11 +623,24 @@ export async function declineReservation(prisma: PrismaClient, userId: string, r
 
 // ---------- Stock ledger / analytics ----------
 
-export async function getStockLedger(prisma: PrismaClient, userId: string, page = 1, take = 30) {
+const LEDGER_REASONS = [
+  'manual_add',
+  'manual_adjust',
+  'manual_remove',
+  'reservation_fulfilled',
+  'order_placed',
+  'order_cancelled',
+  'bulk_requirement_fulfilled',
+] as const;
+
+/** `reasons` narrows the ledger to specific movements - the analytics cards use it to list exactly
+ * the rows that add up to their number. Unknown reason names are ignored. */
+export async function getStockLedger(prisma: PrismaClient, userId: string, page = 1, take = 30, reasons: string[] = []) {
   const profile = await getOwnProfile(prisma, userId);
   const capped = Math.min(take, 50);
+  const wanted = reasons.filter((r): r is (typeof LEDGER_REASONS)[number] => (LEDGER_REASONS as readonly string[]).includes(r));
   return prisma.saplingStockLedger.findMany({
-    where: { nurseryId: profile.id },
+    where: { nurseryId: profile.id, ...(wanted.length > 0 ? { reason: { in: wanted } } : {}) },
     orderBy: { createdAt: 'desc' },
     take: capped,
     skip: (Math.max(page, 1) - 1) * capped,
@@ -729,7 +785,7 @@ export async function getImpact(prisma: PrismaClient, userId: string) {
 export async function getStockAnalytics(prisma: PrismaClient, userId: string) {
   const profile = await getOwnProfile(prisma, userId);
 
-  const [addedAgg, givenOutAgg, cancelledAgg, reservationsFulfilled, stats] = await Promise.all([
+  const [addedAgg, givenOutAgg, cancelledAgg, reservationsDone, bulkResponsesDone, stats] = await Promise.all([
     prisma.saplingStockLedger.aggregate({
       where: { nurseryId: profile.id, reason: { in: ['manual_add', 'manual_adjust'] }, delta: { gt: 0 } },
       _sum: { delta: true },
@@ -749,13 +805,17 @@ export async function getStockAnalytics(prisma: PrismaClient, userId: string) {
       _sum: { delta: true },
     }),
     prisma.saplingReservation.count({ where: { nurseryId: profile.id, status: 'fulfilled' } }),
+    // An NGO bulk requirement the nursery supplied (receipt confirmed) is a fulfilled request too -
+    // counting reservations alone left "Requests fulfilled" at 0 for a nursery whose work all came
+    // through bulk requirements.
+    prisma.bulkRequirementResponse.count({ where: { nurseryId: profile.id, status: 'fulfilled' } }),
     getOwnStats(prisma, userId),
   ]);
 
   return {
     totalAddedLifetime: addedAgg._sum.delta ?? 0,
     totalGivenOutLifetime: Math.max(0, Math.abs(givenOutAgg._sum.delta ?? 0) - (cancelledAgg._sum.delta ?? 0)),
-    reservationsFulfilled,
+    reservationsFulfilled: reservationsDone + bulkResponsesDone,
     currentSpeciesCount: stats.speciesCount,
     currentTotalQuantity: stats.totalQuantity,
   };

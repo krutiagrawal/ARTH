@@ -292,8 +292,29 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
           )}
           {order.status === 'delivered' && (
             <View style={styles.doneBanner}>
-              <Text style={styles.doneText}>✅ Delivered</Text>
+              <Text style={styles.doneText}>
+                ✅ Delivered{order.tracking?.riderName ? ` by ${order.tracking.riderName}` : ''}
+              </Text>
             </View>
+          )}
+
+          {/* Only the nursery sees this - the buyer just sees whoever ended up delivering. */}
+          {!!order.riderChanges?.length && (
+            <>
+              <Text style={styles.sectionTitle}>Rider changes</Text>
+              <BorderCard style={styles.card}>
+                {order.riderChanges.map((c) => (
+                  <View key={c.id} style={styles.riderChangeRow}>
+                    <Text style={styles.riderChangeText}>
+                      {c.fromRiderName ?? 'Previous rider'} → <Text style={styles.riderChangeTo}>{c.toRiderName}</Text>
+                    </Text>
+                    <Text style={styles.riderChangeMeta}>
+                      {c.orderStatus === 'out_for_delivery' ? 'Changed mid-delivery' : 'Changed before dispatch'} · {new Date(c.createdAt).toLocaleString()}
+                    </Text>
+                  </View>
+                ))}
+              </BorderCard>
+            </>
           )}
           {order.status === 'plantation_verified' && (
             <View style={styles.doneBanner}>
@@ -326,14 +347,14 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
                 key={partner.id}
                 style={styles.partnerRow}
                 disabled={dispatchMutation.isPending || reassignMutation.isPending}
-                onPress={() => {
+                onPress={guard(() => {
                   setPickerVisible(false);
                   if (pickerMode === 'reassign') {
                     run(() => reassignMutation.mutateAsync({ id: orderId, deliveryPartnerId: partner.id }));
                   } else {
                     run(() => dispatchMutation.mutateAsync({ id: orderId, deliveryPartnerId: partner.id }));
                   }
-                }}
+                })}
               >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.partnerName}>{partner.name}</Text>
@@ -384,6 +405,10 @@ const styles = StyleSheet.create({
   otpHintText: { fontSize: 12, color: COLORS.earth, fontWeight: '600', textAlign: 'center' },
   partnerAssignedRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   partnerAssignedName: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
+  riderChangeRow: { paddingVertical: 6 },
+  riderChangeText: { fontSize: 14, color: COLORS.textPrimary },
+  riderChangeTo: { fontWeight: '700' },
+  riderChangeMeta: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   partnerAssignedPhone: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
   changeRiderText: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
   errorText: { fontSize: 13, color: COLORS.dangerDark, textAlign: 'center', marginBottom: 12 },

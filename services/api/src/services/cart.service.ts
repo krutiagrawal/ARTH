@@ -32,7 +32,9 @@ export async function getMyCart(prisma: PrismaClient, userId: string) {
 // vendors into one checkout.
 export async function addCartItem(prisma: PrismaClient, userId: string, stockId: string, quantity: number) {
   const stock = await prisma.saplingStock.findUnique({ where: { id: stockId }, include: { nursery: true } });
-  if (!stock || stock.nursery.status !== 'approved' || stock.isFree) throw new NotFoundError('Sapling not found');
+  // Free (price 0) saplings go through the cart and checkout like any other - the flat platform
+  // fee (and any delivery fee) still applies, so the payment total is never zero.
+  if (!stock || stock.nursery.status !== 'approved') throw new NotFoundError('Sapling not found');
   if (stock.nursery.userId === userId) throw new ForbiddenError('You cannot buy from your own nursery');
   if (quantity > stock.quantity) throw new BadRequestError('Not enough stock available');
 

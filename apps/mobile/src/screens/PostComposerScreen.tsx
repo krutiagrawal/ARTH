@@ -46,6 +46,9 @@ export function PostComposerScreen({ navigation, route }: any) {
   const canPublishAsNgo = isNgo && ngoProfile?.status === 'approved';
   const isNursery = !groupId && user?.role === 'nursery';
   const canPublishAsNursery = isNursery && nurseryProfile?.status === 'approved';
+  // Unlike an unapproved NGO, an unapproved nursery can't publish at all (the API rejects every
+  // write from it), so the composer is blocked rather than falling back to a personal post.
+  const nurseryBlocked = isNursery && !canPublishAsNursery;
   // The Group account's own login (no groupId param, distinct from a member tagging a post to
   // their group above) publishing as the group itself – Group has no approval gate, so always on.
   const isGroupAccount = !groupId && user?.role === 'group';
@@ -120,6 +123,7 @@ export function PostComposerScreen({ navigation, route }: any) {
   const busy = createPost.isPending || posting;
 
   const handleSubmit = () => {
+    if (nurseryBlocked) return;
     setError(null);
     if (mode === 'story') submitStory();
     else submitPost();
@@ -173,11 +177,10 @@ export function PostComposerScreen({ navigation, route }: any) {
             </View>
           )}
 
-          {isNursery && !canPublishAsNursery && (
+          {nurseryBlocked && (
             <View style={styles.warning}>
               <Text style={styles.warningText}>
-                Your nursery is not approved yet, so this will publish from your personal account
-                rather than from {nurseryProfile?.nurseryName ?? 'your nursery'}.
+                Your nursery is still under review, so posts and stories are unavailable until an admin approves it.
               </Text>
             </View>
           )}
@@ -241,7 +244,7 @@ export function PostComposerScreen({ navigation, route }: any) {
           <AnimatedButton
             label={busy ? 'Posting…' : mode === 'post' ? '✈  Share post' : '✈  Share story'}
             onPress={handleSubmit}
-            disabled={busy}
+            disabled={busy || nurseryBlocked}
             fullWidth
             gradientColors={[COLORS.forest, COLORS.forestDeep]}
             style={styles.submitButton}

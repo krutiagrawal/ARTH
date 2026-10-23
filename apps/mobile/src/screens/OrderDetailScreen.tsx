@@ -240,7 +240,13 @@ export function OrderDetailScreen({ route, navigation }: any) {
             </BorderCard>
           )}
 
-          {order.tracking?.riderName && (
+          {order.fulfillmentType === 'delivery' && ['delivered', 'plantation_verified'].includes(order.status) && order.tracking?.riderName && (
+            <View style={styles.deliveredByRow}>
+              <Text style={styles.deliveredByText}>✅ Delivered by {order.tracking.riderName}</Text>
+            </View>
+          )}
+
+          {order.tracking?.riderName && !['delivered', 'plantation_verified'].includes(order.status) && (
             <TouchableOpacity
               style={styles.callButton}
               onPress={() => order.tracking?.riderPhone && Linking.openURL(`tel:${order.tracking.riderPhone}`)}
@@ -374,6 +380,8 @@ const styles = StyleSheet.create({
   backIcon: { fontSize: 26, color: COLORS.textPrimary, fontWeight: '700' },
   headerTitle: { flex: 1,...TEXT.heading, color: COLORS.textPrimary, textAlign: 'center' },
   scrollContent: { paddingHorizontal: 20 },
+  deliveredByRow: { backgroundColor: COLORS.mintLight, borderRadius: RADIUS.md, padding: 12, marginBottom: 12 },
+  deliveredByText: { fontSize: 14, fontWeight: '700', color: COLORS.forest, textAlign: 'center' },
   timeline: { flexDirection: 'row', marginBottom: 20, marginTop: 8 },
   timelineStep: { flex: 1, alignItems: 'center' },
   timelineDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: COLORS.sand, marginBottom: 6 },

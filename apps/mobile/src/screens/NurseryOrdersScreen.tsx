@@ -15,6 +15,7 @@ import { BulkActionBar, SelectBox, AttentionBadge, useBulkSelection } from '../c
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import type { ApiNurseryOrder, NurseryOrderStatus } from '../api/nursery';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useRequireApproval } from '../hooks/useRequireApproval';
 import { flattenPages, infiniteScrollProps } from '../hooks/useInfiniteList';
 import { PageFooter } from '../components/common/PageFooter';
 
@@ -109,6 +110,7 @@ export function NurseryOrdersScreen({ navigation }: any) {
   const summary = summaryQuery.data;
   const { refreshing, onRefresh } = usePullToRefresh([refetch, summaryQuery.refetch]);
   const bulk = useBulkSelection();
+  const requireApproval = useRequireApproval();
   const packMutation = usePackOrder();
   const isFiltering = !!q || !!statusTab;
 
@@ -187,7 +189,7 @@ export function NurseryOrdersScreen({ navigation }: any) {
         </ScrollView>
       )}
 
-      <BulkActionBar count={bulk.selected.size} actions={bulkActions} busy={bulk.busy} onAction={bulk.onAction} bottomOffset={insets.bottom} />
+      <BulkActionBar count={bulk.selected.size} actions={bulkActions} busy={bulk.busy} onAction={requireApproval(bulk.onAction)} bottomOffset={insets.bottom} />
     </View>
   );
 }

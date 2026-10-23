@@ -102,6 +102,10 @@ function describe(n: ApiNotification): string {
     case 'bulk_requirement_nearby':
       return 'An NGO nearby needs saplings 🌿 Could you help them grow?';
     case 'bulk_requirement_response_received':
+      if ((n.data as any)?.stage === 'handed_off') {
+        const qty = (n.data as any)?.quantityOffered ? `${Number((n.data as any).quantityOffered).toLocaleString('en-IN')} saplings` : 'the saplings';
+        return `${(n.data as any)?.nurseryName ?? 'A nursery'} handed off ${qty} 📦 Confirm receipt with the handoff code to complete it!`;
+      }
       return `A nursery offered to supply ${(n.data as any)?.quantityOffered ? `${Number((n.data as any).quantityOffered).toLocaleString('en-IN')} saplings` : 'your bulk requirement'} 🌱 See if it fits!`;
     case 'bulk_requirement_response_accepted':
       return 'Your offer was accepted 🎉 Those saplings are headed to a great home!';
@@ -295,6 +299,9 @@ function present(n: ApiNotification): Presentation {
     case 'bulk_requirement_nearby':
       return { label: 'Bulk request nearby', color: COLORS.golden, cta: 'View requirement' };
     case 'bulk_requirement_response_received':
+      if (d.stage === 'handed_off') {
+        return { label: 'Saplings handed off', color: COLORS.forest, highlight: d.quantityOffered ? `🌱 ${Number(d.quantityOffered).toLocaleString('en-IN')} saplings` : undefined, cta: 'Confirm receipt' };
+      }
       return { label: 'New offer', color: COLORS.golden, highlight: d.quantityOffered ? `🌱 ${Number(d.quantityOffered).toLocaleString('en-IN')} saplings` : undefined, cta: 'Review offer' };
     case 'bulk_requirement_response_accepted':
       return { label: 'Offer accepted', color: COLORS.forest, highlight: d.quantityOffered ? `🌱 ${Number(d.quantityOffered).toLocaleString('en-IN')} saplings` : undefined, cta: 'Prepare handoff' };

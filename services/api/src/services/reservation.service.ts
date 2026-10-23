@@ -6,6 +6,10 @@ import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination'
 // User-facing half of the reservation flow — the nursery-side inbox (fulfil/decline) lives in
 // nursery.service.ts, mirroring how follow requests are created from follow.service.ts but
 // responded to from ngo.service.ts.
+// Reservations are on hold: free (price 0) saplings are bought through the cart like any other.
+// Flip this back to true to re-open the request flow (the app's entry points were removed too).
+const RESERVATIONS_ENABLED = false as boolean;
+
 export async function createReservation(
   prisma: PrismaClient,
   userId: string,
@@ -13,6 +17,9 @@ export async function createReservation(
   quantity: number,
   message?: string
 ) {
+  if (!RESERVATIONS_ENABLED) {
+    throw new BadRequestError('Sapling requests are not available right now - add the sapling to your cart instead.');
+  }
   const stock = await prisma.saplingStock.findUnique({
     where: { id: stockId },
     include: { nursery: true },

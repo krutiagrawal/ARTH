@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,7 +11,8 @@ import { ScreenHeader } from '../components/common/ScreenHeader';
 import { BorderCard } from '../components/common/BorderCard';
 import { EcoWidget } from '../components/common/EcoWidget';
 import { EmptyState } from '../components/common/EmptyState';
-import { useStockAnalytics, useStockLedger } from '../hooks/useApiQueries';
+import { Sheet } from '../components/common/Sheet';
+import { useStockAnalytics, useStockLedger, useNurseryReservations, useMyBulkResponses, useSaplingStock } from '../hooks/useApiQueries';
 import type { ApiStockLedgerEntry } from '../api/nursery';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
@@ -44,7 +45,107 @@ function LedgerRow({ item }: { item: ApiStockLedgerEntry }) {
   );
 }
 
+type Kpi = 'given' | 'added' | 'requests' | 'stock';
+
+const KPI_TITLE: Record<Kpi, string> = {
+  given: 'Given out (lifetime)',
+  added: 'Added (lifetime)',
+  requests: 'Requests fulfilled',
+  stock: 'Currently in stock',
+};
+
+function DetailRow({ title, meta, value, color }: { title: string; meta: string; value: string; color: string }) {
+  return (
+    <View style={styles.detailRow}>
+      <View style={styles.ledgerText}>
+        <Text style={styles.ledgerSpecies}>{title}</Text>
+        <Text style={styles.ledgerMeta}>{meta}</Text>
+      </View>
+      <Text style={[styles.ledgerDelta, { color }]}>{value}</Text>
+    </View>
+  );
+}
+
+function DetailList({ loading, empty, children }: { loading: boolean; empty: string; children: React.ReactNode[] }) {
+  if (loading) return <ActivityIndicator color={COLORS.sage} style={{ marginVertical: 20 }} />;
+  if (children.length === 0) return <Text style={styles.detailEmpty}>{empty}</Text>;
+  return <>{children}</>;
+}
+
+/** Ledger rows behind "Given out" / "Added": the same movements the totals add up, newest first. */
+function LedgerKpiDetail({ kind }: { kind: 'given' | 'added' }) {
+  const reasons: ApiStockLedgerEntry['reason'][] =
+    kind === 'given'
+      ? ['reservation_fulfilled', 'order_placed', 'bulk_requirement_fulfilled', 'order_cancelled']
+      : ['manual_add', 'manual_adjust'];
+  const { data = [], isLoading } = useStockLedger(1, 50, reasons);
+  // "Added" only counts increases; a manual adjustment downward isn't an addition.
+  const rows = kind === 'added' ? data.filter((r) => r.delta > 0) : data;
+  return (
+    <DetailList loading={isLoading} empty={kind === 'given' ? 'Nothing given out yet.' : 'No stock added yet.'}>
+      {rows.map((r) => (
+        <DetailRow
+          key={r.id}
+          title={r.species}
+          meta={`${REASON_LABEL[r.reason] ?? r.reason} · ${new Date(r.createdAt).toLocaleDateString()}`}
+          value={kind === 'given' ? `${r.delta < 0 ? '' : '+'}${r.delta}` : `+${r.delta}`}
+          color={r.delta > 0 ? COLORS.sage : COLORS.coral}
+        />
+      ))}
+    </DetailList>
+  );
+}
+
+function RequestsKpiDetail() {
+  const { data: reservations = [], isLoading: l1 } = useNurseryReservations('fulfilled');
+  const { data: responses = [], isLoading: l2 } = useMyBulkResponses();
+  const rows = [
+    ...reservations.map((r) => ({
+      id: `r-${r.id}`,
+      title: r.species ?? 'Reservation',
+      meta: `Planter request${r.requester ? ` · ${r.requester.name}` : ''} · ${new Date(r.respondedAt ?? r.createdAt).toLocaleDateString()}`,
+      qty: r.quantity,
+      at: new Date(r.respondedAt ?? r.createdAt).getTime(),
+    })),
+    ...responses
+      .filter((r) => r.status === 'fulfilled')
+      .map((r) => ({
+        id: `b-${r.id}`,
+        title: r.species,
+        meta: `Bulk requirement · ${r.ngoName} · ${new Date(r.respondedAt ?? r.createdAt).toLocaleDateString()}`,
+        qty: r.quantityOffered,
+        at: new Date(r.respondedAt ?? r.createdAt).getTime(),
+      })),
+  ].sort((a, b) => b.at - a.at);
+  return (
+    <DetailList loading={l1 || l2} empty="No fulfilled requests yet.">
+      {rows.map((r) => (
+        <DetailRow key={r.id} title={r.title} meta={r.meta} value={`${r.qty}`} color={COLORS.xpBlue} />
+      ))}
+    </DetailList>
+  );
+}
+
+function StockKpiDetail() {
+  const { data = [], isLoading } = useSaplingStock({});
+  const rows = data.filter((s) => s.quantity > 0);
+  return (
+    <DetailList loading={isLoading} empty="Nothing in stock right now.">
+      {rows.map((s) => (
+        <DetailRow
+          key={s.id}
+          title={s.speciesRef?.commonName ?? s.species}
+          meta={s.availabilityStatus === 'low_stock' ? 'Low stock' : 'In stock'}
+          value={`${s.quantity}`}
+          color={s.availabilityStatus === 'low_stock' ? COLORS.danger : COLORS.earth}
+        />
+      ))}
+    </DetailList>
+  );
+}
+
 export function NurseryStockAnalyticsScreen({ navigation }: any) {
+  const [openKpi, setOpenKpi] = useState<Kpi | null>(null);
   const insets = useSafeAreaInsets();
   const { data: analytics, isLoading: statsLoading, refetch: refetchAnalytics } = useStockAnalytics();
   const { data: ledger = [], isLoading: ledgerLoading, refetch: refetchLedger } = useStockLedger();
@@ -70,12 +171,12 @@ export function NurseryStockAnalyticsScreen({ navigation }: any) {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           <View style={styles.gridRow}>
-            <EcoWidget icon="🎁" value={analytics.totalGivenOutLifetime} label="Given out (lifetime)" color={COLORS.golden} delay={0} style={styles.gridTile} fill />
-            <EcoWidget icon="🌱" value={analytics.totalAddedLifetime} label="Added (lifetime)" color={COLORS.sage} delay={60} style={styles.gridTile} fill />
+            <EcoWidget icon="🎁" value={analytics.totalGivenOutLifetime} label="Given out (lifetime)" sublabel="Tap for details" onPress={() => setOpenKpi('given')} color={COLORS.golden} delay={0} style={styles.gridTile} fill />
+            <EcoWidget icon="🌱" value={analytics.totalAddedLifetime} label="Added (lifetime)" sublabel="Tap for details" onPress={() => setOpenKpi('added')} color={COLORS.sage} delay={60} style={styles.gridTile} fill />
           </View>
           <View style={styles.gridRow}>
-            <EcoWidget icon="🤝" value={analytics.reservationsFulfilled} label="Requests fulfilled" color={COLORS.xpBlue} delay={120} style={styles.gridTile} fill />
-            <EcoWidget icon="📦" value={analytics.currentTotalQuantity} label="Currently in stock" color={COLORS.earth} delay={180} style={styles.gridTile} fill />
+            <EcoWidget icon="🤝" value={analytics.reservationsFulfilled} label="Requests fulfilled" sublabel="Tap for details" onPress={() => setOpenKpi('requests')} color={COLORS.xpBlue} delay={120} style={styles.gridTile} fill />
+            <EcoWidget icon="📦" value={analytics.currentTotalQuantity} label="Currently in stock" sublabel="Tap for details" onPress={() => setOpenKpi('stock')} color={COLORS.earth} delay={180} style={styles.gridTile} fill />
           </View>
 
           <AnimatedButton
@@ -97,6 +198,12 @@ export function NurseryStockAnalyticsScreen({ navigation }: any) {
           )}
         </ScrollView>
       )}
+
+      <Sheet visible={openKpi !== null} onClose={() => setOpenKpi(null)} title={openKpi ? KPI_TITLE[openKpi] : undefined} scrollable>
+        {openKpi === 'given' || openKpi === 'added' ? <LedgerKpiDetail kind={openKpi} /> : null}
+        {openKpi === 'requests' ? <RequestsKpiDetail /> : null}
+        {openKpi === 'stock' ? <StockKpiDetail /> : null}
+      </Sheet>
     </View>
   );
 }
@@ -115,6 +222,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   ledgerText: { flex: 1 },
+  detailRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: COLORS.sand },
+  detailEmpty: { textAlign: 'center', color: COLORS.textSecondary, marginVertical: 24, fontSize: 13 },
   ledgerSpecies: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
   ledgerMeta: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   ledgerDelta: { fontSize: 15, fontWeight: '800' },
