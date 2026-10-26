@@ -3,6 +3,7 @@ import { hashPassword } from '../utils/password';
 import { ConflictError, NotFoundError } from '../utils/errors';
 import * as nurseryService from './nursery.service';
 import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
+import { cached, nurseryKey } from '../utils/ttlCache';
 
 interface CreateDeliveryPartnerInput {
   email: string;
@@ -81,19 +82,61 @@ export async function createDeliveryPartner(prisma: PrismaClient, nurseryUserId:
   return serializePartner(profile);
 }
 
-export async function listDeliveryPartners(prisma: PrismaClient, nurseryUserId: string, q: CursorQuery = {}) {
+export type PartnerStatusFilter = 'active' | 'available' | 'busy' | 'inactive';
+
+const ON_DELIVERY = { deliveries: { some: { order: { status: 'out_for_delivery' as const } } } };
+
+function partnerStatusWhere(status?: PartnerStatusFilter) {
+  if (status === 'inactive') return { isActive: false };
+  if (status === 'active') return { isActive: true };
+  if (status === 'busy') return { isActive: true, ...ON_DELIVERY };
+  if (status === 'available') return { isActive: true, NOT: ON_DELIVERY };
+  return {};
+}
+
+export async function listDeliveryPartners(
+  prisma: PrismaClient,
+  nurseryUserId: string,
+  q: CursorQuery & { q?: string; status?: PartnerStatusFilter } = {},
+) {
   const nursery = await nurseryService.getOwnProfile(prisma, nurseryUserId);
   const { take, args } = cursorArgs(q, 30);
+  const search = q.q?.trim();
   const partners = await prisma.deliveryPartnerProfile.findMany({
-    where: { nurseryId: nursery.id },
+    where: {
+      nurseryId: nursery.id,
+      ...partnerStatusWhere(q.status),
+      ...(search
+        ? {
+            OR: [
+              { phone: { contains: search } },
+              { user: { name: { contains: search, mode: 'insensitive' as const } } },
+              { user: { handle: { contains: search, mode: 'insensitive' as const } } },
+            ],
+          }
+        : {}),
+    },
     include: {
-      user: true,
+      user: { select: { name: true, handle: true, email: true } },
       _count: { select: { deliveries: { where: { order: { status: 'out_for_delivery' } } } } },
     },
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     ...args,
   });
   return toCursorPage(partners, take, serializePartner);
+}
+
+/** Header counts for the roster: computed in the database so they cover every rider, not just the
+ * page currently loaded on the phone. */
+export async function getPartnersSummary(prisma: PrismaClient, nurseryUserId: string) {
+  const nursery = await nurseryService.getOwnProfile(prisma, nurseryUserId);
+  const base = { nurseryId: nursery.id };
+  const [total, active, busy] = await Promise.all([
+    prisma.deliveryPartnerProfile.count({ where: base }),
+    prisma.deliveryPartnerProfile.count({ where: { ...base, isActive: true } }),
+    prisma.deliveryPartnerProfile.count({ where: { ...base, ...partnerStatusWhere('busy') } }),
+  ]);
+  return { total, available: active - busy, busy, inactive: total - active };
 }
 
 async function findOwnedPartnerOrThrow(prisma: PrismaClient, nurseryUserId: string, partnerId: string) {
@@ -130,6 +173,133 @@ export async function deactivateDeliveryPartner(prisma: PrismaClient, nurseryUse
     include: { user: true },
   });
   return serializePartner(updated);
+}
+
+// Live fleet snapshot for the nursery's map. A rider's position only exists on the tracking rows of
+// deliveries they've started (reportLocation fans a GPS fix out to those), so a rider appears with
+// a pin once any of their assigned orders is under way; assigned-but-not-started orders are still
+// listed (no pin yet) so the nursery can see who is queued.
+export async function getLiveFleet(prisma: PrismaClient, nurseryUserId: string) {
+  const nursery = await nurseryService.getOwnProfile(prisma, nurseryUserId);
+  // Several screens/devices poll this every few seconds; one DB pass per window serves them all.
+  return cached(nurseryKey(nursery.id, 'liveFleet'), 4_000, () => computeLiveFleet(prisma, nursery));
+}
+
+async function computeLiveFleet(prisma: PrismaClient, nursery: Awaited<ReturnType<typeof nurseryService.getOwnProfile>>) {
+  const orders = await prisma.order.findMany({
+    where: { nurseryId: nursery.id, status: 'out_for_delivery', tracking: { deliveryPartnerId: { not: null } } },
+    orderBy: { outForDeliveryAt: 'asc' },
+    select: {
+      id: true,
+      user: { select: { name: true } },
+      items: { select: { species: true, quantity: true } },
+      address: { select: { line1: true, lat: true, lng: true } },
+      tracking: { select: { deliveryPartnerId: true, startedAt: true, lat: true, lng: true, etaMinutes: true, updatedAt: true } },
+    },
+  });
+
+  const partnerIds = [...new Set(orders.map((o) => o.tracking!.deliveryPartnerId!))];
+  const partners = await prisma.deliveryPartnerProfile.findMany({
+    where: { id: { in: partnerIds }, nurseryId: nursery.id },
+    include: { user: true },
+  });
+
+  const num = (v: unknown) => (v == null ? null : Number(v));
+  const riders = partners.map((p) => {
+    const mine = orders.filter((o) => o.tracking!.deliveryPartnerId === p.id);
+    const located = mine
+      .filter((o) => o.tracking!.startedAt && o.tracking!.lat != null && o.tracking!.lng != null)
+      .sort((a, b) => b.tracking!.updatedAt.getTime() - a.tracking!.updatedAt.getTime())[0];
+    return {
+      partnerId: p.id,
+      name: p.user.name,
+      phone: p.phone,
+      lat: located ? num(located.tracking!.lat) : null,
+      lng: located ? num(located.tracking!.lng) : null,
+      updatedAt: located ? located.tracking!.updatedAt : null,
+      orders: mine.map((o) => ({
+        orderId: o.id,
+        customerName: o.user.name,
+        summary: o.items.map((i) => `${i.quantity}× ${i.species}`).join(', '),
+        started: !!o.tracking!.startedAt,
+        etaMinutes: o.tracking!.etaMinutes,
+        destination: { label: o.address?.line1 ?? null, lat: num(o.address?.lat), lng: num(o.address?.lng) },
+      })),
+    };
+  });
+
+  return {
+    nursery: { name: nursery.nurseryName, lat: num(nursery.lat), lng: num(nursery.lng) },
+    riders,
+    fetchedAt: new Date(),
+  };
+}
+
+// Nursery-facing detail view of one rider: live assignments, lifetime/30-day delivery counts,
+// average time from dispatch to delivery, and the most recent completed drops with the customer's
+// delivery rating where one was left.
+export async function getPartnerOverview(prisma: PrismaClient, nurseryUserId: string, partnerId: string) {
+  const partner = await findOwnedPartnerOrThrow(prisma, nurseryUserId, partnerId);
+  const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const mine = { tracking: { deliveryPartnerId: partner.id } };
+
+  const [current, delivered, deliveredLast30d, totalDelivered] = await Promise.all([
+    prisma.order.findMany({
+      where: { ...mine, status: 'out_for_delivery' },
+      orderBy: { outForDeliveryAt: 'asc' },
+      select: {
+        id: true,
+        outForDeliveryAt: true,
+        user: { select: { name: true } },
+        items: { select: { species: true, quantity: true } },
+        tracking: { select: { startedAt: true, etaMinutes: true } },
+      },
+    }),
+    prisma.order.findMany({
+      where: { ...mine, status: 'delivered' },
+      orderBy: { deliveredAt: 'desc' },
+      take: 15,
+      select: {
+        id: true,
+        outForDeliveryAt: true,
+        deliveredAt: true,
+        user: { select: { name: true } },
+        items: { select: { species: true, quantity: true } },
+        review: { select: { deliveryRating: true } },
+      },
+    }),
+    prisma.order.count({ where: { ...mine, status: 'delivered', deliveredAt: { gte: since30d } } }),
+    prisma.order.count({ where: { ...mine, status: 'delivered' } }),
+  ]);
+
+  const durations = delivered
+    .filter((o) => o.outForDeliveryAt && o.deliveredAt)
+    .map((o) => (o.deliveredAt!.getTime() - o.outForDeliveryAt!.getTime()) / 60000);
+  const avgDeliveryMinutes = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : null;
+
+  const summarize = (items: { species: string; quantity: number }[]) =>
+    items.map((i) => `${i.quantity}× ${i.species}`).join(', ');
+
+  return {
+    partner: serializePartner({ ...partner, _count: { deliveries: current.length } }),
+    stats: { totalDelivered, deliveredLast30d, activeNow: current.length, avgDeliveryMinutes },
+    current: current.map((o) => ({
+      orderId: o.id,
+      customerName: o.user.name,
+      summary: summarize(o.items),
+      dispatchedAt: o.outForDeliveryAt,
+      started: !!o.tracking?.startedAt,
+      etaMinutes: o.tracking?.etaMinutes ?? null,
+    })),
+    recent: delivered.map((o) => ({
+      orderId: o.id,
+      customerName: o.user.name,
+      summary: summarize(o.items),
+      deliveredAt: o.deliveredAt,
+      minutes: o.outForDeliveryAt && o.deliveredAt ? Math.round((o.deliveredAt.getTime() - o.outForDeliveryAt.getTime()) / 60000) : null,
+      rating: o.review?.deliveryRating ?? null,
+    })),
+  };
 }
 
 export async function getOwnProfile(prisma: PrismaClient, userId: string) {

@@ -443,6 +443,24 @@ export async function listActiveUserStories(prisma: PrismaClient, userId: string
   return stories.map((s) => serializeStory(s));
 }
 
+/** Public stories for one nursery's profile - active only, mirrors listActiveNgoStories. */
+export async function listActiveNurseryStories(prisma: PrismaClient, nurseryId: string) {
+  const stories = await prisma.story.findMany({
+    where: { nurseryId, authorType: 'nursery', expiresAt: { gt: new Date() } },
+    orderBy: { createdAt: 'asc' },
+  });
+  return stories.map((s) => serializeStory(s));
+}
+
+/** Public stories for one group's profile - active only, mirrors listActiveNgoStories. */
+export async function listActiveGroupStories(prisma: PrismaClient, groupId: string) {
+  const stories = await prisma.story.findMany({
+    where: { groupId, authorType: 'group', expiresAt: { gt: new Date() } },
+    orderBy: { createdAt: 'asc' },
+  });
+  return stories.map((s) => serializeStory(s));
+}
+
 /** Public stories for one NGO's profile — active only, mirrors listActiveUserStories. */
 export async function listActiveNgoStories(prisma: PrismaClient, ngoId: string) {
   const stories = await prisma.story.findMany({

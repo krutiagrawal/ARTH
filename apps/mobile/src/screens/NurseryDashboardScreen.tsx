@@ -1,5 +1,5 @@
-import React, { useRef, type RefObject } from 'react';
-import { View, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions, RefreshControl, Linking } from 'react-native';
+import React, { useRef, useState, type RefObject } from 'react';
+import { View, Image, StyleSheet, TouchableOpacity, ScrollView, Dimensions, RefreshControl, Linking } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -36,10 +36,6 @@ import { useRequireApproval } from '../hooks/useRequireApproval';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const HERO_HEIGHT = SH * 0.54;
-
-function formatRupees(cents: number) {
-  return `₹${(cents / 100).toLocaleString('en-IN')}`;
-}
 
 const STATUS_COPY: Record<string, { title: string; body: string; action?: string }> = {
   pending: { title: 'Under review', body: "We're reviewing your nursery. Your stock will go live once approved." },
@@ -229,25 +225,61 @@ const ACTIVITY_COPY: Record<string, (data: Record<string, any>) => { icon: strin
   nursery_impact_milestone: (d) => ({ icon: '🏆', text: d.message ?? 'You hit an impact milestone!' }),
 };
 
-function ActivityRow({
-  item,
-  seamText,
+const ACTIVITY_COLLAPSED_COUNT = 4;
+
+function timeAgo(iso: string) {
+  const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
+// One glass card with compact divided rows instead of a card per entry – ten stacked cards made
+// the home screen a very long scroll. Shows the latest few; the rest expand in place.
+function ActivityFeed({
+  items,
   theme,
   blurTarget,
 }: {
-  item: ApiNurseryActivityItem;
-  seamText: { primary: string; secondary: string };
+  items: ApiNurseryActivityItem[];
   theme: TimeTheme;
   blurTarget: RefObject<View | null>;
 }) {
-  const copy = ACTIVITY_COPY[item.type]?.(item.data ?? {}) ?? { icon: '📌', text: item.type };
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? items : items.slice(0, ACTIVITY_COLLAPSED_COUNT);
+  const hiddenCount = items.length - ACTIVITY_COLLAPSED_COUNT;
   return (
-    <ThemedCard theme={theme} blurTarget={blurTarget} noPadding style={styles.activityRow}>
-      <Text style={styles.activityIcon}>{copy.icon}</Text>
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.activityText, { color: seamText.primary }]}>{copy.text}</Text>
-        <Text style={[styles.activityTime, { color: seamText.secondary }]}>{new Date(item.createdAt).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}</Text>
-      </View>
+    <ThemedCard theme={theme} blurTarget={blurTarget} noPadding style={styles.activityCard}>
+      {visible.map((item, i) => {
+        const copy = ACTIVITY_COPY[item.type]?.(item.data ?? {}) ?? { icon: '📌', text: item.type };
+        return (
+          <View
+            key={item.id}
+            style={[styles.activityRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.cardBorder }]}
+          >
+            <View style={[styles.activityIconWrap, { backgroundColor: hexToRgba(theme.accentColor, 0.16) }]}>
+              <Text style={styles.activityIcon}>{copy.icon}</Text>
+            </View>
+            <Text style={[styles.activityText, { color: theme.textPrimaryOnCard }]} numberOfLines={2}>{copy.text}</Text>
+            <Text style={[styles.activityTime, { color: theme.textSecondaryOnCard }]}>{timeAgo(item.createdAt)}</Text>
+          </View>
+        );
+      })}
+      {hiddenCount > 0 && (
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => setExpanded((v) => !v)}
+          style={[styles.activityToggle, { borderTopColor: theme.cardBorder }]}
+        >
+          <Text style={[styles.activityToggleText, { color: theme.accentColor }]}>
+            {expanded ? 'Show less ▴' : `Show ${hiddenCount} more ▾`}
+          </Text>
+        </TouchableOpacity>
+      )}
     </ThemedCard>
   );
 }
@@ -267,7 +299,7 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
   const sceneryMode = getSceneryMode(weather);
   const { user } = useAuth();
   const { data: profile, refetch: refetchProfile } = useNurseryProfile();
-  const { data: stats, isLoading, refetch: refetchStats } = useNurseryStats();
+  const { data: stats, refetch: refetchStats } = useNurseryStats();
   const { data: today, refetch: refetchToday } = useNurseryDashboardToday();
   const { refreshing, onRefresh } = usePullToRefresh([refetchProfile, refetchStats, refetchToday]);
   const blurTargetRef = useRef<View>(null);
@@ -281,23 +313,6 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
   const statColor =
     theme.period === 'goldenHour' ? '#5A2A0E' : theme.period === 'sunset' ? '#4A1D44' : theme.textOnSky;
   const haloColor = statColor === '#FFFFFF' ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.85)';
-
-  /** Shared props for the "Your Impact" tiles: real glass cards tinted from the time-of-day
-   * theme (same recipe as the NGO dashboard's cards / Home's EcoFactCard). */
-  const tileProps = {
-    variant: 'glass' as const,
-    fill: true,
-    style: styles.gridTile,
-    color: theme.accentColor,
-    dark: theme.cardTint === 'dark',
-    cardBackground: theme.cardBackground,
-    cardBackgroundAlt: theme.cardBackgroundAlt,
-    cardOverlayAlpha: theme.cardOverlayAlpha,
-    borderColor: theme.cardBorder,
-    textColor: theme.textPrimaryOnCard,
-    subTextColor: theme.textSecondaryOnCard,
-    blurTarget: blurTargetRef,
-  };
 
   // Orders now has its own bottom tab and Edit Profile lives on the nursery's own profile screen
   // (tap the avatar above – same place individual users reach their profile, with Settings
@@ -476,50 +491,8 @@ export function NurseryDashboardScreen({ navigation, previewPeriod }: NurseryDas
             {today.activity.length === 0 ? (
               <EmptyState icon="📋" title="No activity yet" body="Orders, plantings, and milestones will show up here." />
             ) : (
-              <View style={styles.activityList}>
-                {today.activity.slice(0, 10).map((item) => (
-                  <ActivityRow key={item.id} item={item} seamText={seamText} theme={theme} blurTarget={blurTargetRef} />
-                ))}
-              </View>
+              <ActivityFeed items={today.activity.slice(0, 10)} theme={theme} blurTarget={blurTargetRef} />
             )}
-          </>
-        )}
-
-        {isLoading || !stats ? (
-          <ActivityIndicator color={theme.accentColor} style={styles.loader} />
-        ) : (
-          <>
-            <Text style={[styles.sectionTitle, { color: seamText.primary }]}>Your Impact</Text>
-            <View style={styles.gridRow}>
-              <EcoWidget {...tileProps} icon="🌱" value={String(stats.speciesCount)} label="Species listed" delay={0} />
-              <EcoWidget {...tileProps} icon="📦" value={String(stats.totalQuantity)} label="Saplings in stock" delay={60} />
-              <EcoWidget {...tileProps} icon="🎁" value={String(stats.freeSpeciesCount)} label="Free species" delay={120} />
-            </View>
-            <View style={styles.gridRow}>
-              <EcoWidget
-                {...tileProps}
-                icon="🤝"
-                value={stats.trustScore != null ? String(stats.trustScore) : '–'}
-                label="ARTH Trust Score"
-                delay={180}
-                onPress={() => navigation.navigate('NurseryStreakBadges')}
-              />
-              <EcoWidget
-                {...tileProps}
-                icon={GROWTH_LEVEL_META[stats.growthLevel].emoji}
-                value={GROWTH_LEVEL_META[stats.growthLevel].label}
-                label="Growth Level"
-                delay={240}
-                onPress={() => navigation.navigate('NurseryStreakBadges')}
-              />
-              <EcoWidget
-                {...tileProps}
-                icon="💰"
-                value={today ? formatRupees(today.revenueViaArthCents) : '–'}
-                label="Revenue via ARTH"
-                delay={300}
-              />
-            </View>
           </>
         )}
 
@@ -627,13 +600,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.1)',
     marginVertical: 4,
   },
-  loader: { marginTop: 20, marginBottom: 8 },
   statusBanner: { padding: 14, marginTop: 4, marginBottom: 8 },
   statusTitle: { fontSize: 14, fontWeight: '700' },
   statusBody: { fontSize: 12, marginTop: 2 },
   statusAction: { fontSize: 12, fontWeight: '700', marginTop: 6 },
-  gridRow: { flexDirection: 'row', alignItems: 'stretch', gap: 10, marginBottom: 10 },
-  gridTile: { flex: 1 },
   sectionTitle: { ...TEXT.heading, marginTop: 20 },
   // A 2-row, 3-column icon grid – icons sit directly on the page (no per-item card), like a
   // payments-app quick-actions row, rather than another stack of boxed cards.
@@ -647,10 +617,13 @@ const styles = StyleSheet.create({
   dockBadge: { position: 'absolute', top: -3, right: -6, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: COLORS.coral, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
   dockBadgeText: { fontSize: 10, fontWeight: '700', color: COLORS.white },
   dockLabel: { fontSize: 14, fontWeight: '700', textAlign: 'center', marginTop: 8, lineHeight: 17 },
-  activityList: { gap: 8, marginTop: 4 },
-  activityRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
-  activityIcon: { fontSize: 18 },
-  // Colors applied inline via seamText (theme-aware) at the call site, not here – see dockLabel.
-  activityText: { fontSize: 13, fontWeight: '600' },
-  activityTime: { fontSize: 11, marginTop: 2 },
+  activityCard: { marginTop: 4 },
+  activityRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  activityIconWrap: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  activityIcon: { fontSize: 16 },
+  // Colors applied inline from the card theme at the call site, not here.
+  activityText: { flex: 1, fontSize: 13, fontWeight: '600' },
+  activityTime: { fontSize: 11 },
+  activityToggle: { alignItems: 'center', paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth },
+  activityToggleText: { fontSize: 12, fontWeight: '700' },
 });

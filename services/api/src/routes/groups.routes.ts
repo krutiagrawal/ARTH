@@ -6,6 +6,7 @@ import { startOfUtcDay, addDays, calendarStartDate } from '../services/streak.se
 import { getGroupActivity } from '../services/groupActivity.service';
 import { listGroupDrives } from '../services/drive.service';
 import { serializeDrive } from './drives.routes';
+import { listActiveGroupStories } from '../services/story.service';
 
 function serializeGroupSummary(group: any) {
   return {
@@ -50,6 +51,11 @@ export default async function groupsRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
     const group = await groupService.getGroupForMember(fastify.prisma, request.user!.id, request.params.id);
     reply.send(serializeGroupSummary(group));
+  });
+
+  // Active stories for a group's profile; non-membership-gated like the public profile itself.
+  fastify.get<{ Params: { id: string } }>('/:id/stories', async (request, reply) => {
+    reply.send(await listActiveGroupStories(fastify.prisma, request.params.id));
   });
 
   // Non-membership-gated: for viewing a group's public profile from outside it.

@@ -57,6 +57,8 @@ import { NurseryPickupDeliveryConfigScreen } from '../screens/NurseryPickupDeliv
 import { NurseryBulkRequirementsScreen } from '../screens/NurseryBulkRequirementsScreen';
 import { NurseryBulkRequirementDetailScreen } from '../screens/NurseryBulkRequirementDetailScreen';
 import { NurseryDeliveryPartnersScreen } from '../screens/NurseryDeliveryPartnersScreen';
+import { NurseryDeliveryPartnerDetailScreen } from '../screens/NurseryDeliveryPartnerDetailScreen';
+import { NurseryLiveMapScreen } from '../screens/NurseryLiveMapScreen';
 import { DeliveryPartnerQueueScreen } from '../screens/DeliveryPartnerQueueScreen';
 import { DeliveryPartnerProfileScreen } from '../screens/DeliveryPartnerProfileScreen';
 import { useDeliveryLocationReporting } from '../hooks/useDeliveryLocationReporting';
@@ -412,6 +414,8 @@ export type RootStackParamList = {
   NurseryBulkRequirements: undefined;
   NurseryBulkRequirementDetail: { requirementId: string };
   NurseryDeliveryPartners: undefined;
+  NurseryDeliveryPartnerDetail: { partnerId: string };
+  NurseryLiveMap: { focusPartnerId?: string } | undefined;
   DeliveryPartnerMain: undefined;
   NurseryImpact: undefined;
   NurseryReports: undefined;
@@ -1103,6 +1107,8 @@ export function AppNavigator() {
         <Stack.Screen name="NurseryBulkRequirements" component={NurseryBulkRequirementsScreen} />
         <Stack.Screen name="NurseryBulkRequirementDetail" component={NurseryBulkRequirementDetailScreen} />
         <Stack.Screen name="NurseryDeliveryPartners" component={NurseryDeliveryPartnersScreen} />
+        <Stack.Screen name="NurseryDeliveryPartnerDetail" component={NurseryDeliveryPartnerDetailScreen} />
+        <Stack.Screen name="NurseryLiveMap" component={NurseryLiveMapScreen} />
         <Stack.Screen name="NurseryImpact" component={NurseryImpactScreen} />
         <Stack.Screen name="NurseryReports" component={NurseryReportsScreen} />
         <Stack.Screen name="NgoBulkRequirements" component={NgoBulkRequirementsScreen} />

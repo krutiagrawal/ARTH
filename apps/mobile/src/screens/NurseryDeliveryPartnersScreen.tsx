@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, TextInput, Linking } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -17,6 +17,7 @@ import { StatusModal } from '../components/common/StatusModal';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import {
   useDeliveryPartners,
+  useDeliveryPartnersSummary,
   useCreateDeliveryPartner,
   useUpdateDeliveryPartner,
   useDeactivateDeliveryPartner,
@@ -27,51 +28,88 @@ import { ApiError } from '../api/client';
 import type { ApiDeliveryPartner } from '../api/deliveryPartners';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PageFooter } from '../components/common/PageFooter';
-import { infiniteScrollProps } from '../hooks/useInfiniteList';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useEmailField } from '../hooks/useEmailField';
 import { usePhoneField } from '../hooks/usePhoneField';
 import { isValidPhone } from '../utils/validation';
+
+type PartnerFilter = 'all' | 'available' | 'busy' | 'inactive';
+const FILTERS: { key: PartnerFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'available', label: 'Available' },
+  { key: 'busy', label: 'On delivery' },
+  { key: 'inactive', label: 'Deactivated' },
+];
 
 function PartnerRow({
   partner,
   onToggle,
   onEdit,
+  onOpen,
+  onTrack,
 }: {
   partner: ApiDeliveryPartner;
   onToggle: () => void;
   onEdit: () => void;
+  onOpen: () => void;
+  onTrack: () => void;
 }) {
   return (
-    <BorderCard style={styles.row}>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.name}>{partner.name}</Text>
-        <Text style={styles.phone}>{partner.phone}</Text>
-        <View style={styles.metaRow}>
-          <View style={styles.queueBadge}>
-            <Text style={styles.queueBadgeText}>{partner.activeOrderCount} active</Text>
+    <TouchableOpacity activeOpacity={0.85} onPress={onOpen}>
+      <BorderCard style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.name}>{partner.name}</Text>
+          <Text style={styles.phone}>{partner.phone}</Text>
+          <View style={styles.metaRow}>
+            <View style={styles.queueBadge}>
+              <Text style={styles.queueBadgeText}>{partner.activeOrderCount} active</Text>
+            </View>
+            {partner.avgRating != null && <Text style={styles.rating}>★ {Number(partner.avgRating).toFixed(1)}</Text>}
+            {!partner.isActive && <Text style={styles.inactiveTag}>Deactivated</Text>}
           </View>
-          {partner.avgRating != null && <Text style={styles.rating}>★ {Number(partner.avgRating).toFixed(1)}</Text>}
-          {!partner.isActive && <Text style={styles.inactiveTag}>Deactivated</Text>}
+          <View style={styles.contactRow}>
+            {partner.activeOrderCount > 0 && (
+              <TouchableOpacity onPress={onTrack} style={[styles.contactChip, styles.trackChip]}>
+                <Text style={[styles.contactChipText, { color: COLORS.white }]}>📍 Track live</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={() => Linking.openURL(`tel:${partner.phone}`).catch(() => {})} style={styles.contactChip}>
+              <Text style={styles.contactChipText}>📞 Call</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => Linking.openURL(`https://wa.me/91${partner.phone}`).catch(() => {})} style={styles.contactChip}>
+              <Text style={styles.contactChipText}>💬 WhatsApp</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-      <View style={styles.rowActions}>
-        <TouchableOpacity onPress={onEdit} style={styles.editButton}>
-          <Text style={styles.editButtonText}>Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={onToggle} style={[styles.toggleButton, !partner.isActive && styles.toggleButtonInactive]}>
-          <Text style={[styles.toggleButtonText, !partner.isActive && styles.toggleButtonTextInactive]}>
-            {partner.isActive ? 'Deactivate' : 'Reactivate'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </BorderCard>
+        <View style={styles.rowActions}>
+          <TouchableOpacity onPress={onEdit} style={styles.editButton}>
+            <Text style={styles.editButtonText}>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onToggle} style={[styles.toggleButton, !partner.isActive && styles.toggleButtonInactive]}>
+            <Text style={[styles.toggleButtonText, !partner.isActive && styles.toggleButtonTextInactive]}>
+              {partner.isActive ? 'Deactivate' : 'Reactivate'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </BorderCard>
+    </TouchableOpacity>
   );
 }
 
 export function NurseryDeliveryPartnersScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const listQuery = useDeliveryPartners();
-  const { data: partners = [], isLoading, refetch } = listQuery;
+  // Search and status filter run on the server (debounced), so they cover every rider and the
+  // list only ever loads one page at a time.
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<PartnerFilter>('all');
+  const debouncedQuery = useDebouncedValue(query);
+  const listQuery = useDeliveryPartners({
+    q: debouncedQuery.trim() || undefined,
+    status: filter === 'all' ? undefined : filter === 'busy' ? 'busy' : filter === 'available' ? 'available' : 'inactive',
+  });
+  const { data: partners = [], isLoading, refetch: refetchList } = listQuery;
+  const { data: summary, refetch: refetchSummary } = useDeliveryPartnersSummary();
+  const refetch = () => Promise.all([refetchList(), refetchSummary()]);
   const createMutation = useCreateDeliveryPartner();
   const updateMutation = useUpdateDeliveryPartner();
   const deactivateMutation = useDeactivateDeliveryPartner();
@@ -186,15 +224,20 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
         subtitle="Riders who deliver your orders"
         onBack={navigation?.canGoBack?.() ? () => navigation.goBack() : undefined}
         right={
-          <TouchableOpacity onPress={guard(() => setShowCreate(true))} style={styles.newButton}>
-            <Text style={styles.newButtonText}>+ New</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity onPress={() => navigation.navigate('NurseryLiveMap')} style={styles.newButton}>
+              <Text style={styles.newButtonText}>🗺️ Live map</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={guard(() => setShowCreate(true))} style={styles.newButton}>
+              <Text style={styles.newButtonText}>+ New</Text>
+            </TouchableOpacity>
+          </View>
         }
       />
 
-      {isLoading ? (
+      {isLoading && !summary ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 20 }} />
-      ) : partners.length === 0 ? (
+      ) : summary && summary.total === 0 ? (
         <EmptyState
           icon="🛵"
           title="No delivery partners yet"
@@ -203,17 +246,66 @@ export function NurseryDeliveryPartnersScreen({ navigation }: any) {
           onAction={guard(() => setShowCreate(true))}
         />
       ) : (
-        <ScrollView
+        <FlatList
+          data={partners}
+          keyExtractor={(p) => p.id}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
-          {...infiniteScrollProps(listQuery)}
+          keyboardShouldPersistTaps="handled"
+          onEndReachedThreshold={0.5}
+          onEndReached={() => {
+            if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) listQuery.fetchNextPage();
+          }}
+          initialNumToRender={10}
+          windowSize={7}
+          removeClippedSubviews
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
-        >
-          {partners.map((p) => (
-            <PartnerRow key={p.id} partner={p} onToggle={() => handleToggle(p)} onEdit={guard(() => openEdit(p))} />
-          ))}
-          <PageFooter loading={listQuery.isFetchingNextPage} />
-        </ScrollView>
+          ListHeaderComponent={
+            <View>
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryTile}>
+                  <Text style={styles.summaryValue}>{summary?.total ?? '–'}</Text>
+                  <Text style={styles.summaryLabel}>Total</Text>
+                </View>
+                <View style={styles.summaryTile}>
+                  <Text style={styles.summaryValue}>{summary?.available ?? '–'}</Text>
+                  <Text style={styles.summaryLabel}>Available</Text>
+                </View>
+                <View style={styles.summaryTile}>
+                  <Text style={styles.summaryValue}>{summary?.busy ?? '–'}</Text>
+                  <Text style={styles.summaryLabel}>On delivery</Text>
+                </View>
+              </View>
+
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Search by name or phone"
+                placeholderTextColor={COLORS.textMuted}
+                style={styles.search}
+                autoCorrect={false}
+              />
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+                {FILTERS.map((f) => (
+                  <TouchableOpacity key={f.key} onPress={() => setFilter(f.key)} style={[styles.filterChip, filter === f.key && styles.filterChipActive]}>
+                    <Text style={[styles.filterChipText, filter === f.key && styles.filterChipTextActive]}>{f.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          }
+          ListEmptyComponent={isLoading ? null : <Text style={styles.noMatch}>No delivery partners match.</Text>}
+          ListFooterComponent={<PageFooter loading={listQuery.isFetchingNextPage} />}
+          renderItem={({ item: p }) => (
+            <PartnerRow
+              partner={p}
+              onToggle={() => handleToggle(p)}
+              onEdit={guard(() => openEdit(p))}
+              onOpen={() => navigation.navigate('NurseryDeliveryPartnerDetail', { partnerId: p.id })}
+              onTrack={() => navigation.navigate('NurseryLiveMap', { focusPartnerId: p.id })}
+            />
+          )}
+        />
       )}
 
       <Sheet visible={showCreate} onClose={() => setShowCreate(false)} title="Add a delivery partner" scrollable maxHeight={620}>
@@ -303,6 +395,24 @@ const styles = StyleSheet.create({
   toggleButtonInactive: { borderColor: COLORS.forest },
   toggleButtonText: { fontSize: 11, fontWeight: '700', color: COLORS.dangerDark },
   toggleButtonTextInactive: { color: COLORS.forest },
+  contactRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  contactChip: { borderRadius: RADIUS.full, borderWidth: 1, borderColor: COLORS.earth, paddingHorizontal: 10, paddingVertical: 4 },
+  trackChip: { backgroundColor: COLORS.forest, borderColor: COLORS.forest },
+  contactChipText: { fontSize: 11, fontWeight: '700', color: COLORS.earthDark },
+  summaryRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  summaryTile: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  summaryValue: { fontSize: 20, fontWeight: '800', color: COLORS.forest },
+  summaryLabel: { fontSize: 11, color: COLORS.textSecondary },
+  search: {
+    borderWidth: 1.5, borderColor: COLORS.warmBrown, borderRadius: RADIUS.md,
+    paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: COLORS.textPrimary, marginBottom: 10,
+  },
+  filterScroll: { marginBottom: 12, flexGrow: 0 },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.warmBrown, marginRight: 8 },
+  filterChipActive: { backgroundColor: COLORS.forest, borderColor: COLORS.forest },
+  filterChipText: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
+  filterChipTextActive: { color: COLORS.white },
+  noMatch: { fontSize: 13, color: COLORS.textMuted, textAlign: 'center', marginVertical: 20 },
   errorText: { fontSize: 13, color: COLORS.coral, textAlign: 'center', marginTop: 4 },
   hint: { fontSize: 12, color: COLORS.textMuted, lineHeight: 17, marginTop: 4 },
 });

@@ -12,6 +12,8 @@ import { updateCampaign, deleteCampaign, fetchOwnedCampaignSummary, exportOwnedC
 import { updateDrive, deleteDrive, fetchOwnedDriveSummary, exportOwnedDrives, duplicateDrive, relaunchDrive, archiveDrive, type UpdateDriveInput, type OwnedDriveFilter } from '../api/drives';
 import { updateAdoptableTree, deleteAdoptableTree, relistAdoptableTree, fetchOwnedTreeSummary, exportOwnedTrees, duplicateAdoptableTree, archiveAdoptableTree, type UpdateAdoptableTreeInput, type OwnedTreeFilter } from '../api/adoptions';
 import { fetchOrgStreakStatus, reviveOrgStreak, protectOrgStreak } from '../api/orgStreaks';
+import { useEffect, useRef } from 'react';
+import { useIsScreenFocused } from './useScreenFocus';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
 import { pageParams, totalPageParams, mergePages, totalInfinite, flatItems, arrayPageParams, flatArrays, LIST_STALE_MS } from './useInfiniteList';
 import type { ApiPublicFollowersPage } from '../api/publicFollowers';
@@ -68,6 +70,8 @@ import {
   fetchStoryFeed,
   fetchUserStories,
   fetchNgoStories,
+  fetchNurseryStories,
+  fetchGroupStories,
   fetchStoryViewers,
   fetchRingStatus,
   postStory,
@@ -207,6 +211,9 @@ import {
   fulfillReservation as fulfillReservationApi,
   declineReservation as declineReservationApi,
   fetchStockLedger,
+  fetchStockLedgerPage,
+  fetchStockSpeciesOptions,
+  type StockLedgerPageFilter,
   fetchStockAnalytics,
   fetchNurseryOrders,
   fetchNurseryOrder,
@@ -241,6 +248,10 @@ import {
 } from '../api/nursery';
 import {
   fetchDeliveryPartners,
+  fetchDeliveryPartnersSummary,
+  type DeliveryPartnerFilter,
+  fetchDeliveryPartnerOverview,
+  fetchLiveFleet,
   createDeliveryPartner,
   updateDeliveryPartner,
   deactivateDeliveryPartner,
@@ -1000,6 +1011,24 @@ export function useNgoStories(ngoId: string | null) {
     queryKey: ['stories', 'ngo', ngoId],
     queryFn: () => fetchNgoStories(ngoId!),
     enabled: isAuthenticated && !!ngoId,
+  });
+}
+
+export function useNurseryStories(nurseryId: string | null) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['stories', 'nursery', nurseryId],
+    queryFn: () => fetchNurseryStories(nurseryId!),
+    enabled: isAuthenticated && !!nurseryId,
+  });
+}
+
+export function useGroupStories(groupId: string | null) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['stories', 'group', groupId],
+    queryFn: () => fetchGroupStories(groupId!),
+    enabled: isAuthenticated && !!groupId,
   });
 }
 
@@ -2587,31 +2616,39 @@ export function useResubmitNurseryProfile() {
   });
 }
 
+// Nursery aggregates are cached server-side for a few seconds, so polling faster than ~30-60s only
+// returns the same payload. Intervals also stop while the screen isn't focused (stack screens stay
+// mounted underneath) and while the app is backgrounded (see focusManager in App.tsx).
 export function useNurseryStats() {
   const { isAuthenticated } = useAuth();
+  const focused = useIsScreenFocused();
   return useQuery({
     queryKey: ['nursery', 'stats'],
     queryFn: fetchNurseryStats,
     enabled: isAuthenticated,
+    refetchInterval: focused ? 60000 : false,
   });
 }
 
 export function useNurseryDashboardToday() {
   const { isAuthenticated } = useAuth();
+  const focused = useIsScreenFocused();
   return useQuery({
     queryKey: ['nursery', 'dashboard', 'today'],
     queryFn: fetchNurseryDashboardToday,
     enabled: isAuthenticated,
-    refetchInterval: 30000,
+    refetchInterval: focused ? 30000 : false,
   });
 }
 
 export function useNurseryImpact() {
   const { isAuthenticated } = useAuth();
+  const focused = useIsScreenFocused();
   return useQuery({
     queryKey: ['nursery', 'impact'],
     queryFn: fetchNurseryImpact,
     enabled: isAuthenticated,
+    refetchInterval: focused ? 60000 : false,
   });
 }
 
@@ -2622,6 +2659,7 @@ export function useSaplingStock(filter: StockFilter = {}) {
     queryKey: ['nursery', 'stock', filter],
     queryFn: ({ pageParam }) => fetchSaplingStock(filter, pageParam),
     enabled: isAuthenticated,
+    staleTime: LIST_STALE_MS,
     ...pageParams<Awaited<ReturnType<typeof fetchSaplingStock>>['items'][number]>(),
     select: flatItems,
   });
@@ -2674,10 +2712,12 @@ export function useDeleteSaplingStock() {
 
 export function useNurseryReputation(weeks = 12) {
   const { isAuthenticated } = useAuth();
+  const focused = useIsScreenFocused();
   return useQuery({
     queryKey: ['nursery', 'reputation', weeks],
     queryFn: () => fetchNurseryReputation(weeks),
     enabled: isAuthenticated,
+    refetchInterval: focused ? 60000 : false,
   });
 }
 
@@ -2698,7 +2738,7 @@ export function useNurseryPublicAchievements(nurseryId: string | undefined) {
   });
 }
 
-export function useNurseryReservations(status?: ReservationStatus) {
+export function useNurseryReservations(status?: ReservationStatus | 'responded') {
   const { isAuthenticated } = useAuth();
   return useInfiniteQuery({
     queryKey: ['nursery', 'reservations', status],
@@ -2739,6 +2779,31 @@ export function useStockLedger(page = 1, take = 30, reasons: ApiStockLedgerEntry
   });
 }
 
+/** Cursor-paged ledger with optional reason / direction filters - for the long "Recent activity"
+ * list and the analytics detail sheets, which previously showed one fixed page and filtered it
+ * on the phone. */
+export function useStockLedgerPaged(filter: StockLedgerPageFilter = {}, enabled = true) {
+  const { isAuthenticated } = useAuth();
+  return useInfiniteQuery({
+    queryKey: ['nursery', 'stock', 'ledger', 'paged', filter],
+    queryFn: ({ pageParam }) => fetchStockLedgerPage(filter, pageParam),
+    enabled: isAuthenticated && enabled,
+    staleTime: LIST_STALE_MS,
+    ...pageParams<ApiStockLedgerEntry>(),
+    select: flatItems,
+  });
+}
+
+export function useStockSpeciesOptions() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nursery', 'stock', 'speciesOptions'],
+    queryFn: fetchStockSpeciesOptions,
+    enabled: isAuthenticated,
+    staleTime: LIST_STALE_MS,
+  });
+}
+
 export function useStockAnalytics() {
   const { isAuthenticated } = useAuth();
   return useQuery({
@@ -2752,13 +2817,34 @@ export function useStockAnalytics() {
 
 export function useNurseryOrders(filter: NurseryOrdersFilter | NurseryOrderStatus = {}) {
   const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
+  const focused = useIsScreenFocused();
+
+  // Polling an infinite query re-requests every loaded page, which gets expensive on a long list.
+  // Instead, poll the cheap one-row counts summary and only reload the list when it changed (a new
+  // order, a status move), which is the only time the list can differ.
+  const probe = useQuery({
+    queryKey: ['nursery', 'orderCountProbe'],
+    queryFn: fetchNurseryOrdersSummary,
+    enabled: isAuthenticated,
+    refetchInterval: focused ? 15000 : false,
+  });
+  const signature = probe.data ? JSON.stringify(probe.data) : null;
+  const lastSignature = useRef<string | null>(null);
+  useEffect(() => {
+    if (signature === null) return;
+    if (lastSignature.current !== null && lastSignature.current !== signature) {
+      queryClient.invalidateQueries({ queryKey: ['nursery', 'orders'] });
+    }
+    lastSignature.current = signature;
+  }, [signature, queryClient]);
+
   return useInfiniteQuery({
     placeholderData: keepPreviousData,
     queryKey: ['nursery', 'orders', filter],
     queryFn: ({ pageParam }) => fetchNurseryOrders(filter, pageParam),
     enabled: isAuthenticated,
-    // Polling an infinite query refetches every loaded page; maxPages keeps that bounded.
-    refetchInterval: 15000,
+    staleTime: LIST_STALE_MS,
     ...pageParams<ApiNurseryOrder>(),
   });
 }
@@ -2831,14 +2917,49 @@ export function useCancelNurseryOrder() {
 
 // ---------- Delivery partners (Nursery-side roster management) ----------
 
-export function useDeliveryPartners() {
+export function useDeliveryPartners(filter: DeliveryPartnerFilter = {}, enabled = true) {
   const { isAuthenticated } = useAuth();
   return useInfiniteQuery({
-    queryKey: ['nursery', 'deliveryPartners'],
-    queryFn: ({ pageParam }) => fetchDeliveryPartners(pageParam),
-    enabled: isAuthenticated,
+    placeholderData: keepPreviousData,
+    queryKey: ['nursery', 'deliveryPartners', 'list', filter],
+    queryFn: ({ pageParam }) => fetchDeliveryPartners(filter, pageParam),
+    enabled: isAuthenticated && enabled,
+    staleTime: LIST_STALE_MS,
     ...pageParams<Awaited<ReturnType<typeof fetchDeliveryPartners>>['items'][number]>(),
     select: flatItems,
+  });
+}
+
+/** Roster header counts, computed server-side over every rider (not just the loaded pages). */
+export function useDeliveryPartnersSummary() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['nursery', 'deliveryPartners', 'summary'],
+    queryFn: fetchDeliveryPartnersSummary,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useLiveFleet() {
+  const { isAuthenticated } = useAuth();
+  const focused = useIsScreenFocused();
+  return useQuery({
+    queryKey: ['nursery', 'deliveryPartners', 'live'],
+    queryFn: fetchLiveFleet,
+    enabled: isAuthenticated,
+    // Only while the map is actually on screen.
+    refetchInterval: focused ? 8000 : false,
+  });
+}
+
+export function useDeliveryPartnerOverview(id: string) {
+  const { isAuthenticated } = useAuth();
+  const focused = useIsScreenFocused();
+  return useQuery({
+    queryKey: ['nursery', 'deliveryPartners', 'overview', id],
+    queryFn: () => fetchDeliveryPartnerOverview(id),
+    enabled: isAuthenticated && !!id,
+    refetchInterval: focused ? 20000 : false,
   });
 }
 
@@ -2917,6 +3038,7 @@ export function useNurseryReviews() {
     queryKey: ['nursery', 'reviews'],
     queryFn: ({ pageParam }) => fetchNurseryReviews(pageParam),
     enabled: isAuthenticated,
+    staleTime: LIST_STALE_MS,
     ...pageParams<Awaited<ReturnType<typeof fetchNurseryReviews>>['items'][number]>(),
     select: flatItems,
   });
@@ -3097,6 +3219,8 @@ export function useBrowseNurseries(params: { q?: string; city?: string; delivery
     queryKey: ['nurseries', 'browse', params],
     queryFn: ({ pageParam }) => browseNurseries({ ...params, page: pageParam, take: 20 }),
     enabled: isAuthenticated,
+    staleTime: LIST_STALE_MS,
+    placeholderData: keepPreviousData,
     ...totalInfinite<Awaited<ReturnType<typeof browseNurseries>>, 'nurseries'>('nurseries'),
   });
 }

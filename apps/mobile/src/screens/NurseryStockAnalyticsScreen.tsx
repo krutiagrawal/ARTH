@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -12,9 +12,11 @@ import { BorderCard } from '../components/common/BorderCard';
 import { EcoWidget } from '../components/common/EcoWidget';
 import { EmptyState } from '../components/common/EmptyState';
 import { Sheet } from '../components/common/Sheet';
-import { useStockAnalytics, useStockLedger, useNurseryReservations, useMyBulkResponses, useSaplingStock } from '../hooks/useApiQueries';
+import { useStockAnalytics, useStockLedgerPaged, useNurseryReservations, useMyBulkResponses, useSaplingStock } from '../hooks/useApiQueries';
 import type { ApiStockLedgerEntry } from '../api/nursery';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { infiniteScrollProps } from '../hooks/useInfiniteList';
+import { PageFooter } from '../components/common/PageFooter';
 
 import { TEXT } from '../constants/typography';
 const REASON_LABEL: Record<ApiStockLedgerEntry['reason'], string> = {
@@ -72,33 +74,50 @@ function DetailList({ loading, empty, children }: { loading: boolean; empty: str
   return <>{children}</>;
 }
 
-/** Ledger rows behind "Given out" / "Added": the same movements the totals add up, newest first. */
+/** Shown under a sheet list while more pages remain on the server. */
+function LoadMore({ visible, loading, onPress }: { visible: boolean; loading: boolean; onPress: () => void }) {
+  if (!visible) return null;
+  return (
+    <TouchableOpacity onPress={onPress} disabled={loading} style={styles.loadMore}>
+      <Text style={styles.loadMoreText}>{loading ? 'Loading…' : 'Load more'}</Text>
+    </TouchableOpacity>
+  );
+}
+
+/** Ledger rows behind "Given out" / "Added": the same movements the totals add up, newest first.
+ * Paged, with the "increase only" rule applied by the server (`direction=in`). */
 function LedgerKpiDetail({ kind }: { kind: 'given' | 'added' }) {
   const reasons: ApiStockLedgerEntry['reason'][] =
     kind === 'given'
       ? ['reservation_fulfilled', 'order_placed', 'bulk_requirement_fulfilled', 'order_cancelled']
       : ['manual_add', 'manual_adjust'];
-  const { data = [], isLoading } = useStockLedger(1, 50, reasons);
   // "Added" only counts increases; a manual adjustment downward isn't an addition.
-  const rows = kind === 'added' ? data.filter((r) => r.delta > 0) : data;
+  const q = useStockLedgerPaged({ reasons, direction: kind === 'added' ? 'in' : undefined });
+  const rows = q.data ?? [];
   return (
-    <DetailList loading={isLoading} empty={kind === 'given' ? 'Nothing given out yet.' : 'No stock added yet.'}>
-      {rows.map((r) => (
-        <DetailRow
-          key={r.id}
-          title={r.species}
-          meta={`${REASON_LABEL[r.reason] ?? r.reason} · ${new Date(r.createdAt).toLocaleDateString()}`}
-          value={kind === 'given' ? `${r.delta < 0 ? '' : '+'}${r.delta}` : `+${r.delta}`}
-          color={r.delta > 0 ? COLORS.sage : COLORS.coral}
-        />
-      ))}
-    </DetailList>
+    <>
+      <DetailList loading={q.isLoading} empty={kind === 'given' ? 'Nothing given out yet.' : 'No stock added yet.'}>
+        {rows.map((r) => (
+          <DetailRow
+            key={r.id}
+            title={r.species}
+            meta={`${REASON_LABEL[r.reason] ?? r.reason} · ${new Date(r.createdAt).toLocaleDateString()}`}
+            value={kind === 'given' ? `${r.delta < 0 ? '' : '+'}${r.delta}` : `+${r.delta}`}
+            color={r.delta > 0 ? COLORS.sage : COLORS.coral}
+          />
+        ))}
+      </DetailList>
+      <LoadMore visible={!!q.hasNextPage} loading={q.isFetchingNextPage} onPress={() => q.fetchNextPage()} />
+    </>
   );
 }
 
 function RequestsKpiDetail() {
-  const { data: reservations = [], isLoading: l1 } = useNurseryReservations('fulfilled');
-  const { data: responses = [], isLoading: l2 } = useMyBulkResponses();
+  const reservationsQuery = useNurseryReservations('fulfilled');
+  const responsesQuery = useMyBulkResponses();
+  const { data: reservations = [], isLoading: l1 } = reservationsQuery;
+  const { data: responses = [], isLoading: l2 } = responsesQuery;
+  const hasMore = !!reservationsQuery.hasNextPage || !!responsesQuery.hasNextPage;
   const rows = [
     ...reservations.map((r) => ({
       id: `r-${r.id}`,
@@ -117,30 +136,55 @@ function RequestsKpiDetail() {
         at: new Date(r.respondedAt ?? r.createdAt).getTime(),
       })),
   ].sort((a, b) => b.at - a.at);
+  const loadMore = () => {
+    if (reservationsQuery.hasNextPage) reservationsQuery.fetchNextPage();
+    if (responsesQuery.hasNextPage) responsesQuery.fetchNextPage();
+  };
   return (
-    <DetailList loading={l1 || l2} empty="No fulfilled requests yet.">
-      {rows.map((r) => (
-        <DetailRow key={r.id} title={r.title} meta={r.meta} value={`${r.qty}`} color={COLORS.xpBlue} />
-      ))}
-    </DetailList>
+    <>
+      <DetailList loading={l1 || l2} empty="No fulfilled requests yet.">
+        {rows.map((r) => (
+          <DetailRow key={r.id} title={r.title} meta={r.meta} value={`${r.qty}`} color={COLORS.xpBlue} />
+        ))}
+      </DetailList>
+      <LoadMore
+        visible={hasMore}
+        loading={reservationsQuery.isFetchingNextPage || responsesQuery.isFetchingNextPage}
+        onPress={loadMore}
+      />
+    </>
   );
 }
 
 function StockKpiDetail() {
-  const { data = [], isLoading } = useSaplingStock({});
-  const rows = data.filter((s) => s.quantity > 0);
+  // "In stock" = available + low stock. The server filters each band, so no page is wasted on
+  // sold-out rows and nothing is filtered on the phone.
+  const availableQuery = useSaplingStock({ availability: 'available' });
+  const lowQuery = useSaplingStock({ availability: 'low_stock' });
+  const rows = [...(availableQuery.data ?? []), ...(lowQuery.data ?? [])];
+  const loadMore = () => {
+    if (availableQuery.hasNextPage) availableQuery.fetchNextPage();
+    if (lowQuery.hasNextPage) lowQuery.fetchNextPage();
+  };
   return (
-    <DetailList loading={isLoading} empty="Nothing in stock right now.">
-      {rows.map((s) => (
-        <DetailRow
-          key={s.id}
-          title={s.speciesRef?.commonName ?? s.species}
-          meta={s.availabilityStatus === 'low_stock' ? 'Low stock' : 'In stock'}
-          value={`${s.quantity}`}
-          color={s.availabilityStatus === 'low_stock' ? COLORS.danger : COLORS.earth}
-        />
-      ))}
-    </DetailList>
+    <>
+      <DetailList loading={availableQuery.isLoading || lowQuery.isLoading} empty="Nothing in stock right now.">
+        {rows.map((s) => (
+          <DetailRow
+            key={s.id}
+            title={s.speciesRef?.commonName ?? s.species}
+            meta={s.availabilityStatus === 'low_stock' ? 'Low stock' : 'In stock'}
+            value={`${s.quantity}`}
+            color={s.availabilityStatus === 'low_stock' ? COLORS.danger : COLORS.earth}
+          />
+        ))}
+      </DetailList>
+      <LoadMore
+        visible={!!availableQuery.hasNextPage || !!lowQuery.hasNextPage}
+        loading={availableQuery.isFetchingNextPage || lowQuery.isFetchingNextPage}
+        onPress={loadMore}
+      />
+    </>
   );
 }
 
@@ -148,7 +192,8 @@ export function NurseryStockAnalyticsScreen({ navigation }: any) {
   const [openKpi, setOpenKpi] = useState<Kpi | null>(null);
   const insets = useSafeAreaInsets();
   const { data: analytics, isLoading: statsLoading, refetch: refetchAnalytics } = useStockAnalytics();
-  const { data: ledger = [], isLoading: ledgerLoading, refetch: refetchLedger } = useStockLedger();
+  const ledgerQuery = useStockLedgerPaged();
+  const { data: ledger = [], isLoading: ledgerLoading, refetch: refetchLedger } = ledgerQuery;
   const { refreshing, onRefresh } = usePullToRefresh([refetchAnalytics, refetchLedger]);
 
   return (
@@ -168,6 +213,7 @@ export function NurseryStockAnalyticsScreen({ navigation }: any) {
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
+          {...infiniteScrollProps(ledgerQuery)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
         >
           <View style={styles.gridRow}>
@@ -196,6 +242,7 @@ export function NurseryStockAnalyticsScreen({ navigation }: any) {
           ) : (
             ledger.map((item) => <LedgerRow key={item.id} item={item} />)
           )}
+          <PageFooter loading={ledgerQuery.isFetchingNextPage} />
         </ScrollView>
       )}
 
@@ -223,6 +270,8 @@ const styles = StyleSheet.create({
   },
   ledgerText: { flex: 1 },
   detailRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: COLORS.sand },
+  loadMore: { alignItems: 'center', paddingVertical: 14 },
+  loadMoreText: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
   detailEmpty: { textAlign: 'center', color: COLORS.textSecondary, marginVertical: 24, fontSize: 13 },
   ledgerSpecies: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
   ledgerMeta: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },

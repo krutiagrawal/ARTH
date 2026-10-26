@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -16,7 +16,6 @@ import { useApprovalGate } from '../hooks/useApprovalGate';
 import type { ApiNurseryReview } from '../api/nursery';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PageFooter } from '../components/common/PageFooter';
-import { infiniteScrollProps } from '../hooks/useInfiniteList';
 
 function ReviewRow({ review, guard }: { review: ApiNurseryReview; guard: <A extends any[]>(fn: (...a: A) => void) => (...a: A) => void }) {
   const respondMutation = useRespondToReview();
@@ -100,17 +99,22 @@ export function NurseryReviewsScreen({ navigation }: any) {
       ) : reviews.length === 0 ? (
         <EmptyState icon="⭐" title="No reviews yet" body="Reviews from customers who received their order will show up here." />
       ) : (
-        <ScrollView
+        <FlatList
+          data={reviews}
+          keyExtractor={(r) => r.id}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
-          {...infiniteScrollProps(listQuery)}
+          onEndReachedThreshold={0.5}
+          onEndReached={() => {
+            if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) listQuery.fetchNextPage();
+          }}
+          initialNumToRender={8}
+          windowSize={7}
+          removeClippedSubviews
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
-        >
-          {reviews.map((r) => (
-            <ReviewRow key={r.id} review={r} guard={guard} />
-          ))}
-          <PageFooter loading={listQuery.isFetchingNextPage} />
-        </ScrollView>
+          ListFooterComponent={<PageFooter loading={listQuery.isFetchingNextPage} />}
+          renderItem={({ item }) => <ReviewRow review={item} guard={guard} />}
+        />
       )}
 
       <StatusModal {...statusModalProps} />

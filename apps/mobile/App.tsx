@@ -3,7 +3,7 @@ import './global.css';
 import React, { Suspense, useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { StyleSheet, View } from 'react-native';
+import { AppState, StyleSheet, View } from 'react-native';
 import { useFonts } from 'expo-font';
 import { syncAndroidNavigationBarStyle } from './src/utils/androidNavigationBar';
 // Per-face subpath imports, not the package roots. Importing from the root pulls that package's
@@ -20,7 +20,7 @@ import { Figtree_600SemiBold } from '@expo-google-fonts/figtree/600SemiBold';
 import { Figtree_700Bold } from '@expo-google-fonts/figtree/700Bold';
 import { Figtree_800ExtraBold } from '@expo-google-fonts/figtree/800ExtraBold';
 import { Figtree_900Black } from '@expo-google-fonts/figtree/900Black';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { SettingsSync } from './src/components/common/SettingsSync';
 import { SoundProvider } from './src/context/SoundContext';
@@ -35,8 +35,23 @@ const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ??
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { retry: 1, staleTime: 30_000 },
+    queries: {
+      retry: 1,
+      staleTime: 30_000,
+      // Keep unused results around long enough that going back to a screen is instant (the list
+      // hooks cap their own page count), but not forever.
+      gcTime: 10 * 60_000,
+      refetchOnReconnect: true,
+    },
   },
+});
+
+// React Native has no window focus event, so tell React Query when the app itself is foregrounded:
+// polling (refetchInterval) then pauses while the app is in the background, and stale data is
+// quietly refreshed when the user returns instead of the app hammering the API unseen.
+focusManager.setEventListener((handleFocus) => {
+  const sub = AppState.addEventListener('change', (state) => handleFocus(state === 'active'));
+  return () => sub.remove();
 });
 
 // @stripe/stripe-react-native ships native code Expo Go doesn't include – even just

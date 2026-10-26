@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../constants/colors';
 import { ScreenHeader } from '../components/common/ScreenHeader';
-import { useNurseryReport, useNurseryProfile, useSaplingStock } from '../hooks/useApiQueries';
+import { useNurseryReport, useNurseryProfile, useStockSpeciesOptions } from '../hooks/useApiQueries';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { rangeForPreset, rangeParams, describeRange, type DateRangeValue } from '../components/reports/DateRangeBar';
 import { FilterSelect } from '../components/reports/FilterSelect';
@@ -54,13 +54,15 @@ export function NurseryReportsScreen({ navigation }: any) {
   );
   const { data: report, isLoading, isFetching, refetch } = useNurseryReport(params);
   const { data: profile } = useNurseryProfile();
-  const { data: stock = [] } = useSaplingStock();
+  // Distinct species straight from the server - not built from page 1 of the stock list, which
+  // would silently drop every species beyond the first 20 rows.
+  const { data: speciesNames = [] } = useStockSpeciesOptions();
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
-  const speciesOptions = useMemo(() => {
-    const names = Array.from(new Set(stock.map((s) => s.speciesRef?.commonName ?? s.species))).sort();
-    return [{ value: null, label: 'All species' }, ...names.map((n) => ({ value: n, label: n }))];
-  }, [stock]);
+  const speciesOptions = useMemo(
+    () => [{ value: null, label: 'All species' }, ...speciesNames.map((n) => ({ value: n, label: n }))],
+    [speciesNames],
+  );
 
   const k = report?.kpis;
   const p = report?.previousKpis;

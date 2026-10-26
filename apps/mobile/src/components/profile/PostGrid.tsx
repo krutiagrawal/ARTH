@@ -11,10 +11,10 @@ import type { ApiPost } from '../../api/posts';
 const GAP = 3;
 const TILE = (EFFECTIVE_WIDTH - GAP * 2) / 3;
 
-function GridTile({ post, onPress }: { post: ApiPost; onPress: () => void }) {
+function GridTile({ post, onPress, onLongPress }: { post: ApiPost; onPress: () => void; onLongPress?: () => void }) {
   const cover = resolveMediaUrl(post.media[0]?.url);
   return (
-    <TouchableOpacity style={styles.tile} activeOpacity={0.85} onPress={onPress}>
+    <TouchableOpacity style={styles.tile} activeOpacity={0.85} onPress={onPress} onLongPress={onLongPress} delayLongPress={350}>
       {cover ? (
         <Image source={{ uri: cover }} style={styles.image} />
       ) : (
@@ -27,6 +27,12 @@ function GridTile({ post, onPress }: { post: ApiPost; onPress: () => void }) {
       {post.media.length > 1 && (
         <View style={styles.multiBadge}>
           <Text style={styles.multiBadgeText}>⧉</Text>
+        </View>
+      )}
+      {/* Only the author's own query ever returns a hidden post. */}
+      {post.isHidden && (
+        <View style={styles.hiddenBadge}>
+          <Text style={styles.hiddenBadgeText}>Hidden</Text>
         </View>
       )}
       {post.likeCount > 0 && (
@@ -47,6 +53,7 @@ function GridTile({ post, onPress }: { post: ApiPost; onPress: () => void }) {
 export function PostGrid({
   posts,
   onPressPost,
+  onLongPressPost,
   onEndReached,
   isFetchingNextPage,
   ListHeaderComponent,
@@ -58,6 +65,8 @@ export function PostGrid({
 }: {
   posts: ApiPost[];
   onPressPost: (post: ApiPost) => void;
+  /** Own profile: long-press a tile to manage that post (edit caption, delete, ...). */
+  onLongPressPost?: (post: ApiPost) => void;
   onEndReached?: () => void;
   isFetchingNextPage?: boolean;
   ListHeaderComponent?: React.ReactElement | null;
@@ -74,8 +83,8 @@ export function PostGrid({
   const renderItem = useMemo(
     () =>
       ({ item }: { item: ApiPost }) =>
-        <GridTile post={item} onPress={() => onPressPost(item)} />,
-    [onPressPost],
+        <GridTile post={item} onPress={() => onPressPost(item)} onLongPress={onLongPressPost ? () => onLongPressPost(item) : undefined} />,
+    [onPressPost, onLongPressPost],
   );
 
   return (
@@ -126,6 +135,16 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full,
     backgroundColor: 'rgba(0,0,0,0.45)',
   },
+  hiddenBadge: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: RADIUS.full,
+    backgroundColor: 'rgba(200,60,60,0.85)',
+  },
+  hiddenBadgeText: { fontSize: 10, fontWeight: '800', color: COLORS.white },
   likeBadgeText: { fontSize: 10, fontWeight: '700', color: COLORS.white },
   footer: { marginVertical: 16 },
 });

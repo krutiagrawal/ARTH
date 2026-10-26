@@ -1,5 +1,6 @@
-import { PrismaClient } from '@arth/db';
+import { Prisma, PrismaClient } from '@arth/db';
 import { bucketize, resolveReportRange } from '../utils/reportRange';
+import { cached, nurseryKey } from '../utils/ttlCache';
 
 export interface NurseryReportParams {
   from?: Date;
@@ -10,6 +11,7 @@ export interface NurseryReportParams {
 }
 
 const COMPLETED = ['picked_up', 'delivered', 'plantation_verified'] as const;
+const REPORT_TTL_MS = 30_000;
 const pct = (num: number, den: number) => (den > 0 ? Math.round((num / den) * 1000) / 10 : null);
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -29,21 +31,38 @@ function orderWhere(nurseryId: string, w: Window, p: NurseryReportParams) {
   };
 }
 
-/** Headline numbers for one window; run for the selected range and the previous one for the ▲/▼ comparison. */
+/** Headline numbers for one window; run for the selected range and the previous one for the ▲/▼ comparison.
+ * Everything is counted/summed in the database - no order or review rows are loaded. */
 async function computeKpis(prisma: PrismaClient, nurseryId: string, w: Window, p: NurseryReportParams) {
-  const [orders, reviews] = await Promise.all([
-    prisma.order.findMany({
-      where: orderWhere(nurseryId, w, p),
-      select: { status: true, totalCents: true, cancellationFeeCents: true, userId: true, items: { select: { quantity: true } } },
+  const where = orderWhere(nurseryId, w, p);
+  const [byStatus, saplings, customers, reviewAgg] = await Promise.all([
+    prisma.order.groupBy({ by: ['status'], where, _count: { _all: true }, _sum: { totalCents: true, cancellationFeeCents: true } }),
+    prisma.orderItem.aggregate({ where: { order: { ...where, status: { in: [...COMPLETED] } } }, _sum: { quantity: true } }),
+    prisma.order.findMany({ where, select: { userId: true }, distinct: ['userId'] }),
+    prisma.orderReview.aggregate({
+      where: { nurseryId, createdAt: { gte: w.from, lte: w.to } },
+      _avg: { nurseryRating: true },
+      _count: { _all: true },
     }),
-    prisma.orderReview.findMany({ where: { nurseryId, createdAt: { gte: w.from, lte: w.to } }, select: { nurseryRating: true } }),
   ]);
 
-  const completed = orders.filter((o) => (COMPLETED as readonly string[]).includes(o.status));
-  const cancelled = orders.filter((o) => o.status === 'cancelled');
-  const revenueCents = completed.reduce((n, o) => n + o.totalCents, 0);
+  let orders = 0;
+  let completedCount = 0;
+  let revenueCents = 0;
+  let cancelledCount = 0;
+  let cancellationFeesCents = 0;
+  for (const g of byStatus) {
+    orders += g._count._all;
+    if ((COMPLETED as readonly string[]).includes(g.status)) {
+      completedCount += g._count._all;
+      revenueCents += g._sum.totalCents ?? 0;
+    } else if (g.status === 'cancelled') {
+      cancelledCount += g._count._all;
+      cancellationFeesCents += g._sum.cancellationFeeCents ?? 0;
+    }
+  }
 
-  const customerIds = Array.from(new Set(orders.map((o) => o.userId)));
+  const customerIds = customers.map((c) => c.userId);
   const returning = customerIds.length
     ? await prisma.order.findMany({
         where: { nurseryId, userId: { in: customerIds }, status: { not: 'pending_payment' }, createdAt: { lt: w.from } },
@@ -52,16 +71,17 @@ async function computeKpis(prisma: PrismaClient, nurseryId: string, w: Window, p
       })
     : [];
 
+  const reviewCount = reviewAgg._count._all;
   return {
-    orders: orders.length,
+    orders,
     revenueCents,
-    avgOrderValueCents: completed.length ? Math.round(revenueCents / completed.length) : 0,
-    saplingsSold: completed.reduce((n, o) => n + o.items.reduce((m, i) => m + i.quantity, 0), 0),
-    fulfilmentRate: pct(completed.length, completed.length + cancelled.length),
-    cancellationRate: pct(cancelled.length, orders.length),
-    cancellationFeesCents: cancelled.reduce((n, o) => n + o.cancellationFeeCents, 0),
-    avgRating: reviews.length ? round1(reviews.reduce((n, r) => n + r.nurseryRating, 0) / reviews.length) : null,
-    reviews: reviews.length,
+    avgOrderValueCents: completedCount ? Math.round(revenueCents / completedCount) : 0,
+    saplingsSold: saplings._sum.quantity ?? 0,
+    fulfilmentRate: pct(completedCount, completedCount + cancelledCount),
+    cancellationRate: pct(cancelledCount, orders),
+    cancellationFeesCents,
+    avgRating: reviewCount && reviewAgg._avg.nurseryRating != null ? round1(reviewAgg._avg.nurseryRating) : null,
+    reviews: reviewCount,
     newCustomers: customerIds.length - returning.length,
     returningCustomers: returning.length,
   };
@@ -70,9 +90,18 @@ async function computeKpis(prisma: PrismaClient, nurseryId: string, w: Window, p
 /**
  * The nursery Reports payload for a date range: KPIs (with the previous equal-length period),
  * time series, and breakdowns for sales, stock, ratings, bulk requests and delivery partners.
- * Dates use the order's creation day.
+ * Dates use the order's creation day. Aggregated in SQL and cached briefly per filter set.
  */
 export async function getNurseryReport(prisma: PrismaClient, nurseryId: string, params: NurseryReportParams = {}) {
+  const key = nurseryKey(
+    nurseryId,
+    'report',
+    JSON.stringify([params.from?.toISOString() ?? null, params.to?.toISOString() ?? null, params.fulfillmentType ?? null, params.species ?? null]),
+  );
+  return cached(key, REPORT_TTL_MS, () => computeNurseryReport(prisma, nurseryId, params));
+}
+
+async function computeNurseryReport(prisma: PrismaClient, nurseryId: string, params: NurseryReportParams) {
   const nursery = await prisma.nurseryProfile.findUniqueOrThrow({ where: { id: nurseryId }, select: { createdAt: true } });
   const range = resolveReportRange(params.from, params.to, nursery.createdAt);
   const inRange = { gte: range.from, lte: range.to };
@@ -82,41 +111,51 @@ export async function getNurseryReport(prisma: PrismaClient, nurseryId: string, 
     range.previous ? computeKpis(prisma, nurseryId, range.previous, params) : Promise.resolve(null),
   ]);
 
-  const [orders, reviews, ledger, bulk, stockNow, partnerOrders] = await Promise.all([
+  const fulfilmentCond = params.fulfillmentType ? Prisma.sql`AND o.fulfillment_type::text = ${params.fulfillmentType}` : Prisma.empty;
+  const speciesCond = params.species
+    ? Prisma.sql`AND EXISTS (SELECT 1 FROM order_items f WHERE f.order_id = o.id AND position(lower(${params.species}) in lower(f.species)) > 0)`
+    : Prisma.empty;
+  const completedList = [...COMPLETED];
+
+  const [orders, reviewGroups, respondedCount, ledgerRows, bulk, stockRows, speciesRows, partnerRows] = await Promise.all([
+    // Narrow rows only (no items) - enough for the time series and the status/fulfilment splits.
     prisma.order.findMany({
       where: orderWhere(nurseryId, range, params),
-      select: { id: true, status: true, totalCents: true, createdAt: true, fulfillmentType: true, items: { select: { species: true, quantity: true, unitPriceCents: true } } },
+      select: { status: true, totalCents: true, createdAt: true, fulfillmentType: true },
     }),
-    prisma.orderReview.findMany({
-      where: { nurseryId, createdAt: inRange },
-      select: { nurseryRating: true, nurseryResponse: true },
-    }),
-    prisma.saplingStockLedger.findMany({ where: { nurseryId, createdAt: inRange }, select: { delta: true, reason: true } }),
+    prisma.orderReview.groupBy({ by: ['nurseryRating'], where: { nurseryId, createdAt: inRange }, _count: { _all: true } }),
+    prisma.orderReview.count({ where: { nurseryId, createdAt: inRange, nurseryResponse: { not: null } } }),
+    prisma.$queryRaw<{ reason: string; pos: bigint | null; abs: bigint | null; net: bigint | null }[]>(
+      Prisma.sql`SELECT reason::text AS reason,
+          SUM(delta) FILTER (WHERE delta > 0) AS pos, SUM(ABS(delta)) AS abs, SUM(delta) AS net
+        FROM sapling_stock_ledger
+        WHERE nursery_id = ${nurseryId} AND created_at >= ${range.from} AND created_at <= ${range.to}
+        GROUP BY reason`,
+    ),
     prisma.bulkRequirementResponse.groupBy({ by: ['status'], where: { nurseryId, createdAt: inRange }, _count: { _all: true } }),
-    prisma.saplingStock.findMany({ where: { nurseryId, archivedAt: null }, select: { quantity: true, lowStockThreshold: true } }),
-    prisma.order.findMany({
-      where: {
-        nurseryId,
-        status: { in: [...COMPLETED] },
-        createdAt: inRange,
-        tracking: { is: { deliveryPartnerId: { not: null } } },
-      },
-      select: { tracking: { select: { deliveryPartner: { select: { id: true, avgRating: true, user: { select: { name: true } } } } } } },
-    }),
+    prisma.$queryRaw<{ species: bigint; low: bigint; out: bigint }[]>(
+      Prisma.sql`SELECT COUNT(*) AS species,
+          COUNT(*) FILTER (WHERE quantity > 0 AND quantity <= low_stock_threshold) AS low,
+          COUNT(*) FILTER (WHERE quantity <= 0) AS out
+        FROM sapling_stock WHERE nursery_id = ${nurseryId} AND archived_at IS NULL`,
+    ),
+    prisma.$queryRaw<{ species: string; qty: bigint; rev: bigint }[]>(
+      Prisma.sql`SELECT oi.species AS species, SUM(oi.quantity) AS qty, SUM(oi.quantity * oi.unit_price_cents) AS rev
+        FROM order_items oi JOIN orders o ON o.id = oi.order_id
+        WHERE o.nursery_id = ${nurseryId} AND o.status::text = ANY(${completedList}::text[])
+          AND o.created_at >= ${range.from} AND o.created_at <= ${range.to} ${fulfilmentCond} ${speciesCond}
+        GROUP BY oi.species ORDER BY rev DESC LIMIT 8`,
+    ),
+    prisma.$queryRaw<{ partner_id: string; deliveries: bigint }[]>(
+      Prisma.sql`SELECT dt.delivery_partner_id AS partner_id, COUNT(*) AS deliveries
+        FROM orders o JOIN delivery_tracking dt ON dt.order_id = o.id
+        WHERE o.nursery_id = ${nurseryId} AND o.status::text = ANY(${completedList}::text[])
+          AND o.created_at >= ${range.from} AND o.created_at <= ${range.to} AND dt.delivery_partner_id IS NOT NULL
+        GROUP BY dt.delivery_partner_id ORDER BY deliveries DESC LIMIT 5`,
+    ),
   ]);
 
   const completed = orders.filter((o) => (COMPLETED as readonly string[]).includes(o.status));
-
-  // ---- species ----
-  const species = new Map<string, { quantity: number; revenueCents: number }>();
-  for (const o of completed) {
-    for (const i of o.items) {
-      const s = species.get(i.species) ?? { quantity: 0, revenueCents: 0 };
-      s.quantity += i.quantity;
-      s.revenueCents += i.quantity * i.unitPriceCents;
-      species.set(i.species, s);
-    }
-  }
 
   // ---- order splits ----
   const byStatus: Record<string, number> = {};
@@ -128,28 +167,28 @@ export async function getNurseryReport(prisma: PrismaClient, nurseryId: string, 
 
   // ---- stock movement ----
   const GIVEN_OUT = ['reservation_fulfilled', 'order_placed', 'bulk_requirement_fulfilled'];
-  const added = ledger.filter((l) => l.delta > 0 && l.reason !== 'order_cancelled').reduce((n, l) => n + l.delta, 0);
-  const restocked = ledger.filter((l) => l.reason === 'order_cancelled').reduce((n, l) => n + l.delta, 0);
-  const givenOut = ledger.filter((l) => GIVEN_OUT.includes(l.reason)).reduce((n, l) => n + Math.abs(l.delta), 0);
-  let low = 0;
-  let out = 0;
-  for (const s of stockNow) {
-    if (s.quantity <= 0) out += 1;
-    else if (s.quantity <= s.lowStockThreshold) low += 1;
+  let added = 0;
+  let restocked = 0;
+  let givenOut = 0;
+  for (const l of ledgerRows) {
+    if (l.reason !== 'order_cancelled') added += Number(l.pos ?? 0);
+    else restocked += Number(l.net ?? 0);
+    if (GIVEN_OUT.includes(l.reason)) givenOut += Number(l.abs ?? 0);
   }
+  const stockNow = stockRows[0];
 
   // ---- ratings ----
-  const distribution = [1, 2, 3, 4, 5].map((stars) => ({ stars, count: reviews.filter((r) => r.nurseryRating === stars).length }));
+  const reviewTotal = reviewGroups.reduce((n, g) => n + g._count._all, 0);
+  const distribution = [1, 2, 3, 4, 5].map((stars) => ({ stars, count: reviewGroups.find((g) => g.nurseryRating === stars)?._count._all ?? 0 }));
 
   // ---- delivery partners ----
-  const partners = new Map<string, { name: string; deliveries: number; avgRating: number | null }>();
-  for (const o of partnerOrders) {
-    const dp = o.tracking?.deliveryPartner;
-    if (!dp) continue;
-    const p = partners.get(dp.id) ?? { name: dp.user.name, deliveries: 0, avgRating: dp.avgRating != null ? Number(dp.avgRating) : null };
-    p.deliveries += 1;
-    partners.set(dp.id, p);
-  }
+  const partnerProfiles = partnerRows.length
+    ? await prisma.deliveryPartnerProfile.findMany({
+        where: { id: { in: partnerRows.map((r) => r.partner_id) } },
+        select: { id: true, avgRating: true, user: { select: { name: true } } },
+      })
+    : [];
+  const partnerById = new Map(partnerProfiles.map((p) => [p.id, p]));
 
   return {
     range: { from: range.from, to: range.to, granularity: range.granularity, allTime: range.allTime },
@@ -161,10 +200,7 @@ export async function getNurseryReport(prisma: PrismaClient, nurseryId: string, 
       orders: bucketize(orders, range, (o) => o.createdAt),
     },
     sales: {
-      topSpecies: Array.from(species.entries())
-        .map(([name, v]) => ({ species: name, quantity: v.quantity, revenueCents: v.revenueCents }))
-        .sort((a, b) => b.revenueCents - a.revenueCents)
-        .slice(0, 8),
+      topSpecies: speciesRows.map((r) => ({ species: r.species, quantity: Number(r.qty), revenueCents: Number(r.rev) })),
       byStatus,
       byFulfilment,
     },
@@ -172,15 +208,20 @@ export async function getNurseryReport(prisma: PrismaClient, nurseryId: string, 
       added,
       givenOut,
       restocked,
-      current: { species: stockNow.length, low, out },
+      current: { species: Number(stockNow?.species ?? 0), low: Number(stockNow?.low ?? 0), out: Number(stockNow?.out ?? 0) },
     },
     ratings: {
       average: kpis.avgRating,
-      total: reviews.length,
+      total: reviewTotal,
       distribution,
-      responseRate: pct(reviews.filter((r) => !!r.nurseryResponse).length, reviews.length),
+      responseRate: pct(respondedCount, reviewTotal),
     },
     bulkRequirements: Object.fromEntries(bulk.map((g) => [g.status, g._count._all])),
-    deliveryPartners: Array.from(partners.values()).sort((a, b) => b.deliveries - a.deliveries).slice(0, 5),
+    deliveryPartners: partnerRows
+      .map((r) => {
+        const p = partnerById.get(r.partner_id);
+        return p ? { name: p.user.name, deliveries: Number(r.deliveries), avgRating: p.avgRating != null ? Number(p.avgRating) : null } : null;
+      })
+      .filter((p): p is { name: string; deliveries: number; avgRating: number | null } => p !== null),
   };
 }

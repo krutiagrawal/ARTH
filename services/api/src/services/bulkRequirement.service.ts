@@ -7,6 +7,7 @@ import { evaluateNurseryAchievements } from './nurseryAchievement.service';
 import { recordNurseryContribution, recomputeReputation } from './nurseryReputation.service';
 import { haversineDistanceKm } from '../utils/geo';
 import { cursorArgs, toCursorPage, parseTake, type CursorQuery } from '../utils/pagination';
+import { cached, nurseryKey } from '../utils/ttlCache';
 
 const NEARBY_FANOUT_RADIUS_KM = 25;
 
@@ -509,6 +510,27 @@ export async function listRelevantForNursery(prisma: PrismaClient, nurseryUserId
   const take = parseTake(q.take, 20, 50);
   const offset = Math.max(Number.parseInt(String(q.cursor ?? '0'), 10) || 0, 0);
 
+  // The thin-candidate scan + in-memory filter/sort is the expensive part and is identical for every
+  // page of one filter set, so it is computed once and cached briefly (paging through a list no
+  // longer re-scans up to MAX_NURSERY_CANDIDATES rows per page, and the offsets stay consistent
+  // while the user scrolls). Offers/stock changes show up within the TTL.
+  const { cursor: _cursor, take: _take, ...filterKey } = q;
+  const { matched, counts, stockMap } = await cached(
+    nurseryKey(nursery.id, 'bulkReqList', JSON.stringify(filterKey)),
+    20_000,
+    () => buildNurseryRequirementMatches(prisma, nursery, q),
+  );
+
+  const pageIds = matched.slice(offset, offset + take).map((r) => r.id);
+  return {
+    items: await hydrateForNursery(prisma, nursery, pageIds, stockMap),
+    nextCursor: offset + take < matched.length ? String(offset + take) : null,
+    total: matched.length,
+    counts,
+  };
+}
+
+async function buildNurseryRequirementMatches(prisma: PrismaClient, nursery: { id: string; lat: unknown; lng: unknown }, q: NurseryRequirementQuery) {
   const search = q.search?.trim();
   const from = q.from ? new Date(q.from) : null;
   const to = q.to ? new Date(q.to) : null;
@@ -596,13 +618,7 @@ export async function listRelevantForNursery(prisma: PrismaClient, nurseryUserId
   else if (q.sort === 'largest') matched.sort((a, b) => b.quantityNeeded - a.quantityNeeded);
   // 'newest' (default) is already the candidate order.
 
-  const pageIds = matched.slice(offset, offset + take).map((r) => r.id);
-  return {
-    items: await hydrateForNursery(prisma, nursery, pageIds, stockMap),
-    nextCursor: offset + take < matched.length ? String(offset + take) : null,
-    total: matched.length,
-    counts,
-  };
+  return { matched, counts, stockMap };
 }
 
 /** One requirement in the same shape as a list row, for the detail screen and deep links. */

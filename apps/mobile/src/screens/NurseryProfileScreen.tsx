@@ -18,10 +18,12 @@ import { ProfileTabBar, type ProfileTabKey } from '../components/profile/Profile
 import { PostGrid } from '../components/profile/PostGrid';
 import { AchievementsTabContent } from '../components/profile/AchievementsTabContent';
 import { NurserySaplingsTabContent } from '../components/profile/NurserySaplingsTabContent';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { GrowthLevelBadge, GROWTH_LEVEL_META } from '../components/common/GrowthLevelBadge';
 import { TrustScoreGauge } from '../components/common/TrustScoreGauge';
 import { ContributionStreakCard } from '../components/common/ContributionStreakCard';
-import { useNurseryPosts, useNurseryFollowers, useBlockTarget, useUnblockTarget } from '../hooks/useSocialQueries';
+import { useNurseryPosts, useNurseryFollowers, useBlockTarget, useUnblockTarget, useDeletePost } from '../hooks/useSocialQueries';
+import { PostCaptionSheet } from '../components/social/PostCaptionSheet';
 import {
   useNurseryProfile,
   useNurseryStats,
@@ -67,7 +69,11 @@ export function NurseryProfileScreen({ route, navigation }: any) {
 
   const publicProfile = useNurseryPublicProfile(isOwn ? null : nurseryId ?? null);
   const publicAchievements = useNurseryPublicAchievements(isOwn ? undefined : nurseryId);
-  const ownStock = useSaplingStock();
+  // The owner's saplings tab searches and pages on the server (debounced), so a large catalogue
+  // never has to be loaded - or filtered - on the phone.
+  const [stockSearch, setStockSearch] = useState('');
+  const debouncedStockSearch = useDebouncedValue(stockSearch.trim());
+  const ownStock = useSaplingStock({ q: debouncedStockSearch || undefined });
   const followMutation = useFollowNursery();
   const unfollowMutation = useUnfollowNursery();
   const [reporting, setReporting] = useState(false);
@@ -87,6 +93,7 @@ export function NurseryProfileScreen({ route, navigation }: any) {
     refetch: refetchPosts,
   } = useNurseryPosts(effectiveNurseryId);
   const posts = useMemo(() => postsData?.pages.flatMap((p) => p.posts) ?? [], [postsData]);
+
   const onEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
@@ -104,6 +111,36 @@ export function NurseryProfileScreen({ route, navigation }: any) {
     },
     [navigation, effectiveNurseryId],
   );
+
+  // Managing your own posts from the grid: long-press a tile for edit / likes / delete, plus a
+  // "New post" shortcut in the bar above the grid.
+  const deletePost = useDeletePost();
+  const [managedPost, setManagedPost] = useState<ApiPost | null>(null);
+  const [editingPost, setEditingPost] = useState<ApiPost | null>(null);
+  const totalLikes = useMemo(() => posts.reduce((sum, p) => sum + p.likeCount, 0), [posts]);
+  const managePostOptions = useMemo<ActionSheetOption[]>(() => {
+    const post = managedPost;
+    if (!post) return [];
+    return [
+      { key: 'open', icon: '🖼️', label: 'View post', onPress: () => openPost(post) },
+      { key: 'edit', icon: '✏️', label: 'Edit caption', hint: 'Change the text – the photos stay as they are', onPress: () => setEditingPost(post) },
+      ...(post.likeCount > 0
+        ? [{ key: 'likes', icon: '❤️', label: `See who liked it (${post.likeCount})`, onPress: () => navigation.navigate('PostLikes', { postId: post.id }) }]
+        : []),
+      {
+        key: 'delete',
+        icon: '🗑️',
+        label: 'Delete post',
+        hint: 'Removes it for everyone',
+        destructive: true,
+        onPress: () =>
+          confirm('Delete this post?', 'This cannot be undone.', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Delete', style: 'destructive', onPress: () => deletePost.mutate(post.id) },
+          ]),
+      },
+    ];
+  }, [managedPost, confirm, deletePost, navigation, openPost]);
 
   // A suspended/removed nursery's public profile 404s – without this, `isLoading` (derived from
   // `!data`) would stay true forever once the query settles on an error, leaving the screen
@@ -144,6 +181,7 @@ export function NurseryProfileScreen({ route, navigation }: any) {
         avatarUrl={logoUrl}
         avatarEmoji="🌿"
         storyRing={effectiveNurseryId ? ringStatus.data?.nurseries[effectiveNurseryId] : null}
+        storyAuthor={effectiveNurseryId ? { kind: 'nursery', id: effectiveNurseryId, name, avatarEmoji: '🌿' } : null}
         name={name}
         meta={city ? `📍 ${city}` : null}
         bio={bio}
@@ -345,6 +383,17 @@ export function NurseryProfileScreen({ route, navigation }: any) {
               isOwn={isOwn}
               stock={isOwn ? ownStock.data ?? [] : publicProfile.data?.stock ?? []}
               isLoading={isOwn ? ownStock.isLoading : false}
+              serverSearch={
+                isOwn
+                  ? {
+                      query: stockSearch,
+                      onQueryChange: setStockSearch,
+                      hasMore: !!ownStock.hasNextPage,
+                      loadingMore: ownStock.isFetchingNextPage,
+                      onLoadMore: () => ownStock.fetchNextPage(),
+                    }
+                  : undefined
+              }
               onManageInventory={() => navigation.navigate('NurseryStock')}
               onSearchFocusScroll={(y) => saplingsScrollRef.current?.scrollTo({ y: Math.max(0, y - 20), animated: true })}
             />
@@ -354,6 +403,7 @@ export function NurseryProfileScreen({ route, navigation }: any) {
         <PostGrid
           posts={tab === 'posts' ? posts : []}
           onPressPost={openPost}
+          onLongPressPost={isOwn && tab === 'posts' ? setManagedPost : undefined}
           onEndReached={tab === 'posts' ? onEndReached : undefined}
           isFetchingNextPage={isFetchingNextPage}
           emptyTitle="No posts yet"
@@ -363,6 +413,22 @@ export function NurseryProfileScreen({ route, navigation }: any) {
           ListHeaderComponent={
             <>
               {headerBlock}
+              {isOwn && tab === 'posts' && (
+                <View style={styles.manageBar}>
+                  <View style={styles.manageStats}>
+                    <Text style={styles.manageStatValue}>{posts.length}{hasNextPage ? '+' : ''}</Text>
+                    <Text style={styles.manageStatLabel}>Posts</Text>
+                  </View>
+                  <View style={styles.manageStats}>
+                    <Text style={styles.manageStatValue}>{totalLikes}</Text>
+                    <Text style={styles.manageStatLabel}>Likes</Text>
+                  </View>
+                  <TouchableOpacity style={styles.newPostButton} activeOpacity={0.85} onPress={() => navigation.navigate('NurseryPostUpdate')}>
+                    <Text style={styles.newPostText}>＋ New post</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {isOwn && tab === 'posts' && posts.length > 0 && <Text style={styles.manageHint}>Hold a post to edit or delete it.</Text>}
               {tab === 'contributions' && (
                 <View style={styles.tabBody}>
                   <BorderCard style={styles.contributionsCard}>
@@ -437,8 +503,12 @@ export function NurseryProfileScreen({ route, navigation }: any) {
         />
       )}
 
-      {!isOwn && (
-        <ActionSheet visible={menuOpen} onClose={() => setMenuOpen(false)} title={name} options={menuOptions} />
+      {!isOwn && <ActionSheet visible={menuOpen} onClose={() => setMenuOpen(false)} title={name} options={menuOptions} />}
+      {isOwn && (
+        <>
+          <ActionSheet visible={managedPost !== null} onClose={() => setManagedPost(null)} title="Manage post" options={managePostOptions} />
+          <PostCaptionSheet post={editingPost} onClose={() => setEditingPost(null)} />
+        </>
       )}
       <ReportSheet visible={reporting} onClose={() => setReporting(false)} targetType="nursery" targetId={nurseryId ?? null} targetLabel="this nursery" />
     </View>
@@ -492,6 +562,13 @@ const styles = StyleSheet.create({
   aboutIcon: { fontSize: 14, width: 20 },
   aboutText: { fontSize: 13, color: COLORS.textSecondary, flex: 1 },
   tabBody: { paddingHorizontal: 16, paddingTop: 16 },
+  manageBar: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 16, paddingVertical: 12 },
+  manageStats: { alignItems: 'center' },
+  manageStatValue: { fontSize: 18, fontWeight: '800', color: COLORS.forest },
+  manageStatLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', color: COLORS.textMuted },
+  newPostButton: { marginLeft: 'auto', backgroundColor: COLORS.forest, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999 },
+  newPostText: { fontSize: 13, fontWeight: '800', color: COLORS.white },
+  manageHint: { fontSize: 11, color: COLORS.textMuted, paddingHorizontal: 16, paddingBottom: 8 },
   contributionsCard: { gap: 12 },
   contributionsTitle: { ...TEXT.subheading, color: COLORS.textPrimary },
   contributionsRow: { flexDirection: 'row', justifyContent: 'space-around' },

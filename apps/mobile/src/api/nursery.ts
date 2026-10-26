@@ -388,7 +388,8 @@ export interface ApiNurseryReservation {
   requester?: { id: string; name: string; avatarEmoji: string };
 }
 
-export async function fetchNurseryReservations(status?: ReservationStatus, cursor?: string): Promise<Page<ApiNurseryReservation>> {
+/** `responded` is a query-only filter: every reservation that is no longer pending. */
+export async function fetchNurseryReservations(status?: ReservationStatus | 'responded', cursor?: string): Promise<Page<ApiNurseryReservation>> {
   return apiFetch<Page<ApiNurseryReservation>>(pagedPath('/api/nursery/reservations', cursor, { status }));
 }
 
@@ -419,6 +420,28 @@ export interface ApiStockLedgerEntry {
 export async function fetchStockLedger(page = 1, take = 30, reasons: ApiStockLedgerEntry['reason'][] = []): Promise<ApiStockLedgerEntry[]> {
   const filter = reasons.length > 0 ? `&reasons=${reasons.join(',')}` : '';
   return apiFetch<ApiStockLedgerEntry[]>(`/api/nursery/stock/ledger?page=${page}&take=${take}${filter}`);
+}
+
+export interface StockLedgerPageFilter {
+  reasons?: ApiStockLedgerEntry['reason'][];
+  /** in = additions (delta > 0), out = removals (delta < 0). */
+  direction?: 'in' | 'out';
+}
+
+/** Cursor-paged ledger (the offset form above is kept for the small fixed-size cards). */
+export async function fetchStockLedgerPage(filter: StockLedgerPageFilter = {}, cursor?: string): Promise<Page<ApiStockLedgerEntry>> {
+  return apiFetch<Page<ApiStockLedgerEntry>>(
+    pagedPath('/api/nursery/stock/ledger', cursor, {
+      paged: 'true',
+      reasons: filter.reasons?.length ? filter.reasons.join(',') : undefined,
+      direction: filter.direction,
+    }, 30),
+  );
+}
+
+/** Distinct species across this nursery's stock - for filter dropdowns. */
+export async function fetchStockSpeciesOptions(): Promise<string[]> {
+  return apiFetch<string[]>('/api/nursery/stock/species-options');
 }
 
 export interface ApiStockAnalytics {

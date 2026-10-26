@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { TouchableOpacity } from 'react-native';
 import { StoryRing, type StoryRingStatus } from './StoryRing';
 import { StoryViewer } from '../stories/StoryViewer';
-import { useUserStories, useNgoStories } from '../../hooks/useApiQueries';
+import { useUserStories, useNgoStories, useNurseryStories, useGroupStories } from '../../hooks/useApiQueries';
 import { useMarkStoryViewed } from '../../hooks/useSocialQueries';
 
 interface StoryAvatarProps {
-  /** 'user' and 'ngo' open a story; nursery/group avatars fall through to `onPress` unchanged,
-   * since there's no per-author story fetch for those kinds yet. */
+  /** Every kind opens its author's active story when `status.hasStory`; otherwise the tap falls
+   * through to `onPress`. */
   authorKind: 'user' | 'ngo' | 'nursery' | 'group';
   authorId: string;
   authorName: string;
@@ -47,14 +47,17 @@ export function StoryAvatar({
   showRing = true,
 }: StoryAvatarProps) {
   const [open, setOpen] = useState(false);
-  const canOpenStory = (authorKind === 'user' || authorKind === 'ngo') && !!status?.hasStory;
+  const canOpenStory = !!status?.hasStory;
 
   // Only fetches once actually tapped open – not on mount – so a screen full of avatars doesn't
-  // fire a story request per row. Both hooks are always called (Rules of Hooks); each is gated by
+  // fire a story request per row. All hooks are always called (Rules of Hooks); each is gated by
   // its own `enabled` so only the one matching this avatar's kind actually fires.
   const { data: userStories = [] } = useUserStories(authorKind === 'user' && open ? authorId : null);
   const { data: ngoStories = [] } = useNgoStories(authorKind === 'ngo' && open ? authorId : null);
-  const stories = authorKind === 'ngo' ? ngoStories : userStories;
+  const { data: nurseryStories = [] } = useNurseryStories(authorKind === 'nursery' && open ? authorId : null);
+  const { data: groupStories = [] } = useGroupStories(authorKind === 'group' && open ? authorId : null);
+  const stories =
+    authorKind === 'ngo' ? ngoStories : authorKind === 'nursery' ? nurseryStories : authorKind === 'group' ? groupStories : userStories;
   const markViewed = useMarkStoryViewed();
 
   const handlePress = () => {

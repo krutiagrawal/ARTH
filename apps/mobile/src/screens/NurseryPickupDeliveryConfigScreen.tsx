@@ -47,6 +47,13 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [locationNotice, setLocationNotice] = useState<{ ok: boolean; text: string } | null>(null);
+  // The saved address is shown as a read-only card; the form only opens on "Change" (or when
+  // nothing is saved yet), so what's stored and what's being typed never look the same.
+  const [editingAddress, setEditingAddress] = useState(false);
+  const savedLine1 = (profile?.line1 ?? '').trim();
+  const hasSavedAddress = !!savedLine1 && profile?.lat != null && profile?.lng != null;
+  const showAddressForm = editingAddress || !hasSavedAddress;
+  const addressChanged = line1.trim() !== savedLine1 || coords != null;
 
   useEffect(() => {
     if (!profile) return;
@@ -107,8 +114,10 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
       setError('Enable at least one of pickup or delivery – you can’t turn both off.');
       return;
     }
-    if (offersDelivery && !hasLocation && !line1.trim()) {
-      setError('Add your nursery\'s address or tap "Use current location" below before turning on delivery – customers and your delivery partners both need it to track deliveries.');
+    // Either option needs a real address: pickup tells planters where to collect, delivery is the
+    // route origin. A typed-but-unselected address is geocoded server-side and rejected if unknown.
+    if (line1.trim().length < 5) {
+      setError('Add your nursery\'s full address (pick a suggestion, or tap "Use current location") before offering pickup or delivery – planters and delivery partners both need it.');
       return;
     }
     try {
@@ -125,6 +134,9 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
         pickupWindows,
       });
       setSaved(true);
+      setCoords(null);
+      setEditingAddress(false);
+      setLocationNotice(null);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not save. Please try again.');
     }
@@ -147,28 +159,81 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
       >
+        <Text style={[styles.sectionTitle, { marginTop: 4 }]}>How planters get saplings</Text>
         <BorderCard style={styles.toggleCard}>
           <View style={styles.toggleRow}>
+            <Text style={styles.toggleEmoji}>🏪</Text>
             <View style={{ flex: 1 }}>
-              <Text style={styles.toggleTitle}>Offer pickup</Text>
+              <View style={styles.titleRow}>
+                <Text style={styles.toggleTitle}>Offer pickup</Text>
+                <View style={[styles.pill, offersPickup ? styles.pillOn : styles.pillOff]}>
+                  <Text style={[styles.pillText, offersPickup ? styles.pillTextOn : styles.pillTextOff]}>{offersPickup ? 'ON' : 'OFF'}</Text>
+                </View>
+              </View>
               <Text style={styles.toggleBody}>Planters collect saplings from your nursery.</Text>
             </View>
             <Toggle value={offersPickup} onValueChange={setOffersPickup} />
           </View>
           <View style={styles.divider} />
           <View style={styles.toggleRow}>
+            <Text style={styles.toggleEmoji}>🚚</Text>
             <View style={{ flex: 1 }}>
-              <Text style={styles.toggleTitle}>Offer delivery</Text>
+              <View style={styles.titleRow}>
+                <Text style={styles.toggleTitle}>Offer delivery</Text>
+                <View style={[styles.pill, offersDelivery ? styles.pillOn : styles.pillOff]}>
+                  <Text style={[styles.pillText, offersDelivery ? styles.pillTextOn : styles.pillTextOff]}>{offersDelivery ? 'ON' : 'OFF'}</Text>
+                </View>
+              </View>
               <Text style={styles.toggleBody}>Saplings are delivered to the planter's address.</Text>
             </View>
             <Toggle value={offersDelivery} onValueChange={setOffersDelivery} />
           </View>
         </BorderCard>
 
-        {offersDelivery && (
+        {(offersPickup || offersDelivery) && (
           <>
-            <Text style={styles.sectionTitle}>Delivery details</Text>
+            <Text style={styles.sectionTitle}>Nursery address</Text>
 
+            {hasSavedAddress && (
+              <View style={[styles.savedCard, showAddressForm && styles.savedCardDim]}>
+                <View style={styles.savedHead}>
+                  <View style={[styles.pill, styles.pillOn]}>
+                    <Text style={[styles.pillText, styles.pillTextOn]}>✓ SAVED ADDRESS</Text>
+                  </View>
+                  {!showAddressForm && (
+                    <TouchableOpacity onPress={() => setEditingAddress(true)} hitSlop={8}>
+                      <Text style={styles.changeText}>Change</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <Text style={styles.savedAddress}>📍 {savedLine1}</Text>
+                <Text style={styles.savedMeta}>
+                  {showAddressForm ? 'Stays in use until you save a new one below.' : 'Customers and delivery partners see this location.'}
+                </Text>
+              </View>
+            )}
+
+            {showAddressForm && (
+              <View style={styles.formCard}>
+                <View style={styles.savedHead}>
+                  <View style={[styles.pill, styles.pillEdit]}>
+                    <Text style={[styles.pillText, styles.pillTextEdit]}>{hasSavedAddress ? '✎ NEW ADDRESS' : '✎ ADD ADDRESS'}</Text>
+                  </View>
+                  {hasSavedAddress && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setEditingAddress(false);
+                        setLine1(profile?.line1 ?? '');
+                        setCoords(null);
+                        setLocationNotice(null);
+                        setError(null);
+                      }}
+                      hitSlop={8}
+                    >
+                      <Text style={styles.changeText}>Cancel</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
             <AddressSearchField
               required label="Nursery address"
               value={line1}
@@ -185,7 +250,7 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
             />
             <View style={styles.locationRow}>
               <Text style={styles.locationStatus}>
-                {hasLocation ? '📍 Location set' : '📍 No location set – required to offer delivery'}
+                {hasLocation ? '📍 Location set' : '📍 No location set – required to offer pickup or delivery'}
               </Text>
               <TouchableOpacity onPress={useCurrentLocation} disabled={locating} style={styles.locationButton}>
                 <Text style={styles.locationButtonText}>{locating ? 'Locating…' : 'Use current location'}</Text>
@@ -196,6 +261,17 @@ export function NurseryPickupDeliveryConfigScreen({ navigation }: any) {
                 {locationNotice.text}
               </Text>
             )}
+            {hasSavedAddress && addressChanged && (
+              <Text style={styles.unsavedText}>Not saved yet – tap “Save changes” to replace your saved address.</Text>
+            )}
+              </View>
+            )}
+          </>
+        )}
+
+        {offersDelivery && (
+          <>
+            <Text style={styles.sectionTitle}>Delivery details</Text>
 
             <View style={styles.inlineRow}>
               <View style={styles.inlineField}>
@@ -309,6 +385,30 @@ const styles = StyleSheet.create({
   toggleTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
   toggleBody: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   divider: { height: 1, backgroundColor: 'rgba(94,133,80,0.15)' },
+  toggleEmoji: { fontSize: 22 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  pill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: RADIUS.full },
+  pillText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+  pillOn: { backgroundColor: 'rgba(45,90,39,0.14)' },
+  pillTextOn: { color: COLORS.forest },
+  pillOff: { backgroundColor: 'rgba(107,68,35,0.12)' },
+  pillTextOff: { color: COLORS.textSecondary },
+  pillEdit: { backgroundColor: 'rgba(212,168,83,0.22)' },
+  pillTextEdit: { color: COLORS.textPrimary },
+  savedCard: {
+    borderRadius: RADIUS.lg, padding: 14, gap: 6, marginBottom: 12,
+    backgroundColor: 'rgba(45,90,39,0.07)', borderWidth: 1.5, borderColor: COLORS.forest,
+  },
+  savedCardDim: { opacity: 0.6, borderStyle: 'dashed' },
+  savedHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 },
+  changeText: { fontSize: 13, fontWeight: '700', color: COLORS.forest },
+  savedAddress: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary, lineHeight: 20 },
+  savedMeta: { fontSize: 11, color: COLORS.textSecondary },
+  formCard: {
+    borderRadius: RADIUS.lg, padding: 14, marginBottom: 6,
+    borderWidth: 1.5, borderColor: COLORS.golden, backgroundColor: 'rgba(212,168,83,0.06)',
+  },
+  unsavedText: { fontSize: 12, fontWeight: '600', color: COLORS.golden, marginTop: 2 },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary, marginTop: 20, marginBottom: 4 },
   locationRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

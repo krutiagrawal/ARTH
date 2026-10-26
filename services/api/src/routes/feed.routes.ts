@@ -12,6 +12,8 @@ export default async function feedRoutes(fastify: FastifyInstance) {
     if (scope === 'friends') {
       const friendships = await fastify.prisma.friendship.findMany({
         where: { status: 'accepted', OR: [{ requesterId: userId }, { addresseeId: userId }] },
+        select: { requesterId: true, addresseeId: true },
+        take: 2000,
       });
       userIds = friendships.map((f) => (f.requesterId === userId ? f.addresseeId : f.requesterId));
     }
@@ -20,7 +22,9 @@ export default async function feedRoutes(fastify: FastifyInstance) {
       where: userIds ? { userId: { in: userIds } } : {},
       include: {
         user: { select: { id: true, name: true, handle: true, avatarEmoji: true } },
-        reactions: true,
+        // A count plus only the viewer's own reaction, not every reaction row on every item.
+        _count: { select: { reactions: true } },
+        reactions: { where: { userId }, select: { userId: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: limit,
@@ -36,8 +40,8 @@ export default async function feedRoutes(fastify: FastifyInstance) {
         referenceId: item.referenceId,
         metadata: item.metadata,
         createdAt: item.createdAt,
-        cheerCount: item.reactions.length,
-        cheeredByMe: item.reactions.some((r) => r.userId === userId),
+        cheerCount: item._count.reactions,
+        cheeredByMe: item.reactions.length > 0,
       }))
     );
   });

@@ -719,6 +719,7 @@ model Tree {
   @@index([userId, plantedAt(sort: Desc)])
   @@index([lat, lng])
   @@index([nurseryId])
+  @@index([nurseryId, aiVerificationStatus])
   @@map("trees")
 }
 
@@ -1031,6 +1032,9 @@ model SaplingStock {
 
   @@index([nurseryId])
   @@index([speciesId])
+  @@index([nurseryId, archivedAt])
+  @@index([nurseryId, createdAt(sort: Desc)])
+  @@index([nurseryId, speciesId])
   @@map("sapling_stock")
 }
 
@@ -1054,6 +1058,7 @@ model SaplingReservation {
   saplingUnits ArthSaplingUnit[]
 
   @@index([nurseryId, status])
+  @@index([nurseryId, status, createdAt(sort: Desc)])
   @@index([userId])
   @@map("sapling_reservations")
 }
@@ -1073,6 +1078,7 @@ model SaplingStockLedger {
   stock   SaplingStock?  @relation(fields: [stockId], references: [id], onDelete: SetNull)
 
   @@index([nurseryId, createdAt(sort: Desc)])
+  @@index([nurseryId, reason, createdAt(sort: Desc)])
   @@map("sapling_stock_ledger")
 }
 
@@ -1253,6 +1259,10 @@ model Order {
   @@index([userId, createdAt(sort: Desc)])
   @@index([nurseryId, status])
   @@index([nurseryId, createdAt(sort: Desc)])
+  @@index([nurseryId, status, outForDeliveryAt])
+  @@index([nurseryId, status, deliveredAt])
+  @@index([nurseryId, userId])
+  @@index([nurseryId, scheduledFor])
   @@map("orders")
 }
 
@@ -1350,6 +1360,7 @@ model OrderReview {
   deliveryPartner DeliveryPartnerProfile? @relation(fields: [deliveryPartnerId], references: [id])
 
   @@index([nurseryId])
+  @@index([nurseryId, createdAt(sort: Desc)])
   @@index([userId, createdAt(sort: Desc)])
   @@index([deliveryPartnerId])
   @@map("order_reviews")
@@ -1395,6 +1406,8 @@ model ArthSaplingUnit {
   @@index([reservationId])
   @@index([bulkRequirementResponseId])
   @@index([plantedTreeId])
+  @@index([nurseryId, status])
+  @@index([nurseryId, supplyDate])
   @@map("arth_sapling_units")
 }
 
@@ -1798,6 +1811,7 @@ model ActivityFeed {
 
   @@index([createdAt(sort: Desc)])
   @@index([userId])
+  @@index([userId, createdAt(sort: Desc)])
   @@map("activity_feed")
 }
 
@@ -2155,6 +2169,8 @@ model BulkRequirement {
 
   @@index([ngoId, status])
   @@index([status, city])
+  @@index([status, neededByDate])
+  @@index([status, createdAt(sort: Desc)])
   @@index([lat, lng])
   @@map("bulk_requirements")
 }
@@ -2184,6 +2200,7 @@ model BulkRequirementResponse {
   @@unique([requirementId, nurseryId])
   @@index([requirementId, status])
   @@index([nurseryId, status])
+  @@index([nurseryId, createdAt(sort: Desc)])
   @@map("bulk_requirement_responses")
 }
 
@@ -2570,6 +2587,7 @@ model Notification {
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, readAt])
+  @@index([userId, type, createdAt(sort: Desc)])
   @@map("notifications")
 }
 

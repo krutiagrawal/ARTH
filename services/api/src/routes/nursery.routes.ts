@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import * as nurseryService from '../services/nursery.service';
+import { invalidateNurseryCacheOnWrite } from '../utils/nurseryCacheHook';
 import * as orderService from '../services/order.service';
 import { saveNurseryLogo, saveNurseryCoverPhoto, saveStockPhoto } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
@@ -83,6 +84,7 @@ function serializeReservation(r: any) {
 
 export default async function nurseryRoutes(fastify: FastifyInstance) {
   fastify.addHook('preHandler', fastify.requireRole('nursery'));
+  invalidateNurseryCacheOnWrite(fastify);
 
   fastify.get('/profile', async (request, reply) => {
     reply.send(serializeProfile(await nurseryService.getOwnProfile(fastify.prisma, request.user!.id)));
@@ -248,11 +250,32 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
     reply.send(await nurseryService.declineReservation(fastify.prisma, request.user!.id, request.params.id));
   });
 
-  fastify.get<{ Querystring: { page?: string; take?: string; reasons?: string } }>('/stock/ledger', async (request, reply) => {
-    const page = Number(request.query.page) || 1;
-    const take = Number(request.query.take) || 30;
-    const reasons = (request.query.reasons ?? '').split(',').map((r) => r.trim()).filter(Boolean);
-    reply.send(await nurseryService.getStockLedger(fastify.prisma, request.user!.id, page, take, reasons));
+  // `paged=true` (the mobile app) returns a cursor page { items, nextCursor } with an optional
+  // in/out `direction`; without it the legacy offset form returns a bare array (the web dashboard).
+  fastify.get<{ Querystring: { page?: string; take?: string; reasons?: string; paged?: string; cursor?: string; direction?: string } }>(
+    '/stock/ledger',
+    async (request, reply) => {
+      const reasons = (request.query.reasons ?? '').split(',').map((r) => r.trim()).filter(Boolean);
+      if (request.query.paged === 'true' || request.query.cursor) {
+        const direction = request.query.direction === 'in' || request.query.direction === 'out' ? request.query.direction : undefined;
+        reply.send(
+          await nurseryService.listStockLedger(fastify.prisma, request.user!.id, {
+            cursor: request.query.cursor,
+            take: request.query.take,
+            reasons,
+            direction,
+          }),
+        );
+        return;
+      }
+      const page = Number(request.query.page) || 1;
+      const take = Number(request.query.take) || 30;
+      reply.send(await nurseryService.getStockLedger(fastify.prisma, request.user!.id, page, take, reasons));
+    },
+  );
+
+  fastify.get('/stock/species-options', async (request, reply) => {
+    reply.send(await nurseryService.listStockSpeciesOptions(fastify.prisma, request.user!.id));
   });
 
   fastify.get('/stock/analytics', async (request, reply) => {

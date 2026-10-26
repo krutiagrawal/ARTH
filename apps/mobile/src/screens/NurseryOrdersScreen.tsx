@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -16,7 +16,7 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import type { ApiNurseryOrder, NurseryOrderStatus } from '../api/nursery';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { useRequireApproval } from '../hooks/useRequireApproval';
-import { flattenPages, infiniteScrollProps } from '../hooks/useInfiniteList';
+import { flattenPages } from '../hooks/useInfiniteList';
 import { PageFooter } from '../components/common/PageFooter';
 
 function formatRupees(cents: number) {
@@ -161,18 +161,29 @@ export function NurseryOrdersScreen({ navigation }: any) {
           body={isFiltering ? 'Try a different search or filter.' : 'Orders from the marketplace will show up here.'}
         />
       ) : (
-        <ScrollView
+        // Virtualised: only the rows near the screen are mounted, however many orders are loaded.
+        <FlatList
+          data={orders}
+          keyExtractor={(o) => o.id}
+          extraData={bulk.selected}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 + (bulk.selected.size > 0 ? 90 : 0) }]}
           showsVerticalScrollIndicator={false}
-          {...infiniteScrollProps(query)}
+          onEndReachedThreshold={0.5}
+          onEndReached={() => {
+            if (query.hasNextPage && !query.isFetchingNextPage) query.fetchNextPage();
+          }}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={7}
+          removeClippedSubviews
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
-        >
-          {orders.map((o) => {
+          ListFooterComponent={<PageFooter loading={query.isFetchingNextPage} />}
+          renderItem={({ item: o }) => {
             const waitingDays = o.readyForPickupAt ? (Date.now() - new Date(o.readyForPickupAt).getTime()) / 86_400_000 : 0;
             const attention =
               o.status === 'confirmed' ? 'New – ready to pack' : o.status === 'ready_for_pickup' && waitingDays > 2 ? 'Waiting for pickup' : null;
             return (
-              <View key={o.id}>
+              <View>
                 {bulk.selectMode && <SelectBox selected={bulk.selected.has(o.id)} />}
                 <OrderRow
                   order={o}
@@ -184,9 +195,8 @@ export function NurseryOrdersScreen({ navigation }: any) {
                 {attention && <AttentionBadge text={attention} />}
               </View>
             );
-          })}
-          <PageFooter loading={query.isFetchingNextPage} />
-        </ScrollView>
+          }}
+        />
       )}
 
       <BulkActionBar count={bulk.selected.size} actions={bulkActions} busy={bulk.busy} onAction={requireApproval(bulk.onAction)} bottomOffset={insets.bottom} />

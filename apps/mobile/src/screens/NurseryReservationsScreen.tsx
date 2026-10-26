@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -16,7 +16,6 @@ import type { ApiNurseryReservation } from '../api/nursery';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PageFooter } from '../components/common/PageFooter';
-import { infiniteScrollProps } from '../hooks/useInfiniteList';
 import { ApiError } from '../api/client';
 
 function ReservationRow({ item, showActions, guard }: { item: ApiNurseryReservation; showActions: boolean; guard: <A extends any[]>(fn: (...a: A) => void) => (...a: A) => void }) {
@@ -77,14 +76,15 @@ function ReservationRow({ item, showActions, guard }: { item: ApiNurseryReservat
 
 export function NurseryReservationsScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const listQuery = useNurseryReservations();
+  // Pending vs. history is decided by the server, so each tab pages through its own records
+  // instead of splitting whatever happens to be loaded (a pending request on page 5 of a mixed
+  // list would otherwise show up late, or never).
+  const [tab, setTab] = useState<'pending' | 'responded'>('pending');
+  const listQuery = useNurseryReservations(tab);
   const { data: reservations = [], isLoading, refetch } = listQuery;
   const { data: profile } = useNurseryProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
-
-  const pending = reservations.filter((r) => r.status === 'pending');
-  const responded = reservations.filter((r) => r.status !== 'pending');
 
   return (
     <View style={styles.container}>
@@ -97,35 +97,40 @@ export function NurseryReservationsScreen({ navigation }: any) {
         onBack={navigation?.canGoBack?.() ? () => navigation.goBack() : undefined}
       />
 
+      <View style={styles.tabRow}>
+        {(['pending', 'responded'] as const).map((t) => (
+          <TouchableOpacity key={t} onPress={() => setTab(t)} style={[styles.tabChip, tab === t && styles.tabChipActive]}>
+            <Text style={[styles.tabChipText, tab === t && styles.tabChipTextActive]}>{t === 'pending' ? 'Pending' : 'History'}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       {isLoading ? (
         <ActivityIndicator color={COLORS.sage} style={{ marginTop: 20 }} />
-      ) : reservations.length === 0 ? (
-        <EmptyState icon="🌱" title="No requests yet" body="When planters request saplings from your stock, they'll show up here." />
       ) : (
-        <ScrollView
+        <FlatList
+          data={reservations}
+          keyExtractor={(r) => r.id}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
-          {...infiniteScrollProps(listQuery)}
+          onEndReachedThreshold={0.5}
+          onEndReached={() => {
+            if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) listQuery.fetchNextPage();
+          }}
+          initialNumToRender={8}
+          windowSize={7}
+          removeClippedSubviews
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
-        >
-          {pending.length > 0 && (
-            <>
-              <Text style={styles.sectionTitle}>Pending ({pending.length})</Text>
-              {pending.map((r) => (
-                <ReservationRow key={r.id} item={r} showActions guard={guard} />
-              ))}
-            </>
-          )}
-          {responded.length > 0 && (
-            <>
-              <Text style={styles.sectionTitle}>History</Text>
-              {responded.map((r) => (
-                <ReservationRow key={r.id} item={r} showActions={false} guard={guard} />
-              ))}
-            </>
-          )}
-          <PageFooter loading={listQuery.isFetchingNextPage} />
-        </ScrollView>
+          ListEmptyComponent={
+            <EmptyState
+              icon="🌱"
+              title={tab === 'pending' ? 'No pending requests' : 'No history yet'}
+              body={tab === 'pending' ? "When planters request saplings from your stock, they'll show up here." : 'Requests you have fulfilled or declined will appear here.'}
+            />
+          }
+          ListFooterComponent={<PageFooter loading={listQuery.isFetchingNextPage} />}
+          renderItem={({ item }) => <ReservationRow item={item} showActions={tab === 'pending'} guard={guard} />}
+        />
       )}
 
       <StatusModal {...statusModalProps} />
@@ -136,6 +141,11 @@ export function NurseryReservationsScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   list: { paddingHorizontal: SPACING.md, paddingTop: SPACING.sm },
+  tabRow: { flexDirection: 'row', gap: 8, paddingHorizontal: SPACING.md, paddingTop: 4, paddingBottom: 4 },
+  tabChip: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.warmBrown },
+  tabChipActive: { backgroundColor: COLORS.forest, borderColor: COLORS.forest },
+  tabChipText: { fontSize: 13, fontWeight: '700', color: COLORS.textSecondary },
+  tabChipTextActive: { color: COLORS.white },
   sectionTitle: { fontSize: 13, fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4, marginTop: 16, marginBottom: 8 },
   row: {
     borderRadius: RADIUS.md,

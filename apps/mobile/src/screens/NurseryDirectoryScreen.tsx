@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Image, RefreshControl } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Image, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,7 +13,6 @@ import { useMyLocation } from '../hooks/useMyLocation';
 import { resolveMediaUrl } from '../api/client';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PageFooter } from '../components/common/PageFooter';
-import { infiniteScrollProps } from '../hooks/useInfiniteList';
 
 import { TEXT } from '../constants/typography';
 export function NurseryDirectoryScreen({ navigation }: any) {
@@ -63,50 +62,51 @@ export function NurseryDirectoryScreen({ navigation }: any) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
+      <FlatList
+        data={nurseries}
+        keyExtractor={(n) => n.id}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
-        {...infiniteScrollProps(listQuery)}
+        keyboardShouldPersistTaps="handled"
+        onEndReachedThreshold={0.5}
+        onEndReached={() => {
+          if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) listQuery.fetchNextPage();
+        }}
+        initialNumToRender={10}
+        windowSize={7}
+        removeClippedSubviews
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.sage} colors={[COLORS.sage]} />}
-      >
-        {isLoading && <ActivityIndicator color={COLORS.sage} style={styles.loader} />}
-        {!isLoading && nurseries.length === 0 && (
-          <EmptyState icon="🌱" title="No nurseries found" body="Try a different search term." />
-        )}
-        {nurseries.length > 0 && (
+        ListHeaderComponent={isLoading ? <ActivityIndicator color={COLORS.sage} style={styles.loader} /> : null}
+        ListEmptyComponent={isLoading ? null : <EmptyState icon="🌱" title="No nurseries found" body="Try a different search term." />}
+        ListFooterComponent={<PageFooter loading={listQuery.isFetchingNextPage} />}
+        renderItem={({ item: nursery }) => (
           <BorderCard noPadding style={styles.groupedCard}>
-            {nurseries.map((nursery, i) => (
-              <React.Fragment key={nursery.id}>
-                {i > 0 && <View style={styles.rowDivider} />}
-                <TouchableOpacity onPress={() => navigation.navigate('NurseryPublicProfile', { nurseryId: nursery.id })} activeOpacity={0.85} style={styles.row}>
-                  <View style={styles.cardRow}>
-                    {nursery.logoUrl ? (
-                      <Image source={{ uri: resolveMediaUrl(nursery.logoUrl) }} style={styles.logo} />
-                    ) : (
-                      <View style={styles.logoPlaceholder}><Text style={{ fontSize: 20 }}>🌿</Text></View>
+            <TouchableOpacity onPress={() => navigation.navigate('NurseryPublicProfile', { nurseryId: nursery.id })} activeOpacity={0.85} style={styles.row}>
+              <View style={styles.cardRow}>
+                {nursery.logoUrl ? (
+                  <Image source={{ uri: resolveMediaUrl(nursery.logoUrl) }} style={styles.logo} />
+                ) : (
+                  <View style={styles.logoPlaceholder}><Text style={{ fontSize: 20 }}>🌿</Text></View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>{nursery.nurseryName}</Text>
+                  <View style={styles.badgeRow}>
+                    {nursery.city ? <Text style={styles.cardMeta}>📍 {nursery.city}</Text> : null}
+                    {nursery.distanceKm != null && (
+                      <Text style={styles.cardMeta}>{nursery.distanceKm.toFixed(1)} km away</Text>
                     )}
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.cardTitle}>{nursery.nurseryName}</Text>
-                      <View style={styles.badgeRow}>
-                        {nursery.city ? <Text style={styles.cardMeta}>📍 {nursery.city}</Text> : null}
-                        {nursery.distanceKm != null && (
-                          <Text style={styles.cardMeta}>{nursery.distanceKm.toFixed(1)} km away</Text>
-                        )}
-                        {nursery.reviewCount > 0 && (
-                          <Text style={styles.cardMeta}>★ {Number(nursery.avgRating).toFixed(1)} ({nursery.reviewCount})</Text>
-                        )}
-                        {nursery.offersDelivery && <Text style={styles.cardMeta}>🚚 Delivers</Text>}
-                      </View>
-                      <Text style={styles.cardBody} numberOfLines={2}>{nursery.description}</Text>
-                    </View>
+                    {nursery.reviewCount > 0 && (
+                      <Text style={styles.cardMeta}>★ {Number(nursery.avgRating).toFixed(1)} ({nursery.reviewCount})</Text>
+                    )}
+                    {nursery.offersDelivery && <Text style={styles.cardMeta}>🚚 Delivers</Text>}
                   </View>
-                </TouchableOpacity>
-              </React.Fragment>
-            ))}
+                  <Text style={styles.cardBody} numberOfLines={2}>{nursery.description}</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
           </BorderCard>
         )}
-        <PageFooter loading={listQuery.isFetchingNextPage} />
-      </ScrollView>
+      />
     </View>
   );
 }

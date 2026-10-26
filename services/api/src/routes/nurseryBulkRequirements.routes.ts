@@ -2,10 +2,12 @@ import { FastifyInstance } from 'fastify';
 import * as bulkRequirementService from '../services/bulkRequirement.service';
 import { respondToBulkRequirementSchema } from '../schemas/bulkRequirement.schema';
 import { BadRequestError } from '../utils/errors';
+import { invalidateNurseryCacheOnWrite } from '../utils/nurseryCacheHook';
 
 // Nursery side of section 10 — see ngoBulkRequirements.routes.ts for the NGO side.
 export default async function nurseryBulkRequirementsRoutes(fastify: FastifyInstance) {
   fastify.addHook('preHandler', fastify.requireRole('nursery'));
+  invalidateNurseryCacheOnWrite(fastify);
 
   fastify.get<{ Querystring: bulkRequirementService.NurseryRequirementQuery }>('/', async (request, reply) => {
     reply.send(await bulkRequirementService.listRelevantForNursery(fastify.prisma, request.user!.id, request.query));

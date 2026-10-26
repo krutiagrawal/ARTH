@@ -49,11 +49,14 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
   const readyForPickupMutation = useReadyForPickupOrder();
   const pickedUpMutation = usePickedUpOrder();
   const cancelMutation = useCancelNurseryOrder();
-  const { data: deliveryPartners } = useDeliveryPartners();
 
   const [code, setCode] = useState('');
   const [actionError, setActionError] = useState('');
   const [pickerVisible, setPickerVisible] = useState(false);
+  // Active riders only, filtered on the server and loaded a page at a time, and only fetched once
+  // the picker is opened - so a roster of hundreds never sits in memory for every order screen.
+  const partnersQuery = useDeliveryPartners({ status: 'active' }, pickerVisible);
+  const deliveryPartners = partnersQuery.data;
   const [pickerMode, setPickerMode] = useState<'assign' | 'reassign'>('assign');
   const { data: profile } = useNurseryProfile();
   const { guard, statusModalProps } = useApprovalGate(profile?.status, 'nursery', profile?.rejectionReason);
@@ -335,13 +338,14 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
         title={pickerMode === 'reassign' ? 'Choose a delivery partner' : 'Assign a delivery partner'}
         scrollable
       >
-        {(deliveryPartners ?? []).filter((p) => p.isActive).length === 0 ? (
+        {partnersQuery.isLoading ? (
+          <ActivityIndicator color={COLORS.sage} style={{ marginVertical: 16 }} />
+        ) : (deliveryPartners ?? []).length === 0 ? (
           <Text style={styles.emptyPartnersText}>
             No active delivery partners yet – add one from the Delivery Partners screen first.
           </Text>
         ) : (
           (deliveryPartners ?? [])
-            .filter((p) => p.isActive)
             .map((partner) => (
               <TouchableOpacity
                 key={partner.id}
@@ -365,6 +369,11 @@ export function NurseryOrderDetailScreen({ route, navigation }: any) {
                 </View>
               </TouchableOpacity>
             ))
+        )}
+        {partnersQuery.hasNextPage && (
+          <TouchableOpacity onPress={() => partnersQuery.fetchNextPage()} disabled={partnersQuery.isFetchingNextPage} style={{ alignItems: 'center', paddingVertical: 12 }}>
+            <Text style={styles.partnerName}>{partnersQuery.isFetchingNextPage ? 'Loading…' : 'Load more riders'}</Text>
+          </TouchableOpacity>
         )}
       </Sheet>
 

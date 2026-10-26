@@ -151,7 +151,10 @@ export function GroupProfileScreen({ route, navigation }: any) {
               <ProfileHeader
                 avatarEmoji={avatarEmoji ?? '🌳'}
                 xpProgress={xpProgress ? { progress: xpProgress.progress, level: ownStats.data?.level ?? 1 } : null}
-                storyRing={!isOwn && effectiveGroupId ? ringStatus.data?.groups[effectiveGroupId] : null}
+                // The ring itself is hidden on your own group (the XP ring takes that space), but the
+                // status is still needed so tapping the avatar opens its story.
+                storyRing={effectiveGroupId ? ringStatus.data?.groups[effectiveGroupId] : null}
+                storyAuthor={effectiveGroupId ? { kind: 'group', id: effectiveGroupId, name, avatarEmoji: avatarEmoji ?? '🌳' } : null}
                 name={name}
                 handle={handle}
                 bio={bio}

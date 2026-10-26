@@ -7,6 +7,19 @@ import { startOfUtcDay, addDays } from './streak.service';
 import { geocodeAddress } from '../utils/geocode';
 import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
 import { getNurseryImpactTotals } from './treeImpact.service';
+import { cached, invalidatePrefix, nurseryKey, nurseryPrefix } from '../utils/ttlCache';
+
+// Short TTLs: these aggregates are polled by the app, so a few seconds of caching removes nearly
+// all the repeat load while staying effectively live. Writes that change them invalidate the whole
+// nursery's prefix (see invalidateNurseryCache) so the owner sees their own edits immediately.
+const STATS_TTL_MS = 10_000;
+const IMPACT_TTL_MS = 30_000;
+
+/** Drops every cached aggregate for a nursery – call after anything that changes stock, orders,
+ * reservations or supply numbers. */
+export function invalidateNurseryCache(nurseryId: string) {
+  invalidatePrefix(nurseryPrefix(nurseryId));
+}
 
 interface UpdateProfileInput {
   nurseryName?: string;
@@ -94,15 +107,18 @@ export async function updateOwnProfile(prisma: PrismaClient, userId: string, inp
     geocodedLng = result.lng;
   }
 
-  // Delivery-partner tracking (and the old mock-route simulation before it) both need a real
-  // origin point — only enforced at the moment delivery is actually being turned on, not on every
-  // unrelated profile edit, so a nursery that enabled delivery before this check existed can still
-  // save other changes without being blocked until they happen to touch this toggle again.
-  if (input.offersDelivery === true) {
+  // Pickup needs somewhere to collect from and delivery needs an origin point (partner tracking),
+  // so either one being on requires a real address with a resolved location. Only enforced when
+  // the request touches the toggles or the address, not on every unrelated profile edit, so a
+  // nursery that predates this check can still save other changes.
+  const touchesFulfilment =
+    input.offersPickup === true || input.offersDelivery === true || input.line1 !== undefined || input.lat != null || input.lng != null;
+  if ((nextOffersPickup || nextOffersDelivery) && touchesFulfilment) {
+    const nextLine1 = (input.line1 ?? profile.line1 ?? '').trim();
     const nextLat = input.lat ?? geocodedLat ?? profile.lat;
     const nextLng = input.lng ?? geocodedLng ?? profile.lng;
-    if (nextLat == null || nextLng == null) {
-      throw new BadRequestError('Set your nursery location before enabling delivery');
+    if (!nextLine1 || nextLat == null || nextLng == null) {
+      throw new BadRequestError('Add a valid nursery address before offering pickup or delivery');
     }
   }
 
@@ -218,12 +234,17 @@ export async function requireApprovedNurseryProfile(prisma: PrismaClient, userId
 
 export async function getOwnStats(prisma: PrismaClient, userId: string) {
   const profile = await getOwnProfile(prisma, userId);
-  const stock = await prisma.saplingStock.findMany({ where: { nurseryId: profile.id } });
+  // Counted/summed in SQL (all rows, archived included, as before) instead of loading every row.
+  const totals = await cached(nurseryKey(profile.id, 'stockTotals'), STATS_TTL_MS, async () => {
+    const [agg, free] = await Promise.all([
+      prisma.saplingStock.aggregate({ where: { nurseryId: profile.id }, _count: { _all: true }, _sum: { quantity: true } }),
+      prisma.saplingStock.count({ where: { nurseryId: profile.id, isFree: true } }),
+    ]);
+    return { speciesCount: agg._count._all, totalQuantity: agg._sum.quantity ?? 0, freeSpeciesCount: free };
+  });
 
   return {
-    speciesCount: stock.length,
-    totalQuantity: stock.reduce((sum, s) => sum + s.quantity, 0),
-    freeSpeciesCount: stock.filter((s) => s.isFree).length,
+    ...totals,
     trustScore: profile.trustScore,
     growthLevel: profile.growthLevel,
     badgesCount: profile.badgesCount,
@@ -264,7 +285,10 @@ export async function listStock(prisma: PrismaClient, userId: string, filter: St
         : filter.availability === 'low_stock'
           ? Prisma.sql`quantity > 0 AND quantity <= low_stock_threshold`
           : Prisma.sql`quantity > low_stock_threshold`;
-    const matches = await prisma.$queryRaw<{ id: string }[]>(Prisma.sql`SELECT id FROM sapling_stock WHERE nursery_id = ${profile.id} AND ${cond}`);
+    const archivedCond = filter.archived ? Prisma.sql`archived_at IS NOT NULL` : Prisma.sql`archived_at IS NULL`;
+    const matches = await prisma.$queryRaw<{ id: string }[]>(
+      Prisma.sql`SELECT id FROM sapling_stock WHERE nursery_id = ${profile.id} AND ${archivedCond} AND ${cond}`,
+    );
     availabilityIds = matches.map((m) => m.id);
   }
 
@@ -338,6 +362,7 @@ export async function createStock(prisma: PrismaClient, userId: string, input: S
     await recordNurseryContribution(tx, profile.id, ['inventory_freshness', 'arth_contribution']);
     await evaluateNurseryAchievements(tx, profile.id);
     await recomputeReputation(tx, profile.id);
+    invalidateNurseryCache(profile.id);
     return withAvailability(item);
   });
 }
@@ -352,6 +377,10 @@ export async function createStock(prisma: PrismaClient, userId: string, input: S
  */
 export async function alertOnStockBandChange(prisma: PrismaClient, stockId: string, quantityBefore: number) {
   try {
+    // Every caller has just changed this item's quantity outside the inventory screen.
+    const owner = await prisma.saplingStock.findUnique({ where: { id: stockId }, select: { nurseryId: true } });
+    if (owner) invalidateNurseryCache(owner.nurseryId);
+
     const stock = await prisma.saplingStock.findUnique({
       where: { id: stockId },
       include: { nursery: { select: { userId: true } } },
@@ -425,6 +454,7 @@ export async function updateStock(prisma: PrismaClient, userId: string, stockId:
 
     return { updated, wishlisterIds, stockAlert };
   });
+  invalidateNurseryCache(profile.id);
 
   for (const wishlisterId of wishlisterIds) {
     await notify(prisma, {
@@ -479,13 +509,33 @@ export async function deleteStock(prisma: PrismaClient, userId: string, stockId:
   const profile = await getOwnProfile(prisma, userId);
   const result = await prisma.saplingStock.deleteMany({ where: { id: stockId, nurseryId: profile.id } });
   if (result.count === 0) throw new NotFoundError('Stock item not found');
+  invalidateNurseryCache(profile.id);
+}
+
+/** Distinct species names across this nursery's stock - feeds filter dropdowns (e.g. Reports)
+ * without the client having to page through the whole catalogue to build the list. */
+export async function listStockSpeciesOptions(prisma: PrismaClient, userId: string) {
+  const profile = await getOwnProfile(prisma, userId);
+  return cached(nurseryKey(profile.id, 'speciesOptions'), 60_000, async () => {
+    const rows = await prisma.saplingStock.findMany({
+      where: { nurseryId: profile.id },
+      select: { species: true },
+      distinct: ['species'],
+      orderBy: { species: 'asc' },
+      take: 500,
+    });
+    return rows.map((r) => r.species);
+  });
 }
 
 // ---------- Reputation (contribution streaks, Growth Level, ARTH Trust Score) ----------
 
 export async function getOwnReputationSummary(prisma: PrismaClient, userId: string, weeksCount = 12) {
   const profile = await getOwnProfile(prisma, userId);
-  return getReputationSummary(prisma, profile.id, weeksCount);
+  // Counts over orders/streaks/units per call; a short cache absorbs the app's polling.
+  return cached(nurseryKey(profile.id, 'reputation', String(weeksCount)), IMPACT_TTL_MS, () =>
+    getReputationSummary(prisma, profile.id, weeksCount),
+  );
 }
 
 // ---------- Badges ----------
@@ -523,7 +573,11 @@ export async function listReservations(prisma: PrismaClient, userId: string, sta
   const profile = await getOwnProfile(prisma, userId);
   const { take, args } = cursorArgs(q);
   const rows = await prisma.saplingReservation.findMany({
-    where: { nurseryId: profile.id, ...(status ? { status: status as any } : {}) },
+    where: {
+      nurseryId: profile.id,
+      // `responded` = everything that is no longer pending (the app's History tab).
+      ...(status === 'responded' ? { status: { not: 'pending' as const } } : status ? { status: status as any } : {}),
+    },
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     include: { stock: { select: { species: true } }, user: { select: { id: true, name: true, avatarEmoji: true } } },
     ...args,
@@ -647,11 +701,38 @@ export async function getStockLedger(prisma: PrismaClient, userId: string, page 
   });
 }
 
+/** Cursor-paged ledger (the web dashboard still uses the offset form above). `direction` narrows to
+ * additions (`in`, delta > 0) or removals (`out`, delta < 0) so the analytics sheets don't have to
+ * filter a partial page client-side. */
+export async function listStockLedger(
+  prisma: PrismaClient,
+  userId: string,
+  q: CursorQuery & { reasons?: string[]; direction?: 'in' | 'out' } = {},
+) {
+  const profile = await getOwnProfile(prisma, userId);
+  const { take, args } = cursorArgs(q, 30);
+  const wanted = (q.reasons ?? []).filter((r): r is (typeof LEDGER_REASONS)[number] => (LEDGER_REASONS as readonly string[]).includes(r));
+  const rows = await prisma.saplingStockLedger.findMany({
+    where: {
+      nurseryId: profile.id,
+      ...(wanted.length > 0 ? { reason: { in: wanted } } : {}),
+      ...(q.direction === 'in' ? { delta: { gt: 0 } } : q.direction === 'out' ? { delta: { lt: 0 } } : {}),
+    },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    ...args,
+  });
+  return toCursorPage(rows, take);
+}
+
 // ---------- Dashboard (section 1) ----------
 // Purpose-built aggregation, not a bolt-on to getOwnStats above — the dashboard needs
 // order-status counts and ArthSaplingUnit/BulkRequirement joins getOwnStats doesn't touch.
 export async function getDashboardSummary(prisma: PrismaClient, userId: string) {
   const profile = await getOwnProfile(prisma, userId);
+  return cached(nurseryKey(profile.id, 'dashboard'), STATS_TTL_MS, () => computeDashboardSummary(prisma, userId, profile));
+}
+
+async function computeDashboardSummary(prisma: PrismaClient, userId: string, profile: Awaited<ReturnType<typeof getOwnProfile>>) {
   const todayStart = startOfUtcDay(new Date());
 
   const [
@@ -670,7 +751,12 @@ export async function getDashboardSummary(prisma: PrismaClient, userId: string) 
     prisma.order.count({ where: { nurseryId: profile.id, status: 'confirmed' } }),
     prisma.order.count({ where: { nurseryId: profile.id, status: 'ready_for_pickup' } }),
     prisma.order.count({ where: { nurseryId: profile.id, status: 'out_for_delivery' } }),
-    prisma.saplingStock.findMany({ where: { nurseryId: profile.id } }),
+    // Only the rows that actually need attention, filtered in SQL, not the whole catalogue.
+    prisma.$queryRaw<{ id: string; species: string; quantity: number; low_stock_threshold: number }[]>(
+      Prisma.sql`SELECT id, species, quantity, low_stock_threshold FROM sapling_stock
+        WHERE nursery_id = ${profile.id} AND archived_at IS NULL AND quantity <= low_stock_threshold
+        ORDER BY quantity ASC, species ASC LIMIT 50`,
+    ),
     prisma.arthSaplingUnit.count({ where: { nurseryId: profile.id, status: { in: ['collected', 'planted'] } } }),
     prisma.tree.count({ where: { nurseryId: profile.id, aiVerificationStatus: 'verified' } }),
     prisma.order.aggregate({
@@ -708,7 +794,7 @@ export async function getDashboardSummary(prisma: PrismaClient, userId: string) 
     }),
   ]);
 
-  const lowStock = lowStockRows.map(withAvailability).filter((r) => r.availabilityStatus !== 'available');
+  const lowStock = lowStockRows.map((r) => withAvailability({ id: r.id, species: r.species, quantity: r.quantity, lowStockThreshold: r.low_stock_threshold }));
 
   return {
     ordersToday,
@@ -737,38 +823,40 @@ export async function getDashboardSummary(prisma: PrismaClient, userId: string) 
 // ---------- Impact (section 7) ----------
 export async function getImpact(prisma: PrismaClient, userId: string) {
   const profile = await getOwnProfile(prisma, userId);
+  return cached(nurseryKey(profile.id, 'impact'), IMPACT_TTL_MS, () => computeImpact(prisma, profile.id));
+}
 
-  const [treesGrowingThroughYou, plantedUnits, speciesCount, impactTotals, fulfilledResponses, sixMonthUnits] = await Promise.all([
-    prisma.tree.count({ where: { nurseryId: profile.id, aiVerificationStatus: 'verified' } }),
-    prisma.arthSaplingUnit.findMany({
-      where: { nurseryId: profile.id, status: 'planted' },
-      include: { tree: { select: { aiVerificationStatus: true } } },
-    }),
-    prisma.saplingStock.count({ where: { nurseryId: profile.id } }),
-    getNurseryImpactTotals(prisma, profile.id),
-    prisma.bulkRequirementResponse.findMany({
-      where: { nurseryId: profile.id, status: 'fulfilled' },
-      include: { requirement: { select: { ngoId: true, driveId: true } } },
-    }),
-    prisma.arthSaplingUnit.findMany({
-      where: { nurseryId: profile.id, supplyDate: { gte: addDays(startOfUtcDay(new Date()), -180) } },
-      select: { supplyDate: true },
-    }),
+// Everything below is counted/grouped in SQL; nothing loads a row per sapling, order or response.
+async function computeImpact(prisma: PrismaClient, nurseryId: string) {
+  const since = addDays(startOfUtcDay(new Date()), -180);
+
+  const [treesGrowingThroughYou, plantedCount, verifiedPlantedCount, speciesCount, impactTotals, drivesRow, trendRows] = await Promise.all([
+    prisma.tree.count({ where: { nurseryId, aiVerificationStatus: 'verified' } }),
+    prisma.arthSaplingUnit.count({ where: { nurseryId, status: 'planted' } }),
+    prisma.arthSaplingUnit.count({ where: { nurseryId, status: 'planted', tree: { aiVerificationStatus: 'verified' } } }),
+    prisma.saplingStock.count({ where: { nurseryId } }),
+    getNurseryImpactTotals(prisma, nurseryId),
+    prisma.$queryRaw<{ n: bigint }[]>(
+      Prisma.sql`SELECT COUNT(DISTINCT r.drive_id) AS n
+        FROM bulk_requirement_responses resp
+        JOIN bulk_requirements r ON r.id = resp.requirement_id
+        WHERE resp.nursery_id = ${nurseryId} AND resp.status = 'fulfilled' AND r.drive_id IS NOT NULL`,
+    ),
+    prisma.$queryRaw<{ month: string; n: bigint }[]>(
+      Prisma.sql`SELECT to_char(supply_date, 'YYYY-MM') AS month, COUNT(*) AS n
+        FROM arth_sapling_units
+        WHERE nursery_id = ${nurseryId} AND supply_date >= ${since}
+        GROUP BY 1 ORDER BY 1`,
+    ),
   ]);
 
-  const verifiedPlantedUnits = plantedUnits.filter((u) => u.tree?.aiVerificationStatus === 'verified').length;
-  const verificationPercentage = plantedUnits.length > 0 ? Math.round((verifiedPlantedUnits / plantedUnits.length) * 100) : 0;
-  const ngoDrivesSupported = new Set(fulfilledResponses.map((r) => r.requirement.driveId).filter(Boolean)).size;
-
-  const monthlyTrend = new Map<string, number>();
-  for (const unit of sixMonthUnits) {
-    const key = unit.supplyDate.toISOString().slice(0, 7); // YYYY-MM
-    monthlyTrend.set(key, (monthlyTrend.get(key) ?? 0) + 1);
-  }
+  const verificationPercentage = plantedCount > 0 ? Math.round((verifiedPlantedCount / plantedCount) * 100) : 0;
+  const ngoDrivesSupported = Number(drivesRow[0]?.n ?? 0);
+  const monthlyTrend = new Map<string, number>(trendRows.map((r) => [r.month, Number(r.n)]));
 
   return {
     treesGrowingThroughYou,
-    totalSaplingsSupplied: plantedUnits.length,
+    totalSaplingsSupplied: plantedCount,
     verificationPercentage,
     speciesCount,
     ngoDrivesSupported,
@@ -824,23 +912,32 @@ export async function getStockAnalytics(prisma: PrismaClient, userId: string) {
 /** Header numbers for the stock list (non-archived), plus how many are archived. */
 export async function getStockSummary(prisma: PrismaClient, userId: string) {
   const profile = await getOwnProfile(prisma, userId);
-  const rows = await prisma.saplingStock.findMany({
-    where: { nurseryId: profile.id, archivedAt: null },
-    select: { quantity: true, lowStockThreshold: true },
+  return cached(nurseryKey(profile.id, 'stockSummary'), STATS_TTL_MS, async () => {
+    // One SQL pass; the availability bands mirror deriveAvailability above.
+    const [counts, archived] = await Promise.all([
+      prisma.$queryRaw<{ total: bigint; available: bigint; low: bigint; out: bigint; saplings: bigint | null }[]>(
+        Prisma.sql`SELECT COUNT(*) AS total,
+            COUNT(*) FILTER (WHERE quantity > low_stock_threshold) AS available,
+            COUNT(*) FILTER (WHERE quantity > 0 AND quantity <= low_stock_threshold) AS low,
+            COUNT(*) FILTER (WHERE quantity <= 0) AS out,
+            COALESCE(SUM(GREATEST(quantity, 0)), 0) AS saplings
+          FROM sapling_stock WHERE nursery_id = ${profile.id} AND archived_at IS NULL`,
+      ),
+      prisma.saplingStock.count({ where: { nurseryId: profile.id, archivedAt: { not: null } } }),
+    ]);
+    const c = counts[0];
+    const low = Number(c?.low ?? 0);
+    const out = Number(c?.out ?? 0);
+    return {
+      total: Number(c?.total ?? 0),
+      available: Number(c?.available ?? 0),
+      low_stock: low,
+      out_of_stock: out,
+      saplings: Number(c?.saplings ?? 0),
+      archived,
+      needsAttention: low + out,
+    };
   });
-  const archived = await prisma.saplingStock.count({ where: { nurseryId: profile.id, archivedAt: { not: null } } });
-  let available = 0;
-  let low = 0;
-  let out = 0;
-  let saplings = 0;
-  for (const r of rows) {
-    saplings += Math.max(r.quantity, 0);
-    const a = deriveAvailability(r.quantity, r.lowStockThreshold);
-    if (a === 'available') available += 1;
-    else if (a === 'low_stock') low += 1;
-    else out += 1;
-  }
-  return { total: rows.length, available, low_stock: low, out_of_stock: out, saplings, archived, needsAttention: low + out };
 }
 
 export async function setStockArchived(prisma: PrismaClient, userId: string, stockId: string, archived: boolean) {
@@ -850,12 +947,14 @@ export async function setStockArchived(prisma: PrismaClient, userId: string, sto
     data: { archivedAt: archived ? new Date() : null },
   });
   if (result.count === 0) throw new NotFoundError('Stock item not found');
+  invalidateNurseryCache(profile.id);
   return { id: stockId, archived };
 }
 
 export async function exportStock(prisma: PrismaClient, userId: string) {
   const profile = await getOwnProfile(prisma, userId);
-  const items = await prisma.saplingStock.findMany({ where: { nurseryId: profile.id }, orderBy: { species: 'asc' } });
+  // Hard cap so one huge catalogue can't pull an unbounded result into memory for the CSV.
+  const items = await prisma.saplingStock.findMany({ where: { nurseryId: profile.id }, orderBy: { species: 'asc' }, take: 10000 });
   return items.map((i) => ({
     species: i.species,
     quantity: i.quantity,

@@ -55,6 +55,7 @@ export async function listFollowedNurseries(prisma: PrismaClient, userId: string
   const follows = await prisma.follow.findMany({
     where: { followerId: userId, nurseryId: { not: null } },
     orderBy: { createdAt: 'desc' },
+    take: 200,
     include: { nursery: { select: { id: true, nurseryName: true, logoUrl: true, city: true } } },
   });
   return follows.map((f) => ({ ...f.nursery, followStatus: f.status }));

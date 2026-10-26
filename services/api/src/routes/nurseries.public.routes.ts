@@ -5,6 +5,7 @@ import { createReservationSchema, nurseryBrowseQuerySchema } from '../schemas/nu
 import * as nurseryFollowService from '../services/nurseryFollow.service';
 import { getPublicBadges } from '../services/nursery.service';
 import { BadRequestError } from '../utils/errors';
+import { listActiveNurseryStories } from '../services/story.service';
 
 interface NurseryLeaderboardRow {
   id: string;
@@ -79,6 +80,11 @@ export default async function nurseriesPublicRoutes(fastify: FastifyInstance) {
       reply.send(await nurseryPublicService.getPublicNurseryProfile(fastify.prisma, request.params.id, request.user?.id));
     },
   );
+
+  // Active stories for this nursery's profile - mirrors GET /api/ngos/:id/stories.
+  fastify.get<{ Params: { id: string } }>('/:id/stories', async (request, reply) => {
+    reply.send(await listActiveNurseryStories(fastify.prisma, request.params.id));
+  });
 
   fastify.get<{ Params: { id: string } }>('/:id/achievements', async (request, reply) => {
     reply.send(await getPublicBadges(fastify.prisma, request.params.id));

@@ -1002,6 +1002,8 @@ export async function exportNurseryOrders(prisma: PrismaClient, nurseryId: strin
   const orders = await prisma.order.findMany({
     where: { nurseryId },
     orderBy: { createdAt: 'desc' },
+    // Hard cap so a very large order history can't be pulled into memory for one CSV.
+    take: 10000,
     include: { items: true, address: true, user: { select: { name: true, handle: true } } },
   });
   return orders.map((o) => ({

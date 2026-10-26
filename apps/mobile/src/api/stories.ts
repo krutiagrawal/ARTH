@@ -61,6 +61,14 @@ export async function fetchNgoStories(ngoId: string): Promise<ApiStory[]> {
   return apiFetch<ApiStory[]>(`/api/ngos/${ngoId}/stories`);
 }
 
+export async function fetchNurseryStories(nurseryId: string): Promise<ApiStory[]> {
+  return apiFetch<ApiStory[]>(`/api/nurseries/${nurseryId}/stories`);
+}
+
+export async function fetchGroupStories(groupId: string): Promise<ApiStory[]> {
+  return apiFetch<ApiStory[]>(`/api/groups/${groupId}/stories`);
+}
+
 export async function postStory(input: {
   imageBase64: string;
   caption?: string;

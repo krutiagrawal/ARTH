@@ -93,6 +93,8 @@ export default async function treesRoutes(fastify: FastifyInstance) {
         ...(request.query.nurseryId ? { nurseryId: request.query.nurseryId } : {}),
       },
       include: { species: true, user: { select: { id: true, name: true, handle: true, avatarEmoji: true } } },
+      // Capped, and newest first so the cap is deterministic rather than whatever order the DB returns.
+      orderBy: { plantedAt: 'desc' },
       take: 500,
     });
 

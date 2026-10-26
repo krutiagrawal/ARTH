@@ -6,7 +6,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
-import { totalPageParams, mergePages, totalInfinite, pageParams, flatItems, LIST_STALE_MS } from './useInfiniteList';
+import { totalPageParams, mergePages, totalInfinite, pageParams, flatItems, LIST_STALE_MS, MAX_CACHED_PAGES } from './useInfiniteList';
 import type { ApiFollowersPage } from '../api/ngoFollowers';
 import {
   createPost,
@@ -464,6 +464,8 @@ export function useNotifications() {
     enabled: isAuthenticated,
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
+    // Same bounds as every other list: only the newest pages stay in memory / get re-requested.
+    maxPages: MAX_CACHED_PAGES,
   });
 }
 

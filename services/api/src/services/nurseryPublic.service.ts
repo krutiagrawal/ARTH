@@ -116,7 +116,9 @@ async function assembleNurseryProfile(prisma: PrismaClient, nursery: { id: strin
   const [allStock, followersCount, follow, recentPosts] = await Promise.all([
     // Stocked-out species stay on the profile (shown as "Stocked out") rather than vanishing, so a
     // buyer can still see what the nursery grows; they just sort below what's available.
-    prisma.saplingStock.findMany({ where: { nurseryId: nursery.id }, orderBy: { species: 'asc' } }),
+    // Embedded in the profile payload, so bounded: a catalogue of thousands must not ride along
+    // with every profile view. (The owner's own screen pages the full list through /nursery/stock.)
+    prisma.saplingStock.findMany({ where: { nurseryId: nursery.id }, orderBy: { species: 'asc' }, take: 200 }),
     prisma.follow.count({ where: { nurseryId: nursery.id, status: 'accepted' } }),
     viewerUserId
       ? prisma.follow.findUnique({

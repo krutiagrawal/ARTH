@@ -7,6 +7,7 @@ import { SPACING } from '../constants/theme';
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { PostCard } from '../components/social/PostCard';
 import { ReportSheet } from '../components/social/ReportSheet';
+import { PostCaptionSheet } from '../components/social/PostCaptionSheet';
 import {
   useDeletePost,
   useGroupPosts,
@@ -76,6 +77,7 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
   const toggleLike = useToggleLike();
   const deletePost = useDeletePost();
   const [reportTarget, setReportTarget] = useState<ApiPost | null>(null);
+  const [editTarget, setEditTarget] = useState<ApiPost | null>(null);
 
   const listRef = useRef<FlatList<ApiPost>>(null);
   const hasAppliedInitialScroll = useRef(false);
@@ -141,6 +143,7 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
           isTogglingLike={toggleLike.isPending && toggleLike.variables?.id === item.id}
           onPressLikes={(p) => navigation.navigate('PostLikes', { postId: p.id })}
           onDelete={item.isMine ? (p) => deletePost.mutate(p.id) : undefined}
+          onEdit={item.isMine ? (p) => setEditTarget(p) : undefined}
           onReport={!item.isMine ? () => setReportTarget(item) : undefined}
           enableShare={false}
           storyRing={authorRing}
@@ -148,7 +151,7 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
         />
       </View>
     ),
-    [toggleLike, deletePost, authorRing, authorKind, openAuthor],
+    [toggleLike, deletePost, authorRing, authorKind, openAuthor, navigation],
   );
 
   return (
@@ -183,6 +186,8 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
           }
         />
       )}
+
+      <PostCaptionSheet post={editTarget} onClose={() => setEditTarget(null)} />
 
       <ReportSheet
         visible={reportTarget !== null}

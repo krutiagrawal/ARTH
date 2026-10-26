@@ -49,6 +49,8 @@ interface PostCardProps {
   onReport?: (post: ApiPost) => void;
   onBlock?: (post: ApiPost) => void;
   onDelete?: (post: ApiPost) => void;
+  /** Own posts only: opens the caption editor (media can't be swapped once people have liked it). */
+  onEdit?: (post: ApiPost) => void;
   /** True while a like toggle for this exact post is in flight – see LikeButton. */
   isTogglingLike?: boolean;
   /** Set false to hide the Share menu option – e.g. the reduced-actions grid post detail view. */
@@ -67,6 +69,7 @@ export function PostCard({
   onReport,
   onBlock,
   onDelete,
+  onEdit,
   isTogglingLike = false,
   enableShare = true,
   storyRing,
@@ -112,6 +115,23 @@ export function PostCard({
     const options: ActionSheetOption[] = [];
 
     if (post.isMine) {
+      if (onEdit) {
+        options.push({
+          key: 'edit',
+          icon: '✏️',
+          label: 'Edit caption',
+          hint: 'Change the text – the photos stay as they are',
+          onPress: () => onEdit(post),
+        });
+      }
+      if (onPressLikes && post.likeCount > 0) {
+        options.push({
+          key: 'likes',
+          icon: '❤️',
+          label: `See who liked it (${post.likeCount})`,
+          onPress: () => onPressLikes(post),
+        });
+      }
       if (onDelete) {
         options.push({
           key: 'delete',
@@ -169,7 +189,7 @@ export function PostCard({
     }
 
     return options;
-  }, [post, onDelete, onReport, onBlock, enableShare]);
+  }, [post, onDelete, onEdit, onPressLikes, onReport, onBlock, enableShare]);
 
   const openMenu = useCallback(() => {
     selection();

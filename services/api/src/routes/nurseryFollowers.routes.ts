@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import * as followersService from '../services/nurseryFollowers.service';
 import { BadRequestError } from '../utils/errors';
+import { invalidateNurseryCacheOnWrite } from '../utils/nurseryCacheHook';
 
 const listQuerySchema = z.object({
   status: z.enum(['pending', 'accepted']).optional(),
@@ -13,6 +14,7 @@ const listQuerySchema = z.object({
 /** Nursery-only: the Followers list and the follow-request inbox. Mounted at /api/nursery/followers. */
 export default async function nurseryFollowersRoutes(fastify: FastifyInstance) {
   fastify.addHook('preHandler', fastify.requireRole('nursery'));
+  invalidateNurseryCacheOnWrite(fastify);
 
   fastify.get('/', async (request, reply) => {
     const parsed = listQuerySchema.safeParse(request.query);

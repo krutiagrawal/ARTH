@@ -193,10 +193,15 @@ export function NurserySaplingsTabContent({
   isLoading,
   onManageInventory,
   onSearchFocusScroll,
+  serverSearch,
 }: {
   isOwn: boolean;
   stock: ApiSaplingStock[];
   isLoading?: boolean;
+  /** Own profile: the list is paged and searched on the server, so the typed text is reported to
+   * the parent (which refetches) instead of filtering the loaded rows here, and a "Load more"
+   * button appears while more pages remain. */
+  serverSearch?: { query: string; onQueryChange: (q: string) => void; hasMore: boolean; loadingMore: boolean; onLoadMore: () => void };
   /** Own profile only – full add/edit/delete still lives on the dedicated inventory screen. */
   onManageInventory?: () => void;
   /** Called with this section's Y offset inside the parent ScrollView the moment the search
@@ -206,15 +211,20 @@ export function NurserySaplingsTabContent({
   onSearchFocusScroll?: (y: number) => void;
 }) {
   const sectionY = useRef(0);
-  const [query, setQuery] = useState('');
+  const [localQuery, setLocalQuery] = useState('');
+  const query = serverSearch ? serverSearch.query : localQuery;
+  const setQuery = serverSearch ? serverSearch.onQueryChange : setLocalQuery;
   const filtered = useMemo(() => {
+    if (serverSearch) return stock; // already filtered by the server
     const q = query.trim().toLowerCase();
     return q ? stock.filter((item) => item.species.toLowerCase().includes(q)) : stock;
-  }, [stock, query]);
+  }, [stock, query, serverSearch]);
 
-  if (isLoading) return <ActivityIndicator color={COLORS.sage} style={{ marginTop: 24 }} />;
+  if (isLoading && stock.length === 0) return <ActivityIndicator color={COLORS.sage} style={{ marginTop: 24 }} />;
 
-  if (stock.length === 0) {
+  // With server-side search an empty result must keep the search box (to clear it), so only a truly
+  // empty catalogue - no results and no search text - gets the empty state.
+  if (stock.length === 0 && !(serverSearch && query.trim())) {
     return (
       <EmptyState
         icon="🌱"
@@ -260,6 +270,11 @@ export function NurserySaplingsTabContent({
             </React.Fragment>
           ))}
         </BorderCard>
+      )}
+      {serverSearch?.hasMore && (
+        <TouchableOpacity onPress={serverSearch.onLoadMore} disabled={serverSearch.loadingMore} style={styles.manageLink}>
+          <Text style={styles.manageLinkText}>{serverSearch.loadingMore ? 'Loading…' : 'Load more saplings'}</Text>
+        </TouchableOpacity>
       )}
       {isOwn && onManageInventory && (
         <TouchableOpacity onPress={onManageInventory} style={styles.manageLink}>
