@@ -852,7 +852,7 @@ const styles = StyleSheet.create({
   },
   forestStats: {
     position: 'absolute',
-    bottom: -4,
+    bottom: 8,
     left: 20,
     right: 20,
     borderRadius: RADIUS.lg,
