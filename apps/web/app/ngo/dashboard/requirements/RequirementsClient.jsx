@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { ClipboardList, MapPin, CalendarDays, Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'

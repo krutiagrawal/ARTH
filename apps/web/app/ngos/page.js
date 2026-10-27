@@ -11,6 +11,8 @@ export const metadata = {
 
 const PAGE_SIZE = 18
 
+export const dynamic = 'force-dynamic'
+
 export default async function NgosPage({ searchParams }) {
   const { q, city, page: pageParam } = await searchParams
   const page = Math.max(Number.parseInt(pageParam, 10) || 1, 1)
