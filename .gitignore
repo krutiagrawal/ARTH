@@ -50,3 +50,8 @@ Thumbs.db
 apps/web/test-results/
 apps/web/playwright-report/
 apps/web/playwright/.cache/
+
+# Stale per-workspace lockfiles (root package-lock.json is the source of truth)
+apps/web/package-lock.json
+services/api/package-lock.json
+.expo/

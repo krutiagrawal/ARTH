@@ -1,0 +1,57 @@
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run build:db
+      - run: npm run build --workspace=services/api
+      - name: Build web
+        run: npm run build --workspace=apps/web
+        env:
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci
+          API_URL: http://127.0.0.1:4000
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+
+      - name: Package release
+        run: |
+          rm -rf apps/web/.next/cache
+          tar -czf release.tar.gz \
+            deploy package.json package-lock.json \
+            apps/mobile/package.json \
+            packages/db/package.json packages/db/tsconfig.json packages/db/prisma packages/db/dist \
+            services/api/package.json services/api/tsconfig.json services/api/dist services/api/public services/api/scripts services/api/src \
+            apps/web/package.json apps/web/next.config.js apps/web/.next $(test -d apps/web/public && echo apps/web/public)
+
+      - name: Configure SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Upload and release
+        run: |
+          SSH="ssh -i ~/.ssh/id_deploy ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
+          scp -i ~/.ssh/id_deploy release.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/srv/arth/releases/${{ github.sha }}.tar.gz
+          # release.sh lives inside the tarball; extract just it first so the script itself is always the newest version.
+          $SSH "tar -xzf /srv/arth/releases/${{ github.sha }}.tar.gz -C /tmp deploy/release.sh && bash /tmp/deploy/release.sh ${{ github.sha }}"
