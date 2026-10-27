@@ -47,11 +47,11 @@ jobs:
         run: |
           install -m 700 -d ~/.ssh
           echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
-          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -H "13.235.206.230" >> ~/.ssh/known_hosts
 
       - name: Upload and release
         run: |
-          SSH="ssh -i ~/.ssh/id_deploy ubuntu@${{ secrets.SSH_HOST }}"
-          scp -i ~/.ssh/id_deploy release.tar.gz ubuntu@${{ secrets.SSH_HOST }}:/srv/arth/releases/${{ github.sha }}.tar.gz
+          SSH="ssh -i ~/.ssh/id_deploy ubuntu@13.235.206.230"
+          scp -i ~/.ssh/id_deploy release.tar.gz ubuntu@13.235.206.230:/srv/arth/releases/${{ github.sha }}.tar.gz
           # release.sh lives inside the tarball; extract just it first so the script itself is always the newest version.
           $SSH "tar -xzf /srv/arth/releases/${{ github.sha }}.tar.gz -C /tmp deploy/release.sh && bash /tmp/deploy/release.sh ${{ github.sha }}"
