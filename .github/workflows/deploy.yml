@@ -51,7 +51,7 @@ jobs:
 
       - name: Upload and release
         run: |
-          SSH="ssh -i ~/.ssh/id_deploy ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
-          scp -i ~/.ssh/id_deploy release.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/srv/arth/releases/${{ github.sha }}.tar.gz
+          SSH="ssh -i ~/.ssh/id_deploy ${{ secrets.SSH_USER || 'ubuntu' }}@${{ secrets.SSH_HOST }}"
+          scp -i ~/.ssh/id_deploy release.tar.gz ${{ secrets.SSH_USER || 'ubuntu' }}@${{ secrets.SSH_HOST }}:/srv/arth/releases/${{ github.sha }}.tar.gz
           # release.sh lives inside the tarball; extract just it first so the script itself is always the newest version.
           $SSH "tar -xzf /srv/arth/releases/${{ github.sha }}.tar.gz -C /tmp deploy/release.sh && bash /tmp/deploy/release.sh ${{ github.sha }}"
