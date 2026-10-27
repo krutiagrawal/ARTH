@@ -44,9 +44,13 @@ jobs:
             apps/web/package.json apps/web/next.config.js apps/web/.next $(test -d apps/web/public && echo apps/web/public)
 
       - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
         run: |
           install -m 700 -d ~/.ssh
-          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          # Normalise the pasted key: strip CRs and make sure it ends with exactly one newline.
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          ssh-keygen -y -f ~/.ssh/id_deploy > /dev/null || { echo "SSH_KEY secret is not a valid private key"; exit 1; }
           ssh-keyscan -H "13.235.206.230" >> ~/.ssh/known_hosts
 
       - name: Upload and release
