@@ -1,0 +1,11 @@
+{
+  "_comment": "High/critical advisories we have knowingly accepted until their major upgrade lands. Anything NOT listed here fails the Security workflow. Remove an entry once it is fixed.",
+  "accepted": {
+    "next": "Needs Next.js 16 (major). The image-optimizer RCE is not reachable (images.unoptimized is true); pages are server-rendered, not cached ISR.",
+    "zod": "Needs Zod 4 (major). Memory exhaustion on oversized collections; request bodies are already capped at 1 MB.",
+    "expo": "Needs an Expo SDK upgrade. Build-time tooling, not shipped in the app.",
+    "@expo/cli": "Part of the Expo SDK upgrade. Developer tooling only.",
+    "postcss": "Reached through Next/Expo build tooling; only processes our own CSS.",
+    "d3-color": "ReDoS in a chart dependency; only parses colours we define."
+  }
+}

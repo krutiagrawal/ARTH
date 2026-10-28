@@ -1,0 +1,38 @@
+name: Security
+
+# Runs on every PR and on pushes to branches, plus weekly so a newly published advisory is noticed even
+# when nobody is changing code. Separate from CI/Deploy on purpose: it never blocks a deploy by itself.
+on:
+  pull_request:
+  push:
+    branches-ignore: [master]
+  schedule:
+    - cron: '0 4 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Scans the commits being pushed / proposed (not the old history, which still holds retired dev keys).
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependencies:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: node .github/scripts/audit-gate.mjs

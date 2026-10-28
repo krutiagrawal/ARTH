@@ -8,6 +8,8 @@ import corsPlugin from './plugins/cors';
 import multipartPlugin from './plugins/multipart';
 import staticPlugin from './plugins/static';
 import rateLimitPlugin from './plugins/rateLimit';
+import { captureServerError } from './lib/sentry';
+import clientErrorsRoutes from './routes/clientErrors.routes';
 
 import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
@@ -91,7 +93,7 @@ export async function buildApp() {
   await app.register(staticPlugin);
   await app.register(httpCachePlugin);
 
-  app.setErrorHandler((error: FastifyError | AppError, _request, reply) => {
+  app.setErrorHandler((error: FastifyError | AppError, request, reply) => {
     if (error instanceof AppError) {
       reply
         .status(error.statusCode)
@@ -117,7 +119,14 @@ export async function buildApp() {
       reply.status(400).send({ error: 'TOO_MANY_FILES', message: 'Too many files were attached.' });
       return;
     }
+    // Malformed requests (bad JSON, wrong content type...) are the caller's fault, not a server crash: answer with
+    // their real 4xx status instead of a 500, and keep them out of error reporting.
+    if (typeof error.statusCode === 'number' && error.statusCode >= 400 && error.statusCode < 500) {
+      reply.status(error.statusCode).send({ error: error.code ?? 'BAD_REQUEST', message: error.message });
+      return;
+    }
     app.log.error(error);
+    captureServerError(error, { method: request.method, route: request.routeOptions?.url, userId: request.user?.id });
     reply.status(500).send({ error: 'INTERNAL_ERROR', message: 'Something went wrong' });
   });
 
@@ -135,6 +144,7 @@ export async function buildApp() {
   await app.register(ngosPublicRoutes, { prefix: '/api/ngos' });
   await app.register(nurseriesPublicRoutes, { prefix: '/api/nurseries' });
   await app.register(competitionsPublicRoutes, { prefix: '/api/competitions' });
+  await app.register(clientErrorsRoutes, { prefix: '/api/client-errors' });
   // No user identity needed to geocode — and it must work pre-signup, since the nursery
   // registration wizard's address field/current-location button run before any account exists.
   await app.register(geocodeRoutes, { prefix: '/api/geocode' });

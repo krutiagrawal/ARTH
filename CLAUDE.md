@@ -28,6 +28,25 @@ The user works from their phone. They describe a change, you make it, they say "
 - The web app is on React 19 (matches the hoisted root copy that the mobile app needs). Don't downgrade it.
 - Web routes that read the database are `force-dynamic` so `next build` needs no database. New pages that query Prisma must stay dynamic.
 
+## Security rules for all new code
+
+The code in this repo is largely AI-written and has had one security audit (2026-10). Every change must keep these true:
+
+1. **Ownership in the same query.** Any route that takes an `id` (param or body) must scope the lookup to the caller: `findFirst({ where: { id, userId } })` (or `ngoId` / `nurseryId` / group membership), never `findUnique({ where: { id } })` followed by an update. Role guards (`requireRole`) say *what kind* of user you are, not *whose* record it is.
+2. **Rate-limit anything abusable.** New routes that create accounts, send email/SMS/push, take uploads, check short codes/OTPs, or call a paid third party (Gemini, geocoding, weather, Stripe) need `limit(...)` / `limitByBodyField(...)` / `limitByParam(...)` from `services/api/src/plugins/rateLimit.ts`. A global per-caller limit already exists; add a tighter one for these.
+3. **The server decides, never the phone.** XP, streaks, leaderboard rank, prices, totals, "payment succeeded", "location is real" are computed or verified on the server. Values sent by the app (GPS `mocked`/`accuracy`, prices, quantities, flags) are inputs to check, not facts. Money moves only on a verified Stripe webhook.
+4. **Payments fail closed.** Use `getStripeClientOrDevBypass()`, never a bare try/catch that skips payment. Missing Stripe config in production must produce an error, not a free order.
+5. **Validate every input with zod.** Explicit field lists (no spreading `request.body` into Prisma), length caps on every string, `.int().min().max()` on every number, `z.string().uuid()` on ids. URLs must go through `websiteUrlSchema` (forces http/https).
+6. **Uploads** go through `upload.service.ts` only (it reads the real file type from the bytes). Never trust the client's filename or Content-Type, never store uploads outside `UPLOAD_DIR`, and never serve user files with a script-capable type.
+7. **Escape user text in HTML** (emails, receipts, web pages) with `escapeHtml` from `services/api/src/utils/html.ts`. In React, never use `dangerouslySetInnerHTML` with user data.
+8. **Secrets** live only in server env files and GitHub secrets. Nothing secret in `apps/mobile` (everything `EXPO_PUBLIC_*` is public), nothing in logs, nothing in git. Never log tokens, passwords, OTPs or full request bodies.
+9. **Short secret codes use `crypto.randomInt` / `crypto.randomBytes`**, never `Math.random`, and have an attempt limit.
+10. **Redirects and links:** after login only follow same-site paths (`safeNextPath` in `apps/web/lib/safeRedirect.js`); never put user-supplied URLs into `href` without http/https validation.
+11. **Sensitive data stays out of public responses:** no email, phone, PAN/GSTIN, verification documents or exact home-adjacent coordinates in anything a logged-out or unrelated user can fetch.
+12. **Every security fix gets a test** in `services/api/test/` (run with `npm test --workspace=services/api`; CI and Deploy both run it). Keep `.github/audit-baseline.json` honest: add an accepted advisory only with a reason, remove it when fixed.
+
+Crash reporting: the API reports unexpected 5xx errors, the mobile app's JavaScript errors (`apps/mobile/src/utils/errorReporter.ts`) and web server errors (`apps/web/instrumentation.js`) through `POST /api/client-errors` to Sentry. Set `SENTRY_DSN` (and optionally `SENTRY_RELEASE`) in `/srv/arth/shared/.env.api` to switch it on; unset means off.
+
 ## Useful facts
 
 - Server layout: `/srv/arth/{releases,current,shared}`; pm2 apps `arth-api` and `arth-web`; Nginx; Postgres on the same VM; backups in `/srv/arth/shared/backups` (pre-deploy) and `/var/backups/arth` (nightly).

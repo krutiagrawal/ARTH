@@ -28,8 +28,12 @@ import { AuthProvider } from './src/context/AuthContext';
 import { ReduceMotionProvider } from './src/context/ReduceMotionContext';
 import { ConfirmDialogProvider } from './src/context/ConfirmDialogContext';
 import { COLORS } from './src/constants/colors';
+import { installErrorReporter, reportError } from './src/utils/errorReporter';
 
 import Constants from 'expo-constants';
+
+// Registered before anything renders so even a crash during startup is reported.
+installErrorReporter();
 
 const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '';
 
@@ -70,6 +74,10 @@ class StripeErrorBoundary extends React.Component<
   state = { hasError: false };
   static getDerivedStateFromError() {
     return { hasError: true };
+  }
+  componentDidCatch(error: unknown) {
+    // The fallback hides the failure from the user, so a real payments-SDK problem would otherwise be invisible.
+    reportError(error, 'StripeProvider');
   }
   render() {
     return this.state.hasError ? this.props.fallback : this.props.children;

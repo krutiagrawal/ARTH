@@ -1,0 +1,970 @@
+import { PrismaClient } from '@plant/db';
+import { hashPassword } from '../src/utils/password';
+
+const prisma = new PrismaClient();
+
+// Tops up every model in the schema that's below ~10 rows with believable, Pune/India-flavoured
+// demo data, so every screen in the app has real content instead of empty states. Complements
+// seed_admin_demo.ts / seed_social_demo.ts / seed_my_account_demo.ts / seed_achievements_all_demo.ts
+// rather than replacing them — each section here is guarded by a `count < TARGET` check so it's
+// safe to re-run (already-topped-up models are skipped; models without a natural unique key may
+// add a few duplicate-looking rows on a second run, which is fine for dev/test data).
+
+const DEMO_PASSWORD = 'DemoPass123!';
+const TARGET = 11;
+
+function img(seed: string, w = 800, h = 600) {
+  return `https://picsum.photos/seed/${encodeURIComponent(seed)}/${w}/${h}`;
+}
+function daysAgo(n: number) {
+  return new Date(Date.now() - n * 24 * 60 * 60 * 1000);
+}
+function daysFromNow(n: number) {
+  return new Date(Date.now() + n * 24 * 60 * 60 * 1000);
+}
+function hoursFromNow(n: number) {
+  return new Date(Date.now() + n * 60 * 60 * 1000);
+}
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+function sample<T>(arr: T[], n: number): T[] {
+  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.min(n, arr.length));
+}
+function randInt(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+function uid(prefix: string) {
+  return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
+}
+function slugify(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+const PUNE_AREAS = [
+  'Kothrud', 'Baner', 'Aundh', 'Hadapsar', 'Viman Nagar', 'Wakad', 'Hinjewadi', 'Kharadi',
+  'Katraj', 'Warje', 'Deccan Gymkhana', 'Camp', 'Swargate', 'Karve Nagar', 'Bavdhan', 'Yerawada',
+];
+const INDIAN_FIRST = [
+  'Aarav', 'Vivaan', 'Aditya', 'Ishaan', 'Kabir', 'Reyansh', 'Ananya', 'Diya', 'Saanvi', 'Myra',
+  'Kiara', 'Anika', 'Rohan', 'Priya', 'Neha', 'Arjun', 'Meera', 'Sanya', 'Karan', 'Pooja',
+  'Aisha', 'Dev', 'Rhea', 'Vikram', 'Sneha', 'Tara', 'Yash', 'Zara', 'Om', 'Nisha',
+];
+const INDIAN_LAST = [
+  'Sharma', 'Verma', 'Patel', 'Deshmukh', 'Kulkarni', 'Iyer', 'Nair', 'Reddy', 'Joshi', 'Mehta',
+  'Gupta', 'Chawla', 'Bose', 'Menon', 'Rao', 'Kapoor', 'Pillai', 'Shah', 'Agarwal', 'Naik',
+];
+function randomName() {
+  return `${pick(INDIAN_FIRST)} ${pick(INDIAN_LAST)}`;
+}
+function puneLatLng() {
+  return { lat: 18.45 + Math.random() * 0.25, lng: 73.75 + Math.random() * 0.25 };
+}
+
+async function createRoleUser(role: 'user' | 'ngo' | 'group' | 'nursery' | 'corporate', label: string) {
+  const name = randomName();
+  const passwordHash = await hashPassword(DEMO_PASSWORD);
+  return prisma.$transaction(async (tx) => {
+    const created = await tx.user.create({
+      data: {
+        role,
+        email: `${slugify(label)}_${uid('u')}@example.com`,
+        passwordHash,
+        passwordPlain: DEMO_PASSWORD,
+        name,
+        handle: `${slugify(name)}_${uid('h')}`,
+        bio: `${label} account on PLANT`,
+        avatarEmoji: pick(['🌱', '🌳', '🌿', '🍃', '🌻', '🌾']),
+        treesPlantedCount: randInt(0, 30),
+        totalCo2Absorbed: randInt(0, 150),
+        streakCurrent: randInt(0, 15),
+        streakMax: randInt(5, 30),
+        xp: randInt(50, 2000),
+        level: randInt(1, 5),
+      },
+    });
+    await tx.userSettings.create({ data: { userId: created.id } });
+    return created;
+  });
+}
+
+async function main() {
+  console.log('Loading reference data...');
+  const species = await prisma.treeSpecies.findMany();
+  const users = await prisma.user.findMany({ where: { role: 'user' } });
+  let ngos = await prisma.ngoProfile.findMany();
+  const decorationTypes = await prisma.decorationType.findMany();
+
+  // ---------- 1. Role-specific accounts ----------
+  console.log('Group / nursery / corporate accounts...');
+  let groups = await prisma.groupProfile.findMany();
+  if (groups.length < 10) {
+    const need = 10 - groups.length;
+    for (let i = 0; i < need; i++) {
+      const owner = await createRoleUser('group', 'Group Owner');
+      const groupType = pick(['family', 'school', 'club', 'other']);
+      const g = await prisma.groupProfile.create({
+        data: {
+          userId: owner.id,
+          groupName: `${pick(['Green', 'Eco', 'Sapling', 'Root', 'Leaf', 'Bloom'])} ${pick(['Squad', 'Circle', 'Collective', 'Warriors', 'Friends'])}`,
+          groupType,
+          description: `A ${groupType} group planting trees together across Pune.`,
+          city: 'Pune',
+          inviteCode: uid('INV').toUpperCase(),
+          avatarEmoji: pick(['🌳', '🌲', '🌴']),
+          streakCurrent: randInt(0, 10),
+          streakMax: randInt(5, 25),
+        },
+      });
+      await prisma.groupMember.create({ data: { groupId: g.id, userId: owner.id, role: 'owner' } });
+    }
+    groups = await prisma.groupProfile.findMany();
+  }
+
+  let nurseries = await prisma.nurseryProfile.findMany();
+  if (nurseries.length < 10) {
+    const need = 10 - nurseries.length;
+    for (let i = 0; i < need; i++) {
+      const owner = await createRoleUser('nursery', 'Nursery');
+      const area = pick(PUNE_AREAS);
+      await prisma.nurseryProfile.create({
+        data: {
+          userId: owner.id,
+          nurseryName: `${area} Green Nursery`,
+          description: `Native sapling nursery serving the ${area} area of Pune.`,
+          city: 'Pune',
+          contactPhone: `+91 9${randInt(100000000, 999999999)}`,
+          status: pick(['approved', 'approved', 'approved', 'pending']),
+          streakCurrent: randInt(0, 10),
+          streakMax: randInt(5, 20),
+          ...puneLatLng(),
+        },
+      });
+    }
+    nurseries = await prisma.nurseryProfile.findMany();
+  }
+
+  let corporates = await prisma.corporateProfile.findMany();
+  if (corporates.length < 10) {
+    const need = 10 - corporates.length;
+    for (let i = 0; i < need; i++) {
+      const owner = await createRoleUser('corporate', 'Corporate');
+      const company = `${pick(['Sahyadri', 'Deccan', 'Mula', 'Pashan', 'Ganesh', 'Shivaji', 'Kothrud', 'Baner'])} ${pick(['Tech', 'Industries', 'Solutions', 'Enterprises', 'Systems', 'Labs'])}`;
+      await prisma.corporateProfile.create({
+        data: {
+          userId: owner.id,
+          companyName: company,
+          description: `${company} runs CSR tree-planting sponsorships across Pune drives.`,
+          city: 'Pune',
+          industry: pick(['IT Services', 'Manufacturing', 'Finance', 'Retail', 'Pharma', 'Auto']),
+          status: pick(['approved', 'approved', 'pending']),
+          streakCurrent: randInt(0, 8),
+          streakMax: randInt(3, 15),
+        },
+      });
+    }
+    corporates = await prisma.corporateProfile.findMany();
+  }
+
+  // ---------- 2. Trees ----------
+  console.log('Trees...');
+  if ((await prisma.tree.count()) < 10) {
+    for (let i = 0; i < 8; i++) {
+      const u = pick(users);
+      const sp = pick(species);
+      const { lat, lng } = puneLatLng();
+      await prisma.tree.create({
+        data: {
+          userId: u.id,
+          speciesId: sp.id,
+          nickname: `${sp.commonName} #${randInt(1, 99)}`,
+          plantedAt: daysAgo(randInt(1, 200)),
+          locationLabel: pick(PUNE_AREAS),
+          lat, lng,
+          growthStage: randInt(1, 5),
+          co2Absorbed: randInt(1, 40),
+          xpEarned: randInt(10, 100),
+          aiVerificationStatus: pick(['verified', 'unverified', 'verified']),
+        },
+      });
+    }
+  }
+
+  // ---------- 3. Friendships ----------
+  console.log('Friendships...');
+  if ((await prisma.friendship.count()) < 10) {
+    let attempts = 0;
+    while ((await prisma.friendship.count()) < TARGET && attempts < 40) {
+      attempts++;
+      const [a, b] = sample(users, 2);
+      if (!a || !b) break;
+      try {
+        await prisma.friendship.create({
+          data: { requesterId: a.id, addresseeId: b.id, status: pick(['accepted', 'accepted', 'pending']) },
+        });
+      } catch { /* unique collision, retry */ }
+    }
+  }
+
+  // ---------- 4. Group challenges ----------
+  console.log('Group challenges...');
+  if ((await prisma.groupChallenge.count()) < 10) {
+    for (const g of groups) {
+      if ((await prisma.groupChallenge.count()) >= TARGET) break;
+      const gc = await prisma.groupChallenge.create({
+        data: {
+          groupId: g.id,
+          createdById: g.userId,
+          title: pick(['Monsoon Sprint', 'Weekend Warriors', '30 Trees in 30 Days', 'Neighbourhood Green-Up']),
+          description: 'Plant as many trees as you can as a group before the deadline.',
+          goalType: 'trees_planted_count',
+          goalTotal: randInt(10, 100),
+          startsAt: daysAgo(randInt(1, 10)),
+          endsAt: daysFromNow(randInt(5, 30)),
+        },
+      });
+      for (const u of sample(users, randInt(2, 4))) {
+        try {
+          await prisma.groupChallengeParticipant.create({
+            data: { challengeId: gc.id, userId: u.id, progress: randInt(0, 20) },
+          });
+        } catch { /* dup */ }
+      }
+    }
+  }
+
+  // ---------- 5. Nursery-side data ----------
+  console.log('Sapling stock / reservations / ledger / streaks / achievements...');
+  let stock = await prisma.saplingStock.findMany();
+  if (stock.length < 10) {
+    for (const n of nurseries) {
+      if ((await prisma.saplingStock.count()) >= TARGET) break;
+      const sp = pick(species);
+      const isFree = Math.random() < 0.4;
+      await prisma.saplingStock.create({
+        data: {
+          nurseryId: n.id,
+          species: sp.commonName,
+          quantity: randInt(10, 100),
+          isFree,
+          priceCents: isFree ? null : randInt(3000, 20000),
+        },
+      });
+    }
+    stock = await prisma.saplingStock.findMany();
+  }
+
+  if ((await prisma.saplingReservation.count()) < 10) {
+    for (let i = 0; i < 9; i++) {
+      const s = pick(stock);
+      const u = pick(users);
+      await prisma.saplingReservation.create({
+        data: {
+          stockId: s.id,
+          nurseryId: s.nurseryId,
+          userId: u.id,
+          quantity: randInt(1, 5),
+          status: pick(['pending', 'fulfilled', 'fulfilled', 'declined']),
+          message: pick(['For our society garden', 'Balcony planting', 'School project', undefined]),
+        },
+      });
+    }
+  }
+
+  if ((await prisma.saplingStockLedger.count()) < 10) {
+    for (let i = 0; i < 9; i++) {
+      const s = pick(stock);
+      await prisma.saplingStockLedger.create({
+        data: {
+          nurseryId: s.nurseryId,
+          stockId: s.id,
+          species: s.species,
+          delta: pick([10, 20, -5, -2, 15, -8]),
+          reason: pick(['manual_add', 'manual_adjust', 'reservation_fulfilled', 'order_placed']),
+        },
+      });
+    }
+  }
+
+  if ((await prisma.nurseryStreakHistory.count()) < 10) {
+    let attempts = 0;
+    while ((await prisma.nurseryStreakHistory.count()) < TARGET && attempts < 60) {
+      attempts++;
+      try {
+        await prisma.nurseryStreakHistory.create({
+          data: { nurseryId: pick(nurseries).id, activityDate: daysAgo(randInt(0, 40)), planted: Math.random() < 0.7 },
+        });
+      } catch { /* dup date */ }
+    }
+  }
+
+  let nurseryAchievements = await prisma.nurseryAchievement.findMany();
+  if (nurseryAchievements.length < 10) {
+    const extra = [
+      { key: 'nursery_species_master', title: 'Species Master', criteriaType: 'species_listed', target: 20, rarity: 'epic', icon: '🌴' },
+      { key: 'nursery_bulk_giver', title: 'Bulk Giver', criteriaType: 'saplings_given_out', target: 500, rarity: 'epic', icon: '📦' },
+      { key: 'nursery_super_fulfiller', title: 'Super Fulfiller', criteriaType: 'reservations_fulfilled', target: 50, rarity: 'epic', icon: '🚚' },
+      { key: 'nursery_month_streak', title: 'Month-Long Streak', criteriaType: 'streak_days', target: 30, rarity: 'rare', icon: '📅' },
+    ];
+    for (const a of extra) {
+      await prisma.nurseryAchievement.upsert({
+        where: { key: a.key },
+        update: {},
+        create: {
+          key: a.key, title: a.title, description: `Reach ${a.target} for ${a.criteriaType.replace('_', ' ')}`,
+          icon: a.icon, rarity: a.rarity as any, criteriaType: a.criteriaType as any, criteriaTarget: a.target,
+        },
+      });
+    }
+    nurseryAchievements = await prisma.nurseryAchievement.findMany();
+  }
+  if ((await prisma.nurseryAchievementUnlock.count()) < 10) {
+    outer: for (const n of nurseries) {
+      for (const a of sample(nurseryAchievements, 2)) {
+        if ((await prisma.nurseryAchievementUnlock.count()) >= TARGET) break outer;
+        try {
+          await prisma.nurseryAchievementUnlock.create({
+            data: { nurseryId: n.id, achievementId: a.id, unlocked: Math.random() < 0.5, progress: randInt(0, (a.criteriaTarget ?? 10)) },
+          });
+        } catch { /* dup */ }
+      }
+    }
+  }
+
+  // ---------- 6. Addresses / cart / orders / wishlist ----------
+  console.log('Addresses / cart / orders / wishlist...');
+  let addresses = await prisma.address.findMany();
+  if (addresses.length < 10) {
+    for (const u of sample(users, 11)) {
+      const area = pick(PUNE_AREAS);
+      const { lat, lng } = puneLatLng();
+      await prisma.address.create({
+        data: {
+          userId: u.id,
+          label: pick(['Home', 'Office', 'Home', undefined]),
+          line1: `${randInt(1, 400)}, ${area} Society`,
+          landmark: `Near ${pick(['Metro Station', 'Water Tank', 'Bus Stop', 'Garden'])}`,
+          city: 'Pune',
+          pincode: `4110${randInt(10, 99)}`,
+          lat, lng,
+          isDefault: true,
+        },
+      });
+    }
+    addresses = await prisma.address.findMany();
+  }
+
+  if ((await prisma.cartItem.count()) < 10) {
+    for (let i = 0; i < 8; i++) {
+      const s = pick(stock);
+      const u = pick(users);
+      try {
+        await prisma.cartItem.create({
+          data: { userId: u.id, nurseryId: s.nurseryId, stockId: s.id, quantity: randInt(1, 4) },
+        });
+      } catch { /* dup */ }
+    }
+  }
+
+  if ((await prisma.order.count()) < 10) {
+    for (let i = 0; i < 12; i++) {
+      const addr = pick(addresses);
+      const s = pick(stock);
+      const qty = randInt(1, 4);
+      const unit = s.priceCents ?? randInt(4000, 15000);
+      const subtotal = unit * qty;
+      const deliveryFee = 4000;
+      const status = i < 9 ? 'delivered' : pick(['confirmed', 'packed', 'out_for_delivery', 'cancelled']);
+      const order = await prisma.order.create({
+        data: {
+          userId: addr.userId,
+          nurseryId: s.nurseryId,
+          addressId: addr.id,
+          status: status as any,
+          subtotalCents: subtotal,
+          deliveryFeeCents: deliveryFee,
+          totalCents: subtotal + deliveryFee,
+          stripePaymentIntentId: uid('pi_order'),
+          confirmedAt: status === 'cancelled' ? null : daysAgo(randInt(3, 20)),
+          packedAt: ['packed', 'out_for_delivery', 'delivered'].includes(status) ? daysAgo(randInt(2, 18)) : null,
+          outForDeliveryAt: ['out_for_delivery', 'delivered'].includes(status) ? daysAgo(randInt(1, 15)) : null,
+          deliveredAt: status === 'delivered' ? daysAgo(randInt(0, 12)) : null,
+          cancelledAt: status === 'cancelled' ? daysAgo(randInt(0, 5)) : null,
+          deliveryOtp: String(randInt(1000, 9999)),
+        },
+      });
+      await prisma.orderItem.create({
+        data: { orderId: order.id, stockId: s.id, species: s.species, quantity: qty, unitPriceCents: unit },
+      });
+      if (status !== 'pending_payment') {
+        await prisma.deliveryTracking.create({
+          data: {
+            orderId: order.id,
+            provider: 'mock',
+            riderName: status === 'cancelled' ? null : randomName(),
+            riderPhone: status === 'cancelled' ? null : `+91 9${randInt(100000000, 999999999)}`,
+            etaMinutes: status === 'delivered' ? 0 : randInt(15, 90),
+            ...(status === 'cancelled' ? {} : puneLatLng()),
+          },
+        });
+      }
+      if (status === 'delivered') {
+        await prisma.orderReview.create({
+          data: {
+            orderId: order.id,
+            userId: addr.userId,
+            nurseryId: s.nurseryId,
+            nurseryRating: randInt(3, 5),
+            deliveryRating: randInt(3, 5),
+            comment: pick(['Healthy saplings, well packed!', 'Good quality, on time.', 'Loved it, will order again.', undefined]),
+          },
+        });
+      }
+    }
+  }
+
+  if ((await prisma.wishlistItem.count()) < 10) {
+    for (let i = 0; i < 5; i++) {
+      try {
+        await prisma.wishlistItem.create({ data: { userId: pick(users).id, nurseryId: pick(nurseries).id } });
+      } catch { /* dup */ }
+    }
+    for (let i = 0; i < 5; i++) {
+      try {
+        await prisma.wishlistItem.create({ data: { userId: pick(users).id, stockId: pick(stock).id } });
+      } catch { /* dup */ }
+    }
+  }
+
+  // ---------- 7. CSR sponsorships ----------
+  console.log('CSR sponsorships...');
+  const drivesForCsr = await prisma.drive.findMany();
+  if ((await prisma.csrSponsorship.count()) < 10) {
+    for (let i = 0; i < 11; i++) {
+      await prisma.csrSponsorship.create({
+        data: {
+          corporateId: pick(corporates).id,
+          driveId: Math.random() < 0.7 ? pick(drivesForCsr).id : null,
+          amountCents: randInt(50000, 2000000),
+          note: pick(['Q3 CSR budget', 'Annual green initiative', 'Employee volunteering day sponsorship', undefined]),
+        },
+      });
+    }
+  }
+
+  // ---------- 8. Challenges / daily missions / forest themes ----------
+  console.log('Challenges / missions / themes...');
+  if ((await prisma.challenge.count()) < 10) {
+    const defs = [
+      ['Monsoon Marathon', 'trees_planted_count', 15], ['City Hopper', 'cities_count', 4],
+      ['Streak Legend', 'streak_days', 21], ['Rare Finds', 'rare_species_count', 5],
+      ['Festival Forest', 'trees_planted_count', 25], ['Weekend Blitz', 'trees_planted_count', 8],
+    ];
+    for (const [title, goalType, goalTotal] of defs) {
+      await prisma.challenge.create({
+        data: {
+          title: title as string, description: `Complete the ${title} challenge to earn bonus XP.`, icon: '🏆',
+          xpReward: randInt(100, 500), goalType: goalType as any, goalTotal: goalTotal as number,
+          startsAt: daysAgo(5), endsAt: daysFromNow(randInt(10, 40)),
+        },
+      });
+    }
+  }
+  const challenges = await prisma.challenge.findMany();
+  if ((await prisma.challengeParticipant.count()) < 10) {
+    outer2: for (const c of challenges) {
+      for (const u of sample(users, 4)) {
+        if ((await prisma.challengeParticipant.count()) >= TARGET) break outer2;
+        try {
+          await prisma.challengeParticipant.create({ data: { challengeId: c.id, userId: u.id, progress: randInt(0, c.goalTotal) } });
+        } catch { /* dup */ }
+      }
+    }
+  }
+
+  if ((await prisma.dailyMission.count()) < 10) {
+    const defs = [
+      ['plant_a_tree', 'Plant a Tree', 'plant'], ['share_progress', 'Share Your Progress', 'share'],
+      ['read_eco_fact', 'Read an Eco Fact', 'learn'], ['cheer_a_friend', 'Cheer a Friend', 'community'],
+      ['join_a_drive', 'RSVP to a Drive', 'community'], ['water_check', 'Log a Health Check', 'plant'],
+    ];
+    for (const [key, title, type] of defs) {
+      await prisma.dailyMission.upsert({
+        where: { key: key as string },
+        update: {},
+        create: { key: key as string, title: title as string, description: `Complete: ${title}`, icon: '✅', xpReward: randInt(10, 50), type: type as any },
+      });
+    }
+  }
+
+  if ((await prisma.forestTheme.count()) < 10) {
+    const defs = [
+      ['monsoon', 'Monsoon Mist'], ['desert', 'Desert Bloom'], ['coastal', 'Coastal Mangrove'],
+      ['himalayan', 'Himalayan Pine'], ['sunset', 'Sunset Savanna'],
+    ];
+    for (const [key, name] of defs) {
+      await prisma.forestTheme.upsert({
+        where: { key: key as string },
+        update: {},
+        create: { key: key as string, name: name as string, previewEmoji: pick(['🌲', '🌵', '🌊', '🏔️', '🌅']), unlockCriteria: 'Reach a milestone to unlock' },
+      });
+    }
+  }
+
+  // ---------- 9. Decorations / stories ----------
+  console.log('Decorations / stories...');
+  if ((await prisma.decorationPlacement.count()) < 10) {
+    for (let i = 0; i < 6; i++) {
+      await prisma.decorationPlacement.create({
+        data: {
+          userId: pick(users).id, decorationTypeId: pick(decorationTypes).id,
+          positionX: Math.random(), positionY: Math.random(), scale: 1, rotation: 0,
+        },
+      });
+    }
+  }
+
+  if ((await prisma.story.count()) < 10) {
+    for (let i = 0; i < 4; i++) {
+      await prisma.story.create({
+        data: {
+          authorType: 'user', userId: pick(users).id,
+          imageUrl: img(`story-${uid('s')}`, 720, 1280),
+          caption: pick(['Planted today! 🌱', 'Loving this streak 🔥', 'New sapling in the ground', undefined]),
+          expiresAt: hoursFromNow(randInt(6, 24)),
+        },
+      });
+    }
+  }
+  const stories = await prisma.story.findMany();
+  if ((await prisma.storyView.count()) < 10) {
+    for (let i = 0; i < 8; i++) {
+      try {
+        await prisma.storyView.create({ data: { storyId: pick(stories).id, userId: pick(users).id } });
+      } catch { /* dup */ }
+    }
+  }
+  if ((await prisma.storyLike.count()) < 10) {
+    for (let i = 0; i < 12; i++) {
+      try {
+        await prisma.storyLike.create({ data: { storyId: pick(stories).id, userId: pick(users).id } });
+      } catch { /* dup */ }
+    }
+  }
+
+  // ---------- 10. Streaks / XP / activity ----------
+  console.log('Streaks / XP / activity...');
+  if ((await prisma.streakHistory.count()) < 10) {
+    let attempts = 0;
+    while ((await prisma.streakHistory.count()) < TARGET && attempts < 60) {
+      attempts++;
+      try {
+        await prisma.streakHistory.create({ data: { userId: pick(users).id, activityDate: daysAgo(randInt(0, 30)), planted: Math.random() < 0.7 } });
+      } catch { /* dup */ }
+    }
+  }
+
+  if ((await prisma.activityFeed.count()) < 10) {
+    for (let i = 0; i < 4; i++) {
+      const af = await prisma.activityFeed.create({
+        data: { userId: pick(users).id, type: pick(['tree_planted', 'streak_milestone', 'friend_cheer']) },
+      });
+      if (Math.random() < 0.5) {
+        try {
+          await prisma.activityReaction.create({ data: { activityId: af.id, userId: pick(users).id } });
+        } catch { /* dup */ }
+      }
+    }
+  }
+  const activities = await prisma.activityFeed.findMany();
+  if ((await prisma.activityReaction.count()) < 10) {
+    for (let i = 0; i < 10; i++) {
+      try {
+        await prisma.activityReaction.create({
+          data: { activityId: pick(activities).id, userId: pick(users).id, reaction: pick(['cheer', '🌱', '🔥']) },
+        });
+      } catch { /* dup */ }
+    }
+  }
+
+  // ---------- 11. Content / config ----------
+  console.log('Eco facts / app config / planting locations...');
+  if ((await prisma.ecoFact.count()) < 10) {
+    const facts = [
+      'A single mature tree can absorb up to 21kg of CO2 per year.',
+      'Bamboo can grow up to 91cm in a single day, making it the fastest-growing plant.',
+      'Neem trees are known as the "village pharmacy" in India for their medicinal uses.',
+      'Banyan trees can live for hundreds of years and cover several acres.',
+      'Urban trees can reduce surrounding air temperatures by up to 8°C.',
+      'India is home to over 91,000 recorded plant species.',
+    ];
+    for (const f of facts) await prisma.ecoFact.create({ data: { factText: f } });
+  }
+
+  if ((await prisma.appConfig.count()) < 10) {
+    const defs: [string, string][] = [
+      ['min_app_version_ios', '1.4.0'], ['min_app_version_android', '1.4.0'],
+      ['maintenance_mode', 'false'], ['xp_per_tree', '25'], ['streak_freeze_cost_xp', '100'],
+      ['referral_bonus_xp', '50'], ['feature_flag_group_challenges', 'true'],
+      ['feature_flag_competitions', 'true'], ['support_email', 'support@plantapp.example.com'],
+    ];
+    for (const [key, value] of defs) {
+      await prisma.appConfig.upsert({ where: { key }, update: {}, create: { key, value } });
+    }
+  }
+
+  if ((await prisma.approvedPlantingLocation.count()) < 10) {
+    for (let i = 0; i < 5; i++) {
+      const { lat, lng } = puneLatLng();
+      await prisma.approvedPlantingLocation.create({
+        data: { name: `${pick(PUNE_AREAS)} Green Patch`, lat, lng, radiusMeters: randInt(50, 300) },
+      });
+    }
+  }
+
+  // ---------- 12. Drives ----------
+  console.log('Drives / pickup points / plants / sponsorships / RSVPs...');
+  if (ngos.length < 3) {
+    for (let i = 0; i < 3; i++) {
+      const owner = await createRoleUser('ngo', 'NGO');
+      await prisma.ngoProfile.create({
+        data: { userId: owner.id, orgName: `${pick(PUNE_AREAS)} Green Trust`, description: 'Community tree-planting NGO in Pune.', city: 'Pune', status: 'approved' },
+      });
+    }
+    ngos = await prisma.ngoProfile.findMany();
+  }
+  let drives = await prisma.drive.findMany();
+  if (drives.length < 10) {
+    for (let i = 0; i < 3; i++) {
+      const { lat, lng } = puneLatLng();
+      await prisma.drive.create({
+        data: {
+          ngoId: pick(ngos).id, title: `${pick(PUNE_AREAS)} Plantation Drive`,
+          description: 'Join us for a morning of tree planting and community building.',
+          city: 'Pune', address: `${pick(PUNE_AREAS)}, Pune`, lat, lng,
+          transportMode: pick(['self_arrange', 'ngo_provided']),
+          startsAt: daysFromNow(randInt(3, 30)), durationMinutes: randInt(90, 240), capacity: randInt(20, 100),
+          status: 'upcoming',
+        },
+      });
+    }
+    drives = await prisma.drive.findMany();
+  }
+
+  if ((await prisma.drivePickupPoint.count()) < 10) {
+    for (let i = 0; i < 10; i++) {
+      const d = pick(drives);
+      await prisma.drivePickupPoint.create({
+        data: { driveId: d.id, address: `${pick(PUNE_AREAS)} Bus Stand`, arrivalBy: d.startsAt, order: randInt(0, 3) },
+      });
+    }
+  }
+
+  let drivePlants = await prisma.drivePlant.findMany();
+  if (drivePlants.length < 10) {
+    for (let i = 0; i < 9; i++) {
+      await prisma.drivePlant.create({
+        data: { driveId: pick(drives).id, speciesName: pick(species).commonName.toLowerCase(), priceCents: randInt(8000, 25000), order: i },
+      });
+    }
+    drivePlants = await prisma.drivePlant.findMany();
+  }
+
+  if ((await prisma.drivePlantSponsorship.count()) < 10) {
+    for (let i = 0; i < 11; i++) {
+      await prisma.drivePlantSponsorship.create({
+        data: {
+          drivePlantId: pick(drivePlants).id, userId: pick(users).id, amountCents: randInt(5000, 30000),
+          stripePaymentIntentId: uid('pi_dps'), status: pick(['succeeded', 'succeeded', 'pending', 'failed']),
+        },
+      });
+    }
+  }
+
+  if ((await prisma.driveRsvp.count()) < 10) {
+    for (let i = 0; i < 8; i++) {
+      try {
+        await prisma.driveRsvp.create({ data: { driveId: pick(drives).id, userId: pick(users).id, status: pick(['confirmed', 'confirmed', 'cancelled']) } });
+      } catch { /* dup */ }
+    }
+  }
+
+  // ---------- 13. Adoptable trees / adoptions / donations ----------
+  console.log('Adoptable trees / adoptions / donations...');
+  if ((await prisma.adoptableTree.count()) < 10) {
+    for (let i = 0; i < 8; i++) {
+      const sp = pick(species);
+      const adopted = i < 8;
+      const tree = await prisma.adoptableTree.create({
+        data: {
+          ngoId: pick(ngos).id, nickname: `${sp.commonName} ${pick(['Guardian', 'Sentinel', 'Elder', 'Sapling'])}`,
+          speciesName: sp.commonName, description: `A healthy ${sp.commonName} available for symbolic adoption.`,
+          city: 'Pune', status: adopted ? 'adopted' : 'available',
+        },
+      });
+      if (adopted) {
+        await prisma.adoption.create({ data: { adoptableTreeId: tree.id, userId: pick(users).id, message: pick(['In memory of my grandmother', 'For my daughter\'s birthday', undefined]) } });
+      }
+    }
+  }
+
+  const campaigns = await prisma.donationCampaign.findMany();
+  if ((await prisma.donation.count()) < 10) {
+    for (let i = 0; i < 10; i++) {
+      await prisma.donation.create({
+        data: {
+          campaignId: pick(campaigns).id, userId: pick(users).id, amountCents: randInt(10000, 500000),
+          stripePaymentIntentId: uid('pi_don'), status: pick(['succeeded', 'succeeded', 'succeeded', 'pending']),
+        },
+      });
+    }
+  }
+
+  // ---------- 14. Posts / likes / saves ----------
+  console.log('Posts / likes / saves...');
+  if ((await prisma.post.count()) < 10) {
+    for (let i = 0; i < 3; i++) {
+      const u = pick(users);
+      const post = await prisma.post.create({
+        data: { authorType: 'user', userId: u.id, caption: pick(['Another tree in the ground! 🌳', 'Weekend plantation drive was amazing', 'My forest is growing 🌱']), visibility: 'public' },
+      });
+      await prisma.postMedia.create({ data: { postId: post.id, url: img(`post-${uid('p')}`), order: 0 } });
+    }
+  }
+  const posts = await prisma.post.findMany();
+  if ((await prisma.postLike.count()) < 10) {
+    for (let i = 0; i < 12; i++) {
+      try {
+        await prisma.postLike.create({ data: { postId: pick(posts).id, userId: pick(users).id } });
+      } catch { /* dup */ }
+    }
+  }
+  if ((await prisma.savedPost.count()) < 10) {
+    for (let i = 0; i < 8; i++) {
+      try {
+        await prisma.savedPost.create({ data: { postId: pick(posts).id, userId: pick(users).id } });
+      } catch { /* dup */ }
+    }
+  }
+
+  // ---------- 15. NGO portfolio / reports / blocks / staff ----------
+  console.log('NGO portfolio / reports / blocks / staff...');
+  if ((await prisma.ngoPortfolioEntry.count()) < 10) {
+    for (let i = 0; i < 7; i++) {
+      await prisma.ngoPortfolioEntry.create({
+        data: {
+          ngoId: pick(ngos).id, title: `${pick(PUNE_AREAS)} Restoration ${2018 + i}`,
+          happenedOn: daysAgo(randInt(365, 2000)), city: 'Pune',
+          treesPlanted: randInt(200, 5000), volunteersInvolved: randInt(20, 300),
+        },
+      });
+    }
+  }
+
+  if ((await prisma.contentReport.count()) < 10) {
+    for (let i = 0; i < 3; i++) {
+      try {
+        await prisma.contentReport.create({
+          data: { reporterId: pick(users).id, targetType: 'post', targetId: pick(posts).id, postId: pick(posts).id, reason: pick(['spam', 'other', 'misinformation']), details: 'auto-seeded report' },
+        });
+      } catch { /* dup */ }
+    }
+  }
+
+  if ((await prisma.block.count()) < 10) {
+    for (let i = 0; i < 8; i++) {
+      const [a, b] = sample(users, 2);
+      try {
+        await prisma.block.create({ data: { blockerId: a.id, blockedUserId: b.id } });
+      } catch { /* dup */ }
+    }
+  }
+
+  if ((await prisma.staffMember.count()) < 10) {
+    for (let i = 0; i < 8; i++) {
+      await prisma.staffMember.create({
+        data: { ngoId: pick(ngos).id, name: randomName(), role: pick(['Field Coordinator', 'Volunteer Lead', 'Outreach Manager', 'Operations']) },
+      });
+    }
+  }
+
+  // ---------- 16. Push tokens / password resets ----------
+  console.log('Push tokens / password reset tokens...');
+  if ((await prisma.pushToken.count()) < 10) {
+    for (let i = 0; i < 11; i++) {
+      try {
+        await prisma.pushToken.create({ data: { userId: pick(users).id, token: uid('ExponentPushToken'), platform: pick(['ios', 'android']) } });
+      } catch { /* dup */ }
+    }
+  }
+  if ((await prisma.passwordResetToken.count()) < 10) {
+    for (let i = 0; i < 11; i++) {
+      const used = Math.random() < 0.4;
+      await prisma.passwordResetToken.create({
+        data: { userId: pick(users).id, tokenHash: uid('reset'), expiresAt: hoursFromNow(1), usedAt: used ? daysAgo(1) : null },
+      });
+    }
+  }
+
+  // ---------- 17. NGO / group gamification ----------
+  console.log('NGO streaks / group streaks / achievements...');
+  if ((await prisma.ngoStreakHistory.count()) < 10) {
+    let attempts = 0;
+    while ((await prisma.ngoStreakHistory.count()) < TARGET && attempts < 60) {
+      attempts++;
+      const weekStart = new Date(daysAgo(randInt(0, 16) * 7));
+      try {
+        await prisma.ngoStreakHistory.create({ data: { ngoId: pick(ngos).id, weekStart, posted: Math.random() < 0.7 } });
+      } catch { /* dup */ }
+    }
+  }
+
+  if ((await prisma.groupStreakHistory.count()) < 10) {
+    let attempts = 0;
+    while ((await prisma.groupStreakHistory.count()) < TARGET && attempts < 80) {
+      attempts++;
+      try {
+        await prisma.groupStreakHistory.create({ data: { groupId: pick(groups).id, activityDate: daysAgo(randInt(0, 30)), planted: Math.random() < 0.7 } });
+      } catch { /* dup */ }
+    }
+  }
+
+  let groupAchievements = await prisma.groupAchievement.findMany();
+  if (groupAchievements.length < 10) {
+    const extra = [
+      { key: 'group_species_diversity', title: 'Biodiversity Builders', criteriaType: 'trees_planted', target: 500, rarity: 'epic', icon: '🦋' },
+      { key: 'group_thousand_club', title: 'Thousand Club', criteriaType: 'trees_planted', target: 1000, rarity: 'legendary', icon: '🏅' },
+    ];
+    for (const a of extra) {
+      await prisma.groupAchievement.upsert({
+        where: { key: a.key }, update: {},
+        create: { key: a.key, title: a.title, description: `Reach ${a.target} for ${a.criteriaType.replace('_', ' ')}`, icon: a.icon, rarity: a.rarity as any, criteriaType: a.criteriaType as any, criteriaTarget: a.target },
+      });
+    }
+    groupAchievements = await prisma.groupAchievement.findMany();
+  }
+  if ((await prisma.groupAchievementUnlock.count()) < 10) {
+    outer3: for (const g of groups) {
+      for (const a of sample(groupAchievements, 2)) {
+        if ((await prisma.groupAchievementUnlock.count()) >= TARGET) break outer3;
+        try {
+          await prisma.groupAchievementUnlock.create({ data: { groupId: g.id, achievementId: a.id, unlocked: Math.random() < 0.5, progress: randInt(0, (a.criteriaTarget ?? 10)) } });
+        } catch { /* dup */ }
+      }
+    }
+  }
+
+  // ---------- 18. Competitions ----------
+  console.log('Competition entries / votes...');
+  const competitions = await prisma.competition.findMany();
+  if ((await prisma.competitionEntry.count()) < 10) {
+    for (let i = 0; i < 11; i++) {
+      await prisma.competitionEntry.create({
+        data: {
+          competitionId: pick(competitions).id, userId: pick(users).id,
+          title: pick(['My Banyan Journey', 'Sunrise Sapling', 'Roots of Hope', 'Green Corner', 'Forest in Bloom']),
+          description: 'Entry submitted for the competition.', imageUrl: img(`entry-${uid('e')}`),
+        },
+      });
+    }
+  }
+  const entries = await prisma.competitionEntry.findMany();
+  if ((await prisma.competitionEntryVote.count()) < 10) {
+    for (let i = 0; i < 11; i++) {
+      try {
+        await prisma.competitionEntryVote.create({ data: { entryId: pick(entries).id, userId: pick(users).id } });
+      } catch { /* dup */ }
+    }
+  }
+
+  // ---------- 19. Marketing content (apps/web) ----------
+  console.log('Marketing content (legacy trees / blogs / ecosystem / stats / timeline)...');
+  if ((await prisma.legacyTree.count()) < 10) {
+    const extras = [
+      ['The Old Sentinel', 'Ficus religiosa', 'Anjali M.', 33, 'Tamil Nadu, India', 'A peepal that has watched three generations play beneath it.'],
+      ['River\'s Companion', 'Syzygium cumini', 'Farhan S.', 22, 'West Bengal, India', 'Its jamun fruit has fed every child on this street.'],
+      ['The Wedding Tree', 'Delonix regia', 'Meera K.', 15, 'Goa, India', 'Every wedding in the village happens under its red canopy.'],
+      ['Grandmother Neem', 'Azadirachta indica', 'Ibrahim K.', 45, 'Rajasthan, India', 'Bitter leaves, sweet shade — she has outlived two houses.'],
+      ['The Watchtower', 'Tectona grandis', 'Rohan D.', 28, 'Maharashtra, India', 'Planted the year the dam was built, still standing guard.'],
+      ['Coastal Keeper', 'Cocos nucifera', 'Priya N.', 19, 'Kerala, India', 'Every monsoon it bends, every summer it stands back up.'],
+    ];
+    for (const [name, sp, owner, years, loc, quote] of extras) {
+      await prisma.legacyTree.upsert({
+        where: { id: slugify(name as string) }, update: {},
+        create: { id: slugify(name as string), name: name as string, species: sp as string, owner: owner as string, years: years as number, location: loc as string, imageUrl: img(`legacy-${slugify(name as string)}`), quote: quote as string },
+      });
+    }
+  }
+
+  if ((await prisma.blog.count()) < 10) {
+    const extras = [
+      ['Composting for City Balconies', 'Plantation Guides', 'Neha V.', 5, 'Turn kitchen scraps into food for your sapling.'],
+      ['Why Native Species Win', 'Native Species', 'Rohan D.', 7, 'Imported trees look nice. Native trees survive.'],
+      ['The Nursery Behind Your App', 'Environmental News', 'Sundari P.', 6, 'A day in the life of the growers who make PLANT possible.'],
+      ['Tracking Growth Without a Ruler', 'Plantation Guides', 'Ibrahim K.', 4, 'Simple ways to log your sapling\'s progress each month.'],
+      ['Streaks, Explained', 'App Updates', 'Farah A.', 3, 'Why we built streaks the way we did.'],
+    ];
+    for (const [title, category, author, minutes, excerpt] of extras) {
+      await prisma.blog.upsert({
+        where: { id: slugify(title as string) }, update: {},
+        create: { id: slugify(title as string), title: title as string, category: category as string, author: author as string, date: 'Sep 9, 2026', minutes: minutes as number, imageUrl: img(`blog-${slugify(title as string)}`), excerpt: excerpt as string },
+      });
+    }
+  }
+
+  if ((await prisma.ecosystemEntry.count()) < 10) {
+    const extras = [
+      ['Schools', 'Classrooms that grow forests, not just lessons.', 'Every school on PLANT gets a shared grove, a leaderboard, and a curriculum tie-in that turns science class into a plantation drive.'],
+      ['Corporates', 'CSR spend that plants real, trackable trees.', 'Corporate partners sponsor drives and adoptable trees with full transparency — every rupee maps to a geo-tagged sapling.'],
+      ['Government Bodies', 'Municipal partners tracking city-wide canopy growth.', 'City bodies use PLANT\'s public dashboards to monitor plantation targets ward by ward.'],
+      ['Researchers', 'Open data for anyone studying urban afforestation.', 'Every verified planting event is available as open data for ecological research.'],
+      ['Volunteers', 'The individuals who show up, again and again.', 'Volunteers are the backbone of every drive — PLANT tracks their hours, their trees, and their streaks.'],
+    ];
+    for (const [title, description, long] of extras) {
+      await prisma.ecosystemEntry.upsert({
+        where: { id: slugify(title as string) }, update: {},
+        create: { id: slugify(title as string), title: title as string, description: description as string, long: long as string },
+      });
+    }
+  }
+
+  if ((await prisma.stat.count()) < 10) {
+    const extras: [string, number, string][] = [
+      ['Group Challenges', 1240, ''], ['Adoptable Trees', 5860, ''], ['Competitions Held', 42, ''],
+    ];
+    for (const [label, value, suffix] of extras) {
+      await prisma.stat.create({ data: { label, value, suffix } });
+    }
+  }
+
+  if ((await prisma.timelineEntry.count()) < 10) {
+    const extras: [string, string, string][] = [
+      ['2026', 'The mobile app', 'PLANT launches on Android and iOS, bringing the movement to every pocket.'],
+      ['2026', 'Group challenges', 'Families and schools start competing to plant the most trees together.'],
+      ['2026', 'Nurseries go live', 'Local nurseries list their stock directly, closing the loop from grower to planter.'],
+      ['2027', 'A hundred cities', 'PLANT drives reach a hundred Indian cities.'],
+      ['2027', 'CSR at scale', 'Corporate sponsorships fund a thousand community drives.'],
+    ];
+    for (const [year, title, text] of extras) {
+      await prisma.timelineEntry.create({ data: { year, title, text } });
+    }
+  }
+
+  if ((await prisma.newsletterSubscriber.count()) < 10) {
+    for (let i = 0; i < 11; i++) {
+      const email = `subscriber_${uid('n')}@example.com`;
+      await prisma.newsletterSubscriber.upsert({ where: { email }, update: {}, create: { email } });
+    }
+  }
+
+  console.log('Done.');
+}
+
+main()
+  .then(() => prisma.$disconnect())
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });
