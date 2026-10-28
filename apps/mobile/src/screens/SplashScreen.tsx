@@ -151,7 +151,7 @@ export function SplashScreen({ navigation }: any) {
 
       {/* Heading + tagline, above the hero image */}
       <Animated.View style={[styles.logoContainer, logoStyle]}>
-        <Text style={styles.logoText}>ARTH</Text>
+        <Text style={styles.logoText}>arth</Text>
         <Text style={styles.tagline}>Leave More Than Footprints</Text>
       </Animated.View>
 
