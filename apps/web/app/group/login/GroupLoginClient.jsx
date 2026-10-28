@@ -1,5 +1,6 @@
 'use client'
 import { Suspense, useState } from 'react'
+import { safeNextPath } from '@/lib/safeRedirect'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
@@ -27,7 +28,7 @@ function GroupLoginForm() {
         setError(data.error || 'Something went wrong.')
         return
       }
-      router.push(searchParams.get('next') || '/group/dashboard')
+      router.push(safeNextPath(searchParams.get('next'), '/group/dashboard'))
     } catch {
       setError('Could not reach the server. Please check your connection and try again.')
     } finally {
