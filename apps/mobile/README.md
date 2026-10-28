@@ -145,3 +145,10 @@ All screens use `dummyData.ts`. When connecting a real backend:
 3. Replace `FRIENDS`, `LEADERBOARD` with social endpoints
 4. `PlantTreeScreen` → upload to storage + AI verification API
 5. `MapScreen` → replace custom canvas with real coordinates from DB
+
+## Shipping changes to the installed APK
+
+- JS/UI changes merged to `master` are published automatically by `.github/workflows/mobile-update.yml` to the
+  EAS `preview` branch; the installed APK picks them up over the air on next launch (runtime version = app version).
+- Native changes (permissions, native libraries, `app.json` plugins) need a new APK:
+  `npx eas-cli build --platform android --profile preview`.
