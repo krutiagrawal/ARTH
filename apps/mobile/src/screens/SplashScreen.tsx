@@ -17,7 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Canvas, Circle, RadialGradient, vec } from '@shopify/react-native-skia';
 import { COLORS, GRADIENTS } from '../constants/colors';
-import { TYPOGRAPHY, TEXT } from '../constants/typography';
+import { TYPOGRAPHY, TEXT, FONTS } from '../constants/typography';
 import { FloatingParticles } from '../components/common/FloatingParticles';
 import { MuteButton } from '../components/common/MuteButton';
 import { useAuth } from '../context/AuthContext';
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     letterSpacing: 3,
     textTransform: 'uppercase',
-    fontWeight: '600',
+    fontFamily: FONTS.display,
     marginTop: 4,
     textShadowColor: 'rgba(0, 0, 0, 0.55)',
     textShadowOffset: { width: 0, height: 1 },
