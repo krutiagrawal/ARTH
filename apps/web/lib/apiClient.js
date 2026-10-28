@@ -1,5 +1,7 @@
 // Cross-origin client for services/api (the Fastify backend apps/mobile uses).
 // Distinct from lib/prisma.js, which talks to this app's own Arth database.
+import { headers as requestHeaders } from 'next/headers'
+
 const API_URL = process.env.API_URL || 'http://localhost:4000'
 
 export class ApiError extends Error {
@@ -13,6 +15,15 @@ export class ApiError extends Error {
 export async function apiRequest(path, { method = 'GET', body, token, isForm = false } = {}) {
   const headers = {}
   if (token) headers.Authorization = `Bearer ${token}`
+
+  // The API sees this server as its caller, so pass along the real visitor's IP (set by nginx) — otherwise
+  // the API's per-IP rate limits would count every website visitor as one person.
+  try {
+    const forwarded = (await requestHeaders()).get('x-forwarded-for')
+    if (forwarded) headers['X-Forwarded-For'] = forwarded
+  } catch {
+    // Called outside a request (build time, scripts): nothing to forward.
+  }
 
   let payload
   if (body !== undefined) {

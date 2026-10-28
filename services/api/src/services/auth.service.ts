@@ -9,6 +9,7 @@ import {
 import { generateResetToken, hashResetToken, RESET_TOKEN_TTL_MS } from '../utils/resetToken';
 import { generateInviteCode } from '../utils/inviteCode';
 import { sendEmail } from './email.service';
+import { escapeHtml } from '../utils/html';
 import { env } from '../config/env';
 import { AccountBlockedError, ConflictError, NotFoundError, UnauthorizedError, BadRequestError } from '../utils/errors';
 
@@ -609,7 +610,7 @@ export async function requestPasswordReset(prisma: PrismaClient, email: string):
   await sendEmail({
     to: user.email,
     subject: 'Reset your Arth password',
-    html: `<p>Hi ${user.name},</p><p>Someone requested a password reset for your Arth account. If this was you, click the link below — it expires in an hour.</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you didn't request this, you can ignore this email.</p>`,
+    html: `<p>Hi ${escapeHtml(user.name)},</p><p>Someone requested a password reset for your Arth account. If this was you, click the link below — it expires in an hour.</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you didn't request this, you can ignore this email.</p>`,
   });
 }
 
@@ -623,9 +624,12 @@ export async function resetPassword(prisma: PrismaClient, token: string, newPass
 
   const passwordHash = await hashPassword(newPassword);
 
+  // Every existing session is revoked too: whoever may already be signed in with the old (possibly
+  // stolen) password must not stay signed in after the owner resets it.
   await prisma.$transaction([
     prisma.user.update({ where: { id: resetToken.userId }, data: { passwordHash } }),
     prisma.passwordResetToken.update({ where: { id: resetToken.id }, data: { usedAt: new Date() } }),
+    prisma.refreshToken.updateMany({ where: { userId: resetToken.userId, revokedAt: null }, data: { revokedAt: new Date() } }),
   ]);
 }
 

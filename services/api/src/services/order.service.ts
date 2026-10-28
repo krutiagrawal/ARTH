@@ -1,5 +1,7 @@
+import { randomInt } from 'node:crypto';
+import { escapeHtml } from '../utils/html';
 import { Prisma, PrismaClient } from '@arth/db';
-import { getStripeClient } from '../lib/stripe';
+import { getStripeClient, getStripeClientOrDevBypass } from '../lib/stripe';
 import { getLiveLocation } from '../lib/deliveryProvider';
 import { sendEmail } from './email.service';
 import { notify } from './notification.service';
@@ -32,7 +34,7 @@ export function cancellationFeeFor(order: { status: string; subtotalCents: numbe
 }
 
 function generateHandoffCode() {
-  return String(Math.floor(1000 + Math.random() * 9000));
+  return String(randomInt(1000, 10000));
 }
 
 const orderInclude = {
@@ -113,7 +115,7 @@ async function sendPlantingGuideEmail(prisma: PrismaClient, orderId: string) {
     await sendEmail({
       to: order.user.email,
       subject: `Your planting guide from ${order.nursery.nurseryName}`,
-      html: `<p>Hi ${order.user.name},</p><p>Here's how to give your new saplings from <strong>${order.nursery.nurseryName}</strong> the best start:</p>${itemsHtml}<p>Happy planting! 🌱</p>`,
+      html: `<p>Hi ${escapeHtml(order.user.name)},</p><p>Here's how to give your new saplings from <strong>${escapeHtml(order.nursery.nurseryName)}</strong> the best start:</p>${itemsHtml}<p>Happy planting! 🌱</p>`,
     });
   } catch (error) {
     console.warn('[order] could not send planting guide email:', error);
@@ -231,12 +233,8 @@ export async function checkout(prisma: PrismaClient, userId: string, input: Chec
   // the client to present a payment sheet for. Lets local development exercise the full order
   // lifecycle without needing real Stripe keys or a native payment UI (which can't run in Expo Go
   // anyway). A real deployment always has STRIPE_SECRET_KEY set, so this path never triggers there.
-  let stripe: ReturnType<typeof getStripeClient> | null = null;
-  try {
-    stripe = getStripeClient();
-  } catch (e) {
-    if (!(e instanceof ServiceUnavailableError)) throw e;
-  }
+  // Fail-closed in production: getStripeClientOrDevBypass() only returns null outside production.
+  const stripe = getStripeClientOrDevBypass();
 
   const paymentIntent = stripe
     ? await stripe.paymentIntents.create({
@@ -386,7 +384,7 @@ async function finalizeConfirmedOrder(prisma: PrismaClient, order: OrderForFinal
   await sendEmail({
     to: order.user.email,
     subject: 'Your Arth order is confirmed',
-    html: `<p>Hi ${order.user.name},</p><p>Your order from <strong>${order.nursery.nurseryName}</strong> for ₹${(order.totalCents / 100).toFixed(2)} is confirmed. We'll notify you as it's packed and ${order.fulfillmentType === 'pickup' ? 'ready for pickup' : 'on its way'}.</p>`,
+    html: `<p>Hi ${escapeHtml(order.user.name)},</p><p>Your order from <strong>${escapeHtml(order.nursery.nurseryName)}</strong> for ₹${(order.totalCents / 100).toFixed(2)} is confirmed. We'll notify you as it's packed and ${order.fulfillmentType === 'pickup' ? 'ready for pickup' : 'on its way'}.</p>`,
   });
 }
 

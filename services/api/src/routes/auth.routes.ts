@@ -18,6 +18,7 @@ import { BadRequestError } from '../utils/errors';
 import { saveNurseryVerificationPhoto, saveNgoVerificationDocument, saveNgoPastWorkPhoto } from '../services/upload.service';
 import { splitMultipartBody, splitMultipartNamedFiles } from '../utils/multipart';
 import { refreshUserImpact } from '../services/treeImpact.service';
+import { limit, limitByBodyField } from '../plugins/rateLimit';
 
 const NGO_SINGLE_DOC_FIELDS = [
   'registrationCertificate',
@@ -44,6 +45,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
   // nursery wizard) needs to flag "already taken" while the user is still typing, not just on submit.
   fastify.get<{ Querystring: { email?: string; phone?: string; handle?: string } }>(
     '/check-availability',
+    limit(60, '1 minute'),
     async (request, reply) => {
       const parsed = checkAvailabilitySchema.safeParse(request.query);
       if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
@@ -51,7 +53,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     },
   );
 
-  fastify.post('/register', async (request, reply) => {
+  fastify.post('/register', limit(20, '1 hour'), async (request, reply) => {
     const parsed = registerSchema.safeParse(request.body);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
 
@@ -64,7 +66,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     reply.status(201).send(result);
   });
 
-  fastify.post('/register-ngo', async (request, reply) => {
+  fastify.post('/register-ngo', limit(20, '1 hour'), async (request, reply) => {
     // Unlike nursery (which still has to support an older JSON-only web form with no photo), the
     // NGO wizard is being built fresh on both mobile and web as part of this feature, so there's
     // no legacy client to preserve — multipart is required unconditionally, since the mandatory
@@ -116,7 +118,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     reply.status(201).send(result);
   });
 
-  fastify.post('/register-group', async (request, reply) => {
+  fastify.post('/register-group', limit(20, '1 hour'), async (request, reply) => {
     const parsed = registerGroupSchema.safeParse(request.body);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
 
@@ -129,7 +131,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     reply.status(201).send(result);
   });
 
-  fastify.post('/register-nursery', async (request, reply) => {
+  fastify.post('/register-nursery', limit(20, '1 hour'), async (request, reply) => {
     // The mobile signup wizard sends multipart with a mandatory verification photo; the older web
     // registration form still posts plain JSON with no photo — both are accepted here, but only
     // the multipart path can supply (and is required to supply) a photo.
@@ -162,7 +164,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     reply.status(201).send(result);
   });
 
-  fastify.post('/register-corporate', async (request, reply) => {
+  fastify.post('/register-corporate', limit(20, '1 hour'), async (request, reply) => {
     const parsed = registerCorporateSchema.safeParse(request.body);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
 
@@ -175,7 +177,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     reply.status(201).send(result);
   });
 
-  fastify.post('/login', async (request, reply) => {
+  fastify.post('/login', limitByBodyField(8, '10 minutes', 'email'), async (request, reply) => {
     const parsed = loginSchema.safeParse(request.body);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
 
@@ -203,7 +205,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     reply.status(204).send();
   });
 
-  fastify.post('/forgot-password', async (request, reply) => {
+  fastify.post('/forgot-password', limitByBodyField(3, '1 hour', 'email'), async (request, reply) => {
     const parsed = forgotPasswordSchema.safeParse(request.body);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
 
@@ -213,7 +215,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     reply.send({ ok: true });
   });
 
-  fastify.post('/reset-password', async (request, reply) => {
+  fastify.post('/reset-password', limit(10, '1 hour'), async (request, reply) => {
     const parsed = resetPasswordSchema.safeParse(request.body);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
 

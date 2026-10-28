@@ -1,5 +1,5 @@
 import { DriveStatus, DriveTransportMode, PrismaClient, TreeHealthStatus } from '@arth/db';
-import { getStripeClient } from '../lib/stripe';
+import { getStripeClient, getStripeClientOrDevBypass } from '../lib/stripe';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, ServiceUnavailableError } from '../utils/errors';
 import type { CancelDriveInput, CancelRsvpInput, RsvpInput } from '../schemas/drives.schema';
 import { geocodeAddress } from '../utils/geocode';
@@ -699,12 +699,8 @@ export async function sponsorPlant(prisma: PrismaClient, userId: string, driveId
   // clientSecret for the client to present a payment form for. Mirrors the same bypass in
   // order.service.ts's checkout() and donation.service.ts's createDonationIntent(). A real
   // deployment always has STRIPE_SECRET_KEY set, so this path never triggers there.
-  let stripe: ReturnType<typeof getStripeClient> | null = null;
-  try {
-    stripe = getStripeClient();
-  } catch (e) {
-    if (!(e instanceof ServiceUnavailableError)) throw e;
-  }
+  // Fail-closed in production: getStripeClientOrDevBypass() only returns null outside production.
+  const stripe = getStripeClientOrDevBypass();
 
   const paymentIntent = stripe
     ? await stripe.paymentIntents.create({

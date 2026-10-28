@@ -1,6 +1,7 @@
 import { PrismaClient } from '@arth/db';
 import { randomUUID } from 'node:crypto';
-import { getStripeClient } from '../lib/stripe';
+import { getStripeClient, getStripeClientOrDevBypass } from '../lib/stripe';
+import { escapeHtml } from '../utils/html';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, ServiceUnavailableError } from '../utils/errors';
 import { requireApprovedNgoProfile, requireNgoProfile } from './ngo.service';
 import { confirmOrderPayment } from './order.service';
@@ -317,12 +318,8 @@ export async function createDonationIntent(
   // clientSecret for the client to present a payment form for. Mirrors the same bypass in
   // order.service.ts's checkout(). A real deployment always has STRIPE_SECRET_KEY set, so this
   // path never triggers there.
-  let stripe: ReturnType<typeof getStripeClient> | null = null;
-  try {
-    stripe = getStripeClient();
-  } catch (e) {
-    if (!(e instanceof ServiceUnavailableError)) throw e;
-  }
+  // Fail-closed in production: getStripeClientOrDevBypass() only returns null outside production.
+  const stripe = getStripeClientOrDevBypass();
 
   const paymentIntent = stripe
     ? await stripe.paymentIntents.create({
@@ -410,20 +407,20 @@ function buildReceiptHtml(donation: {
   return `
     <div style="font-family: Georgia, serif; max-width: 560px; margin: 0 auto; padding: 32px; border: 1px solid #ddd; color: #2d2a25;">
       <h1 style="font-size: 20px; margin: 0 0 4px;">Donation Receipt</h1>
-      <p style="font-size: 13px; color: #6e6355; margin: 0 0 24px;">Receipt No. ${donation.receiptNumber}</p>
+      <p style="font-size: 13px; color: #6e6355; margin: 0 0 24px;">Receipt No. ${escapeHtml(donation.receiptNumber)}</p>
       <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
         <tr><td style="padding: 6px 0; color: #6e6355;">Date</td><td style="padding: 6px 0; text-align: right;">${donation.createdAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</td></tr>
-        <tr><td style="padding: 6px 0; color: #6e6355;">Donor</td><td style="padding: 6px 0; text-align: right;">${donation.donorName}</td></tr>
-        ${donation.donorPan ? `<tr><td style="padding: 6px 0; color: #6e6355;">Donor PAN</td><td style="padding: 6px 0; text-align: right;">${donation.donorPan}</td></tr>` : ''}
-        <tr><td style="padding: 6px 0; color: #6e6355;">Received by</td><td style="padding: 6px 0; text-align: right;">${donation.ngoOrgName}</td></tr>
-        <tr><td style="padding: 6px 0; color: #6e6355;">Campaign</td><td style="padding: 6px 0; text-align: right;">${donation.campaignTitle}</td></tr>
+        <tr><td style="padding: 6px 0; color: #6e6355;">Donor</td><td style="padding: 6px 0; text-align: right;">${escapeHtml(donation.donorName)}</td></tr>
+        ${donation.donorPan ? `<tr><td style="padding: 6px 0; color: #6e6355;">Donor PAN</td><td style="padding: 6px 0; text-align: right;">${escapeHtml(donation.donorPan)}</td></tr>` : ''}
+        <tr><td style="padding: 6px 0; color: #6e6355;">Received by</td><td style="padding: 6px 0; text-align: right;">${escapeHtml(donation.ngoOrgName)}</td></tr>
+        <tr><td style="padding: 6px 0; color: #6e6355;">Campaign</td><td style="padding: 6px 0; text-align: right;">${escapeHtml(donation.campaignTitle)}</td></tr>
         <tr><td style="padding: 12px 0 6px; font-weight: bold; border-top: 1px solid #ddd;">Amount</td><td style="padding: 12px 0 6px; text-align: right; font-weight: bold; border-top: 1px solid #ddd;">${formatRupees(donation.amountCents, donation.currency)}</td></tr>
       </table>
       ${
         donation.ngoEightyG || donation.ngoPan
           ? `<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #ddd; font-size: 12px; color: #6e6355;">
-              ${donation.ngoEightyG ? `<p style="margin: 0 0 4px;">80G Registration No.: ${donation.ngoEightyG}</p>` : ''}
-              ${donation.ngoPan ? `<p style="margin: 0;">PAN: ${donation.ngoPan}</p>` : ''}
+              ${donation.ngoEightyG ? `<p style="margin: 0 0 4px;">80G Registration No.: ${escapeHtml(donation.ngoEightyG)}</p>` : ''}
+              ${donation.ngoPan ? `<p style="margin: 0;">PAN: ${escapeHtml(donation.ngoPan)}</p>` : ''}
             </div>`
           : ''
       }

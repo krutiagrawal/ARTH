@@ -1,4 +1,5 @@
 import Fastify, { FastifyError } from 'fastify';
+import helmet from '@fastify/helmet';
 import { AppError } from './utils/errors';
 
 import prismaPlugin from './plugins/prisma';
@@ -6,6 +7,7 @@ import authPlugin from './plugins/auth';
 import corsPlugin from './plugins/cors';
 import multipartPlugin from './plugins/multipart';
 import staticPlugin from './plugins/static';
+import rateLimitPlugin from './plugins/rateLimit';
 
 import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
@@ -73,8 +75,15 @@ import nurseryDeliveryPartnersRoutes from './routes/nurseryDeliveryPartners.rout
 import deliveryPartnerRoutes from './routes/deliveryPartner.routes';
 
 export async function buildApp() {
-  const app = Fastify({ logger: true });
+  // trustProxy: nginx (and the Next.js server) reach us over loopback, so without it every request appears
+  // to come from 127.0.0.1 and per-IP rate limits would treat the whole internet as one caller. Only
+  // loopback hops are trusted; nginx overwrites X-Forwarded-For, so a client can't spoof its own IP.
+  const app = Fastify({ logger: true, trustProxy: 'loopback' });
 
+  // Security headers (nosniff, no framing, HSTS...). The CORP override lets the web app and other
+  // origins display images served from /uploads.
+  await app.register(helmet, { crossOriginResourcePolicy: { policy: 'cross-origin' } });
+  await app.register(rateLimitPlugin);
   await app.register(corsPlugin);
   await app.register(prismaPlugin);
   await app.register(authPlugin);
@@ -87,6 +96,11 @@ export async function buildApp() {
       reply
         .status(error.statusCode)
         .send({ error: error.code, message: error.message, ...(error.details !== undefined ? { details: error.details } : {}) });
+      return;
+    }
+    if (error.statusCode === 429) {
+      const body = error as unknown as { error?: string; message?: string };
+      reply.status(429).send({ error: body.error ?? 'TOO_MANY_REQUESTS', message: body.message ?? 'Too many requests. Please try again shortly.' });
       return;
     }
     if (error.validation) {

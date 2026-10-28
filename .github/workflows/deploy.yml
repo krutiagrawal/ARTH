@@ -22,6 +22,12 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
       - run: npm run typecheck
+      - name: API security tests
+        run: npm test --workspace=services/api
+        env:
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci
+          JWT_ACCESS_SECRET: ci-secret-ci-secret-ci-secret-ci-secret
+          OWM_API_KEY: ci
       - run: npm run build:db
       - run: npm run build --workspace=services/api
       - name: Build web

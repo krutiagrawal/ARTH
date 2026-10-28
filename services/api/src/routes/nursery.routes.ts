@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { limitByParam } from '../plugins/rateLimit';
 import * as nurseryService from '../services/nursery.service';
 import { invalidateNurseryCacheOnWrite } from '../utils/nurseryCacheHook';
 import * as orderService from '../services/order.service';
@@ -336,7 +337,7 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
     reply.send(await orderService.markOrderReadyForPickup(fastify.prisma, profile.id, request.params.id));
   });
 
-  fastify.post<{ Params: { id: string }; Body: { code?: string } }>('/orders/:id/picked-up', async (request, reply) => {
+  fastify.post<{ Params: { id: string }; Body: { code?: string } }>('/orders/:id/picked-up', limitByParam(10, '30 minutes', 'id'), async (request, reply) => {
     const profile = await nurseryService.getOwnProfile(fastify.prisma, request.user!.id);
     reply.send(await orderService.markOrderPickedUp(fastify.prisma, profile.id, request.params.id, request.body?.code));
   });
@@ -367,7 +368,7 @@ export default async function nurseryRoutes(fastify: FastifyInstance) {
     },
   );
 
-  fastify.post<{ Params: { id: string }; Body: { otp?: string; code?: string } }>('/orders/:id/deliver', async (request, reply) => {
+  fastify.post<{ Params: { id: string }; Body: { otp?: string; code?: string } }>('/orders/:id/deliver', limitByParam(10, '30 minutes', 'id'), async (request, reply) => {
     const profile = await nurseryService.getOwnProfile(fastify.prisma, request.user!.id);
     reply.send(
       await orderService.markOrderDelivered(fastify.prisma, profile.id, request.params.id, request.body?.code ?? request.body?.otp),

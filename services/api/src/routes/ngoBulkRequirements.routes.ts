@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { limitByParam } from '../plugins/rateLimit';
 import * as bulkRequirementService from '../services/bulkRequirement.service';
 import { updateBulkRequirementSchema, createBulkRequirementSchema, confirmBulkRequirementResponseSchema, rescheduleBulkRequirementSchema } from '../schemas/bulkRequirement.schema';
 import { BadRequestError } from '../utils/errors';
@@ -51,7 +52,7 @@ export default async function ngoBulkRequirementsRoutes(fastify: FastifyInstance
     reply.send(await bulkRequirementService.declineResponse(fastify.prisma, request.user!.id, request.params.id));
   });
 
-  fastify.post<{ Params: { id: string } }>('/responses/:id/confirm-received', async (request, reply) => {
+  fastify.post<{ Params: { id: string } }>('/responses/:id/confirm-received', limitByParam(10, '30 minutes', 'id'), async (request, reply) => {
     const parsed = confirmBulkRequirementResponseSchema.safeParse(request.body);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
 

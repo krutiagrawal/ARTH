@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { limitByParam } from '../plugins/rateLimit';
 import * as deliveryPartnerService from '../services/deliveryPartner.service';
 import * as orderService from '../services/order.service';
 import { reportLocationSchema, deliverWithCodeSchema } from '../schemas/deliveryPartner.schema';
@@ -29,7 +30,7 @@ export default async function deliveryPartnerRoutes(fastify: FastifyInstance) {
     reply.send(await deliveryPartnerService.reportLocation(fastify.prisma, request.user!.id, parsed.data));
   });
 
-  fastify.post<{ Params: { id: string } }>('/orders/:id/deliver', async (request, reply) => {
+  fastify.post<{ Params: { id: string } }>('/orders/:id/deliver', limitByParam(10, '30 minutes', 'id'), async (request, reply) => {
     const parsed = deliverWithCodeSchema.safeParse(request.body);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
 

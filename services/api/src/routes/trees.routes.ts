@@ -12,6 +12,7 @@ import { resolvePublicId, getPassportByInternalId } from '../services/treePasspo
 import { findNearbyTrees } from '../services/nearbyTrees.service';
 import { BadRequestError, NotFoundError } from '../utils/errors';
 import { treeImpactFields } from '../lib/treeImpact';
+import { limit } from '../plugins/rateLimit';
 
 const DEFAULT_NEARBY_RADIUS_METERS = 800;
 const MIN_NEARBY_RADIUS_METERS = 100;
@@ -98,8 +99,14 @@ export default async function treesRoutes(fastify: FastifyInstance) {
       take: 500,
     });
 
+    // On the global map, other people's trees are shown rounded to ~100m: a planting is very often
+    // at the planter's home, and exact coordinates next to their name and handle reveal where they live.
+    const blur = (value: number, isMine: boolean) => (isMine ? value : Math.round(value * 1000) / 1000);
+
     reply.send(trees.map((t) => ({
       ...serializeTree(t),
+      lat: blur(Number(t.lat), t.userId === request.user!.id),
+      lng: blur(Number(t.lng), t.userId === request.user!.id),
       planter: { id: t.user.id, name: t.user.name, handle: t.user.handle, avatarEmoji: t.user.avatarEmoji },
     })));
   });
@@ -157,7 +164,7 @@ export default async function treesRoutes(fastify: FastifyInstance) {
   // nickname/location — matches the "AI Scanning" step shown immediately post-capture. This is
   // a convenience pre-check only; the real gate is on POST / below, which re-verifies so a
   // client can't skip straight to creating a tree with a rejected photo.
-  fastify.post('/verify-photo', async (request, reply) => {
+  fastify.post('/verify-photo', limit(30, '1 hour'), async (request, reply) => {
     const body = request.body as Record<string, MultipartFile | { value: string }>;
     const photo = await extractPhoto(body);
     if (!photo) throw new BadRequestError('No photo provided');
@@ -166,7 +173,8 @@ export default async function treesRoutes(fastify: FastifyInstance) {
     reply.send({ isPlanting: verification.status !== 'rejected', reason: verification.reason });
   });
 
-  fastify.post('/', async (request, reply) => {
+  // Capped per signed-in caller: planting earns XP and leaderboard rank, so an unthrottled script could farm it.
+  fastify.post('/', limit(15, '1 hour'), async (request, reply) => {
     const body = request.body as Record<string, MultipartFile | { value: string }>;
 
     const fields: Record<string, string> = {};
@@ -182,6 +190,9 @@ export default async function treesRoutes(fastify: FastifyInstance) {
 
     const parsed = plantTreeSchema.safeParse(fields);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
+
+    // The app always captures a live photo; a request without one is a script, not a person at a tree.
+    if (!photoFile) throw new BadRequestError('A live photo is required to plant a tree.');
 
     assertGpsNotMocked(parsed.data.mocked);
     assertGpsAccuracy(parsed.data.accuracy);

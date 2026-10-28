@@ -8,6 +8,12 @@ export default fp(async function staticPlugin(fastify: FastifyInstance) {
   await fastify.register(fastifyStatic, {
     root: path.resolve(process.cwd(), env.UPLOAD_DIR),
     prefix: '/uploads/',
+    // Uploads are user-supplied. nosniff stops a browser guessing a file is HTML/script, and the sandboxed
+    // CSP means that even if one slipped through it could not run scripts or load anything.
+    setHeaders: (res) => {
+      res.header('X-Content-Type-Options', 'nosniff');
+      res.header('Content-Security-Policy', "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox");
+    },
   });
 
   // Photos that ship with the app (lesson images). Served by us rather than hotlinked: Wikimedia returns
