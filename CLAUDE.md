@@ -43,7 +43,8 @@ The code in this repo is largely AI-written and has had one security audit (2026
 9. **Short secret codes use `crypto.randomInt` / `crypto.randomBytes`**, never `Math.random`, and have an attempt limit.
 10. **Redirects and links:** after login only follow same-site paths (`safeNextPath` in `apps/web/lib/safeRedirect.js`); never put user-supplied URLs into `href` without http/https validation.
 11. **Sensitive data stays out of public responses:** no email, phone, PAN/GSTIN, verification documents or exact home-adjacent coordinates in anything a logged-out or unrelated user can fetch.
-12. **Every security fix gets a test** in `services/api/test/` (run with `npm test --workspace=services/api`; CI and Deploy both run it). Keep `.github/audit-baseline.json` honest: add an accepted advisory only with a reason, remove it when fixed.
+12. **New personal data must be erasable.** Any new table or column that holds personal data (names, contact details, free text, photos, locations, messages, tokens) must be added to `services/api/src/services/accountErasure.service.ts` in the same change, and the DB test in `services/api/test/accountErasure.db.test.ts` extended (run it with `RUN_DB_TESTS=1 npx vitest run` from `services/api` against the local database). Play Store and the DPDP Act require "Delete account" to really delete.
+13. **Every security fix gets a test** in `services/api/test/` (run with `npm test --workspace=services/api`; CI and Deploy both run it). Keep `.github/audit-baseline.json` honest: add an accepted advisory only with a reason, remove it when fixed.
 
 Crash reporting: the API reports unexpected 5xx errors, the mobile app's JavaScript errors (`apps/mobile/src/utils/errorReporter.ts`) and web server errors (`apps/web/instrumentation.js`) through `POST /api/client-errors` to Sentry. Set `SENTRY_DSN` (and optionally `SENTRY_RELEASE`) in `/srv/arth/shared/.env.api` to switch it on; unset means off.
 

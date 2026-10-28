@@ -7,6 +7,8 @@ import { refreshUserImpact } from '../services/treeImpact.service';
 import { syncStreak } from '../services/streak.service';
 import { saveUserAvatar } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
+import { eraseAccount } from '../services/accountErasure.service';
+import { limit } from '../plugins/rateLimit';
 
 export default async function usersRoutes(fastify: FastifyInstance) {
   fastify.get('/me', async (request, reply) => {
@@ -92,13 +94,10 @@ export default async function usersRoutes(fastify: FastifyInstance) {
     reply.send({ user: toPublicUser(updated), ...tokens });
   });
 
-  fastify.delete('/me', async (request, reply) => {
-    await fastify.prisma.user.update({
-      where: { id: request.user!.id },
-      data: { isDeleted: true },
-    });
-    // Sign the account out everywhere so a deleted account's refresh tokens can't linger.
-    await logoutAll(fastify.prisma, request.user!.id);
+  // Permanent erasure of personal data, not just hiding the account - see accountErasure.service.ts.
+  // Tightly limited: it is destructive, so a stolen session shouldn't be able to retry it freely.
+  fastify.delete('/me', limit(5, '1 hour'), async (request, reply) => {
+    await eraseAccount(fastify.prisma, request.user!.id);
     reply.status(204).send();
   });
 

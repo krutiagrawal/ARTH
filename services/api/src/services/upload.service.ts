@@ -141,3 +141,18 @@ export function saveNgoAwardCertificate(photo: PhotoInput): Promise<string> {
 export function saveNgoPastWorkPhoto(photo: PhotoInput): Promise<string> {
   return saveImage(photo, 'ngo-past-work');
 }
+
+/**
+ * Best-effort removal of previously uploaded files (used when an account is erased). Only paths that
+ * resolve inside the upload directory are touched, so a bad URL stored in the database can never make
+ * this delete anything elsewhere on the server. Missing files and failures are ignored.
+ */
+export async function deleteUploadedFiles(urls: (string | null | undefined)[]): Promise<void> {
+  const root = path.resolve(process.cwd(), env.UPLOAD_DIR);
+  for (const url of urls) {
+    if (!url || !url.startsWith('/uploads/')) continue;
+    const target = path.resolve(root, url.slice('/uploads/'.length));
+    if (!target.startsWith(root + path.sep)) continue;
+    await fs.promises.unlink(target).catch(() => {});
+  }
+}

@@ -84,7 +84,13 @@ export function NurserySettingsScreen({ navigation }: any) {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            await deleteAccount();
+            try {
+              await deleteAccount();
+            } catch (e) {
+              // e.g. a paid order or an active campaign is still in progress: the server explains what to finish first.
+              confirm('Could not delete account', e instanceof Error ? e.message : 'Please try again in a moment.', [{ text: 'OK' }]);
+              return;
+            }
             await logout();
             navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
           },
