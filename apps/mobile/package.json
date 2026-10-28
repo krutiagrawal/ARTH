@@ -46,7 +46,7 @@
     "expo-secure-store": "~57.0.4",
     "expo-speech": "~57.0.3",
     "expo-status-bar": "~57.0.1",
-    "expo-updates": "~57.0.26",
+    "expo-updates": "~58.0.18",
     "fbjs": "^3.0.5",
     "lottie-react-native": "~7.3.1",
     "nativewind": "^4.2.1",
