@@ -1,0 +1,88 @@
+name: Mobile release
+
+# One workflow decides how a mobile change reaches the phone, using the Expo *native fingerprint*:
+#   - native code/config unchanged  -> publish an over-the-air update (installed APK picks it up on next launch)
+#   - native code/config changed    -> build a new APK on EAS and publish it at a fixed download URL
+# The installed APK only receives updates built for the same fingerprint (runtimeVersion policy: fingerprint).
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'apps/mobile/**'
+      - 'package-lock.json'
+      - '.github/workflows/mobile-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write # publish the APK as a release asset
+
+concurrency:
+  group: mobile-release
+  cancel-in-progress: false
+
+env:
+  EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+  # Public server addresses, not secrets; hardcoded so a blank repo variable can't break the app.
+  EXPO_PUBLIC_API_URL: https://api.13-235-206-230.sslip.io
+  EXPO_PUBLIC_WEB_URL: https://app.13-235-206-230.sslip.io
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Compute native fingerprint
+        id: fp
+        working-directory: apps/mobile
+        run: |
+          eas fingerprint:generate --platform android --json --non-interactive > fp.json
+          HASH=$(node -e 'const s=require("fs").readFileSync("fp.json","utf8");console.log(JSON.parse(s.slice(s.indexOf("{"))).hash)')
+          [ -n "$HASH" ] && [ "$HASH" != "undefined" ] || { echo "could not compute fingerprint"; exit 1; }
+          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
+          echo "Native fingerprint: $HASH"
+
+      - name: Is there already an APK for this fingerprint?
+        id: have
+        working-directory: apps/mobile
+        run: |
+          eas build:list --platform android --distribution internal --fingerprint-hash "${{ steps.fp.outputs.hash }}" \
+            --status finished --limit 1 --json --non-interactive > existing.json
+          COUNT=$(node -e 'const s=require("fs").readFileSync("existing.json","utf8");console.log(JSON.parse(s.slice(s.indexOf("["))).length)')
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "Finished APKs for this fingerprint: $COUNT"
+
+      # ---- JS/asset-only change: ship over the air -------------------------------------------------------
+      - name: Publish over-the-air update
+        if: steps.have.outputs.count != '0'
+        working-directory: apps/mobile
+        run: eas update --branch preview --platform android --message "${{ github.sha }}" --non-interactive
+
+      # ---- Native change: build a new APK ----------------------------------------------------------------
+      - name: Build new APK (native change)
+        if: steps.have.outputs.count == '0'
+        working-directory: apps/mobile
+        run: eas build --platform android --profile preview --non-interactive --json > build.json
+
+      - name: Publish APK at a stable URL
+        if: steps.have.outputs.count == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          URL=$(node -e 'const s=require("fs").readFileSync("apps/mobile/build.json","utf8");console.log(JSON.parse(s.slice(s.indexOf("[")))[0].artifacts.buildUrl)')
+          curl -fL --retry 3 -o arth.apk "$URL"
+          gh release view apk-latest >/dev/null 2>&1 || gh release create apk-latest --target "$GITHUB_SHA" --latest=false \
+            --title "Latest Android APK" --notes "placeholder"
+          gh release upload apk-latest arth.apk --clobber
+          gh release edit apk-latest --notes "Built from ${GITHUB_SHA::9} on $(date -u +%F\ %H:%MZ). Install by opening the arth.apk asset on your phone."
+          echo "APK: https://github.com/${{ github.repository }}/releases/download/apk-latest/arth.apk" >> "$GITHUB_STEP_SUMMARY"

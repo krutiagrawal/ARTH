@@ -139,10 +139,11 @@
     },
     "owner": "kruti_agrawal",
     "runtimeVersion": {
-      "policy": "appVersion"
+      "policy": "fingerprint"
     },
     "updates": {
-      "url": "https://u.expo.dev/318022cc-b7ce-459b-b127-f57a21a5f462"
+      "url": "https://u.expo.dev/318022cc-b7ce-459b-b127-f57a21a5f462",
+      "fallbackToCacheTimeout": 3000
     }
   }
 }
