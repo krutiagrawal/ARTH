@@ -98,3 +98,33 @@ describe('rate limiting', () => {
     }
   });
 });
+
+describe('mobile error intake', () => {
+  async function buildIntakeApp() {
+    const app = Fastify({ trustProxy: true });
+    const rateLimitModule = await import('../src/plugins/rateLimit');
+    await app.register(rateLimitModule.default);
+    app.decorate('optionalAuthenticate', async () => {});
+    const routes = (await import('../src/routes/clientErrors.routes')).default;
+    await app.register(routes, { prefix: '/api/client-errors' });
+    return app;
+  }
+
+  it('accepts a report and answers 204, even when the report is malformed', async () => {
+    const app = await buildIntakeApp();
+    const ok = await app.inject({ method: 'POST', url: '/api/client-errors', payload: { message: 'boom', platform: 'android' } });
+    expect(ok.statusCode).toBe(204);
+    const bad = await app.inject({ method: 'POST', url: '/api/client-errors', payload: { nonsense: true } });
+    expect(bad.statusCode).toBe(204);
+  });
+
+  it('is rate limited so it cannot be used to flood error reporting', async () => {
+    const app = await buildIntakeApp();
+    const codes: number[] = [];
+    for (let i = 0; i < 12; i++) {
+      codes.push((await app.inject({ method: 'POST', url: '/api/client-errors', payload: { message: `e${i}` } })).statusCode);
+    }
+    expect(codes.slice(0, 10).every((c) => c === 204)).toBe(true);
+    expect(codes[10]).toBe(429);
+  });
+});

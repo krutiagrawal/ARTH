@@ -167,6 +167,7 @@ import { AdminCatalogScreen } from '../screens/AdminCatalogScreen';
 import { BottomNav, NavSurface, TabName, TabItem, USER_TABS } from '../components/navigation/BottomNav';
 import { useTimeTheme, type TimePeriod } from '../hooks/useTimeTheme';
 import { useSettings } from '../hooks/useApiQueries';
+import { reportError } from '../utils/errorReporter';
 import { usePushRegistration } from '../hooks/usePushRegistration';
 
 export type NgoTabName = 'Home' | 'Manage' | 'Map' | 'Community';
@@ -269,6 +270,7 @@ class MapErrorBoundary extends React.Component<
     // Any render/load error in the Map lands here, not just Expo Go's missing native module –
     // log it so a real bug isn't hidden behind the generic message below.
     console.error('[MapErrorBoundary]', error);
+    reportError(error, 'Map');
   }
   render() {
     if (this.state.hasError) {
@@ -294,6 +296,9 @@ class DonateErrorBoundary extends React.Component<
   state = { hasError: false };
   static getDerivedStateFromError() {
     return { hasError: true };
+  }
+  componentDidCatch(error: unknown) {
+    reportError(error, 'Donate');
   }
   render() {
     if (this.state.hasError) {

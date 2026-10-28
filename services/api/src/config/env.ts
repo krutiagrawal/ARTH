@@ -13,6 +13,9 @@ const envSchema = z.object({
   OWM_API_KEY: z.string().min(1),
   // Optional so the whole API doesn't fail to boot before Stripe is configured —
   // donation endpoints throw a clear 503 instead (see lib/stripe.ts).
+  // Crash/error reporting (Sentry). Unset = reporting is off. See lib/sentry.ts.
+  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_RELEASE: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   // Expo push delivery. Off by default: push doesn't work in Expo Go on iOS (removed in SDK 53),
