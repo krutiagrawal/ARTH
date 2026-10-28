@@ -32,6 +32,15 @@ ln -sfn "$ROOT/shared/.env.api" packages/db/.env   # prisma CLI reads DATABASE_U
 # Install only the workspaces that run on the server (skips the heavy Expo/mobile tree).
 npm ci --workspace=packages/db --workspace=services/api --workspace=apps/web --include-workspace-root --no-audit --no-fund
 
+# Snapshot the database before touching the schema. The automatic rollback below only restores code, so this dump
+# is the way back from a bad migration (restore: pg_restore --clean --if-exists -d "$DATABASE_URL" <file>).
+# A failed backup aborts the release (ERR trap) rather than migrating without a safety net.
+BACKUPS="$ROOT/shared/backups"
+mkdir -p "$BACKUPS"
+DB_URL="$(grep -E '^DATABASE_URL=' "$ROOT/shared/.env.api" | head -1 | cut -d= -f2- | tr -d '"')"
+pg_dump -Fc "$DB_URL" -f "$BACKUPS/pre-deploy-$(date -u +%Y%m%dT%H%M%SZ)-$SHA.dump"
+ls -1t "$BACKUPS"/pre-deploy-*.dump | tail -n +11 | xargs -r rm -f   # keep the 10 newest
+
 # Apply migrations before switching traffic (migrations must stay backward compatible with the previous release).
 npm run prisma:migrate:deploy
 

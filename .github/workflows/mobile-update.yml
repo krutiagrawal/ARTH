@@ -1,10 +1,17 @@
 name: Mobile OTA update
 
+# Publishes JS/asset changes to installed APKs without a rebuild. The installed APK was built with the
+# `preview` EAS profile (channel "preview"), so updates go to the "preview" branch. Native changes
+# (permissions, native libraries, app.json plugins) still need a new APK build.
 on:
   push:
     branches: [master]
     paths: ['apps/mobile/**']
   workflow_dispatch:
+
+concurrency:
+  group: mobile-update
+  cancel-in-progress: false
 
 jobs:
   update:
@@ -21,10 +28,10 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-      - name: Publish update to the production branch
+      - name: Publish update to the preview branch
         working-directory: apps/mobile
-        run: eas update --branch production --message "${{ github.sha }}" --non-interactive
+        run: eas update --branch preview --platform android --message "${{ github.sha }}" --non-interactive
         env:
-          EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
-          EXPO_PUBLIC_WEB_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
-          EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          # Public server addresses, not secrets; hardcoded so a blank repo variable can't break the app.
+          EXPO_PUBLIC_API_URL: https://api.13-235-206-230.sslip.io
+          EXPO_PUBLIC_WEB_URL: https://app.13-235-206-230.sslip.io
