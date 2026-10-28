@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { limit } from '../plugins/rateLimit';
 import { env } from '../config/env';
 import { BadRequestError } from '../utils/errors';
 
@@ -24,7 +25,7 @@ const FORECAST_STEP_MS = 3 * 60 * 60 * 1000;
 export default async function weatherRoutes(fastify: FastifyInstance) {
   // Forecast for a specific moment (a drive's start). OpenWeather's free forecast covers ~5 days in
   // 3-hour steps, so anything further out - or already past - simply reports { available: false }.
-  fastify.get<{ Querystring: { lat?: string; lng?: string; at?: string } }>('/forecast', async (request, reply) => {
+  fastify.get<{ Querystring: { lat?: string; lng?: string; at?: string } }>('/forecast', limit(60, '1 minute'), async (request, reply) => {
     const lat = Number(request.query.lat);
     const lng = Number(request.query.lng);
     const at = new Date(request.query.at ?? '').getTime();
@@ -64,7 +65,7 @@ export default async function weatherRoutes(fastify: FastifyInstance) {
     }
   });
 
-  fastify.get<{ Querystring: { lat?: string; lng?: string } }>('/', async (request, reply) => {
+  fastify.get<{ Querystring: { lat?: string; lng?: string } }>('/', limit(60, '1 minute'), async (request, reply) => {
     const lat = Number(request.query.lat);
     const lng = Number(request.query.lng);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {

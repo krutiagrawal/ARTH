@@ -11,6 +11,8 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": { "fastify": ["node_modules/fastify"] },
     "declaration": false,
     "sourceMap": true
   },

@@ -4,8 +4,10 @@ import { randomUUID } from 'node:crypto';
 import { env } from '../config/env';
 import { BadRequestError } from '../utils/errors';
 
-const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic']);
-const ALLOWED_DOCUMENT_MIME_TYPES = new Set([...ALLOWED_MIME_TYPES, 'application/pdf']);
+type DetectedType = 'jpeg' | 'png' | 'webp' | 'heic' | 'pdf';
+
+const EXTENSION_FOR: Record<DetectedType, string> = { jpeg: '.jpg', png: '.png', webp: '.webp', heic: '.heic', pdf: '.pdf' };
+const HEIC_BRANDS = new Set(['heic', 'heix', 'hevc', 'hevx', 'heim', 'heis', 'mif1', 'msf1']);
 
 interface PhotoInput {
   filename: string;
@@ -13,9 +15,25 @@ interface PhotoInput {
   buffer: Buffer;
 }
 
-async function writeUpload(photo: PhotoInput, subdir: string): Promise<string> {
-  const extension = path.extname(photo.filename) || '.jpg';
-  const filename = `${randomUUID()}${extension}`;
+// The client chooses both the filename and the Content-Type it claims, so neither can be trusted: an
+// attacker could upload an .html page labelled image/png and have it served from our own domain. The
+// real type is read from the file's leading bytes, and the stored extension comes from that — never
+// from the uploaded filename.
+export function detectFileType(buf: Buffer): DetectedType | null {
+  if (buf.length < 12) return null;
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'jpeg';
+  if (buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'png';
+  if (buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP') return 'webp';
+  if (buf.toString('ascii', 0, 5) === '%PDF-') return 'pdf';
+  if (buf.toString('ascii', 4, 8) === 'ftyp' && HEIC_BRANDS.has(buf.toString('ascii', 8, 12))) return 'heic';
+  return null;
+}
+
+async function writeUpload(photo: PhotoInput, subdir: string, allowed: DetectedType[], rejectMessage: string): Promise<string> {
+  const detected = detectFileType(photo.buffer);
+  if (!detected || !allowed.includes(detected)) throw new BadRequestError(rejectMessage);
+
+  const filename = `${randomUUID()}${EXTENSION_FOR[detected]}`;
   const dir = path.resolve(process.cwd(), env.UPLOAD_DIR, subdir);
   fs.mkdirSync(dir, { recursive: true });
   const destination = path.join(dir, filename);
@@ -26,20 +44,14 @@ async function writeUpload(photo: PhotoInput, subdir: string): Promise<string> {
 }
 
 async function saveImage(photo: PhotoInput, subdir: string): Promise<string> {
-  if (!ALLOWED_MIME_TYPES.has(photo.mimetype)) {
-    throw new BadRequestError('Unsupported image type. Please upload a JPEG, PNG, WEBP, or HEIC file.');
-  }
-  return writeUpload(photo, subdir);
+  return writeUpload(photo, subdir, ['jpeg', 'png', 'webp', 'heic'], 'Unsupported image type. Please upload a JPEG, PNG, WEBP, or HEIC file.');
 }
 
 // Registration/tax certificates are commonly scanned as PDFs, unlike every other upload in the
 // app (logos, cover photos, verification photos) which is always a photo — this is the one place
-// that also accepts application/pdf alongside the standard image types.
+// that also accepts a PDF alongside the standard image types.
 async function saveDocument(photo: PhotoInput, subdir: string): Promise<string> {
-  if (!ALLOWED_DOCUMENT_MIME_TYPES.has(photo.mimetype)) {
-    throw new BadRequestError('Unsupported file type. Please upload a JPEG, PNG, WEBP, HEIC, or PDF file.');
-  }
-  return writeUpload(photo, subdir);
+  return writeUpload(photo, subdir, ['jpeg', 'png', 'webp', 'heic', 'pdf'], 'Unsupported file type. Please upload a JPEG, PNG, WEBP, HEIC, or PDF file.');
 }
 
 export function saveTreePhoto(photo: PhotoInput): Promise<string> {

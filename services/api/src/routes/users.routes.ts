@@ -97,6 +97,8 @@ export default async function usersRoutes(fastify: FastifyInstance) {
       where: { id: request.user!.id },
       data: { isDeleted: true },
     });
+    // Sign the account out everywhere so a deleted account's refresh tokens can't linger.
+    await logoutAll(fastify.prisma, request.user!.id);
     reply.status(204).send();
   });
 

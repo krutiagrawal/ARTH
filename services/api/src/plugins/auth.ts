@@ -98,6 +98,9 @@ export default fp(async function authPlugin(fastify: FastifyInstance) {
     const token = header.slice('Bearer '.length);
     try {
       const payload = verifyAccessToken(token);
+      // Same blocked/deleted check as authenticate(), so a banned account can't keep using public-route personalisation.
+      const user = await fastify.prisma.user.findUnique({ where: { id: payload.sub }, select: { isDeleted: true, isBlocked: true } });
+      if (!user || user.isDeleted || user.isBlocked) return;
       request.user = { id: payload.sub, email: payload.email, role: payload.role as UserRole };
     } catch {
       // Invalid/expired token on an optional route — treat as anonymous, don't throw.

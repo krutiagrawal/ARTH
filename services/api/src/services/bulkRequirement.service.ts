@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import { PrismaClient } from '@arth/db';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
 import { notify } from './notification.service';
@@ -724,7 +725,7 @@ export async function withdrawResponse(prisma: PrismaClient, nurseryUserId: stri
 }
 
 function generateHandoffCode() {
-  return String(Math.floor(1000 + Math.random() * 9000));
+  return String(randomInt(1000, 10000));
 }
 
 // Nursery declares the physical handoff has happened — but this alone must never be enough to
