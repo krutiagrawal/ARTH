@@ -7,6 +7,7 @@ import { getGroupActivity } from '../services/groupActivity.service';
 import { listGroupDrives } from '../services/drive.service';
 import { serializeDrive } from './drives.routes';
 import { listActiveGroupStories } from '../services/story.service';
+import { limit } from '../plugins/rateLimit';
 
 function serializeGroupSummary(group: any) {
   return {
@@ -35,7 +36,7 @@ export default async function groupsRoutes(fastify: FastifyInstance) {
     );
   });
 
-  fastify.post('/join', async (request, reply) => {
+  fastify.post('/join', limit(10, '1 hour'), async (request, reply) => {
     const parsed = joinGroupSchema.safeParse(request.body);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
 

@@ -1,5 +1,6 @@
 'use client'
 import { Suspense, useState } from 'react'
+import { safeNextPath } from '@/lib/safeRedirect'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
@@ -34,7 +35,7 @@ function LoginForm() {
       await refresh()
       // Organisation-type accounts (ngo/community/nursery/organisation) have their
       // own dashboard + session at /ngo/login – this form is for individual accounts.
-      router.push(searchParams.get('next') || '/dashboard/individual')
+      router.push(safeNextPath(searchParams.get('next'), '/dashboard/individual'))
     } catch {
       setError('Could not reach the server. Please check your connection and try again.')
     } finally {
