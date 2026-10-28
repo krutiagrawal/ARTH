@@ -27,7 +27,11 @@
       "android": {
         "buildType": "app-bundle"
       },
-      "channel": "production"
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.13-235-206-230.sslip.io",
+        "EXPO_PUBLIC_WEB_URL": "https://app.13-235-206-230.sslip.io"
+      }
     }
   },
   "submit": {
