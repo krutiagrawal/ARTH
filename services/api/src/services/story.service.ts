@@ -2,7 +2,6 @@ import { PrismaClient } from '@arth/db';
 import { NotFoundError } from '../utils/errors';
 import { requireApprovedNgoProfile } from './ngo.service';
 import { requireApprovedNurseryProfile } from './nursery.service';
-import { requireOwnGroup } from './group.service';
 import { getBlockedIds } from './block.service';
 
 export const STORY_TTL_MS = 24 * 60 * 60 * 1000;
@@ -14,7 +13,6 @@ export function serializeStory(story: any, seenIds?: Set<string>, likedIds?: Set
     userId: story.userId,
     ngoId: story.ngoId,
     nurseryId: story.nurseryId,
-    groupId: story.groupId,
     imageUrl: story.imageUrl,
     caption: story.caption,
     createdAt: story.createdAt,
@@ -29,19 +27,17 @@ export function serializeStory(story: any, seenIds?: Set<string>, likedIds?: Set
 export async function createStory(
   prisma: PrismaClient,
   viewerId: string,
-  input: { imageUrl: string; caption?: string | null; asNgo?: boolean; asGroup?: boolean; asNursery?: boolean },
+  input: { imageUrl: string; caption?: string | null; asNgo?: boolean; asNursery?: boolean },
 ) {
   const ngo = input.asNgo ? await requireApprovedNgoProfile(prisma, viewerId) : null;
-  const group = !ngo && input.asGroup ? await requireOwnGroup(prisma, viewerId) : null;
-  const nursery = !ngo && !group && input.asNursery ? await requireApprovedNurseryProfile(prisma, viewerId) : null;
-  const asOrg = ngo ?? group ?? nursery;
+  const nursery = !ngo && input.asNursery ? await requireApprovedNurseryProfile(prisma, viewerId) : null;
+  const asOrg = ngo ?? nursery;
 
   return prisma.story.create({
     data: {
-      authorType: ngo ? 'ngo' : group ? 'group' : nursery ? 'nursery' : 'user',
+      authorType: ngo ? 'ngo' : nursery ? 'nursery' : 'user',
       userId: asOrg ? null : viewerId,
       ngoId: ngo?.id ?? null,
-      groupId: group?.id ?? null,
       nurseryId: nursery?.id ?? null,
       imageUrl: input.imageUrl,
       caption: input.caption || null,
@@ -52,12 +48,11 @@ export async function createStory(
 
 /**
  * The caller's own stories, newest first, with no expiry filter — this doubles as the permanent
- * forest gallery on the profile. Includes the NGO's/Group's/nursery's stories when the caller runs one.
+ * forest gallery on the profile. Includes the NGO's/nursery's stories when the caller runs one.
  */
 export async function listOwnStories(prisma: PrismaClient, viewerId: string) {
-  const [ngo, group, nursery] = await Promise.all([
+  const [ngo, nursery] = await Promise.all([
     prisma.ngoProfile.findUnique({ where: { userId: viewerId }, select: { id: true } }),
-    prisma.groupProfile.findUnique({ where: { userId: viewerId }, select: { id: true } }),
     prisma.nurseryProfile.findUnique({ where: { userId: viewerId }, select: { id: true } }),
   ]);
 
@@ -66,7 +61,6 @@ export async function listOwnStories(prisma: PrismaClient, viewerId: string) {
       OR: [
         { userId: viewerId },
         ...(ngo ? [{ ngoId: ngo.id }] : []),
-        ...(group ? [{ groupId: group.id }] : []),
         ...(nursery ? [{ nurseryId: nursery.id }] : []),
       ],
     },
@@ -79,7 +73,7 @@ export async function listOwnStories(prisma: PrismaClient, viewerId: string) {
 
 interface StoryGroup {
   author: {
-    kind: 'user' | 'ngo' | 'nursery' | 'group';
+    kind: 'user' | 'ngo' | 'nursery';
     id: string;
     name: string;
     handle: string | null;
@@ -99,13 +93,12 @@ interface StoryGroup {
  * for), then by recency. Blocked accounts drop out in both directions.
  */
 export async function getStoryFeed(prisma: PrismaClient, viewerId: string): Promise<StoryGroup[]> {
-  const [friendships, follows, memberships, blocked] = await Promise.all([
+  const [friendships, follows, blocked] = await Promise.all([
     prisma.friendship.findMany({
       where: { status: 'accepted', OR: [{ requesterId: viewerId }, { addresseeId: viewerId }] },
       select: { requesterId: true, addresseeId: true },
     }),
     prisma.follow.findMany({ where: { followerId: viewerId, status: 'accepted' }, select: { ngoId: true, nurseryId: true } }),
-    prisma.groupMember.findMany({ where: { userId: viewerId }, select: { groupId: true } }),
     getBlockedIds(prisma, viewerId),
   ]);
 
@@ -114,15 +107,13 @@ export async function getStoryFeed(prisma: PrismaClient, viewerId: string): Prom
     .filter((id) => !blocked.userIds.includes(id));
   const ngoIds = follows.map((f) => f.ngoId).filter((id): id is string => id != null && !blocked.ngoIds.includes(id));
   const nurseryIds = follows.map((f) => f.nurseryId).filter((id): id is string => id != null && !blocked.nurseryIds.includes(id));
-  const groupIds = memberships.map((m) => m.groupId);
 
-  if (friendIds.length === 0 && ngoIds.length === 0 && nurseryIds.length === 0 && groupIds.length === 0) return [];
+  if (friendIds.length === 0 && ngoIds.length === 0 && nurseryIds.length === 0) return [];
 
   const authorClauses = [
     ...(friendIds.length ? [{ userId: { in: friendIds } }] : []),
     ...(ngoIds.length ? [{ ngoId: { in: ngoIds } }] : []),
     ...(nurseryIds.length ? [{ nurseryId: { in: nurseryIds } }] : []),
-    ...(groupIds.length ? [{ groupId: { in: groupIds } }] : []),
   ];
 
   const stories = await prisma.story.findMany({
@@ -132,7 +123,6 @@ export async function getStoryFeed(prisma: PrismaClient, viewerId: string): Prom
       user: { select: { id: true, name: true, handle: true, avatarEmoji: true } },
       ngo: { select: { id: true, orgName: true, logoUrl: true } },
       nursery: { select: { id: true, nurseryName: true, logoUrl: true } },
-      group: { select: { id: true, groupName: true, logoUrl: true, avatarEmoji: true } },
     },
   });
 
@@ -152,9 +142,7 @@ export async function getStoryFeed(prisma: PrismaClient, viewerId: string): Prom
       ? `ngo:${story.ngoId}`
       : story.nurseryId
         ? `nursery:${story.nurseryId}`
-        : story.groupId
-          ? `group:${story.groupId}`
-          : `user:${story.userId}`;
+        : `user:${story.userId}`;
     let group = groups.get(key);
 
     if (!group) {
@@ -186,33 +174,19 @@ export async function getStoryFeed(prisma: PrismaClient, viewerId: string): Prom
               stories: [],
               hasUnseen: false,
             }
-          : story.group
-            ? {
-                author: {
-                  kind: 'group',
-                  id: story.group.id,
-                  name: story.group.groupName,
-                  handle: null,
-                  avatarEmoji: story.group.avatarEmoji,
-                  imageUrl: story.group.logoUrl,
-                },
-                user: null,
-                stories: [],
-                hasUnseen: false,
-              }
-            : {
-                author: {
-                  kind: 'user',
-                  id: story.user!.id,
-                  name: story.user!.name,
-                  handle: story.user!.handle,
-                  avatarEmoji: story.user!.avatarEmoji,
-                  imageUrl: null,
-                },
-                user: story.user!,
-                stories: [],
-                hasUnseen: false,
-              };
+          : {
+            author: {
+              kind: 'user',
+              id: story.user!.id,
+              name: story.user!.name,
+              handle: story.user!.handle,
+              avatarEmoji: story.user!.avatarEmoji,
+              imageUrl: null,
+            },
+            user: story.user!,
+            stories: [],
+            hasUnseen: false,
+          };
       groups.set(key, group);
     }
 
@@ -239,21 +213,20 @@ export interface RingStatus {
  *
  * Privacy: an individual user with `UserSettings.publicProfile = false` only shows their ring to
  * accepted friends (and themselves) — everyone else gets no ring for that user, active story or
- * not. NGOs/nurseries/groups have no privacy concept in this app, so their rings are always
+ * not. NGOs/nurseries have no privacy concept in this app, so their rings are always
  * computed normally.
  */
 export async function getRingStatus(
   prisma: PrismaClient,
   viewerId: string,
-  ids: { userIds?: string[]; ngoIds?: string[]; nurseryIds?: string[]; groupIds?: string[] },
-): Promise<{ users: Record<string, RingStatus>; ngos: Record<string, RingStatus>; nurseries: Record<string, RingStatus>; groups: Record<string, RingStatus> }> {
+  ids: { userIds?: string[]; ngoIds?: string[]; nurseryIds?: string[] },
+): Promise<{ users: Record<string, RingStatus>; ngos: Record<string, RingStatus>; nurseries: Record<string, RingStatus> }> {
   const userIds = [...new Set(ids.userIds ?? [])];
   const ngoIds = [...new Set(ids.ngoIds ?? [])];
   const nurseryIds = [...new Set(ids.nurseryIds ?? [])];
-  const groupIds = [...new Set(ids.groupIds ?? [])];
 
-  const empty = { users: {}, ngos: {}, nurseries: {}, groups: {} };
-  if (!userIds.length && !ngoIds.length && !nurseryIds.length && !groupIds.length) return empty;
+  const empty = { users: {}, ngos: {}, nurseries: {} };
+  if (!userIds.length && !ngoIds.length && !nurseryIds.length) return empty;
 
   const stories = await prisma.story.findMany({
     where: {
@@ -262,10 +235,9 @@ export async function getRingStatus(
         ...(userIds.length ? [{ userId: { in: userIds } }] : []),
         ...(ngoIds.length ? [{ ngoId: { in: ngoIds } }] : []),
         ...(nurseryIds.length ? [{ nurseryId: { in: nurseryIds } }] : []),
-        ...(groupIds.length ? [{ groupId: { in: groupIds } }] : []),
-      ],
+          ],
     },
-    select: { id: true, userId: true, ngoId: true, nurseryId: true, groupId: true },
+    select: { id: true, userId: true, ngoId: true, nurseryId: true },
   });
   if (stories.length === 0) return empty;
 
@@ -302,11 +274,10 @@ export async function getRingStatus(
     }
   }
 
-  const result = { users: {}, ngos: {}, nurseries: {}, groups: {} } as {
+  const result = { users: {}, ngos: {}, nurseries: {} } as {
     users: Record<string, RingStatus>;
     ngos: Record<string, RingStatus>;
     nurseries: Record<string, RingStatus>;
-    groups: Record<string, RingStatus>;
   };
 
   for (const story of stories) {
@@ -324,9 +295,6 @@ export async function getRingStatus(
     } else if (story.nurseryId) {
       bucket = result.nurseries;
       key = story.nurseryId;
-    } else if (story.groupId) {
-      bucket = result.groups;
-      key = story.groupId;
     }
     if (!bucket || !key) continue;
 
@@ -347,9 +315,8 @@ export async function markStoryViewed(prisma: PrismaClient, viewerId: string, st
 
 /** Throws if `viewerId` doesn't own the account that posted `storyId` — mirrors deleteStory's check. */
 async function assertOwnsStory(prisma: PrismaClient, viewerId: string, storyId: string) {
-  const [ngo, group, nursery] = await Promise.all([
+  const [ngo, nursery] = await Promise.all([
     prisma.ngoProfile.findUnique({ where: { userId: viewerId }, select: { id: true } }),
-    prisma.groupProfile.findUnique({ where: { userId: viewerId }, select: { id: true } }),
     prisma.nurseryProfile.findUnique({ where: { userId: viewerId }, select: { id: true } }),
   ]);
 
@@ -359,7 +326,6 @@ async function assertOwnsStory(prisma: PrismaClient, viewerId: string, storyId: 
       OR: [
         { userId: viewerId },
         ...(ngo ? [{ ngoId: ngo.id }] : []),
-        ...(group ? [{ groupId: group.id }] : []),
         ...(nursery ? [{ nurseryId: nursery.id }] : []),
       ],
     },
@@ -415,9 +381,8 @@ export async function unlikeStory(prisma: PrismaClient, viewerId: string, storyI
 }
 
 export async function deleteStory(prisma: PrismaClient, viewerId: string, storyId: string) {
-  const [ngo, group, nursery] = await Promise.all([
+  const [ngo, nursery] = await Promise.all([
     prisma.ngoProfile.findUnique({ where: { userId: viewerId }, select: { id: true } }),
-    prisma.groupProfile.findUnique({ where: { userId: viewerId }, select: { id: true } }),
     prisma.nurseryProfile.findUnique({ where: { userId: viewerId }, select: { id: true } }),
   ]);
   const result = await prisma.story.deleteMany({
@@ -426,7 +391,6 @@ export async function deleteStory(prisma: PrismaClient, viewerId: string, storyI
       OR: [
         { userId: viewerId },
         ...(ngo ? [{ ngoId: ngo.id }] : []),
-        ...(group ? [{ groupId: group.id }] : []),
         ...(nursery ? [{ nurseryId: nursery.id }] : []),
       ],
     },
@@ -447,15 +411,6 @@ export async function listActiveUserStories(prisma: PrismaClient, userId: string
 export async function listActiveNurseryStories(prisma: PrismaClient, nurseryId: string) {
   const stories = await prisma.story.findMany({
     where: { nurseryId, authorType: 'nursery', expiresAt: { gt: new Date() } },
-    orderBy: { createdAt: 'asc' },
-  });
-  return stories.map((s) => serializeStory(s));
-}
-
-/** Public stories for one group's profile - active only, mirrors listActiveNgoStories. */
-export async function listActiveGroupStories(prisma: PrismaClient, groupId: string) {
-  const stories = await prisma.story.findMany({
-    where: { groupId, authorType: 'group', expiresAt: { gt: new Date() } },
     orderBy: { createdAt: 'asc' },
   });
   return stories.map((s) => serializeStory(s));

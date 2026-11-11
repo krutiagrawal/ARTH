@@ -15,13 +15,13 @@ const IN_PROGRESS_ORDER = ['confirmed', 'packed', 'ready_for_pickup', 'out_for_d
  * every login are removed. Donation records keep the amount, receipt number and donor PAN, which the receiving
  * NGO must retain for tax audits.
  *
- * Organisation accounts (NGO, nursery, corporate, group, delivery partner) are additionally taken offline and
+ * Organisation accounts (NGO, nursery, corporate, delivery partner) are additionally taken offline and
  * lose their personal contact details; their legal registration details are retained for audit.
  */
 export async function eraseAccount(prisma: PrismaClient, userId: string): Promise<void> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: { ngoProfile: true, nurseryProfile: true, corporateProfile: true, groupProfile: true, deliveryPartnerProfile: true },
+    include: { ngoProfile: true, nurseryProfile: true, corporateProfile: true, deliveryPartnerProfile: true },
   });
   if (!user || user.isDeleted) throw new NotFoundError('Account not found');
   if (user.role === 'admin') throw new ForbiddenError('Admin accounts cannot be deleted here.');
@@ -74,7 +74,6 @@ export async function eraseAccount(prisma: PrismaClient, userId: string): Promis
       await tx.follow.deleteMany({ where: { followerId: userId } });
       await tx.friendship.deleteMany({ where: { OR: [{ requesterId: userId }, { addresseeId: userId }] } });
       await tx.block.deleteMany({ where: { OR: [{ blockerId: userId }, { blockedUserId: userId }] } });
-      await tx.groupMember.deleteMany({ where: { userId, role: { not: 'owner' } } });
       await tx.notification.deleteMany({ where: { userId } });
       await tx.notification.updateMany({ where: { actorUserId: userId }, data: { actorUserId: null } });
 
@@ -147,13 +146,6 @@ export async function eraseAccount(prisma: PrismaClient, userId: string): Promis
       if (user.corporateProfile) {
         filesToDelete.push(user.corporateProfile.logoUrl);
         await tx.corporateProfile.update({ where: { id: user.corporateProfile.id }, data: { status: 'suspended', logoUrl: null } });
-      }
-      if (user.groupProfile) {
-        filesToDelete.push(user.groupProfile.logoUrl);
-        await tx.groupProfile.update({
-          where: { id: user.groupProfile.id },
-          data: { status: 'suspended', logoUrl: null, inviteCode: `X${crypto.randomBytes(7).toString('hex').toUpperCase()}` },
-        });
       }
       if (user.deliveryPartnerProfile) {
         filesToDelete.push(user.deliveryPartnerProfile.photoUrl);

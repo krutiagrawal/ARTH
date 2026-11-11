@@ -97,7 +97,7 @@ const POST_CAPTIONS = [
   'DEMO Social — Native species > ornamental, change my mind.',
   'DEMO Social — Six months later and look at the growth!',
   'DEMO Social — Rainy season is the best time to plant, no cap.',
-  'DEMO Social — Group planting day was such a vibe today.',
+  'DEMO Social — Planting day was such a vibe today.',
   'DEMO Social — Adopted a new tree this week, meet the newest member of the family.',
   'DEMO Social — Small balcony, big ambitions 🌿',
   'DEMO Social — Progress pic from the riverside patch.',
@@ -158,7 +158,7 @@ async function main() {
   const users = [...newUsers, ...adminDemoUsers];
   console.log(`Users in social graph: ${users.length}`);
 
-  // ---------- NGOs / Nurseries / Group (reuse seed_admin_demo.ts's if present, else create a
+  // ---------- NGOs / Nurseries (reuse seed_admin_demo.ts's if present, else create a
   // small fallback set so this script also works standalone) ----------
   let ngos = await prisma.ngoProfile.findMany({ where: { status: 'approved' } });
   if (ngos.length === 0) {
@@ -194,25 +194,7 @@ async function main() {
     nurseries = [nursery];
   }
 
-  let groups = await prisma.groupProfile.findMany({ where: { status: 'active' } });
-  if (groups.length === 0) {
-    const groupOwner = await findOrCreateUser({ email: 'fallback-group@arth.demo', name: 'Fallback Group Owner', handle: 'fallback_group_owner' });
-    const group = await prisma.groupProfile.create({
-      data: {
-        userId: groupOwner.id,
-        groupName: 'Green Families Pune',
-        groupType: 'family',
-        description: 'DEMO group seeded standalone by seed_social_demo.ts.',
-        logoUrl: img('fallback-group'),
-        city: 'Pune',
-        inviteCode: 'DEMOFAM2',
-        status: 'active',
-      },
-    });
-    groups = [group];
-  }
-  const group = groups[0];
-  console.log(`NGOs: ${ngos.length}, Nurseries: ${nurseries.length}, Groups: ${groups.length}`);
+  console.log(`NGOs: ${ngos.length}, Nurseries: ${nurseries.length}`);
 
   const drives = await prisma.drive.findMany({ take: 10 });
 
@@ -254,19 +236,6 @@ async function main() {
   }
   console.log(`Follows: ~${followRows.length} rows seeded`);
 
-  // ---------- Group membership ----------
-  const groupMemberCandidates = sample(
-    users.filter((u) => u.id !== group.userId),
-    Math.min(9, users.length),
-  );
-  if (groupMemberCandidates.length > 0) {
-    await prisma.groupMember.createMany({
-      data: groupMemberCandidates.map((u, i) => ({ groupId: group.id, userId: u.id, role: i === 0 ? ('co_admin' as const) : ('member' as const) })),
-      skipDuplicates: true,
-    });
-  }
-  console.log(`Group members added: ~${groupMemberCandidates.length}`);
-
   // ---------- Drive RSVPs (for the "joined drives" profile tab) ----------
   if (drives.length > 0) {
     const rsvpRows = [];
@@ -292,11 +261,9 @@ async function main() {
     let likeCount = 0;
 
     for (const u of users) {
-      const memberOfGroup = groupMemberCandidates.some((m) => m.id === u.id);
       const postsForUser = randInt(1, 3);
       for (let i = 0; i < postsForUser; i++) {
-        const tagWithGroup = memberOfGroup && i === 0;
-        const tagWithDrive = drives.length > 0 && !tagWithGroup && Math.random() < 0.3;
+        const tagWithDrive = drives.length > 0 && Math.random() < 0.3;
         const mediaCount = randInt(1, 3);
 
         const post = await prisma.post.create({
@@ -305,7 +272,6 @@ async function main() {
             userId: u.id,
             caption: pick(POST_CAPTIONS),
             createdAt: daysAgo(randInt(0, 45)),
-            groupId: tagWithGroup ? group.id : undefined,
             driveId: tagWithDrive ? pick(drives).id : undefined,
             media: {
               create: Array.from({ length: mediaCount }, (_, order) => ({ url: img(`${u.handle}-post-${i}-${order}`), order })),
@@ -369,7 +335,7 @@ async function main() {
     let storyViewCount = 0;
     let storyLikeCount = 0;
 
-    async function createStoryWith(data: { authorType: 'user' | 'ngo' | 'nursery' | 'group'; userId?: string; ngoId?: string; nurseryId?: string; groupId?: string }, seed: string, expired = false) {
+    async function createStoryWith(data: { authorType: 'user' | 'ngo' | 'nursery'; userId?: string; ngoId?: string; nurseryId?: string }, seed: string, expired = false) {
       const story = await prisma.story.create({
         data: {
           ...data,
@@ -406,7 +372,6 @@ async function main() {
     }
     for (const ngo of ngos) await createStoryWith({ authorType: 'ngo', ngoId: ngo.id }, `${ngo.id}-story`);
     for (const nursery of nurseries) await createStoryWith({ authorType: 'nursery', nurseryId: nursery.id }, `${nursery.id}-story`);
-    for (const g of groups) await createStoryWith({ authorType: 'group', groupId: g.id }, `${g.id}-story`);
 
     console.log(`Stories: ${storyCount}, story views: ${storyViewCount}, story likes: ${storyLikeCount}`);
   }

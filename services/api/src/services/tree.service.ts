@@ -4,8 +4,6 @@ import { recordPlantedToday } from './streak.service';
 import { evaluateAchievements } from './achievement.service';
 import { bumpTreePlantedChallenges } from './challenge.service';
 import { completeMissionByType } from './missions.service';
-import { recordGroupPlantedToday } from './groupStreak.service';
-import { evaluateGroupAchievements } from './groupAchievement.service';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../utils/errors';
 import { assertEligiblePlantingLocation, assertNoNearbyOwnPlanting } from './plantingLocation.service';
 import { evaluateNurseryAchievements } from './nurseryAchievement.service';
@@ -180,14 +178,6 @@ export async function plantTree(prisma: PrismaClient, input: PlantTreeInput) {
     await completeMissionByType(tx, input.userId, 'plant');
     await evaluateAchievements(tx, input.userId);
     await bumpTreePlantedChallenges(tx, input.userId);
-
-    // Roll this planting up into every group the planter belongs to — a user can be in
-    // multiple groups, so there's no single canonical groupId to store on the tree itself.
-    const memberships = await tx.groupMember.findMany({ where: { userId: input.userId }, select: { groupId: true } });
-    for (const membership of memberships) {
-      await recordGroupPlantedToday(tx, membership.groupId);
-      await evaluateGroupAchievements(tx, membership.groupId);
-    }
 
     await tx.activityFeed.create({
       data: { userId: input.userId, type: 'tree_planted', referenceType: 'tree', referenceId: tree.id },

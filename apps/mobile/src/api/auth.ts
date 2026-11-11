@@ -5,7 +5,7 @@ import type { PickedPhoto } from './posts';
 
 export interface ApiUser {
   id: string;
-  role: 'user' | 'ngo' | 'group' | 'nursery' | 'corporate' | 'admin' | 'delivery_partner';
+  role: 'user' | 'ngo' | 'nursery' | 'corporate' | 'admin' | 'delivery_partner';
   email: string;
   name: string;
   handle: string;
@@ -247,23 +247,6 @@ export async function registerNgo(input: RegisterNgoInput) {
     method: 'POST',
     body: form,
     isForm: true,
-    auth: false,
-  });
-  return persistAuthResponse(response);
-}
-
-export async function registerGroup(input: {
-  email: string;
-  password: string;
-  name: string;
-  handle: string;
-  groupName: string;
-  groupType: 'family' | 'school' | 'club' | 'other';
-  description: string;
-}) {
-  const response = await apiFetch<AuthResponse>('/api/auth/register-group', {
-    method: 'POST',
-    body: { ...input, deviceInfo },
     auth: false,
   });
   return persistAuthResponse(response);

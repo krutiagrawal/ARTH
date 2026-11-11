@@ -28,7 +28,7 @@ export interface ProfileHeaderAction {
 }
 
 interface ProfileHeaderProps {
-  /** NGO/Nursery logo, or a user/group photo – omit to fall back to `avatarEmoji`. */
+  /** NGO/Nursery logo, or a user photo – omit to fall back to `avatarEmoji`. */
   avatarUrl?: string | null;
   avatarEmoji?: string;
   /** 0-1 XP ring progress + level badge, overlaid on the avatar – User profiles only. */
@@ -39,7 +39,7 @@ interface ProfileHeaderProps {
   /** When set, tapping the avatar opens this author's active story (if `storyRing.hasStory`) –
    * omit to keep the avatar a plain, non-interactive image. */
   storyAuthor?: {
-    kind: 'user' | 'ngo' | 'nursery' | 'group';
+    kind: 'user' | 'ngo' | 'nursery';
     id: string;
     name: string;
     avatarEmoji?: string;

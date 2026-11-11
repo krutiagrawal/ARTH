@@ -161,10 +161,6 @@ export async function fetchUserJoinedDrives(userId: string): Promise<ApiDrive[]>
   return apiFetch<ApiDrive[]>(`/api/users/${userId}/drives/joined`);
 }
 
-export async function fetchGroupDrives(groupId: string): Promise<ApiDrive[]> {
-  return apiFetch<ApiDrive[]>(`/api/groups/${groupId}/drives`);
-}
-
 // ---------- NGO-facing ----------
 
 export function ownedQuery(page: number | undefined, take: number | undefined, filter: Record<string, string | undefined>): string {

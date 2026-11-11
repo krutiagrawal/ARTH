@@ -10,7 +10,6 @@ import { ReportSheet } from '../components/social/ReportSheet';
 import { PostCaptionSheet } from '../components/social/PostCaptionSheet';
 import {
   useDeletePost,
-  useGroupPosts,
   useLikedPosts,
   useNgoPosts,
   useNurseryPosts,
@@ -27,10 +26,10 @@ import type { ApiPost } from '../api/posts';
 const ESTIMATED_ITEM_HEIGHT = 480;
 
 // 'liked' isn't an author – it's the signed-in user's liked-posts list, which mixes authors.
-export type ProfilePostFeedAuthorKind = 'user' | 'ngo' | 'nursery' | 'group' | 'liked';
+export type ProfilePostFeedAuthorKind = 'user' | 'ngo' | 'nursery' | 'liked';
 
 /**
- * Opened by tapping a tile in any profile's post grid (user, NGO, nursery, or group) – lands on
+ * Opened by tapping a tile in any profile's post grid (user, NGO, or nursery) – lands on
  * that exact post, full width, and lets you keep scrolling up/down through the rest of that
  * author's posts in grid order, the way tapping into an Instagram grid does. Backed by the same
  * per-author-kind post query the grid itself uses, so it opens with zero network wait and
@@ -50,10 +49,9 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
   const userPosts = useUserPosts(authorKind === 'user' ? authorId : undefined);
   const ngoPosts = useNgoPosts(authorKind === 'ngo' ? authorId : undefined);
   const nurseryPosts = useNurseryPosts(authorKind === 'nursery' ? authorId : undefined);
-  const groupPosts = useGroupPosts(authorKind === 'group' ? authorId : undefined);
   const likedPosts = useLikedPosts();
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, refetch } =
-    authorKind === 'ngo' ? ngoPosts : authorKind === 'nursery' ? nurseryPosts : authorKind === 'group' ? groupPosts : authorKind === 'liked' ? likedPosts : userPosts;
+    authorKind === 'ngo' ? ngoPosts : authorKind === 'nursery' ? nurseryPosts : authorKind === 'liked' ? likedPosts : userPosts;
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
 
   const posts = useMemo(() => (data?.pages.flatMap((p: any) => p.posts) ?? []) as ApiPost[], [data]);
@@ -62,16 +60,13 @@ export function ProfilePostFeedScreen({ navigation, route }: any) {
     userIds: authorKind === 'user' && authorId ? [authorId] : [],
     ngoIds: authorKind === 'ngo' && authorId ? [authorId] : [],
     nurseryIds: authorKind === 'nursery' && authorId ? [authorId] : [],
-    groupIds: authorKind === 'group' && authorId ? [authorId] : [],
   });
   const authorRing = authorId
     ? authorKind === 'ngo'
       ? ringStatus.data?.ngos[authorId]
       : authorKind === 'nursery'
         ? ringStatus.data?.nurseries[authorId]
-        : authorKind === 'group'
-          ? ringStatus.data?.groups[authorId]
-          : ringStatus.data?.users[authorId]
+        : ringStatus.data?.users[authorId]
     : null;
 
   const toggleLike = useToggleLike();

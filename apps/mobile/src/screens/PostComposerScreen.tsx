@@ -39,25 +39,16 @@ export function PostComposerScreen({ navigation, route }: any) {
   const confirm = useConfirm();
   const { refreshing, onRefresh } = usePullToRefresh([refetchDrives, refetchNgoProfile, refetchNurseryProfile]);
 
-  const groupId: string | undefined = route?.params?.groupId;
-  // A group post is a member posting as themselves, tagged to the group – never the
-  // NGO-style authorship switch, so the two contexts are mutually exclusive.
-  const isNgo = !groupId && user?.role === 'ngo';
+  const isNgo = user?.role === 'ngo';
   const canPublishAsNgo = isNgo && ngoProfile?.status === 'approved';
-  const isNursery = !groupId && user?.role === 'nursery';
+  const isNursery = user?.role === 'nursery';
   const canPublishAsNursery = isNursery && nurseryProfile?.status === 'approved';
   // Unlike an unapproved NGO, an unapproved nursery can't publish at all (the API rejects every
   // write from it), so the composer is blocked rather than falling back to a personal post.
   const nurseryBlocked = isNursery && !canPublishAsNursery;
-  // The Group account's own login (no groupId param, distinct from a member tagging a post to
-  // their group above) publishing as the group itself – Group has no approval gate, so always on.
-  const isGroupAccount = !groupId && user?.role === 'group';
-  const canPublishAsGroup = isGroupAccount;
-  // A Group account only authors Stories today (its forest gallery) – permanent Post authorship
-  // for groups isn't modeled on the backend yet, so the 'post' tab is hidden for it.
-  const availableModes: Mode[] = isGroupAccount ? ['story'] : ['post', 'story'];
+  const availableModes: Mode[] = ['post', 'story'];
 
-  const [mode, setMode] = useState<Mode>(isGroupAccount ? 'story' : 'post');
+  const [mode, setMode] = useState<Mode>('post');
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
   const [caption, setCaption] = useState('');
   const [driveId, setDriveId] = useState<string | undefined>(undefined);
@@ -79,7 +70,6 @@ export function PostComposerScreen({ navigation, route }: any) {
       await createPost.mutateAsync({
         caption: caption.trim() || undefined,
         driveId,
-        groupId,
         photos,
         asNgo: canPublishAsNgo,
         asNursery: canPublishAsNursery,
@@ -87,7 +77,7 @@ export function PostComposerScreen({ navigation, route }: any) {
       reset();
       confirm(
         'Posted',
-        groupId ? 'Shared to your group.' : canPublishAsNgo || canPublishAsNursery ? 'Your followers can see this now.' : 'Shared with your friends.'
+        canPublishAsNgo || canPublishAsNursery ? 'Your followers can see this now.' : 'Shared with your friends.'
       );
       navigation?.goBack?.();
     } catch (e) {
@@ -107,7 +97,6 @@ export function PostComposerScreen({ navigation, route }: any) {
         photo: photos[0],
         caption: caption.trim() || undefined,
         asNgo: canPublishAsNgo,
-        asGroup: canPublishAsGroup,
         asNursery: canPublishAsNursery,
       });
       reset();
@@ -135,12 +124,10 @@ export function PostComposerScreen({ navigation, route }: any) {
       <LinearGradient colors={[COLORS.cream, COLORS.beigeLight]} style={StyleSheet.absoluteFill} />
 
       <ScreenHeader
-        title={mode === 'post' ? (groupId ? 'New group update' : 'New post') : 'New story'}
+        title={mode === 'post' ? 'New post' : 'New story'}
         subtitle={
           mode === 'post'
-            ? groupId
-              ? 'Shared to your group'
-              : 'Stays on your profile'
+            ? 'Stays on your profile'
             : 'Disappears after 24 hours'
         }
         onBack={() => navigation?.goBack?.()}

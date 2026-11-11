@@ -378,19 +378,6 @@ export async function listJoinedDrives(prisma: PrismaClient, userId: string) {
   });
 }
 
-/** Drives any current member of the group has RSVP'd to, deduped — a group has no RSVP of its own. */
-export async function listGroupDrives(prisma: PrismaClient, groupId: string) {
-  const members = await prisma.groupMember.findMany({ where: { groupId }, select: { userId: true } });
-  const memberIds = members.map((m) => m.userId);
-  if (memberIds.length === 0) return [];
-
-  return prisma.drive.findMany({
-    where: { rsvps: { some: { userId: { in: memberIds }, status: 'confirmed' } } },
-    include: driveInclude,
-    orderBy: { startsAt: 'desc' },
-  });
-}
-
 export async function listOwnedDrives(prisma: PrismaClient, ngoUserId: string, filter: OwnedListFilter = {}) {
   const ngo = await requireNgoProfile(prisma, ngoUserId);
   const take = Math.min(filter.take ?? 50, 50);

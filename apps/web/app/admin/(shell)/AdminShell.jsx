@@ -9,7 +9,6 @@ import {
   ScrollText,
   LogOut,
   ShieldAlert,
-  Users,
   Sprout,
   Building2,
   Search,
@@ -52,10 +51,6 @@ export default function AdminShell({ hasAdmin, adminName, children }) {
         { label: 'Nurseries', href: '/admin/nurseries', icon: Sprout, disabled: !hasAdmin, disabledReason: ADMIN_REASON },
         { label: 'Corporates', href: '/admin/corporates', icon: Building2, disabled: !hasAdmin, disabledReason: ADMIN_REASON },
       ],
-    },
-    {
-      label: 'Groups',
-      items: [{ label: 'Groups', href: '/admin/groups', icon: Users, disabled: !hasAdmin, disabledReason: ADMIN_REASON }],
     },
     {
       label: 'Operations',

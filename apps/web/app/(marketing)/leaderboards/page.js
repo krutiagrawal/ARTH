@@ -41,7 +41,6 @@ const CATEGORY_ORDER = ['Individuals', 'Communities', 'NGOs', 'Cities', 'Schools
 // LeaderboardEntry table.
 const LIVE_CATEGORIES = {
   Individuals: 'user',
-  Communities: 'group',
 }
 
 async function loadLiveCategory(role) {

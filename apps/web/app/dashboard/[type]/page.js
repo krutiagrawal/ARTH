@@ -5,7 +5,7 @@ import DashboardClient from './DashboardClient'
 // 'individual' now lives at the static apps/web/app/dashboard/individual/*
 // route tree, which Next.js shadows ahead of this dynamic segment – kept out
 // of VALID_TYPES so a stray link here 404s instead of double-serving it.
-const VALID_TYPES = ['group', 'ngo', 'nursery', 'corporate']
+const VALID_TYPES = ['ngo', 'nursery', 'corporate']
 
 export const metadata = {
   title: 'Dashboard',

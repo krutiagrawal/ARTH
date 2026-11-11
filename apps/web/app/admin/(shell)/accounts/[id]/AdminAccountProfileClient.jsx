@@ -27,16 +27,6 @@ const CONFIRM_COPY = {
     destructive: true,
   },
   reinstate: { title: 'Reinstate this account?', confirmLabel: 'Reinstate', body: 'They regain full publishing access.', status: 'approved' },
-  // Groups use GroupStatus (active/suspended only, no approval workflow) – distinct
-  // confirm keys since the generic reinstate above sets 'approved', not 'active'.
-  'group-suspend': {
-    title: 'Suspend this group?',
-    confirmLabel: 'Suspend',
-    body: "Members keep read access but the group can't post or run challenges until reinstated.",
-    status: 'suspended',
-    destructive: true,
-  },
-  'group-reinstate': { title: 'Reinstate this group?', confirmLabel: 'Reinstate', body: 'The group regains full access.', status: 'active' },
   block: {
     title: 'Block this account?',
     confirmLabel: 'Block',
@@ -65,7 +55,7 @@ function MediaCard({ caption, media, meta }) {
   )
 }
 
-// Shared by every kind that carries an achievements/badges list (ngo/nursery/user/group) –
+// Shared by every kind that carries an achievements/badges list (ngo/nursery/user) –
 // same {unlocked, achievement{icon,title}, unlockedAt} shape from the *AchievementUnlock tables.
 function AchievementRow({ unlock }) {
   return (
@@ -125,12 +115,11 @@ export default function AdminAccountProfileClient({ userId }) {
   const kind = data?.kind
   const content = data?.content
 
-  const orgProfile = account?.ngoProfile ?? account?.nurseryProfile ?? account?.corporateProfile ?? account?.groupProfile ?? null
+  const orgProfile = account?.ngoProfile ?? account?.nurseryProfile ?? account?.corporateProfile ?? null
   const orgName =
     account?.ngoProfile?.orgName ??
     account?.nurseryProfile?.nurseryName ??
     account?.corporateProfile?.companyName ??
-    account?.groupProfile?.groupName ??
     null
   const approvalStatus = orgProfile?.status ?? null
 
@@ -141,9 +130,7 @@ export default function AdminAccountProfileClient({ userId }) {
         ? `/admin/nurseries/${orgProfile?.id}/status`
         : kind === 'corporate'
           ? `/admin/corporates/${orgProfile?.id}/status`
-          : kind === 'group'
-            ? `/admin/groups/${orgProfile?.id}/status`
-            : null
+          : null
 
   const runConfirm = async () => {
     if (!confirm) return
@@ -221,20 +208,6 @@ export default function AdminAccountProfileClient({ userId }) {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {kind === 'group' ? (
-              <>
-                {approvalStatus === 'active' && (
-                  <Button variant="outline" className="rounded-full" onClick={() => setConfirm('group-suspend')}>
-                    <ShieldAlert className="h-4 w-4" /> Suspend
-                  </Button>
-                )}
-                {approvalStatus === 'suspended' && (
-                  <Button className="rounded-full" onClick={() => setConfirm('group-reinstate')}>
-                    <ShieldQuestion className="h-4 w-4" /> Reinstate
-                  </Button>
-                )}
-              </>
-            ) : (
               <>
                 {approvalStatus === 'pending' && (
                   <>
@@ -262,7 +235,6 @@ export default function AdminAccountProfileClient({ userId }) {
                   </Button>
                 )}
               </>
-            )}
             {account.isBlocked ? (
               <Button className="rounded-full" onClick={() => setConfirm('unblock')}>
                 <ShieldCheck className="h-4 w-4" /> Unblock
@@ -497,69 +469,6 @@ export default function AdminAccountProfileClient({ userId }) {
           {!content.posts?.length && !content.trees?.length && !content.stories?.length && !content.achievements?.length && (
             <EmptyState title="No activity yet" body="This account hasn't posted, planted any trees, or unlocked anything yet." />
           )}
-        </>
-      )}
-
-      {kind === 'group' && (
-        <>
-          <div className="rounded-3xl border border-border/70 bg-card soft-shadow p-6 space-y-3">
-            <p className="eyebrow">About</p>
-            <p className="text-sm text-muted-foreground">{content.description}</p>
-            <p className="text-sm text-muted-foreground capitalize">{content.groupType}</p>
-            {content.city && <p className="text-sm text-muted-foreground">{content.city}</p>}
-          </div>
-
-          <ListSection
-            title="Members"
-            items={content.members}
-            renderRow={(m) => (
-              <div key={m.id} className="flex items-center justify-between text-sm border-b border-border/50 pb-2 last:border-0">
-                <span>
-                  {m.user?.name} <span className="text-xs text-muted-foreground">@{m.user?.handle}</span>
-                </span>
-                <span className="text-muted-foreground text-xs capitalize">
-                  {m.role?.replace(/_/g, ' ')} · joined {new Date(m.joinedAt).toLocaleDateString()}
-                </span>
-              </div>
-            )}
-          />
-
-          <ListSection
-            title="Challenges"
-            items={content.challenges}
-            renderRow={(c) => (
-              <div key={c.id} className="flex items-center justify-between text-sm border-b border-border/50 pb-2 last:border-0">
-                <span>{c.title}</span>
-                <span className="text-muted-foreground text-xs">
-                  {c.goalTotal} {c.goalType?.replace(/_/g, ' ')} · {new Date(c.startsAt).toLocaleDateString()}–{new Date(c.endsAt).toLocaleDateString()}
-                </span>
-              </div>
-            )}
-          />
-
-          <MediaSection
-            title="Posts"
-            items={content.posts}
-            renderCard={(post) => (
-              <MediaCard key={post.id} caption={post.caption} media={post.media} meta={new Date(post.createdAt).toLocaleDateString()} />
-            )}
-          />
-
-          <MediaSection
-            title="Stories"
-            items={content.stories}
-            renderCard={(s) => (
-              <MediaCard key={s.id} caption={s.caption} media={s.imageUrl ? [{ url: s.imageUrl }] : []} meta={new Date(s.createdAt).toLocaleDateString()} />
-            )}
-          />
-
-          <ListSection title="Achievements & badges" items={content.achievements} renderRow={(a) => <AchievementRow key={a.id} unlock={a} />} />
-
-          {!content.members?.length &&
-            !content.challenges?.length &&
-            !content.posts?.length &&
-            !content.stories?.length &&
-            !content.achievements?.length && <EmptyState title="No activity yet" body="This group hasn't done anything yet." />}
         </>
       )}
 

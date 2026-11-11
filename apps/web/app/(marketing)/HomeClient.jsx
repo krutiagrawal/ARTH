@@ -449,7 +449,7 @@ function ExampleCard({ name, quote, glass = 'light' }) {
 }
 
 /* -------------------- GLASS SEGMENTED CHOICE --------------------
-   A tab-like real-glass control (Individual / Group / Organisation). Click to
+   A tab-like real-glass control (Individual / Organisation). Click to
    switch on both mouse and touch – no hover dependency. First item is
    preselected so its description/links are visible without any interaction. */
 
@@ -554,7 +554,6 @@ const SAPLING_ITEMS = [
 
 const MATURE_ITEMS = [
   { id: 'individual', label: 'Individual', icon: User, description: 'Build your personal grove, maintain care streaks and collect the story of every tree.', links: [{ label: 'Trees', href: '/trees' }, { label: 'Dashboard', href: '/dashboard/individual' }] },
-  { id: 'group', label: 'Group', icon: Users, description: 'Plant with family, friends or communities. Grow a shared forest and complete challenges together.', links: [{ label: 'Start a group', href: '/group/register' }, { label: 'Leaderboards', href: '/leaderboards' }] },
   { id: 'organisation', label: 'Organisation', icon: Building2, description: 'Run large campaigns, involve employees or students and receive verified impact reports.', links: [{ label: 'Partners', href: '/partners' }, { label: 'Dashboard', href: '/dashboard/corporate' }] },
 ]
 
@@ -951,7 +950,6 @@ export default function HomeClient({ namingExample }) {
               )}
 
               <div className="mt-5 flex flex-wrap gap-2">
-                <LinkChip href="/group/register" glass="dark">Start as a group</LinkChip>
                 <LinkChip href="/partners" glass="dark">Partner as an organisation</LinkChip>
               </div>
             </div>

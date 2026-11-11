@@ -7,7 +7,7 @@ import { EmptyState } from '../common/EmptyState';
 import { resolveMediaUrl } from '../../api/client';
 
 /** The fields this tab renders - satisfied by a full `ApiDrive` (NGO profile) and by the lighter
- * shapes the user/group profiles pass, so everything past the first few fields is optional and the
+ * shapes the user profiles pass, so everything past the first few fields is optional and the
  * row only shows what it has. */
 export interface DriveListItem {
   id: string;
@@ -82,7 +82,7 @@ function DriveRow({ drive, onPress }: { drive: DriveListItem; onPress: () => voi
 }
 
 /**
- * Role-parameterized: users/NGOs/groups all have a real notion of "their" drives (joined,
+ * Role-parameterized: users/NGOs all have a real notion of "their" drives (joined,
  * organized, or derived from members' RSVPs respectively). Nurseries don't run drives – there's
  * no schema relation to fabricate one from, so that role gets an honest empty state instead.
  */
@@ -91,7 +91,7 @@ export function DrivesTabContent({
   drives,
   onPressDrive,
 }: {
-  role: 'user' | 'ngo' | 'nursery' | 'group';
+  role: 'user' | 'ngo' | 'nursery';
   drives: DriveListItem[];
   onPressDrive: (drive: DriveListItem) => void;
 }) {
@@ -113,9 +113,7 @@ export function DrivesTabContent({
         body={
           role === 'ngo'
             ? "This NGO hasn't organized any drives yet."
-            : role === 'group'
-              ? 'No members have joined a drive yet.'
-              : "You haven't joined a drive yet."
+            : "You haven't joined a drive yet."
         }
       />
     );

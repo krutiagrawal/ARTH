@@ -24,7 +24,7 @@ async function findOrCreateUser(opts: {
   email: string;
   name: string;
   handle: string;
-  role: 'user' | 'ngo' | 'group' | 'nursery' | 'corporate';
+  role: 'user' | 'ngo' | 'nursery' | 'corporate';
   isBlocked?: boolean;
   blockedReason?: string;
 }) {
@@ -88,25 +88,6 @@ async function main() {
   const users = [];
   for (const u of USER_SEED) users.push(await findOrCreateUser({ ...u, role: 'user' }));
   console.log(`Individual users: ${users.length}`);
-
-  // ---------- Group ----------
-  const groupOwner = await findOrCreateUser({ email: 'green.families@arth.demo', name: 'Green Families Owner', handle: 'green_families_owner', role: 'group' });
-  let groupProfile = await prisma.groupProfile.findUnique({ where: { userId: groupOwner.id } });
-  if (!groupProfile) {
-    groupProfile = await prisma.groupProfile.create({
-      data: {
-        userId: groupOwner.id,
-        groupName: 'Green Families Pune',
-        groupType: 'family',
-        description: 'A demo family group planting trees together every weekend.',
-        logoUrl: img('group-green-families'),
-        city: 'Pune',
-        inviteCode: 'DEMOFAM1',
-        status: 'active',
-      },
-    });
-  }
-  console.log('Group: 1');
 
   // ---------- NGOs (varied approval status) ----------
   const NGO_SEED = [

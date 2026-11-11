@@ -149,9 +149,6 @@ interface CreatePostInput {
   caption?: string;
   driveId?: string;
   treeId?: string;
-  /** Share this post to one of the caller's groups' activity timelines. Unlike asNgo, this
-   * never changes authorship — the post stays user-authored, just tagged for the group. */
-  groupId?: string;
   mediaUrls: string[];
   /** Post as the caller's NGO rather than as themselves. Requires an approved NGO profile. */
   asNgo?: boolean;
@@ -184,15 +181,6 @@ export async function createPost(prisma: PrismaClient, viewerId: string, input: 
     const tree = await prisma.tree.findFirst({ where: { id: input.treeId, userId: viewerId, isDeleted: false } });
     if (!tree) throw new NotFoundError('Tree not found');
   }
-  if (input.groupId && !asOrg) {
-    // Members post as themselves — this is a membership check, not an ownership check
-    // (unlike driveId, which is only meaningful for the NGO that owns the drive).
-    const membership = await prisma.groupMember.findUnique({
-      where: { groupId_userId: { groupId: input.groupId, userId: viewerId } },
-    });
-    if (!membership) throw new ForbiddenError("You're not a member of this group");
-  }
-
   const post = await prisma.$transaction(async (tx) => {
     const created = await tx.post.create({
       data: {
@@ -205,7 +193,6 @@ export async function createPost(prisma: PrismaClient, viewerId: string, input: 
         caption: input.caption,
         driveId: input.driveId,
         treeId: asOrg ? null : input.treeId,
-        groupId: asOrg ? null : input.groupId,
         media: { create: input.mediaUrls.map((url, order) => ({ url, order })) },
       },
       include: postInclude,
@@ -466,7 +453,7 @@ export async function getSocialFeed(
 export async function listPostsByAuthor(
   prisma: PrismaClient,
   viewerId: string,
-  author: { ngoId?: string; nurseryId?: string; userId?: string; groupId?: string },
+  author: { ngoId?: string; nurseryId?: string; userId?: string },
   filter: { cursor?: string; take?: number } = {},
 ) {
   const take = Math.min(filter.take ?? 20, 50);
@@ -476,9 +463,7 @@ export async function listPostsByAuthor(
     ? { ngoId: author.ngoId }
     : author.nurseryId
       ? { nurseryId: author.nurseryId }
-      : author.groupId
-        ? { groupId: author.groupId }
-        : { userId: author.userId };
+      : { userId: author.userId };
 
   const rows = await prisma.post.findMany({
     where: {

@@ -10,7 +10,6 @@ const createPostSchema = z.object({
   caption: z.string().max(2000).optional(),
   driveId: z.string().uuid().optional(),
   treeId: z.string().uuid().optional(),
-  groupId: z.string().uuid().optional(),
   // Multipart fields arrive as strings, so the flag is compared as one.
   asNgo: z.union([z.literal('true'), z.literal('false'), z.boolean()]).optional(),
   asNursery: z.union([z.literal('true'), z.literal('false'), z.boolean()]).optional(),
@@ -54,7 +53,6 @@ export default async function postsRoutes(fastify: FastifyInstance) {
       caption: parsed.data.caption,
       driveId: parsed.data.driveId,
       treeId: parsed.data.treeId,
-      groupId: parsed.data.groupId,
       asNgo: isTrue(parsed.data.asNgo),
       asNursery: isTrue(parsed.data.asNursery),
       mediaUrls,

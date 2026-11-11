@@ -97,21 +97,6 @@ export default async function socialRoutes(fastify: FastifyInstance) {
     );
   });
 
-  // Groups don't author Post rows themselves — members tag their own posts with a groupId, so
-  // this filters by that tag rather than an author foreign key.
-  fastify.get<{ Params: { id: string } }>('/groups/:id/posts', async (request, reply) => {
-    const parsed = cursorQuerySchema.safeParse(request.query);
-    if (!parsed.success) throw new BadRequestError('Invalid query parameters');
-    reply.send(
-      await postService.listPostsByAuthor(
-        fastify.prisma,
-        request.user!.id,
-        { groupId: request.params.id },
-        parsed.data,
-      ),
-    );
-  });
-
   // ---------- Moderation ----------
 
   fastify.post('/reports', async (request, reply) => {

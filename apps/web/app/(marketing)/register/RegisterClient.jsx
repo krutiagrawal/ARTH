@@ -4,18 +4,17 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { User, Users, Sprout, ArrowRight } from 'lucide-react'
+import { User, Sprout, ArrowRight } from 'lucide-react'
 import { useAuth } from '@/components/site/AuthProvider'
 import { useEmailField } from '@/lib/useEmailField'
 
 const REGISTER_IMAGE = 'https://images.pexels.com/photos/8060360/pexels-photo-8060360.jpeg'
 
 // Nursery and Organisation/CSR doorways come back once those account types get
-// their own dedicated profile + dashboard (see GroupProfile's schema comment
-// for why they no longer share NgoProfile with 'ngo').
+// their own dedicated profile + dashboard (they no longer share NgoProfile
+// with 'ngo').
 const ACCOUNTS = [
   { id: 'individual', label: 'Individual', desc: 'Plant your own trees. Track your legacy.', icon: User },
-  { id: 'group', label: 'Group', desc: 'Families, schools and clubs planting together.', icon: Users },
   { id: 'ngo', label: 'NGO', desc: 'Run drives. Verify impact.', icon: Sprout },
 ]
 
@@ -34,11 +33,9 @@ function App() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const emailField = useEmailField(email, emailTouched)
-  // NGO gets a separate, admin-reviewed doorway; Group is also its own doorway
-  // (its own registration form/fields) but self-serve – no approval wait.
+  // NGO gets a separate, admin-reviewed doorway.
   const needsNgoDoorway = accountType === 'ngo'
-  const needsGroupDoorway = accountType === 'group'
-  const needsDoorway = needsNgoDoorway || needsGroupDoorway
+  const needsDoorway = needsNgoDoorway
 
   const submit = async (e) => {
     e.preventDefault()
@@ -123,15 +120,13 @@ function App() {
             <div className="mt-8 rounded-2xl border border-primary/30 bg-primary/5 p-6">
               <p className="font-serif text-lg leading-tight">{ACCOUNTS.find(a => a.id === accountType).label} accounts get their own doorway.</p>
               <p className="mt-2 text-sm text-muted-foreground">
-                {needsNgoDoorway
-                  ? 'Running drives, listing adoptable trees, and receiving donations requires an approved organisation account – a separate, reviewed sign-up from the one here.'
-                  : 'Groups get a shared invite code, a combined forest, and group challenges – a separate sign-up from the one here. No review wait, you can start right away.'}
+                Running drives, listing adoptable trees, and receiving donations requires an approved organisation account – a separate, reviewed sign-up from the one here.
               </p>
-              <Link href={needsNgoDoorway ? '/ngo/register' : '/group/register'} className="mt-4 inline-flex items-center gap-2 rounded-full bg-foreground text-background px-5 h-11 text-sm hover:opacity-90 transition">
+              <Link href="/ngo/register" className="mt-4 inline-flex items-center gap-2 rounded-full bg-foreground text-background px-5 h-11 text-sm hover:opacity-90 transition">
                 Register your {ACCOUNTS.find(a => a.id === accountType).label}
                 <ArrowRight className="h-4 w-4" />
               </Link>
-              <p className="text-xs mt-4 text-center text-muted-foreground">Already have an account? <Link href={needsNgoDoorway ? '/ngo/login' : '/group/login'} className="text-primary">Sign in</Link></p>
+              <p className="text-xs mt-4 text-center text-muted-foreground">Already have an account? <Link href="/ngo/login" className="text-primary">Sign in</Link></p>
             </div>
           ) : (
             <form onSubmit={submit} className="mt-8 space-y-3">

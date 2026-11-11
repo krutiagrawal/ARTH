@@ -8,8 +8,8 @@ export default async function storiesRoutes(fastify: FastifyInstance) {
   /**
    * Create a story. Two shapes, because two callers:
    *  - JSON `{ imageBase64, caption }` — the user forest snapshot, composited on-device by Skia
-   *  - multipart `photo` — a camera/gallery photo, which is how NGOs/Groups post
-   * `asNgo`/`asGroup` publish as the caller's NGO/Group instead of as themselves.
+   *  - multipart `photo` — a camera/gallery photo, which is how NGOs/nurseries post
+   * `asNgo`/`asNursery` publish as the caller's NGO/nursery instead of as themselves.
    */
   fastify.post('/', async (request, reply) => {
     const isMultipart = (request.headers['content-type'] ?? '').includes('multipart/form-data');
@@ -19,7 +19,6 @@ export default async function storiesRoutes(fastify: FastifyInstance) {
     let mimetype = 'image/jpeg';
     let caption: string | undefined;
     let asNgo = false;
-    let asGroup = false;
     let asNursery = false;
 
     if (isMultipart) {
@@ -30,14 +29,12 @@ export default async function storiesRoutes(fastify: FastifyInstance) {
       mimetype = file.mimetype;
       caption = fields.caption?.trim();
       asNgo = fields.asNgo === 'true';
-      asGroup = fields.asGroup === 'true';
       asNursery = fields.asNursery === 'true';
     } else {
       const body = (request.body ?? {}) as {
         imageBase64?: string;
         caption?: string;
         asNgo?: boolean;
-        asGroup?: boolean;
         asNursery?: boolean;
       };
       const imageBase64 = body.imageBase64?.replace(/^data:image\/\w+;base64,/, '');
@@ -52,7 +49,6 @@ export default async function storiesRoutes(fastify: FastifyInstance) {
 
       caption = body.caption?.trim();
       asNgo = body.asNgo === true;
-      asGroup = body.asGroup === true;
       asNursery = body.asNursery === true;
     }
 
@@ -63,7 +59,6 @@ export default async function storiesRoutes(fastify: FastifyInstance) {
       imageUrl,
       caption,
       asNgo,
-      asGroup,
       asNursery,
     });
 
@@ -82,7 +77,7 @@ export default async function storiesRoutes(fastify: FastifyInstance) {
 
   // Batch seen/unseen ring lookup for avatars rendered outside the tray/feed (profile headers,
   // leaderboard rows, follower lists, ...). Comma-separated id lists, any subset may be omitted.
-  fastify.get<{ Querystring: { userIds?: string; ngoIds?: string; nurseryIds?: string; groupIds?: string } }>(
+  fastify.get<{ Querystring: { userIds?: string; ngoIds?: string; nurseryIds?: string } }>(
     '/ring-status',
     async (request, reply) => {
       const split = (s?: string) => (s ? s.split(',').filter(Boolean) : []);
@@ -91,7 +86,6 @@ export default async function storiesRoutes(fastify: FastifyInstance) {
           userIds: split(request.query.userIds),
           ngoIds: split(request.query.ngoIds),
           nurseryIds: split(request.query.nurseryIds),
-          groupIds: split(request.query.groupIds),
         }),
       );
     },

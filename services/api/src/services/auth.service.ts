@@ -1,4 +1,4 @@
-import { PrismaClient, User, GroupType, NurseryType, NgoOrgType, NgoDocumentType, Prisma } from '@arth/db';
+import { PrismaClient, User, NurseryType, NgoOrgType, NgoDocumentType, Prisma } from '@arth/db';
 import { hashPassword, comparePassword } from '../utils/password';
 import {
   signAccessToken,
@@ -7,7 +7,6 @@ import {
   refreshTokenExpiryDate,
 } from '../utils/jwt';
 import { generateResetToken, hashResetToken, RESET_TOKEN_TTL_MS } from '../utils/resetToken';
-import { generateInviteCode } from '../utils/inviteCode';
 import { sendEmail } from './email.service';
 import { escapeHtml } from '../utils/html';
 import { env } from '../config/env';
@@ -92,12 +91,6 @@ interface RegisterNgoInput extends RegisterInput {
   participantTypes?: string[];
 
   documents?: { docType: NgoDocumentType; fileUrl: string }[];
-}
-
-interface RegisterGroupInput extends RegisterInput {
-  groupName: string;
-  groupType: GroupType;
-  description: string;
 }
 
 interface RegisterNurseryInput extends RegisterInput {
@@ -390,73 +383,6 @@ export async function registerNgo(prisma: PrismaClient, input: RegisterNgoInput)
         verificationDocuments: input.documents?.length ? { create: input.documents } : undefined,
       },
     });
-
-    return created;
-  });
-
-  const tokens = await issueTokenPair(prisma, user, input.deviceInfo);
-  return { user: toPublicUser(user), ...tokens };
-}
-
-// Creates both the User and GroupProfile in one step, same as the other role registrations —
-// but unlike the comment this used to carry, a group is NOT instantly public: it's created
-// 'pending' (see GroupStatus) and only becomes joinable/discoverable/leaderboard-eligible once
-// an admin approves it, matching NGO/Nursery/Corporate instead of granting instant public reach
-// to an unvetted account. The owner can still fully manage their own group immediately.
-export async function registerGroup(prisma: PrismaClient, input: RegisterGroupInput) {
-  const existingEmail = await prisma.user.findUnique({ where: { email: input.email } });
-  if (existingEmail) throw new ConflictError('Email is already registered');
-
-  const existingHandle = await prisma.user.findUnique({ where: { handle: input.handle } });
-  if (existingHandle) throw new ConflictError('Handle is already taken');
-
-  const passwordHash = await hashPassword(input.password);
-
-  const user = await prisma.$transaction(async (tx) => {
-    const created = await tx.user.create({
-      data: {
-        role: 'group',
-        email: input.email,
-        passwordHash,
-        name: input.name,
-        handle: input.handle,
-      },
-    });
-
-    await tx.userSettings.create({ data: { userId: created.id } });
-
-    const group = await tx.groupProfile.create({
-      data: {
-        userId: created.id,
-        groupName: input.groupName,
-        groupType: input.groupType,
-        description: input.description,
-        inviteCode: generateInviteCode(),
-        status: 'pending',
-      },
-    });
-
-    await tx.groupMember.create({
-      data: { groupId: group.id, userId: created.id, role: 'owner' },
-    });
-
-    const themes = await tx.forestTheme.findMany();
-    if (themes.length > 0) {
-      await tx.groupForestTheme.createMany({
-        data: themes.map((theme) => ({
-          groupId: group.id,
-          themeId: theme.id,
-          unlocked: theme.isDefaultUnlocked,
-          unlockedAt: theme.isDefaultUnlocked ? new Date() : null,
-        })),
-      });
-
-      const classicTheme = themes.find((t) => t.key === 'classic') ?? themes[0];
-      await tx.groupProfile.update({
-        where: { id: group.id },
-        data: { selectedForestThemeId: classicTheme.id },
-      });
-    }
 
     return created;
   });

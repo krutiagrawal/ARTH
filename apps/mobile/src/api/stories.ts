@@ -2,11 +2,10 @@ import { apiFetch, resolveMediaUrl, toFormFile } from './client';
 
 export interface ApiStory {
   id: string;
-  authorType: 'user' | 'ngo' | 'group' | 'nursery';
-  /** Null on org-authored stories – the org/group owns them, not the operator's account. */
+  authorType: 'user' | 'ngo' | 'nursery';
+  /** Null on org-authored stories – the org owns them, not the operator's account. */
   userId: string | null;
   ngoId: string | null;
-  groupId: string | null;
   nurseryId: string | null;
   imageUrl: string;
   caption: string | null;
@@ -22,7 +21,7 @@ export interface ApiStory {
 }
 
 export interface ApiStoryAuthor {
-  kind: 'user' | 'ngo' | 'nursery' | 'group';
+  kind: 'user' | 'ngo' | 'nursery';
   id: string;
   name: string;
   handle: string | null;
@@ -33,7 +32,7 @@ export interface ApiStoryAuthor {
 
 export interface ApiStoryGroup {
   author: ApiStoryAuthor;
-  /** Retained for the original friends-only tray; null on NGO groups. */
+  /** Retained for the original friends-only tray; null on NGO/nursery entries. */
   user: {
     id: string;
     name: string;
@@ -65,15 +64,10 @@ export async function fetchNurseryStories(nurseryId: string): Promise<ApiStory[]
   return apiFetch<ApiStory[]>(`/api/nurseries/${nurseryId}/stories`);
 }
 
-export async function fetchGroupStories(groupId: string): Promise<ApiStory[]> {
-  return apiFetch<ApiStory[]>(`/api/groups/${groupId}/stories`);
-}
-
 export async function postStory(input: {
   imageBase64: string;
   caption?: string;
   asNgo?: boolean;
-  asGroup?: boolean;
   asNursery?: boolean;
 }): Promise<ApiStory> {
   return apiFetch<ApiStory>('/api/stories', {
@@ -82,25 +76,22 @@ export async function postStory(input: {
       imageBase64: input.imageBase64,
       caption: input.caption?.trim() || undefined,
       asNgo: input.asNgo || undefined,
-      asGroup: input.asGroup || undefined,
       asNursery: input.asNursery || undefined,
     },
   });
 }
 
-/** Posts a camera/gallery photo as a story – how NGOs/Groups/nurseries post, vs. the base64 forest snapshot. */
+/** Posts a camera/gallery photo as a story – how NGOs/nurseries post, vs. the base64 forest snapshot. */
 export async function postPhotoStory(input: {
   photo: { uri: string; name: string; type: string };
   caption?: string;
   asNgo?: boolean;
-  asGroup?: boolean;
   asNursery?: boolean;
 }): Promise<ApiStory> {
   const form = new FormData();
   form.append('photo', toFormFile(input.photo.uri), input.photo.name);
   if (input.caption?.trim()) form.append('caption', input.caption.trim());
   if (input.asNgo) form.append('asNgo', 'true');
-  if (input.asGroup) form.append('asGroup', 'true');
   if (input.asNursery) form.append('asNursery', 'true');
   return apiFetch<ApiStory>('/api/stories', { method: 'POST', body: form, isForm: true });
 }
@@ -155,7 +146,6 @@ export interface RingStatusMap {
   users: Record<string, RingStatus>;
   ngos: Record<string, RingStatus>;
   nurseries: Record<string, RingStatus>;
-  groups: Record<string, RingStatus>;
 }
 
 /** Batch seen/unseen ring lookup for avatars rendered outside the story tray/feed. */
@@ -163,12 +153,10 @@ export async function fetchRingStatus(ids: {
   userIds?: string[];
   ngoIds?: string[];
   nurseryIds?: string[];
-  groupIds?: string[];
 }): Promise<RingStatusMap> {
   const qs = new URLSearchParams();
   if (ids.userIds?.length) qs.set('userIds', ids.userIds.join(','));
   if (ids.ngoIds?.length) qs.set('ngoIds', ids.ngoIds.join(','));
   if (ids.nurseryIds?.length) qs.set('nurseryIds', ids.nurseryIds.join(','));
-  if (ids.groupIds?.length) qs.set('groupIds', ids.groupIds.join(','));
   return apiFetch<RingStatusMap>(`/api/stories/ring-status?${qs}`);
 }

@@ -4,7 +4,6 @@ import type { ApiUser } from '../api/auth';
 export const ROLE_ROUTES: Record<ApiUser['role'], string> = {
   user: 'Main',
   ngo: 'NgoMain',
-  group: 'GroupMain',
   nursery: 'NurseryMain',
   corporate: 'CorporateMain',
   admin: 'AdminMain',

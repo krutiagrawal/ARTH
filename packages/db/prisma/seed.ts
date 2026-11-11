@@ -94,23 +94,6 @@ async function seedNgoAchievements() {
   }
 }
 
-async function seedGroupAchievements() {
-  const achievements = [
-    { key: 'group_first_roots', title: 'First Roots', description: 'Plant your first tree as a group', icon: '🌱', rarity: 'common', criteriaType: 'trees_planted', criteriaTarget: 1, sortOrder: 1 },
-    { key: 'group_grove_builders', title: 'Grove Builders', description: 'Plant 50 trees together', icon: '🌳', rarity: 'rare', criteriaType: 'trees_planted', criteriaTarget: 50, sortOrder: 2 },
-    { key: 'group_forest_founders', title: 'Forest Founders', description: 'Plant 250 trees together', icon: '🌲', rarity: 'epic', criteriaType: 'trees_planted', criteriaTarget: 250, sortOrder: 3 },
-    { key: 'group_full_house', title: 'Full House', description: 'Grow your group to 10 members', icon: '👥', rarity: 'common', criteriaType: 'member_count', criteriaTarget: 10, sortOrder: 4 },
-    { key: 'group_two_weeks_strong', title: 'Two Weeks Strong', description: 'Keep the group streak alive for 14 days', icon: '🔥', rarity: 'rare', criteriaType: 'streak_days', criteriaTarget: 14, sortOrder: 5 },
-    { key: 'group_century_streak', title: 'Century Streak', description: 'Keep the group streak alive for 100 days', icon: '⭐', rarity: 'legendary', criteriaType: 'streak_days', criteriaTarget: 100, sortOrder: 6 },
-    { key: 'group_carbon_crew', title: 'Carbon Crew', description: 'Absorb 500kg of CO₂ together', icon: '🌍', rarity: 'epic', criteriaType: 'co2_absorbed', criteriaTarget: 500, sortOrder: 7 },
-    { key: 'group_challenge_champions', title: 'Challenge Champions', description: 'Complete 3 group challenges', icon: '🏆', rarity: 'rare', criteriaType: 'challenges_completed', criteriaTarget: 3, sortOrder: 8 },
-  ] as const;
-
-  for (const a of achievements) {
-    await prisma.groupAchievement.upsert({ where: { key: a.key }, update: a, create: a });
-  }
-}
-
 async function seedNurseryAchievements() {
   const achievements = [
     { key: 'nursery_first_listing', title: 'First Listing', description: 'List your first species in stock', icon: '🌱', rarity: 'common', criteriaType: 'species_listed', criteriaTarget: 1, sortOrder: 1 },
@@ -422,7 +405,6 @@ async function main() {
   await seedSpecies();
   await seedAchievements();
   await seedNgoAchievements();
-  await seedGroupAchievements();
   await seedNurseryAchievements();
   await seedForestThemes();
   await seedDecorationTypes();

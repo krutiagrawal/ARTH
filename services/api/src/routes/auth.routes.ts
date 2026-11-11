@@ -3,7 +3,6 @@ import { NgoDocumentType } from '@arth/db';
 import {
   registerSchema,
   registerNgoSchema,
-  registerGroupSchema,
   registerNurserySchema,
   registerCorporateSchema,
   loginSchema,
@@ -113,19 +112,6 @@ export default async function authRoutes(fastify: FastifyInstance) {
       email: parsed.data.email.toLowerCase(),
       handle: parsed.data.handle.toLowerCase(),
       documents,
-    });
-
-    reply.status(201).send(result);
-  });
-
-  fastify.post('/register-group', limit(20, '1 hour'), async (request, reply) => {
-    const parsed = registerGroupSchema.safeParse(request.body);
-    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
-
-    const result = await authService.registerGroup(fastify.prisma, {
-      ...parsed.data,
-      email: parsed.data.email.toLowerCase(),
-      handle: parsed.data.handle.toLowerCase(),
     });
 
     reply.status(201).send(result);

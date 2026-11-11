@@ -64,8 +64,6 @@ export interface CreatePostInput {
   caption?: string;
   driveId?: string;
   treeId?: string;
-  /** Share this post to one of the caller's groups' activity timelines. */
-  groupId?: string;
   photos: PickedPhoto[];
   /** Publish as the caller's NGO rather than as themselves. */
   asNgo?: boolean;
@@ -78,7 +76,6 @@ export async function createPost(input: CreatePostInput): Promise<ApiPost> {
   if (input.caption) form.append('caption', input.caption);
   if (input.driveId) form.append('driveId', input.driveId);
   if (input.treeId) form.append('treeId', input.treeId);
-  if (input.groupId) form.append('groupId', input.groupId);
   if (input.asNgo) form.append('asNgo', 'true');
   if (input.asNursery) form.append('asNursery', 'true');
   // Repeated field name – the API reads every `photos` part in append order as the carousel.
@@ -166,9 +163,4 @@ export async function fetchUserPosts(userId: string, cursor?: string): Promise<C
 export async function fetchNurseryPosts(nurseryId: string, cursor?: string): Promise<CursorPage<ApiPost>> {
   const qs = cursor ? `?cursor=${cursor}` : '';
   return apiFetch(`/api/nurseries/${nurseryId}/posts${qs}`);
-}
-
-export async function fetchGroupPosts(groupId: string, cursor?: string): Promise<CursorPage<ApiPost>> {
-  const qs = cursor ? `?cursor=${cursor}` : '';
-  return apiFetch(`/api/groups/${groupId}/posts${qs}`);
 }

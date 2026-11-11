@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Users, ShieldCheck, CalendarDays, Sprout, IndianRupee, FileStack, Mail, LogIn, Users2, ShieldBan, Flag, TreePine, Building2 } from 'lucide-react'
+import { Users, ShieldCheck, CalendarDays, Sprout, IndianRupee, FileStack, Mail, LogIn, ShieldBan, Flag, TreePine, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import StatTile from '@/components/dashboard/StatTile'
 import DashboardPageShell from '@/components/dashboard/DashboardPageShell'
@@ -94,7 +94,6 @@ export default function OverviewClient() {
               tone="sand"
               breakdown={statusBreakdown(platform.data.ngosByStatus, '/admin/ngos')}
             />
-            <StatTile label="Groups" value={platform.data.groupsCount ?? 0} description="All-time" icon={Users2} tone="primary" href="/admin/groups" />
             <StatTile label="Drives" value={platform.data.drivesCount} description="Created all-time" icon={CalendarDays} tone="primary" href="/admin/ops?tab=drives" />
             <StatTile label="Trees adopted" value={platform.data.adoptedTreesCount} description="Across all NGOs" icon={Sprout} tone="sand" href="/admin/ops?tab=orders" />
             <StatTile

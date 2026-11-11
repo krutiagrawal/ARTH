@@ -13,7 +13,7 @@ const prisma = new PrismaClient();
 // handle/id prefix so reruns don't pile up duplicates. Safe to run repeatedly.
 //
 // Deliberately left alone (fixed reference/config data, not "content"):
-//   achievements, ngo_achievements, group_achievements, nursery_achievements, tree_species,
+//   achievements, ngo_achievements, nursery_achievements, tree_species,
 //   forest_themes, decoration_types, daily_missions, eco_facts, forest_level_tiers,
 //   approved_planting_locations, app_config, ecosystem_entries, stats — all managed by
 //   packages/db/prisma/seed.ts (or, for the last three, are intentionally small fixed
@@ -54,7 +54,7 @@ async function findOrCreateUser(opts: {
   email: string;
   name: string;
   handle: string;
-  role?: 'user' | 'ngo' | 'group' | 'nursery' | 'corporate';
+  role?: 'user' | 'ngo' | 'nursery' | 'corporate';
 }) {
   const existing = await prisma.user.findUnique({ where: { email: opts.email } });
   if (existing) return existing;
@@ -83,7 +83,6 @@ async function main() {
   // ---------------------------------------------------------------------
   const species = await prisma.treeSpecies.findMany();
   const decorationTypes = await prisma.decorationType.findMany();
-  const groupAchievements = await prisma.groupAchievement.findMany();
   const ngoAchievements = await prisma.ngoAchievement.findMany();
   const nurseryAchievements = await prisma.nurseryAchievement.findMany();
   const forestThemes = await prisma.forestTheme.findMany();
@@ -97,7 +96,7 @@ async function main() {
     ));
 
   // ---------------------------------------------------------------------
-  // 1. Top up org profiles (Ngo/Nursery/Group/Corporate) to TARGET each
+  // 1. Top up org profiles (Ngo/Nursery/Corporate) to TARGET each
   // ---------------------------------------------------------------------
   let ngos = await prisma.ngoProfile.findMany();
   {
@@ -150,29 +149,6 @@ async function main() {
     console.log(`Nurseries: ${nurseries.length}`);
   }
 
-  let groups = await prisma.groupProfile.findMany();
-  {
-    const n = need(groups.length);
-    for (let i = 0; i < n; i++) {
-      const idx = groups.length + i + 1;
-      const user = await findOrCreateUser({ email: `fc-group-${idx}@arth.demo`, name: `FC Group Owner ${idx}`, handle: `fc_group_owner_${idx}`, role: 'group' });
-      const profile = await prisma.groupProfile.create({
-        data: {
-          userId: user.id,
-          groupName: `FC Green Circle ${idx}`,
-          groupType: pick(['family', 'school', 'club', 'other'] as const, idx),
-          description: `DEMO FC — Green Circle ${idx} plants trees together every month.`,
-          logoUrl: img(`fc-group-${idx}`),
-          city: pick(['Pune', 'Mumbai', 'Nashik'], idx),
-          inviteCode: `FCGRP${idx.toString().padStart(3, '0')}`,
-          status: 'active',
-        },
-      });
-      groups.push(profile);
-    }
-    console.log(`Groups: ${groups.length}`);
-  }
-
   let corporates = await prisma.corporateProfile.findMany();
   {
     const n = need(corporates.length);
@@ -198,74 +174,6 @@ async function main() {
 
   const users = await prisma.user.findMany({ where: { role: 'user' } });
   console.log(`Individual users available: ${users.length}`);
-
-  // ---------------------------------------------------------------------
-  // 2. Group ecosystem
-  // ---------------------------------------------------------------------
-  for (let gi = 0; gi < groups.length; gi++) {
-    const group = groups[gi];
-
-    // Members (skip the owner)
-    const existingMembers = await prisma.groupMember.count({ where: { groupId: group.id } });
-    if (existingMembers < 3) {
-      const candidates = users.filter((u) => u.id !== group.userId).slice(gi * 3, gi * 3 + 3);
-      if (candidates.length > 0) {
-        await prisma.groupMember.createMany({
-          data: candidates.map((u, i) => ({ groupId: group.id, userId: u.id, role: (i === 0 ? 'co_admin' : 'member') as 'co_admin' | 'member' })),
-          skipDuplicates: true,
-        });
-      }
-    }
-
-    // Streak history — 3 recent days per group
-    for (let d = 0; d < 3; d++) {
-      await prisma.groupStreakHistory
-        .create({ data: { groupId: group.id, activityDate: daysAgo(d), planted: d !== 1 } })
-        .catch(() => undefined);
-    }
-
-    // One forest theme unlock
-    const theme = pick(forestThemes, gi);
-    await prisma.groupForestTheme
-      .create({ data: { groupId: group.id, themeId: theme.id, unlocked: true, unlockedAt: daysAgo(30) } })
-      .catch(() => undefined);
-
-    // One achievement unlock
-    const achievement = pick(groupAchievements, gi);
-    await prisma.groupAchievementUnlock
-      .create({ data: { groupId: group.id, achievementId: achievement.id, unlocked: true, progress: achievement.criteriaTarget ?? 1, unlockedAt: daysAgo(20) } })
-      .catch(() => undefined);
-  }
-  console.log('Group streak history / forest themes / achievement unlocks seeded');
-
-  const groupChallengeCount = await prisma.groupChallenge.count();
-  {
-    const n = need(groupChallengeCount);
-    for (let i = 0; i < n; i++) {
-      const group = pick(groups, groupChallengeCount + i);
-      const title = `FC Challenge ${groupChallengeCount + i + 1}`;
-      const challenge = await prisma.groupChallenge.create({
-        data: {
-          groupId: group.id,
-          createdById: group.userId,
-          title,
-          description: 'DEMO FC — plant together and hit the group goal before the deadline.',
-          goalType: pick(['trees_planted_count', 'cities_count', 'streak_days', 'rare_species_count'] as const, i),
-          goalTotal: 10 + i,
-          startsAt: daysAgo(5),
-          endsAt: daysFromNow(10 + i),
-        },
-      });
-      const members = await prisma.groupMember.findMany({ where: { groupId: group.id }, take: 3 });
-      if (members.length > 0) {
-        await prisma.groupChallengeParticipant.createMany({
-          data: members.map((m, mi) => ({ challengeId: challenge.id, userId: m.userId, progress: mi + 1 })),
-          skipDuplicates: true,
-        });
-      }
-    }
-    console.log(`Group challenges: ${groupChallengeCount + n}`);
-  }
 
   // ---------------------------------------------------------------------
   // 3. NGO ecosystem

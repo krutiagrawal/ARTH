@@ -71,7 +71,6 @@ import {
   fetchUserStories,
   fetchNgoStories,
   fetchNurseryStories,
-  fetchGroupStories,
   fetchStoryViewers,
   fetchRingStatus,
   postStory,
@@ -88,7 +87,6 @@ import {
   fetchMyDrives,
   fetchJoinedDrives,
   fetchUserJoinedDrives,
-  fetchGroupDrives,
   createDrive,
   CreateDriveInput,
   fetchDriveAttendees,
@@ -147,25 +145,6 @@ import {
   UpdateNgoProfileInput,
   DonationsFilter,
 } from '../api/ngo';
-import {
-  fetchGroupProfile,
-  updateGroupProfile,
-  regenerateGroupInviteCode,
-  fetchGroupStats,
-  fetchGroupMembers,
-  setGroupMemberRole,
-  removeGroupMember,
-  fetchOwnGroupChallenges,
-  createGroupChallenge,
-  fetchMyGroups,
-  joinGroupByInviteCode,
-  leaveGroup,
-  fetchGroupChallenges,
-  joinGroupChallenge,
-  fetchGroupPublicProfile,
-  UpdateGroupProfileInput,
-  CreateGroupChallengeInput,
-} from '../api/group';
 import { fetchStaff, createStaff, updateStaff, deleteStaff, CreateStaffInput, UpdateStaffInput } from '../api/staff';
 import {
   fetchPlantedTrees,
@@ -193,9 +172,6 @@ import { fetchMyUpdates, createUpdate, deleteUpdate, CreateUpdateInput } from '.
 import { fetchNgoAchievements, fetchNgoPublicAchievements } from '../api/ngoAchievements';
 import { fetchNgoStreakCalendar } from '../api/ngoStreaks';
 import { fetchNgoReputation } from '../api/ngoReputation';
-import { fetchGroupStreakCalendar, fetchGroupStreakCalendarForMember } from '../api/groupStreaks';
-import { fetchGroupAchievements, fetchGroupAchievementsForMember } from '../api/groupAchievements';
-import { fetchGroupActivity, fetchGroupActivityForMember } from '../api/groupActivity';
 import {
   fetchNurseryProfile,
   updateNurseryProfile,
@@ -296,8 +272,6 @@ import {
   CreateSponsorshipInput,
 } from '../api/corporate';
 import { fetchNgoLeaderboard } from '../api/ngoLeaderboard';
-import { fetchGroupLeaderboard } from '../api/groupLeaderboard';
-import { fetchGroupThemes, selectGroupTheme } from '../api/groupThemes';
 import { browseNgos, fetchNgoPublicProfile } from '../api/ngosPublic';
 import { likePortfolioEntry, unlikePortfolioEntry } from '../api/portfolio';
 import type { ApiPublicNgoProfile } from '../api/ngosPublic';
@@ -1023,31 +997,21 @@ export function useNurseryStories(nurseryId: string | null) {
   });
 }
 
-export function useGroupStories(groupId: string | null) {
-  const { isAuthenticated } = useAuth();
-  return useQuery({
-    queryKey: ['stories', 'group', groupId],
-    queryFn: () => fetchGroupStories(groupId!),
-    enabled: isAuthenticated && !!groupId,
-  });
-}
-
 /**
  * Batch seen/unseen story-ring lookup for a screen's visible avatars – call once per list with
  * every id on it (profile header, a page of leaderboard rows, a followers list, ...) rather than
  * one request per avatar. Pass stable arrays (e.g. `useMemo`'d) to avoid refetching every render.
  */
-export function useRingStatus(ids: { userIds?: string[]; ngoIds?: string[]; nurseryIds?: string[]; groupIds?: string[] }) {
+export function useRingStatus(ids: { userIds?: string[]; ngoIds?: string[]; nurseryIds?: string[] }) {
   const { isAuthenticated } = useAuth();
   const userIds = ids.userIds ?? [];
   const ngoIds = ids.ngoIds ?? [];
   const nurseryIds = ids.nurseryIds ?? [];
-  const groupIds = ids.groupIds ?? [];
-  const hasAny = userIds.length + ngoIds.length + nurseryIds.length + groupIds.length > 0;
+  const hasAny = userIds.length + ngoIds.length + nurseryIds.length > 0;
 
   return useQuery({
-    queryKey: ['stories', 'ring-status', [...userIds].sort(), [...ngoIds].sort(), [...nurseryIds].sort(), [...groupIds].sort()],
-    queryFn: () => fetchRingStatus({ userIds, ngoIds, nurseryIds, groupIds }),
+    queryKey: ['stories', 'ring-status', [...userIds].sort(), [...ngoIds].sort(), [...nurseryIds].sort()],
+    queryFn: () => fetchRingStatus({ userIds, ngoIds, nurseryIds }),
     enabled: isAuthenticated && hasAny,
     staleTime: 30 * 1000,
   });
@@ -1317,15 +1281,6 @@ export function useUserJoinedDrives(userId: string | undefined) {
     queryKey: ['users', userId, 'drives', 'joined'],
     queryFn: () => fetchUserJoinedDrives(userId as string),
     enabled: !!userId,
-  });
-}
-
-export function useGroupDrives(groupId: string | undefined) {
-  const { isAuthenticated } = useAuth();
-  return useQuery({
-    queryKey: ['groups', groupId, 'drives'],
-    queryFn: () => fetchGroupDrives(groupId as string),
-    enabled: isAuthenticated && Boolean(groupId),
   });
 }
 
@@ -2363,229 +2318,6 @@ export function usePlantTree() {
         refreshUser(),
       ]);
     },
-  });
-}
-
-// ---------- Group profile / stats / members / challenges (owner dashboard) ----------
-
-export function useGroupProfile() {
-  const { isAuthenticated } = useAuth();
-  return useQuery({
-    queryKey: ['group', 'profile'],
-    queryFn: fetchGroupProfile,
-    enabled: isAuthenticated,
-  });
-}
-
-export function useUpdateGroupProfile() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (input: UpdateGroupProfileInput) => updateGroupProfile(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['group', 'profile'] }),
-  });
-}
-
-export function useRegenerateGroupInviteCode() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: () => regenerateGroupInviteCode(),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['group', 'profile'] }),
-  });
-}
-
-export function useGroupStats() {
-  const { isAuthenticated } = useAuth();
-  return useQuery({
-    queryKey: ['group', 'stats'],
-    queryFn: fetchGroupStats,
-    enabled: isAuthenticated,
-  });
-}
-
-export function useGroupLeaderboard(limit = 50) {
-  const { isAuthenticated } = useAuth();
-  return useQuery({
-    queryKey: ['group', 'leaderboard', limit],
-    queryFn: () => fetchGroupLeaderboard(limit),
-    enabled: isAuthenticated,
-  });
-}
-
-export function useGroupThemes() {
-  const { isAuthenticated } = useAuth();
-  return useQuery({
-    queryKey: ['group', 'themes'],
-    queryFn: fetchGroupThemes,
-    enabled: isAuthenticated,
-  });
-}
-
-export function useSelectGroupTheme() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (themeId: string) => selectGroupTheme(themeId),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['group', 'themes'] });
-      await queryClient.invalidateQueries({ queryKey: ['group', 'profile'] });
-    },
-  });
-}
-
-export function useGroupMembers() {
-  const { isAuthenticated } = useAuth();
-  return useInfiniteQuery({
-    queryKey: ['group', 'members'],
-    queryFn: ({ pageParam }) => fetchGroupMembers(pageParam),
-    enabled: isAuthenticated,
-    ...pageParams<Awaited<ReturnType<typeof fetchGroupMembers>>['items'][number]>(),
-    select: flatItems,
-  });
-}
-
-export function useSetGroupMemberRole() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ userId, role }: { userId: string; role: 'owner' | 'co_admin' | 'member' }) => setGroupMemberRole(userId, role),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['group', 'members'] }),
-  });
-}
-
-export function useRemoveGroupMember() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (userId: string) => removeGroupMember(userId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['group', 'members'] });
-      queryClient.invalidateQueries({ queryKey: ['group', 'stats'] });
-    },
-  });
-}
-
-export function useOwnGroupChallenges() {
-  const { isAuthenticated } = useAuth();
-  return useQuery({
-    queryKey: ['group', 'challenges', 'mine'],
-    queryFn: fetchOwnGroupChallenges,
-    enabled: isAuthenticated,
-  });
-}
-
-export function useCreateGroupChallenge() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (input: CreateGroupChallengeInput) => createGroupChallenge(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['group', 'challenges'] }),
-  });
-}
-
-export function useGroupStreakCalendar(weeks = 4) {
-  const { isAuthenticated } = useAuth();
-  return useQuery({
-    queryKey: ['group', 'streaks', 'calendar', weeks],
-    queryFn: () => fetchGroupStreakCalendar(weeks),
-    enabled: isAuthenticated,
-  });
-}
-
-export function useGroupAchievements() {
-  const { isAuthenticated } = useAuth();
-  return useQuery({
-    queryKey: ['group', 'achievements'],
-    queryFn: fetchGroupAchievements,
-    enabled: isAuthenticated,
-  });
-}
-
-export function useGroupActivity(options?: { enabled?: boolean }) {
-  const { isAuthenticated } = useAuth();
-  return useInfiniteQuery({
-    queryKey: ['group', 'activity'],
-    queryFn: ({ pageParam }) => fetchGroupActivity(pageParam),
-    enabled: isAuthenticated && (options?.enabled ?? true),
-    ...pageParams<Awaited<ReturnType<typeof fetchGroupActivity>>['items'][number]>(),
-    select: flatItems,
-  });
-}
-
-// ---------- Groups (member-facing: join/leave/browse) ----------
-
-export function useMyGroups() {
-  const { isAuthenticated } = useAuth();
-  return useQuery({
-    queryKey: ['groups', 'mine'],
-    queryFn: fetchMyGroups,
-    enabled: isAuthenticated,
-  });
-}
-
-export function useJoinGroup() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (inviteCode: string) => joinGroupByInviteCode(inviteCode),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['groups', 'mine'] }),
-  });
-}
-
-export function useLeaveGroup() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (groupId: string) => leaveGroup(groupId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['groups', 'mine'] }),
-  });
-}
-
-export function useGroupPublicProfile(groupId: string | undefined) {
-  const { isAuthenticated } = useAuth();
-  return useQuery({
-    queryKey: ['groups', groupId, 'public'],
-    queryFn: () => fetchGroupPublicProfile(groupId as string),
-    enabled: isAuthenticated && Boolean(groupId),
-  });
-}
-
-export function useGroupChallenges(groupId: string | undefined) {
-  const { isAuthenticated } = useAuth();
-  return useQuery({
-    queryKey: ['groups', groupId, 'challenges'],
-    queryFn: () => fetchGroupChallenges(groupId as string),
-    enabled: isAuthenticated && Boolean(groupId),
-  });
-}
-
-export function useJoinGroupChallenge() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (challengeId: string) => joinGroupChallenge(challengeId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['groups'] }),
-  });
-}
-
-export function useGroupActivityForMember(groupId: string | undefined) {
-  const { isAuthenticated } = useAuth();
-  return useInfiniteQuery({
-    queryKey: ['groups', groupId, 'activity'],
-    queryFn: ({ pageParam }) => fetchGroupActivityForMember(groupId as string, pageParam),
-    enabled: isAuthenticated && Boolean(groupId),
-    ...pageParams<Awaited<ReturnType<typeof fetchGroupActivityForMember>>['items'][number]>(),
-    select: flatItems,
-  });
-}
-
-export function useGroupStreakCalendarForMember(groupId: string | undefined, weeks = 4) {
-  const { isAuthenticated } = useAuth();
-  return useQuery({
-    queryKey: ['groups', groupId, 'streaks', 'calendar', weeks],
-    queryFn: () => fetchGroupStreakCalendarForMember(groupId as string, weeks),
-    enabled: isAuthenticated && Boolean(groupId),
-  });
-}
-
-export function useGroupAchievementsForMember(groupId: string | undefined) {
-  const { isAuthenticated } = useAuth();
-  return useQuery({
-    queryKey: ['groups', groupId, 'achievements'],
-    queryFn: () => fetchGroupAchievementsForMember(groupId as string),
-    enabled: isAuthenticated && Boolean(groupId),
   });
 }
 

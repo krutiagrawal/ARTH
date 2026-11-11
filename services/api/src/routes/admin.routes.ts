@@ -223,32 +223,6 @@ const reviewTreeSchema = z.object({ decision: z.enum(['approve', 'reject']) });
 const CATALOG_MODELS = ['species', 'achievements', 'challenges', 'missions', 'themes', 'decorations', 'lessons'] as const;
 const catalogModelParamSchema = z.enum(CATALOG_MODELS);
 
-function serializeGroup(group: any) {
-  return {
-    id: group.id,
-    groupName: group.groupName,
-    groupType: group.groupType,
-    description: group.description,
-    status: group.status,
-    memberCount: group._count?.members,
-    createdAt: group.createdAt,
-    owner: group.user
-      ? { id: group.user.id, email: group.user.email, name: group.user.name, handle: group.user.handle }
-      : undefined,
-  };
-}
-
-const listGroupsQuerySchema = z.object({
-  status: z.enum(['pending', 'active', 'suspended']).optional(),
-  q: z.string().max(200).optional(),
-  page: z.coerce.number().int().min(1).optional(),
-  take: z.coerce.number().int().min(1).max(50).optional(),
-});
-
-const setGroupStatusSchema = z.object({
-  status: z.enum(['pending', 'active', 'suspended']),
-});
-
 export default async function adminRoutes(fastify: FastifyInstance) {
   fastify.addHook('preHandler', fastify.requireRole('admin'));
 
@@ -330,24 +304,6 @@ export default async function adminRoutes(fastify: FastifyInstance) {
     });
 
     reply.send(serializeCorporate(profile));
-  });
-
-  // ---------- Groups (pending/active/suspended — see admin.service.ts) ----------
-
-  fastify.get('/groups', async (request, reply) => {
-    const parsed = listGroupsQuerySchema.safeParse(request.query);
-    if (!parsed.success) throw new BadRequestError('Invalid query parameters');
-
-    const { groups, total } = await adminService.listGroups(fastify.prisma, parsed.data);
-    reply.send({ total, groups: groups.map(serializeGroup) });
-  });
-
-  fastify.patch<{ Params: { id: string } }>('/groups/:id/status', async (request, reply) => {
-    const parsed = setGroupStatusSchema.safeParse(request.body);
-    if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
-
-    const group = await adminService.setGroupStatus(fastify.prisma, request.params.id, parsed.data.status, request.user!.id);
-    reply.send(serializeGroup(group));
   });
 
   fastify.get('/action-logs', async (request, reply) => {

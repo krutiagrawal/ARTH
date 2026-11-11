@@ -11,7 +11,6 @@ import type { ApiFollowersPage } from '../api/ngoFollowers';
 import {
   createPost,
   deletePost,
-  fetchGroupPosts,
   fetchLikedPosts,
   fetchNgoPosts,
   fetchNurseryPosts,
@@ -79,7 +78,6 @@ export const socialKeys = {
   ngoPosts: (ngoId: string) => ['social', 'posts', 'ngo', ngoId] as const,
   userPosts: (userId: string) => ['social', 'posts', 'user', userId] as const,
   nurseryPosts: (nurseryId: string) => ['social', 'posts', 'nursery', nurseryId] as const,
-  groupPosts: (groupId: string) => ['social', 'posts', 'group', groupId] as const,
   followers: (status?: FollowStatus, q?: string) => ['ngo', 'followers', status ?? 'all', q ?? ''] as const,
   nurseryFollowers: (status?: FollowStatus, q?: string) => ['nursery', 'followers', status ?? 'all', q ?? ''] as const,
   portfolio: ['ngo', 'portfolio'] as const,
@@ -163,16 +161,6 @@ export function useNurseryPosts(nurseryId: string | undefined) {
   });
 }
 
-export function useGroupPosts(groupId: string | undefined) {
-  const { isAuthenticated } = useAuth();
-  return useInfiniteQuery({
-    queryKey: socialKeys.groupPosts(groupId ?? ''),
-    queryFn: ({ pageParam }) => fetchGroupPosts(groupId as string, pageParam),
-    enabled: isAuthenticated && !!groupId,
-    ...cursorPageParams<ApiPost>(),
-  });
-}
-
 export function usePost(id: string | undefined) {
   const { isAuthenticated } = useAuth();
   return useQuery({
@@ -207,9 +195,6 @@ export function useCreatePost() {
       queryClient.invalidateQueries({ queryKey: ['ngo'] });
       if (post.ngoId) queryClient.invalidateQueries({ queryKey: ['ngos', 'public', post.ngoId] });
       if (post.nurseryId) queryClient.invalidateQueries({ queryKey: ['nurseries', 'public', post.nurseryId] });
-      // A group-tagged post shows up in that group's activity timeline immediately.
-      queryClient.invalidateQueries({ queryKey: ['group'] });
-      queryClient.invalidateQueries({ queryKey: ['groups'] });
     },
   });
 }

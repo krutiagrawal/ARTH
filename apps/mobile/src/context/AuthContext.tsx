@@ -12,15 +12,6 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<ApiUser>;
   register: (input: { email: string; password: string; name: string; handle: string; phone: string; city: string }) => Promise<void>;
   registerNgo: (input: RegisterNgoInput) => Promise<void>;
-  registerGroup: (input: {
-    email: string;
-    password: string;
-    name: string;
-    handle: string;
-    groupName: string;
-    groupType: 'family' | 'school' | 'club' | 'other';
-    description: string;
-  }) => Promise<void>;
   registerNursery: (input: RegisterNurseryInput) => Promise<void>;
   registerCorporate: (input: {
     email: string;
@@ -48,7 +39,6 @@ const AuthContext = createContext<AuthContextValue>({
   login: async () => { throw new Error('AuthProvider not mounted'); },
   register: async () => {},
   registerNgo: async () => {},
-  registerGroup: async () => {},
   registerNursery: async () => {},
   registerCorporate: async () => {},
   logout: async () => {},
@@ -138,23 +128,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [queryClient]
   );
 
-  const registerGroup = useCallback(
-    async (input: {
-      email: string;
-      password: string;
-      name: string;
-      handle: string;
-      groupName: string;
-      groupType: 'family' | 'school' | 'club' | 'other';
-      description: string;
-    }) => {
-      const registeredUser = await authApi.registerGroup(input);
-      queryClient.clear();
-      setUser(registeredUser);
-    },
-    [queryClient]
-  );
-
   const registerNursery = useCallback(
     async (input: RegisterNurseryInput) => {
       const registeredUser = await authApi.registerNursery(input);
@@ -204,7 +177,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         register,
         registerNgo,
-        registerGroup,
         registerNursery,
         registerCorporate,
         logout,

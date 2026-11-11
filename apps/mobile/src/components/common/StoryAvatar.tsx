@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { TouchableOpacity } from 'react-native';
 import { StoryRing, type StoryRingStatus } from './StoryRing';
 import { StoryViewer } from '../stories/StoryViewer';
-import { useUserStories, useNgoStories, useNurseryStories, useGroupStories } from '../../hooks/useApiQueries';
+import { useUserStories, useNgoStories, useNurseryStories } from '../../hooks/useApiQueries';
 import { useMarkStoryViewed } from '../../hooks/useSocialQueries';
 
 interface StoryAvatarProps {
   /** Every kind opens its author's active story when `status.hasStory`; otherwise the tap falls
    * through to `onPress`. */
-  authorKind: 'user' | 'ngo' | 'nursery' | 'group';
+  authorKind: 'user' | 'ngo' | 'nursery';
   authorId: string;
   authorName: string;
   authorAvatarEmoji?: string;
@@ -55,9 +55,8 @@ export function StoryAvatar({
   const { data: userStories = [] } = useUserStories(authorKind === 'user' && open ? authorId : null);
   const { data: ngoStories = [] } = useNgoStories(authorKind === 'ngo' && open ? authorId : null);
   const { data: nurseryStories = [] } = useNurseryStories(authorKind === 'nursery' && open ? authorId : null);
-  const { data: groupStories = [] } = useGroupStories(authorKind === 'group' && open ? authorId : null);
   const stories =
-    authorKind === 'ngo' ? ngoStories : authorKind === 'nursery' ? nurseryStories : authorKind === 'group' ? groupStories : userStories;
+    authorKind === 'ngo' ? ngoStories : authorKind === 'nursery' ? nurseryStories : userStories;
   const markViewed = useMarkStoryViewed();
 
   const handlePress = () => {

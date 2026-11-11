@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { apiRequest, ApiError } from '@/lib/apiClient'
 
 // Public, unauthenticated proxy to services/api's GET /api/auth/check-availability – every
-// registration form (individual/NGO/group/nursery) needs to flag "already taken" while the user
+// registration form (individual/NGO/nursery) needs to flag "already taken" while the user
 // is still typing, not just on submit. The backend itself needs no auth for this endpoint, but the
 // browser can't call it directly (API_URL isn't a NEXT_PUBLIC_ var), so this thin route forwards it.
 export async function GET(request) {

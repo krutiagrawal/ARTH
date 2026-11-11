@@ -5,7 +5,6 @@ export interface ApiAdminOverview {
   ngosByStatus: Record<string, number>;
   nurseriesByStatus: Record<string, number>;
   corporatesByStatus: Record<string, number>;
-  groupsCount: number;
   drivesCount: number;
   adoptedTreesCount: number;
   totalDonatedCents: number;
@@ -266,7 +265,7 @@ export interface ApiAdminAccount {
   email: string;
   name: string;
   handle: string;
-  role: AdminAccountType | 'admin' | 'group';
+  role: AdminAccountType | 'admin';
   isBlocked: boolean;
   blockedAt: string | null;
   blockedReason: string | null;

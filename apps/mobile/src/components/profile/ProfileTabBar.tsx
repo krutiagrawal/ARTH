@@ -26,7 +26,7 @@ export function ProfileTabBar({
   activeTab: ProfileTabKey;
   onChange: (tab: ProfileTabKey) => void;
   /** Nurseries don't run drives – that last tab becomes "Saplings" for them instead. */
-  role?: 'user' | 'ngo' | 'nursery' | 'group';
+  role?: 'user' | 'ngo' | 'nursery';
 }) {
   const baseTabs = role === 'nursery' ? TABS.map((t) => (t.key === 'drives' ? { ...t, icon: '🌱', label: 'Saplings' } : t)) : TABS;
   const tabs = role === 'ngo' ? [...baseTabs, ...NGO_ONLY_TABS] : baseTabs;

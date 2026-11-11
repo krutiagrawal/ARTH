@@ -195,7 +195,6 @@ async function main() {
   const allNgos = await prisma.ngoProfile.findMany({ where: { status: 'approved' } });
   const allNurseries = await prisma.nurseryProfile.findMany({ where: { status: 'approved' } });
   const drives = await prisma.drive.findMany({ take: 10 });
-  const group = await prisma.groupProfile.findFirst({ where: { status: 'active' } });
 
   // ============================================================ Friendships
   const friendCandidates = sample(otherUsers, Math.min(6, otherUsers.length));
@@ -229,12 +228,6 @@ async function main() {
     skipDuplicates: true,
   });
   console.log(`Follows: ${followedNgos.length} NGOs, ${followedNurseries.length} nurseries`);
-
-  // ============================================================ Group membership
-  if (group) {
-    await prisma.groupMember.create({ data: { groupId: group.id, userId: myId, role: 'member' } }).catch(() => undefined);
-    console.log(`Joined group: ${group.groupName}`);
-  }
 
   // ============================================================ Drive RSVPs
   const myDrives = sample(drives, Math.min(2, drives.length));

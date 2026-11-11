@@ -206,21 +206,6 @@ export const registerNgoSchema = z.object({
   deviceInfo: z.string().max(200).optional(),
 });
 
-export const registerGroupSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8).max(72),
-  name: z.string().min(1).max(60),
-  handle: z
-    .string()
-    .min(3)
-    .max(30)
-    .regex(/^[a-z0-9_]+$/, 'Handle may only contain lowercase letters, numbers, and underscores'),
-  groupName: z.string().min(1).max(120),
-  groupType: z.enum(['family', 'school', 'club', 'other']).default('other'),
-  description: z.string().min(1).max(2000),
-  deviceInfo: z.string().max(200).optional(),
-});
-
 // Kept in sync with the NurseryType enum in packages/db/prisma/schema.prisma.
 export const NURSERY_TYPES = [
   'retail',

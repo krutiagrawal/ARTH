@@ -69,7 +69,7 @@ async function computeNurseryProgress(
   }
 }
 
-// Mirrors groupAchievement.service.ts's evaluateGroupAchievements, scoped to NurseryProfile.
+// Evaluates nursery achievements, scoped to NurseryProfile.
 export async function evaluateNurseryAchievements(tx: Prisma.TransactionClient, nurseryId: string) {
   const achievements = await tx.nurseryAchievement.findMany();
 

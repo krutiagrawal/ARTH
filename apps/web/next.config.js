@@ -38,8 +38,6 @@ const nextConfig = {
       { source: '/app/orders/:id', destination: '/dashboard/individual/orders/:id', permanent: true },
       { source: '/app/cart', destination: '/dashboard/individual/orders/cart', permanent: true },
       { source: '/app/checkout', destination: '/dashboard/individual/orders/checkout', permanent: true },
-      { source: '/app/groups', destination: '/dashboard/individual/groups', permanent: true },
-      { source: '/app/groups/:id', destination: '/dashboard/individual/groups/:id', permanent: true },
       { source: '/app/following', destination: '/dashboard/individual/community', permanent: true },
     ]
   },

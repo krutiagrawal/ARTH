@@ -299,77 +299,6 @@ export async function setCorporateStatus(prisma: PrismaClient, corporateId: stri
   });
 }
 
-interface ListGroupsFilter {
-  q?: string;
-  page?: number;
-  take?: number;
-}
-
-interface ListGroupsFilterWithStatus extends ListGroupsFilter {
-  status?: 'pending' | 'active' | 'suspended';
-}
-
-// A group starts 'pending' at registration (see auth.service.ts's registerGroup) and needs the
-// same approve/suspend lever NGO/Nursery/Corporate get, logged the same way as their status
-// changes.
-export async function listGroups(prisma: PrismaClient, filter: ListGroupsFilterWithStatus = {}) {
-  const take = Math.min(filter.take ?? 50, 50);
-  const page = Math.max(filter.page ?? 1, 1);
-
-  const where = {
-    ...(filter.status ? { status: filter.status } : {}),
-    ...(filter.q ? { groupName: { contains: filter.q, mode: 'insensitive' as const } } : {}),
-  };
-
-  const [groups, total] = await Promise.all([
-    prisma.groupProfile.findMany({
-      where,
-      include: {
-        user: { select: { id: true, email: true, name: true, handle: true, createdAt: true } },
-        _count: { select: { members: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      take,
-      skip: (page - 1) * take,
-    }),
-    prisma.groupProfile.count({ where }),
-  ]);
-
-  return { groups, total };
-}
-
-export async function setGroupStatus(
-  prisma: PrismaClient,
-  groupId: string,
-  status: 'pending' | 'active' | 'suspended',
-  adminUserId: string,
-) {
-  const group = await prisma.groupProfile.findUnique({ where: { id: groupId } });
-  if (!group) throw new NotFoundError('Group not found');
-
-  const action =
-    status === 'suspended' ? 'group.suspended' : status === 'active' && group.status === 'pending' ? 'group.approved' : 'group.reinstated';
-
-  return prisma.$transaction(async (tx) => {
-    const updated = await tx.groupProfile.update({
-      where: { id: groupId },
-      data: { status },
-      include: { user: { select: { id: true, email: true, name: true, handle: true } } },
-    });
-
-    await tx.adminActionLog.create({
-      data: {
-        actorUserId: adminUserId,
-        action,
-        targetType: 'GroupProfile',
-        targetId: groupId,
-      },
-    });
-
-    return updated;
-  });
-}
-
 interface PaginationFilter {
   page?: number;
   take?: number;
@@ -398,7 +327,6 @@ export async function getOverviewStats(prisma: PrismaClient) {
     ngosByStatus,
     nurseriesByStatus,
     corporatesByStatus,
-    groupsCount,
     drivesCount,
     adoptedTreesCount,
     succeededDonations,
@@ -410,7 +338,6 @@ export async function getOverviewStats(prisma: PrismaClient) {
     prisma.ngoProfile.groupBy({ by: ['status'], _count: true }),
     prisma.nurseryProfile.groupBy({ by: ['status'], _count: true }),
     prisma.corporateProfile.groupBy({ by: ['status'], _count: true }),
-    prisma.groupProfile.count(),
     prisma.drive.count(),
     prisma.adoptableTree.count({ where: { status: 'adopted' } }),
     prisma.donation.findMany({ where: { status: 'succeeded' }, select: { amountCents: true } }),
@@ -424,7 +351,6 @@ export async function getOverviewStats(prisma: PrismaClient) {
     ngosByStatus: Object.fromEntries(ngosByStatus.map((r) => [r.status, r._count])),
     nurseriesByStatus: Object.fromEntries(nurseriesByStatus.map((r) => [r.status, r._count])),
     corporatesByStatus: Object.fromEntries(corporatesByStatus.map((r) => [r.status, r._count])),
-    groupsCount,
     drivesCount,
     adoptedTreesCount,
     totalDonatedCents: succeededDonations.reduce((sum, d) => sum + d.amountCents, 0),
@@ -434,8 +360,7 @@ export async function getOverviewStats(prisma: PrismaClient) {
   };
 }
 
-// ---------- Account search & blocking (User/NGO/Nursery/Corporate — Group is
-// out of scope, it keeps its own separate suspend/active workflow above) ----------
+// ---------- Account search & blocking (User/NGO/Nursery/Corporate) ----------
 
 interface SearchAccountsFilter {
   q?: string;
@@ -465,7 +390,6 @@ const ACCOUNT_SELECT = {
   ngoProfile: { select: { id: true, orgName: true, status: true } },
   nurseryProfile: { select: { id: true, nurseryName: true, status: true } },
   corporateProfile: { select: { id: true, companyName: true, status: true } },
-  groupProfile: { select: { id: true, groupName: true, status: true } },
 } satisfies Prisma.UserSelect;
 
 // One query against User covers all four account types since NgoProfile/
@@ -570,42 +494,6 @@ export async function getAccountProfile(prisma: PrismaClient, userId: string) {
       include: { drive: { select: { id: true, title: true } } },
     });
     return { account, kind: 'corporate' as const, content: { ...corporate, sponsorships } };
-  }
-
-  // Groups have their own profile row (unlike the old assumption that only ngo/nursery/
-  // corporate do) — members/challenges/posts-shared-to-the-group/stories/achievements,
-  // not a user's personal posts/trees.
-  if (account.role === 'group' && account.groupProfile) {
-    const groupId = account.groupProfile.id;
-    const [groupProfile, members, challenges, posts, stories, achievements] = await Promise.all([
-      prisma.groupProfile.findUnique({ where: { id: groupId } }),
-      prisma.groupMember.findMany({
-        where: { groupId },
-        include: { user: { select: { id: true, name: true, handle: true, avatarEmoji: true } } },
-        orderBy: { joinedAt: 'asc' },
-        take: 100,
-      }),
-      prisma.groupChallenge.findMany({ where: { groupId }, orderBy: { startsAt: 'desc' }, take: 50 }),
-      prisma.post.findMany({
-        where: { groupId, isHidden: false },
-        orderBy: { createdAt: 'desc' },
-        take: 50,
-        include: viewerInclude(),
-      }),
-      // Story (unlike Post) supports real group authorship via authorType: 'group'.
-      prisma.story.findMany({ where: { authorType: 'group', groupId }, orderBy: { createdAt: 'desc' }, take: 50 }),
-      prisma.groupAchievementUnlock.findMany({
-        where: { groupId, unlocked: true },
-        orderBy: { unlockedAt: 'desc' },
-        include: { achievement: true },
-      }),
-    ]);
-
-    return {
-      account,
-      kind: 'group' as const,
-      content: { ...groupProfile, members, challenges, posts: posts.map((p) => serializePost(p as any)), stories, achievements },
-    };
   }
 
   // Individual accounts: no dedicated profile row — surface their post history, trees,

@@ -18,18 +18,6 @@ import { AccountTypeScreen } from '../screens/AccountTypeScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
 import { PersonalizeOnboardingScreen } from '../screens/PersonalizeOnboardingScreen';
-import { GroupRegisterScreen } from '../screens/GroupRegisterScreen';
-import { GroupDashboardScreen } from '../screens/GroupDashboardScreen';
-import { GroupManageScreen } from '../screens/GroupManageScreen';
-import { GroupCreateChallengeScreen } from '../screens/GroupCreateChallengeScreen';
-import { GroupSettingsScreen } from '../screens/GroupSettingsScreen';
-import { GroupProfileScreen } from '../screens/GroupProfileScreen';
-import { GroupMembersStandaloneScreen } from '../screens/GroupMembersStandaloneScreen';
-import { EditGroupProfileScreen } from '../screens/EditGroupProfileScreen';
-import { GroupStreakScreen } from '../screens/GroupStreakScreen';
-import { GroupActivityScreen } from '../screens/GroupActivityScreen';
-import { GroupsScreen } from '../screens/GroupsScreen';
-import { GroupDetailScreen } from '../screens/GroupDetailScreen';
 import { NurseryRegisterScreen } from '../screens/NurseryRegisterScreen';
 import { NurseryDashboardScreen } from '../screens/NurseryDashboardScreen';
 import { NurserySettingsScreen } from '../screens/NurserySettingsScreen';
@@ -172,14 +160,6 @@ import { usePushRegistration } from '../hooks/usePushRegistration';
 
 export type NgoTabName = 'Home' | 'Manage' | 'Map' | 'Community';
 export type AdminTabName = 'Overview' | 'NGOs' | 'Reports' | 'AuditLog' | 'More';
-export type GroupTabName = 'Home' | 'Manage' | 'Activity' | 'Settings';
-
-const GROUP_TABS: TabItem[] = [
-  { name: 'Home', icon: '🏡', label: 'Home' },
-  { name: 'Manage', icon: '👥', label: 'Manage', raised: true },
-  { name: 'Activity', icon: '📣', label: 'Activity' },
-  { name: 'Settings', icon: '⚙️', label: 'Settings' },
-];
 
 // Settings moved off the tab bar and into the nursery's own profile screen (gear icon, next to
 // the "Edit profile" button) – the same place individual users reach Settings from, rather than
@@ -218,7 +198,7 @@ const CORPORATE_TABS: TabItem[] = [
 
 // No "More" tab: every item that used to live there is already reachable from the dashboard's
 // Quick Actions dock (or, for Followers, from the Community tab), so a fifth catch-all tab was
-// pure duplication. Post keeps the raised centre FAB, matching User/Nursery/Admin/Group/Corporate –
+// pure duplication. Post keeps the raised centre FAB, matching User/Nursery/Admin/Corporate –
 // its onPress is special-cased in NgoMainApp to push the NgoPostUpdate stack screen rather than
 // switch tabs, since PostComposerScreen calls navigation.goBack() on submit/back, which would pop
 // NgoMain itself off the stack if 'Post' were ever a real activeTab value.
@@ -376,19 +356,6 @@ export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   PersonalizeOnboarding: undefined;
-  GroupRegister: undefined;
-  GroupMain: undefined;
-  GroupCreateChallenge: undefined;
-  GroupProfile: undefined;
-  GroupPublicProfile: { groupId: string };
-  GroupSettings: undefined;
-  GroupMembers: undefined;
-  EditGroupProfile: undefined;
-  GroupStreak: undefined;
-  GroupActivity: { groupId: string } | undefined;
-  GroupPostUpdate: { groupId: string } | undefined;
-  Groups: undefined;
-  GroupDetail: { groupId: string };
   NurseryRegister: undefined;
   NurseryMain: undefined;
   NurseryStock: undefined;
@@ -512,7 +479,7 @@ export type RootStackParamList = {
   NgoPortfolioEntry: { entry?: any } | undefined;
   Notifications: undefined;
   PostDetail: { postId: string };
-  ProfilePostFeed: { authorKind: 'user' | 'ngo' | 'nursery' | 'group' | 'liked'; authorId?: string; initialPostId: string };
+  ProfilePostFeed: { authorKind: 'user' | 'ngo' | 'nursery' | 'liked'; authorId?: string; initialPostId: string };
   PublicFollowers: { kind: 'ngo' | 'nursery'; id: string; name: string };
   PostLikes: { postId: string };
   BlockedAccounts: undefined;
@@ -670,38 +637,6 @@ function NgoMainApp({ navigation }: any) {
         tabs={NGO_TABS}
         activeTab={activeTab}
         onTabPress={handleTabPress}
-        theme={activeTab === 'Home' ? dashboardTheme : null}
-      />
-    </View>
-  );
-}
-
-function GroupMainApp({ navigation }: any) {
-  const [activeTab, setActiveTab] = useState<GroupTabName>('Home');
-  const dashboardTheme = useTimeTheme();
-
-  const renderScreen = useCallback(() => {
-    switch (activeTab) {
-      case 'Home':
-        return <GroupDashboardScreen navigation={navigation} onNavigateTab={setActiveTab} />;
-      case 'Manage':
-        return <GroupManageScreen navigation={navigation} />;
-      case 'Activity':
-        return <GroupActivityScreen navigation={navigation} />;
-      case 'Settings':
-        return <GroupSettingsScreen navigation={navigation} />;
-      default:
-        return <GroupDashboardScreen navigation={navigation} onNavigateTab={setActiveTab} />;
-    }
-  }, [activeTab, navigation]);
-
-  return (
-    <View style={styles.mainContainer}>
-      {renderScreen()}
-      <BottomNav
-        tabs={GROUP_TABS}
-        activeTab={activeTab}
-        onTabPress={setActiveTab as (t: TabName) => void}
         theme={activeTab === 'Home' ? dashboardTheme : null}
       />
     </View>
@@ -932,17 +867,6 @@ export function AppNavigator() {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="PersonalizeOnboarding" component={PersonalizeOnboardingScreen} />
-        <Stack.Screen name="GroupRegister" component={GroupRegisterScreen} />
-        <Stack.Screen name="GroupMain" component={GroupMainApp} />
-        <Stack.Screen name="GroupCreateChallenge" component={GroupCreateChallengeScreen} />
-        <Stack.Screen name="GroupProfile" component={GroupProfileScreen} />
-        <Stack.Screen name="GroupPublicProfile" component={GroupProfileScreen} />
-        <Stack.Screen name="GroupSettings" component={GroupSettingsScreen} />
-        <Stack.Screen name="GroupMembers" component={GroupMembersStandaloneScreen} />
-        <Stack.Screen name="EditGroupProfile" component={EditGroupProfileScreen} />
-        <Stack.Screen name="GroupStreak" component={GroupStreakScreen} />
-        <Stack.Screen name="GroupActivity" component={GroupActivityScreen} />
-        <Stack.Screen name="GroupPostUpdate" component={PostComposerScreen} />
         <Stack.Screen name="NurseryRegister" component={NurseryRegisterScreen} />
         <Stack.Screen name="NurseryMain" component={NurseryMainApp} />
         <Stack.Screen name="DeliveryPartnerMain" component={DeliveryPartnerMainApp} />
@@ -958,8 +882,6 @@ export function AppNavigator() {
         <Stack.Screen name="CorporateRegister" component={CorporateRegisterScreen} />
         <Stack.Screen name="CorporateMain" component={CorporateMainApp} />
         <Stack.Screen name="CorporateSponsorships" component={CorporateSponsorshipsScreen} />
-        <Stack.Screen name="Groups" component={GroupsScreen} />
-        <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
         <Stack.Screen name="Main" component={MainApp} />
         <Stack.Screen
           name="PlantTree"
