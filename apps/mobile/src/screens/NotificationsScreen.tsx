@@ -587,7 +587,7 @@ export function NotificationsScreen({ navigation, route }: any) {
       if (n.type.startsWith('group_')) {
         const groupId = (n.data as any)?.groupId as string | undefined;
         if (n.type === 'group_invited') navigation.navigate('Groups');
-        else if (groupId && n.type !== 'group_join_declined' && n.type !== 'group_member_removed') navigation.navigate('GroupMain', { groupId });
+        else if (groupId && n.type !== 'group_join_declined' && n.type !== 'group_member_removed') navigation.navigate('GroupMain', { groupId, groupName: (n.data as any)?.groupName });
         else navigation.navigate('Groups');
         return;
       }

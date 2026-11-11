@@ -31,7 +31,7 @@ export function GroupDetailScreen({ navigation, route }: any) {
   const action = () => {
     if (!g) return null;
     if (g.viewer.role) {
-      return <AnimatedButton label="Open group" size="sm" variant="primary" fullWidth onPress={() => navigation.replace('GroupMain', { groupId })} />;
+      return <AnimatedButton label="Open group" size="sm" variant="primary" fullWidth onPress={() => navigation.replace('GroupMain', { groupId, groupName: g.name })} />;
     }
     const pending = g.viewer.pendingRequest;
     if (pending?.kind === 'invitation') {

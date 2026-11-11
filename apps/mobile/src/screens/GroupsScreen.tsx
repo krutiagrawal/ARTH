@@ -77,7 +77,7 @@ export function GroupsScreen({ navigation }: any) {
               <GroupRow
                 group={g}
                 right={g.myRole ? <RolePill role={g.myRole} /> : undefined}
-                onPress={() => navigation.navigate('GroupMain', { groupId: g.id })}
+                onPress={() => navigation.navigate('GroupMain', { groupId: g.id, groupName: g.name })}
               />
             </View>
           ))}

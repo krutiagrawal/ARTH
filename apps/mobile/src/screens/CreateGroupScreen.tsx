@@ -65,7 +65,7 @@ export function CreateGroupScreen({ navigation }: any) {
           confirm('Group created', 'The group photo could not be uploaded. You can add it from Group settings.');
         }
       }
-      navigation.replace('GroupMain', { groupId: group.id });
+      navigation.replace('GroupMain', { groupId: group.id, groupName: group.name });
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not create the group. Please try again.');
     }

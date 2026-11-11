@@ -611,7 +611,7 @@ export function CommunityScreen({ navigation }: any) {
           <Text style={styles.myGroupsTitle}>MY GROUPS</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.myGroupsRow}>
             {(myGroups.data ?? []).map((g) => (
-              <TouchableOpacity key={g.id} style={styles.myGroupChip} activeOpacity={0.8} onPress={() => navigation.navigate('GroupMain', { groupId: g.id })}>
+              <TouchableOpacity key={g.id} style={styles.myGroupChip} activeOpacity={0.8} onPress={() => navigation.navigate('GroupMain', { groupId: g.id, groupName: g.name })}>
                 <GroupAvatar group={g} size={32} />
                 <View>
                   <Text style={styles.myGroupName} numberOfLines={1}>

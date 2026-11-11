@@ -80,6 +80,8 @@ import { HomeScreen as GroupHome } from '../screens/HomeScreen';
 import { ForestScreen as GroupForest } from '../screens/ForestScreen';
 import { MapScreen as GroupMap } from '../screens/MapScreen';
 import { GroupCommunityScreen } from '../screens/GroupCommunityScreen';
+import { GroupLoading } from '../components/groups/GroupLoading';
+import { useGroup, useGroupStats } from '../hooks/useGroupQueries';
 import { GroupProfileScreen } from '../screens/GroupProfileScreen';
 import { GroupMembersScreen } from '../screens/GroupMembersScreen';
 import { GroupChallengesScreen } from '../screens/GroupChallengesScreen';
@@ -397,7 +399,7 @@ export type RootStackParamList = {
   CreateGroup: undefined;
   GroupDiscover: undefined;
   GroupDetail: { groupId: string };
-  GroupMain: { groupId: string };
+  GroupMain: { groupId: string; groupName?: string };
   GroupActions: { groupId: string; groupName?: string };
   GroupActivity: { groupId: string };
   GroupAchievements: { groupId: string };
@@ -698,7 +700,17 @@ function NgoMainApp({ navigation }: any) {
 
 function GroupMainApp({ navigation, route }: any) {
   const groupId: string = route.params.groupId;
+  const groupName: string | undefined = route.params.groupName;
   const [activeTab, setActiveTab] = useState<GroupTabName>('Home');
+  // Hold on a loading screen until the group's basics have arrived (and for a beat, so it never just
+  // flashes). The tabs below then open with their data already in hand.
+  const group = useGroup(groupId);
+  const stats = useGroupStats(groupId);
+  const [minTimePassed, setMinTimePassed] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setMinTimePassed(true), 900);
+    return () => clearTimeout(t);
+  }, []);
   // Same as the individual app: the nav bar takes the time-of-day colour on the Home tab.
   const { data: navSettings } = useSettings();
   const dashboardTheme = useTimeTheme((navSettings?.pinnedTimeTheme ?? null) as TimePeriod | null);
@@ -713,6 +725,22 @@ function GroupMainApp({ navigation, route }: any) {
     },
     [navigation, groupId],
   );
+
+  const loaded = !!group.data && !!stats.data && minTimePassed;
+  const failed = (group.isError || stats.isError) && !group.data;
+  if (!loaded) {
+    return (
+      <GroupLoading
+        name={group.data?.name ?? groupName}
+        failed={failed}
+        onRetry={() => {
+          group.refetch();
+          stats.refetch();
+        }}
+        onBack={() => navigation.goBack()}
+      />
+    );
+  }
 
   const renderScreen = () => {
     switch (activeTab) {
