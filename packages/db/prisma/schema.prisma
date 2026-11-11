@@ -1621,6 +1621,7 @@ model ForestTheme {
   groupForestThemes GroupForestTheme[]
   selectedByUsers   User[]             @relation("SelectedTheme")
   selectedByGroups  GroupProfile[]     @relation("GroupSelectedTheme")
+  selectedByPlantingGroups PlantingGroup[] @relation("PlantingGroupSelectedTheme")
 
   @@map("forest_themes")
 }
@@ -3127,9 +3128,11 @@ model PlantingGroup {
   description String
   logoUrl     String?           @map("logo_url")
   city        String?
+  selectedForestThemeId String?   @map("selected_forest_theme_id")
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
 
+  selectedForestTheme ForestTheme? @relation("PlantingGroupSelectedTheme", fields: [selectedForestThemeId], references: [id], onDelete: SetNull)
   createdBy User                   @relation("PlantingGroupCreator", fields: [createdById], references: [id], onDelete: Restrict)
   members   PlantingGroupMember[]
   requests  PlantingGroupRequest[]
@@ -3150,6 +3153,9 @@ model PlantingGroupMember {
   userId   String            @map("user_id")
   role     PlantingGroupRole @default(member)
   joinedAt DateTime          @default(now()) @map("joined_at")
+  // When on, what this person does on ARTH from joinedAt onwards (trees, adoptions, donations, drives,
+  // XP) counts toward the group. They can switch it off for a group at any time.
+  shareActivity Boolean @default(true) @map("share_activity")
 
   group PlantingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)

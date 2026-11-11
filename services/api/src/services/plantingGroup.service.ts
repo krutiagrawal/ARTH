@@ -90,6 +90,7 @@ export function serializeGroup(group: any) {
     city: group.city,
     memberCount: group._count?.members ?? 0,
     maxMembers: MAX_GROUP_MEMBERS,
+    selectedForestThemeId: group.selectedForestThemeId ?? null,
     createdAt: group.createdAt,
   };
 }
@@ -162,7 +163,7 @@ export async function getGroup(prisma: PrismaClient, viewerId: string, groupId: 
   if (!group) throw new NotFoundError('Group not found');
 
   const [membership, request] = await Promise.all([
-    prisma.plantingGroupMember.findFirst({ where: { groupId, userId: viewerId }, select: { role: true } }),
+    prisma.plantingGroupMember.findFirst({ where: { groupId, userId: viewerId }, select: { role: true, shareActivity: true } }),
     prisma.plantingGroupRequest.findFirst({
       where: { groupId, userId: viewerId, status: 'pending' },
       select: { id: true, kind: true },
@@ -173,6 +174,7 @@ export async function getGroup(prisma: PrismaClient, viewerId: string, groupId: 
     ...serializeGroup(group),
     viewer: {
       role: membership?.role ?? null,
+      shareActivity: membership?.shareActivity ?? null,
       pendingRequest: request ? { id: request.id, kind: request.kind } : null,
       isCreator: group.createdById === viewerId,
     },
@@ -339,6 +341,16 @@ export async function removeMember(prisma: PrismaClient, actorId: string, groupI
     });
   }
   return { ok: true, groupDeleted: outcome.groupDeleted };
+}
+
+/**
+ * A member chooses whether their own ARTH activity (from the day they joined) counts toward this group.
+ * Work they do for the group in its name always counts.
+ */
+export async function setMyShareActivity(prisma: PrismaClient, userId: string, groupId: string, shareActivity: boolean) {
+  const result = await prisma.plantingGroupMember.updateMany({ where: { groupId, userId }, data: { shareActivity } });
+  if (result.count === 0) throw new NotFoundError('Group not found');
+  return { shareActivity };
 }
 
 // ---------- join requests and invitations ----------

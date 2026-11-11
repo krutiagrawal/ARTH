@@ -69,12 +69,22 @@ describe('planting group input validation', () => {
 describe('group level and streak rules', () => {
   const day = (iso: string) => new Date(`${iso}T10:00:00Z`);
 
-  it('maps tree counts to levels and shows how far the next one is', async () => {
-    const { levelForTrees } = await import('../src/services/plantingGroupInsights.service');
-    expect(levelForTrees(0)).toMatchObject({ level: 1, name: 'Seedlings', treesToNext: 5 });
-    expect(levelForTrees(5)).toMatchObject({ level: 2, name: 'Sprouts' });
-    expect(levelForTrees(99)).toMatchObject({ level: 4, treesToNext: 1 });
-    expect(levelForTrees(5000)).toMatchObject({ level: 8, treesToNext: 0, progress: 1 });
+  it('uses the same level rule as an individual: a level every 500 XP', async () => {
+    const { levelForXp } = await import('../src/services/plantingGroupScope.service');
+    expect(levelForXp(0)).toMatchObject({ level: 1, xpIntoLevel: 0, xpPerLevel: 500 });
+    expect(levelForXp(499)).toMatchObject({ level: 1, xpIntoLevel: 499 });
+    expect(levelForXp(500)).toMatchObject({ level: 2, xpIntoLevel: 0 });
+    expect(levelForXp(1250)).toMatchObject({ level: 3, xpIntoLevel: 250 });
+  });
+
+  it('blurs a personal tree to about 1 km but keeps group trees and your own exact', async () => {
+    const { visibleCoordinates } = await import('../src/services/plantingGroupScope.service');
+    const personal = { lat: 18.523456, lng: 73.856789, plantingGroupId: null, userId: 'other' };
+    expect(visibleCoordinates(personal, 'g1', 'me')).toEqual({ lat: 18.52, lng: 73.86, approximate: true });
+    expect(visibleCoordinates({ ...personal, plantingGroupId: 'g1' }, 'g1', 'me')).toEqual({ lat: 18.523456, lng: 73.856789, approximate: false });
+    expect(visibleCoordinates({ ...personal, userId: 'me' }, 'g1', 'me').approximate).toBe(false);
+    // Planted for a different group: still someone's personal spot as far as this group is concerned.
+    expect(visibleCoordinates({ ...personal, plantingGroupId: 'g2' }, 'g1', 'me').approximate).toBe(true);
   });
 
   it('counts consecutive planting days and keeps the streak alive through yesterday only', async () => {

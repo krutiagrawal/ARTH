@@ -52,6 +52,10 @@ export const createChallengeSchema = z.object({
   endsAt: z.coerce.date(),
 });
 
+export const themeParamSchema = z.object({ id: z.string().uuid(), themeId: z.string().uuid() });
+
+export const membershipSchema = z.object({ shareActivity: z.boolean() });
+
 export const analyticsQuerySchema = z.object({
   weeks: z.coerce.number().int().min(1).max(26).optional(),
 });

@@ -1,53 +1,40 @@
 import { PrismaClient } from '@arth/db';
 import { estimateTreeImpact, countsTowardImpact, round1 } from '../lib/treeImpact';
-import { BadRequestError, NotFoundError } from '../utils/errors';
-import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
+import { BadRequestError, ConflictError, NotFoundError } from '../utils/errors';
+import { cursorArgs, parseTake, toCursorPage, type CursorQuery } from '../utils/pagination';
+import { serializeDrive } from '../routes/drives.routes';
+import { driveInclude } from './drive.service';
 import { sendPush } from './push.service';
 import { requireAdmin, requireMember, serializeGroup } from './plantingGroup.service';
+import {
+  COUNTED_TREE,
+  adoptionScopeWhere,
+  donationScopeWhere,
+  groupXp,
+  levelForXp,
+  loadScope,
+  rsvpScopeWhere,
+  treeScopeWhere,
+  visibleCoordinates,
+  type GroupScope,
+} from './plantingGroupScope.service';
 
 /**
- * Everything a group dashboard shows: totals, level, streak, achievements, challenge progress,
- * leaderboards and analytics. Every figure is worked out here from the real records (trees,
- * donations, adoptions, members), never taken from the phone, and nothing is stored that could
- * drift from them.
+ * Everything a group's pages show: totals, level, streak, achievements, challenge progress, trees,
+ * drives, adoptions, donations, the timeline, rankings and analytics.
  *
- * Only trees that were not rejected and not deleted count, matching how an individual's totals work.
+ * What counts is defined in plantingGroupScope.service.ts (work done for the group, plus what sharing
+ * members do on ARTH from the day they joined). Every figure is worked out here from the real
+ * records, never taken from the phone, and nothing is stored that could drift from them.
  */
-
-const COUNTED_TREE = { isDeleted: false, aiVerificationStatus: { in: ['verified', 'unverified'] as ('verified' | 'unverified')[] } };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const dayKey = (d: Date) => d.toISOString().slice(0, 10);
-
-// ---------- levels ----------
-
-export const GROUP_LEVELS = [
-  { level: 1, name: 'Seedlings', minTrees: 0 },
-  { level: 2, name: 'Sprouts', minTrees: 5 },
-  { level: 3, name: 'Saplings', minTrees: 15 },
-  { level: 4, name: 'Grove', minTrees: 40 },
-  { level: 5, name: 'Woodland', minTrees: 100 },
-  { level: 6, name: 'Forest', minTrees: 250 },
-  { level: 7, name: 'Canopy', minTrees: 500 },
-  { level: 8, name: 'Old Growth', minTrees: 1000 },
-] as const;
-
-export function levelForTrees(trees: number) {
-  let current: (typeof GROUP_LEVELS)[number] = GROUP_LEVELS[0];
-  for (const l of GROUP_LEVELS) if (trees >= l.minTrees) current = l;
-  const next = GROUP_LEVELS.find((l) => l.minTrees > trees) ?? null;
-  return {
-    level: current.level,
-    name: current.name,
-    treesToNext: next ? next.minTrees - trees : 0,
-    nextName: next?.name ?? null,
-    progress: next ? (trees - current.minTrees) / (next.minTrees - current.minTrees) : 1,
-  };
-}
+const USER_BRIEF = { id: true, name: true, handle: true, avatarEmoji: true, avatarUrl: true } as const;
 
 // ---------- streak ----------
 
-/** Consecutive days with at least one planting. The current run stays alive through "yesterday". */
+/** Consecutive days with at least one planting by anyone counted. The run stays alive through "yesterday". */
 export function computeStreak(plantedAt: Date[], now = new Date()) {
   const days = [...new Set(plantedAt.map(dayKey))].sort();
   if (days.length === 0) return { current: 0, max: 0 };
@@ -64,16 +51,6 @@ export function computeStreak(plantedAt: Date[], now = new Date()) {
   return { current: gapToToday <= 1 ? run : 0, max };
 }
 
-// ---------- shared load ----------
-
-async function loadGroupTrees(prisma: PrismaClient, groupId: string) {
-  return prisma.tree.findMany({
-    where: { plantingGroupId: groupId, ...COUNTED_TREE },
-    select: { id: true, userId: true, plantedAt: true, healthStatus: true, species: { select: { key: true, commonName: true } } },
-    orderBy: { plantedAt: 'asc' },
-  });
-}
-
 function challengeStatus(c: { startsAt: Date; endsAt: Date }, progress: number, goal: number, now: Date) {
   if (progress >= goal) return 'completed' as const;
   if (now < c.startsAt) return 'upcoming' as const;
@@ -81,13 +58,22 @@ function challengeStatus(c: { startsAt: Date; endsAt: Date }, progress: number, 
   return 'active' as const;
 }
 
+// ---------- shared load ----------
+
 async function buildStats(prisma: PrismaClient, groupId: string, now = new Date()) {
-  const [trees, memberCount, adoptions, donated, challenges] = await Promise.all([
-    loadGroupTrees(prisma, groupId),
-    prisma.plantingGroupMember.count({ where: { groupId } }),
-    prisma.adoption.count({ where: { plantingGroupId: groupId } }),
-    prisma.donation.aggregate({ where: { plantingGroupId: groupId, status: 'succeeded' }, _sum: { amountCents: true } }),
+  const scope = await loadScope(prisma, groupId);
+  const [trees, adoptions, donated, drives, challenges, xp, forGroupTrees] = await Promise.all([
+    prisma.tree.findMany({
+      where: treeScopeWhere(scope),
+      select: { id: true, userId: true, plantedAt: true, healthStatus: true, species: { select: { key: true, commonName: true } } },
+      orderBy: { plantedAt: 'asc' },
+    }),
+    prisma.adoption.count({ where: adoptionScopeWhere(scope) }),
+    prisma.donation.aggregate({ where: donationScopeWhere(scope), _sum: { amountCents: true } }),
+    scope.sharing.length ? prisma.driveRsvp.findMany({ where: rsvpScopeWhere(scope), select: { driveId: true }, distinct: ['driveId'] }) : Promise.resolve([]),
     prisma.plantingGroupChallenge.findMany({ where: { groupId }, orderBy: { startsAt: 'desc' } }),
+    groupXp(prisma, scope),
+    prisma.tree.count({ where: { plantingGroupId: groupId, ...COUNTED_TREE } }),
   ]);
 
   let co2 = 0;
@@ -106,22 +92,27 @@ async function buildStats(prisma: PrismaClient, groupId: string, now = new Date(
   });
 
   return {
+    scope,
     trees,
     challengeRows,
     stats: {
-      memberCount,
+      memberCount: scope.memberCount,
+      sharingCount: scope.sharing.length,
       treesPlanted: trees.length,
+      treesForGroup: forGroupTrees,
       co2Kg: round1(co2),
       co2NextYearKg: round1(co2Next),
       adoptions,
       donatedCents: donated._sum.amountCents ?? 0,
+      drivesJoined: drives.length,
       streakCurrent: streak.current,
       streakMax: streak.max,
       challengesCompleted: challengeRows.filter((c) => c.status === 'completed').length,
-      ...levelForTrees(trees.length),
+      ...levelForXp(xp),
     },
   };
 }
+type Stats = Awaited<ReturnType<typeof buildStats>>['stats'];
 
 // ---------- stats and achievements ----------
 
@@ -139,10 +130,10 @@ const ACHIEVEMENTS = [
   { key: 'month_strong', title: 'Month Strong', description: 'Plant on 30 days in a row', icon: '⭐', target: 30, value: (s: Stats) => s.streakMax },
   { key: 'carbon_crew', title: 'Carbon Crew', description: 'Absorb 100 kg of CO₂ together', icon: '🌍', target: 100, value: (s: Stats) => s.co2Kg },
   { key: 'challenge_champions', title: 'Challenge Champions', description: 'Complete a group challenge', icon: '🏆', target: 1, value: (s: Stats) => s.challengesCompleted },
-  { key: 'tree_parents', title: 'Tree Parents', description: 'Adopt a tree as a group', icon: '🤝', target: 1, value: (s: Stats) => s.adoptions },
-  { key: 'givers', title: 'Givers', description: 'Make a donation as a group', icon: '💚', target: 1, value: (s: Stats) => (s.donatedCents > 0 ? 1 : 0) },
+  { key: 'tree_parents', title: 'Tree Parents', description: 'Adopt a tree together', icon: '🤝', target: 1, value: (s: Stats) => s.adoptions },
+  { key: 'givers', title: 'Givers', description: 'Make a donation together', icon: '💚', target: 1, value: (s: Stats) => (s.donatedCents > 0 ? 1 : 0) },
+  { key: 'volunteers', title: 'Volunteers', description: 'Join an NGO planting drive together', icon: '🙋', target: 1, value: (s: Stats) => s.drivesJoined },
 ];
-type Stats = Awaited<ReturnType<typeof buildStats>>['stats'];
 
 export async function getGroupAchievements(prisma: PrismaClient, viewerId: string, groupId: string) {
   await requireMember(prisma, groupId, viewerId);
@@ -222,78 +213,165 @@ export async function deleteChallenge(prisma: PrismaClient, actorId: string, gro
   if (result.count === 0) throw new NotFoundError('Challenge not found');
 }
 
-// ---------- lists ----------
+// ---------- timeline ----------
 
+const STORED_ACTIVITY = ['member_joined', 'member_left', 'challenge_created', 'role_changed'] as const;
+
+/**
+ * The group's timeline: members' plantings, adoptions, donations and drive sign-ups (the work that
+ * counts for the group) interleaved with joins, role changes and challenges. Paged by time: the cursor
+ * is the timestamp of the last item returned.
+ */
 export async function listActivity(prisma: PrismaClient, viewerId: string, groupId: string, query: CursorQuery) {
   await requireMember(prisma, groupId, viewerId);
-  const { take, args } = cursorArgs(query, 30);
-  const rows = await prisma.plantingGroupActivity.findMany({
-    where: { groupId },
-    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-    include: { actor: { select: { id: true, name: true, handle: true, avatarEmoji: true } } },
-    ...args,
-  });
-  return toCursorPage(rows, take, (r) => ({ id: r.id, type: r.type, createdAt: r.createdAt, data: r.data, actor: r.actor }));
+  const take = parseTake(query.take, 30);
+  const parsed = query.cursor ? new Date(query.cursor) : null;
+  if (parsed && Number.isNaN(parsed.getTime())) throw new BadRequestError('Invalid cursor');
+  const before = parsed ?? new Date(Date.now() + 60_000);
+
+  const scope = await loadScope(prisma, groupId);
+  const limit = take + 1;
+  const [trees, adoptions, donations, rsvps, stored] = await Promise.all([
+    prisma.tree.findMany({
+      where: { AND: [treeScopeWhere(scope), { plantedAt: { lt: before } }] },
+      orderBy: { plantedAt: 'desc' },
+      take: limit,
+      select: { id: true, nickname: true, plantedAt: true, plantingGroupId: true, user: { select: USER_BRIEF } },
+    }),
+    prisma.adoption.findMany({
+      where: { AND: [adoptionScopeWhere(scope), { createdAt: { lt: before } }] },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      select: { id: true, createdAt: true, plantingGroupId: true, adoptableTree: { select: { nickname: true } }, user: { select: USER_BRIEF } },
+    }),
+    prisma.donation.findMany({
+      where: { AND: [donationScopeWhere(scope), { createdAt: { lt: before } }] },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      select: { id: true, createdAt: true, amountCents: true, isAnonymous: true, userId: true, plantingGroupId: true, campaign: { select: { title: true } }, user: { select: USER_BRIEF } },
+    }),
+    scope.sharing.length
+      ? prisma.driveRsvp.findMany({
+          where: { AND: [rsvpScopeWhere(scope), { createdAt: { lt: before } }] },
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+          select: { id: true, createdAt: true, drive: { select: { title: true } }, user: { select: USER_BRIEF } },
+        })
+      : Promise.resolve([]),
+    prisma.plantingGroupActivity.findMany({
+      where: { groupId, type: { in: [...STORED_ACTIVITY] }, createdAt: { lt: before } },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      include: { actor: { select: USER_BRIEF } },
+    }),
+  ]);
+
+  const items = [
+    ...trees.map((t) => ({ id: `tree:${t.id}`, type: 'tree_planted', createdAt: t.plantedAt, data: { nickname: t.nickname }, actor: t.user, forGroup: t.plantingGroupId === groupId })),
+    ...adoptions.map((a) => ({ id: `adoption:${a.id}`, type: 'tree_adopted', createdAt: a.createdAt, data: { nickname: a.adoptableTree.nickname }, actor: a.user, forGroup: a.plantingGroupId === groupId })),
+    ...donations.map((d) => ({
+      id: `donation:${d.id}`,
+      type: 'donation_made',
+      createdAt: d.createdAt,
+      data: { amountCents: d.amountCents, campaignTitle: d.campaign.title },
+      // An anonymous donor stays anonymous to the group too (their own view excepted).
+      actor: d.isAnonymous && d.userId !== viewerId ? null : d.user,
+      forGroup: d.plantingGroupId === groupId,
+    })),
+    ...rsvps.map((r) => ({ id: `drive:${r.id}`, type: 'drive_joined', createdAt: r.createdAt, data: { title: r.drive.title }, actor: r.user, forGroup: false })),
+    ...stored.map((s) => ({ id: `stored:${s.id}`, type: s.type as string, createdAt: s.createdAt, data: s.data as Record<string, unknown> | null, actor: s.actor, forGroup: true })),
+  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || (a.id < b.id ? 1 : -1));
+
+  const hasMore = items.length > take;
+  const page = items.slice(0, take);
+  return { items: page, nextCursor: hasMore ? page[page.length - 1].createdAt.toISOString() : null };
 }
 
-export async function listGroupTrees(prisma: PrismaClient, viewerId: string, groupId: string, query: CursorQuery) {
-  await requireMember(prisma, groupId, viewerId);
-  const { take, args } = cursorArgs(query, 50, 100);
-  const rows = await prisma.tree.findMany({
-    where: { plantingGroupId: groupId, isDeleted: false },
-    orderBy: [{ plantedAt: 'desc' }, { id: 'desc' }],
-    include: {
-      species: { select: { commonName: true, emoji: true } },
-      user: { select: { id: true, name: true, handle: true, avatarEmoji: true } },
-    },
-    ...args,
-  });
-  return toCursorPage(rows, take, (t) => ({
+// ---------- trees (list and map) ----------
+
+function shapeTree(t: any, groupId: string, viewerId: string) {
+  const place = visibleCoordinates(t, groupId, viewerId);
+  const exact = !place.approximate;
+  return {
     id: t.id,
     publicId: t.publicId,
     nickname: t.nickname,
     species: t.species,
-    lat: t.lat,
-    lng: t.lng,
-    locationLabel: t.locationLabel,
+    lat: place.lat,
+    lng: place.lng,
+    approximate: place.approximate,
+    // A personal tree's address label could point at someone's home, so it is shown only for exact trees.
+    locationLabel: exact ? t.locationLabel : null,
     photoUrl: t.photoUrl,
     plantedAt: t.plantedAt,
     healthStatus: t.healthStatus,
     verification: t.aiVerificationStatus,
+    forGroup: t.plantingGroupId === groupId,
     plantedBy: t.user,
-  }));
+  };
 }
+
+export async function listGroupTrees(prisma: PrismaClient, viewerId: string, groupId: string, query: CursorQuery) {
+  await requireMember(prisma, groupId, viewerId);
+  const scope = await loadScope(prisma, groupId);
+  const { take, args } = cursorArgs(query, 50, 100);
+  const rows = await prisma.tree.findMany({
+    where: treeScopeWhere(scope),
+    orderBy: [{ plantedAt: 'desc' }, { id: 'desc' }],
+    include: { species: { select: { commonName: true, emoji: true } }, user: { select: USER_BRIEF } },
+    ...args,
+  });
+  return toCursorPage(rows, take, (t) => shapeTree(t, groupId, viewerId));
+}
+
+/** Pins for the group map: every counted tree (up to 500, newest first), with the same privacy rules. */
+export async function listGroupTreePins(prisma: PrismaClient, viewerId: string, groupId: string) {
+  await requireMember(prisma, groupId, viewerId);
+  const scope = await loadScope(prisma, groupId);
+  const rows = await prisma.tree.findMany({
+    where: treeScopeWhere(scope),
+    orderBy: [{ plantedAt: 'desc' }, { id: 'desc' }],
+    take: 500,
+    include: { species: { select: { commonName: true, emoji: true } }, user: { select: USER_BRIEF } },
+  });
+  return rows.map((t) => shapeTree(t, groupId, viewerId));
+}
+
+// ---------- adoptions, donations, drives ----------
 
 export async function listGroupAdoptions(prisma: PrismaClient, viewerId: string, groupId: string, query: CursorQuery) {
   await requireMember(prisma, groupId, viewerId);
+  const scope = await loadScope(prisma, groupId);
   const { take, args } = cursorArgs(query, 30);
   const rows = await prisma.adoption.findMany({
-    where: { plantingGroupId: groupId },
+    where: adoptionScopeWhere(scope),
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     include: {
       adoptableTree: { select: { id: true, nickname: true, speciesName: true, photoUrl: true, ngo: { select: { orgName: true } } } },
-      user: { select: { id: true, name: true, handle: true } },
+      user: { select: USER_BRIEF },
     },
     ...args,
   });
   return toCursorPage(rows, take, (a) => ({
     id: a.id,
     createdAt: a.createdAt,
+    forGroup: a.plantingGroupId === groupId,
     tree: { id: a.adoptableTree.id, nickname: a.adoptableTree.nickname, speciesName: a.adoptableTree.speciesName, photoUrl: a.adoptableTree.photoUrl, ngoName: a.adoptableTree.ngo.orgName },
     adoptedBy: a.user,
   }));
 }
 
-/** Receipts for the group's donations. Never includes the donor's PAN. */
+/** Donations that count for the group. Never includes a PAN; an anonymous donor's name stays hidden. */
 export async function listGroupDonations(prisma: PrismaClient, viewerId: string, groupId: string, query: CursorQuery) {
   await requireMember(prisma, groupId, viewerId);
+  const scope = await loadScope(prisma, groupId);
   const { take, args } = cursorArgs(query, 30);
   const rows = await prisma.donation.findMany({
-    where: { plantingGroupId: groupId, status: 'succeeded' },
+    where: donationScopeWhere(scope),
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     include: {
       campaign: { select: { id: true, title: true, ngo: { select: { orgName: true } } } },
-      user: { select: { id: true, name: true, handle: true } },
+      user: { select: USER_BRIEF },
     },
     ...args,
   });
@@ -301,27 +379,91 @@ export async function listGroupDonations(prisma: PrismaClient, viewerId: string,
     id: d.id,
     amountCents: d.amountCents,
     currency: d.currency,
-    receiptNumber: d.receiptNumber,
+    receiptNumber: d.plantingGroupId === groupId || d.userId === viewerId ? d.receiptNumber : null,
     createdAt: d.createdAt,
+    forGroup: d.plantingGroupId === groupId,
     campaign: { id: d.campaign.id, title: d.campaign.title, ngoName: d.campaign.ngo.orgName },
-    donatedBy: d.user,
+    donatedBy: d.isAnonymous && d.userId !== viewerId ? null : d.user,
   }));
+}
+
+/** NGO drives the group's sharing members have signed up for, with how many of them are going. */
+export async function listGroupDrives(prisma: PrismaClient, viewerId: string, groupId: string) {
+  await requireMember(prisma, groupId, viewerId);
+  const scope = await loadScope(prisma, groupId);
+  if (scope.sharing.length === 0) return [];
+
+  const rsvps = await prisma.driveRsvp.findMany({ where: rsvpScopeWhere(scope), select: { driveId: true, user: { select: USER_BRIEF } } });
+  const byDrive = new Map<string, typeof rsvps>();
+  for (const r of rsvps) byDrive.set(r.driveId, [...(byDrive.get(r.driveId) ?? []), r]);
+  if (byDrive.size === 0) return [];
+
+  const drives = await prisma.drive.findMany({ where: { id: { in: [...byDrive.keys()] } }, include: driveInclude, orderBy: { startsAt: 'desc' } });
+  return drives.map((d) => ({ ...serializeDrive(d), groupAttendees: (byDrive.get(d.id) ?? []).map((r) => r.user) }));
+}
+
+// ---------- forest themes ----------
+
+/** Non-default themes unlock as the group levels up: the first at level 2, the next at 3, and so on. */
+async function themesFor(prisma: PrismaClient, groupId: string) {
+  const [themes, group, { stats }] = await Promise.all([
+    prisma.forestTheme.findMany({ orderBy: { sortOrder: 'asc' } }),
+    prisma.plantingGroup.findUnique({ where: { id: groupId }, select: { selectedForestThemeId: true } }),
+    buildStats(prisma, groupId),
+  ]);
+  let step = 1;
+  const rows = themes.map((t) => {
+    const unlockLevel = t.isDefaultUnlocked ? 1 : ++step;
+    return {
+      id: t.id,
+      key: t.key,
+      name: t.name,
+      preview: t.previewEmoji,
+      unlockLevel,
+      unlocked: stats.level >= unlockLevel,
+      selected: group?.selectedForestThemeId === t.id,
+    };
+  });
+  return rows;
+}
+
+export async function listGroupThemes(prisma: PrismaClient, viewerId: string, groupId: string) {
+  await requireMember(prisma, groupId, viewerId);
+  return themesFor(prisma, groupId);
+}
+
+export async function selectGroupTheme(prisma: PrismaClient, actorId: string, groupId: string, themeId: string) {
+  await requireAdmin(prisma, groupId, actorId);
+  const theme = (await themesFor(prisma, groupId)).find((t) => t.id === themeId);
+  if (!theme) throw new NotFoundError('Theme not found');
+  if (!theme.unlocked) throw new ConflictError(`This theme unlocks at group level ${theme.unlockLevel}`);
+  await prisma.plantingGroup.update({ where: { id: groupId }, data: { selectedForestThemeId: themeId } });
+  return { selectedForestThemeId: themeId };
 }
 
 // ---------- leaderboards ----------
 
-/** Groups ranked by trees planted. Open to any signed-in person: names, logos and totals only. */
+/** Groups ranked by trees that count for them. Open to any signed-in person: names, logos and totals only. */
 export async function groupsLeaderboard(prisma: PrismaClient, viewerId: string) {
-  const grouped = await prisma.tree.groupBy({
-    by: ['plantingGroupId'],
-    where: { plantingGroupId: { not: null }, ...COUNTED_TREE },
-    _count: { _all: true },
-    orderBy: { _count: { plantingGroupId: 'desc' } },
-    take: 50,
-  });
-  const ids = grouped.map((g) => g.plantingGroupId as string);
-  if (ids.length === 0) return [];
+  const rows = await prisma.$queryRaw<{ group_id: string; trees: number }[]>`
+    SELECT g.id AS group_id, COUNT(DISTINCT t.id)::int AS trees
+    FROM planting_groups g
+    JOIN trees t
+      ON t.is_deleted = false
+     AND t.ai_verification_status IN ('verified', 'unverified')
+     AND (
+       t.planting_group_id = g.id
+       OR EXISTS (
+         SELECT 1 FROM planting_group_members m
+         WHERE m.group_id = g.id AND m.user_id = t.user_id AND m.share_activity = true AND t.planted_at >= m.joined_at
+       )
+     )
+    GROUP BY g.id
+    ORDER BY trees DESC, g.id
+    LIMIT 50`;
+  if (rows.length === 0) return [];
 
+  const ids = rows.map((r) => r.group_id);
   const [groups, mine] = await Promise.all([
     prisma.plantingGroup.findMany({ where: { id: { in: ids } }, include: { _count: { select: { members: true } } } }),
     prisma.plantingGroupMember.findMany({ where: { userId: viewerId, groupId: { in: ids } }, select: { groupId: true } }),
@@ -329,21 +471,22 @@ export async function groupsLeaderboard(prisma: PrismaClient, viewerId: string) 
   const byId = new Map(groups.map((g) => [g.id, g]));
   const mineIds = new Set(mine.map((m) => m.groupId));
 
-  return grouped.flatMap((g, i) => {
-    const group = byId.get(g.plantingGroupId as string);
+  return rows.flatMap((r, i) => {
+    const group = byId.get(r.group_id);
     if (!group) return [];
-    return [{ rank: i + 1, treesPlanted: g._count._all, isMine: mineIds.has(group.id), group: serializeGroup(group) }];
+    return [{ rank: i + 1, treesPlanted: r.trees, isMine: mineIds.has(group.id), group: serializeGroup(group) }];
   });
 }
 
-/** Who has planted the most for this group (members only). Members with no planting yet are listed last. */
+/** Who has contributed the most to this group (members only). Members with nothing yet are listed last. */
 export async function contributorsLeaderboard(prisma: PrismaClient, viewerId: string, groupId: string) {
   await requireMember(prisma, groupId, viewerId);
+  const scope = await loadScope(prisma, groupId);
   const [counts, members] = await Promise.all([
-    prisma.tree.groupBy({ by: ['userId'], where: { plantingGroupId: groupId, ...COUNTED_TREE }, _count: { _all: true } }),
+    prisma.tree.groupBy({ by: ['userId'], where: treeScopeWhere(scope), _count: { _all: true } }),
     prisma.plantingGroupMember.findMany({
       where: { groupId },
-      include: { user: { select: { id: true, name: true, handle: true, avatarEmoji: true, avatarUrl: true } } },
+      include: { user: { select: USER_BRIEF } },
     }),
   ]);
   const countBy = new Map(counts.map((c) => [c.userId, c._count._all]));
@@ -368,10 +511,10 @@ export async function getAnalytics(prisma: PrismaClient, viewerId: string, group
   const thisWeek = weekStart(now);
   const from = new Date(thisWeek.getTime() - (n - 1) * 7 * DAY_MS);
 
-  const [{ trees, stats, challengeRows }, joins, donations] = await Promise.all([
-    buildStats(prisma, groupId, now).then((r) => ({ trees: r.trees, stats: r.stats, challengeRows: r.challengeRows })),
+  const { scope, trees, stats, challengeRows } = await buildStats(prisma, groupId, now);
+  const [joins, donations] = await Promise.all([
     prisma.plantingGroupMember.findMany({ where: { groupId, joinedAt: { gte: from } }, select: { joinedAt: true } }),
-    prisma.donation.findMany({ where: { plantingGroupId: groupId, status: 'succeeded', createdAt: { gte: from } }, select: { amountCents: true, createdAt: true } }),
+    prisma.donation.findMany({ where: { AND: [donationScopeWhere(scope), { createdAt: { gte: from } }] }, select: { amountCents: true, createdAt: true } }),
   ]);
 
   const buckets = Array.from({ length: n }, (_, i) => ({ weekStart: new Date(from.getTime() + i * 7 * DAY_MS), trees: 0, newMembers: 0, donatedCents: 0 }));
@@ -405,3 +548,5 @@ export async function getAnalytics(prisma: PrismaClient, viewerId: string, group
     overall: stats,
   };
 }
+
+export type { GroupScope };

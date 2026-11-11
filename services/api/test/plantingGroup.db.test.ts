@@ -215,6 +215,58 @@ describe.skipIf(!enabled)('planting groups (needs a database)', () => {
     await prisma.tree.deleteMany({ where: { plantingGroupId: group.id } });
   });
 
+  it("counts what members do on ARTH from the day they join, honours the sharing switch, and blurs personal trees", async () => {
+    const insights = await import('../src/services/plantingGroupInsights.service');
+    const { generatePublicId } = await import('@arth/db');
+    const species = await prisma.treeSpecies.findFirst();
+    if (!species) throw new Error('local database has no tree species; run the seed first');
+    const admin = await makeUser('sc1');
+    const member = await makeUser('sc2');
+    const group = await newGroup(admin.id, 'scope');
+    const plant = (userId: string, plantedAt: Date, extra: Record<string, unknown> = {}) =>
+      prisma.tree.create({
+        data: { userId, speciesId: species.id, publicId: generatePublicId(), nickname: 'scoped', lat: 18.523456, lng: 73.856789, aiVerificationStatus: 'verified', plantedAt, ...extra } as any,
+      });
+
+    // Planted two days ago, before joining: must not count.
+    await plant(member.id, new Date(Date.now() - 2 * 86_400_000));
+    const req = await svc.requestToJoin(prisma, member.id, group.id);
+    await svc.respondToJoinRequest(prisma, admin.id, group.id, req.id, 'approve');
+    expect((await insights.getGroupStats(prisma, admin.id, group.id)).treesPlanted).toBe(0);
+
+    // After joining: a personal tree counts, and so does a tree an admin plants for the group.
+    await plant(member.id, new Date(Date.now() + 5_000));
+    await plant(admin.id, new Date(Date.now() + 5_000), { plantingGroupId: group.id });
+    let stats = await insights.getGroupStats(prisma, admin.id, group.id);
+    expect(stats.treesPlanted).toBe(2);
+    expect(stats.treesForGroup).toBe(1);
+    expect(stats.sharingCount).toBe(2);
+
+    // Privacy: the admin sees the member's personal tree only as an area, the group tree exactly.
+    const pins = await insights.listGroupTreePins(prisma, admin.id, group.id);
+    const personal = pins.find((p) => !p.forGroup)!;
+    const forGroup = pins.find((p) => p.forGroup)!;
+    expect(personal).toMatchObject({ approximate: true, lat: 18.52, lng: 73.86 });
+    expect(forGroup).toMatchObject({ approximate: false, lat: 18.523456 });
+    // The member sees their own tree exactly.
+    expect((await insights.listGroupTreePins(prisma, member.id, group.id)).find((p) => !p.forGroup)!.approximate).toBe(false);
+
+    // The member switches sharing off: their personal tree stops counting, the group's own still does.
+    await svc.setMyShareActivity(prisma, member.id, group.id, false);
+    stats = await insights.getGroupStats(prisma, admin.id, group.id);
+    expect(stats.treesPlanted).toBe(1);
+    expect(stats.sharingCount).toBe(1);
+    await svc.setMyShareActivity(prisma, member.id, group.id, true);
+    expect((await insights.getGroupStats(prisma, admin.id, group.id)).treesPlanted).toBe(2);
+
+    // The timeline shows both plantings, and a non-member cannot read any of it.
+    const feed = await insights.listActivity(prisma, admin.id, group.id, {});
+    expect(feed.items.filter((i) => i.type === 'tree_planted')).toHaveLength(2);
+    await expect(insights.listGroupTreePins(prisma, (await makeUser('sc3')).id, group.id)).rejects.toThrow(/not found/i);
+
+    await prisma.tree.deleteMany({ where: { userId: { in: [admin.id, member.id] } } });
+  });
+
   it('records joins on the group timeline and lists the group on the leaderboard', async () => {
     const insights = await import('../src/services/plantingGroupInsights.service');
     const admin = await makeUser('tl1');

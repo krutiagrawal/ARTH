@@ -10,6 +10,8 @@ import {
   groupMemberParamSchema,
   groupRequestParamSchema,
   inviteSchema,
+  membershipSchema,
+  themeParamSchema,
   requestIdParamSchema,
   setRoleSchema,
   updateGroupSchema,
@@ -168,6 +170,33 @@ export default async function plantingGroupsRoutes(fastify: FastifyInstance) {
   fastify.get('/:id/stats', async (request, reply) => {
     const { id } = parse(groupIdParamSchema, request.params);
     reply.send(await insights.getGroupStats(fastify.prisma, request.user!.id, id));
+  });
+
+  // The caller's own choice: should my ARTH activity count for this group?
+  fastify.patch('/:id/membership', limit(60, '1 hour'), async (request, reply) => {
+    const { id } = parse(groupIdParamSchema, request.params);
+    const { shareActivity } = parse(membershipSchema, request.body);
+    reply.send(await groupService.setMyShareActivity(fastify.prisma, request.user!.id, id, shareActivity));
+  });
+
+  fastify.get('/:id/drives', async (request, reply) => {
+    const { id } = parse(groupIdParamSchema, request.params);
+    reply.send(await insights.listGroupDrives(fastify.prisma, request.user!.id, id));
+  });
+
+  fastify.get('/:id/trees/map', async (request, reply) => {
+    const { id } = parse(groupIdParamSchema, request.params);
+    reply.send(await insights.listGroupTreePins(fastify.prisma, request.user!.id, id));
+  });
+
+  fastify.get('/:id/themes', async (request, reply) => {
+    const { id } = parse(groupIdParamSchema, request.params);
+    reply.send(await insights.listGroupThemes(fastify.prisma, request.user!.id, id));
+  });
+
+  fastify.post('/:id/themes/:themeId/select', limit(60, '1 hour'), async (request, reply) => {
+    const { id, themeId } = parse(themeParamSchema, request.params);
+    reply.send(await insights.selectGroupTheme(fastify.prisma, request.user!.id, id, themeId));
   });
 
   fastify.get('/:id/achievements', async (request, reply) => {
