@@ -7,7 +7,8 @@ import { BorderCard } from '../components/common/BorderCard';
 import { FormField } from '../components/common/FormField';
 import { CityPickerField } from '../components/common/CityPickerField';
 import { OutlineChip } from '../components/common/OutlineChip';
-import { PhotoPickerField, type PickedPhoto } from '../components/common/PhotoPickerField';
+import type { PickedPhoto } from '../components/common/PhotoPickerField';
+import { GroupPhotoPicker } from '../components/groups/GroupPhotoPicker';
 import { View } from 'react-native';
 import { GroupScreen } from '../components/groups/GroupScreen';
 import { SectionTitle } from '../components/groups/GroupBits';
@@ -34,7 +35,8 @@ export function GroupSettingsScreen({ navigation, route }: any) {
   const [description, setDescription] = useState('');
   const [city, setCity] = useState('');
   const [groupType, setGroupType] = useState<GroupType>('other');
-  const [logo, setLogo] = useState<PickedPhoto | null>(null);
+  // The photo just picked, shown while it uploads; the stored logo takes over once it is saved.
+  const [pickedLogo, setPickedLogo] = useState<PickedPhoto | null>(null);
   const [saved, setSaved] = useState('');
 
   useEffect(() => {
@@ -51,12 +53,21 @@ export function GroupSettingsScreen({ navigation, route }: any) {
     setSaved('');
     try {
       await update.mutateAsync({ name: name.trim(), description: description.trim(), groupType, city });
-      if (logo) {
-        await uploadLogo.mutateAsync(logo);
-        setLogo(null);
-      }
       setSaved('Saved.');
     } catch (e) {
+      fail(e);
+    }
+  };
+
+  // The photo saves as soon as it is picked, so there is nothing extra to remember to press.
+  const changeLogo = async (photo: PickedPhoto) => {
+    setSaved('');
+    setPickedLogo(photo);
+    try {
+      await uploadLogo.mutateAsync(photo);
+      setPickedLogo(null);
+    } catch (e) {
+      setPickedLogo(null);
       fail(e);
     }
   };
@@ -99,8 +110,7 @@ export function GroupSettingsScreen({ navigation, route }: any) {
     <GroupScreen title="Group settings" subtitle={g ? `@${g.handle}` : undefined} onBack={() => navigation.goBack()} refetch={[group.refetch]}>
       {isAdmin ? (
         <>
-          <PhotoPickerField photo={logo} onChange={setLogo} mode="gallery" label="Group logo" existingUri={g?.logoUrl} aspect={[1, 1]} />
-          <View style={{ height: 8 }} />
+          <GroupPhotoPicker photo={pickedLogo} existingUri={g?.logoUrl} groupType={groupType} onChange={changeLogo} uploading={uploadLogo.isPending} />
           <FormField label="Group name" required value={name} onChangeText={setName} maxLength={60} />
           <FormField label="About the group" required value={description} onChangeText={setDescription} multiline maxLength={500} />
           <CityPickerField required value={city} onChange={setCity} />
@@ -111,7 +121,7 @@ export function GroupSettingsScreen({ navigation, route }: any) {
             ))}
           </View>
           <AnimatedButton
-            label={update.isPending || uploadLogo.isPending ? 'Saving…' : 'Save changes'}
+            label={update.isPending ? 'Saving…' : 'Save changes'}
             onPress={save}
             disabled={name.trim().length < 2 || description.trim().length < 1 || update.isPending}
             variant="primary"

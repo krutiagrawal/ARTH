@@ -5,10 +5,14 @@ import { COLORS } from '../constants/colors';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
 import { CityPickerField } from '../components/common/CityPickerField';
+import type { PickedPhoto } from '../components/common/PhotoPickerField';
+import { GroupPhotoPicker } from '../components/groups/GroupPhotoPicker';
+import { useConfirm } from '../context/ConfirmDialogContext';
+import { useQueryClient } from '@tanstack/react-query';
 import { OutlineChip } from '../components/common/OutlineChip';
 import { GroupScreen } from '../components/groups/GroupScreen';
 import { SectionTitle } from '../components/groups/GroupBits';
-import { GROUP_TYPES, type GroupType } from '../api/plantingGroups';
+import { GROUP_TYPES, uploadGroupLogo, type GroupType } from '../api/plantingGroups';
 import { ApiError } from '../api/client';
 import { useCreateGroup } from '../hooks/useGroupQueries';
 
@@ -22,6 +26,9 @@ const toHandle = (name: string) =>
 /** Any signed-in person can found a group. They become its first admin and invite others from there. */
 export function CreateGroupScreen({ navigation }: any) {
   const create = useCreateGroup();
+  const confirm = useConfirm();
+  const queryClient = useQueryClient();
+  const [logo, setLogo] = useState<PickedPhoto | null>(null);
   const [name, setName] = useState('');
   const [handle, setHandle] = useState('');
   const [handleTouched, setHandleTouched] = useState(false);
@@ -49,6 +56,15 @@ export function CreateGroupScreen({ navigation }: any) {
         description: description.trim(),
         city,
       });
+      // The group exists now; add its photo. A failed upload must not undo the group, so it only warns.
+      if (logo) {
+        try {
+          await uploadGroupLogo(group.id, logo);
+          await queryClient.invalidateQueries({ queryKey: ['groups'] });
+        } catch {
+          confirm('Group created', 'The group photo could not be uploaded. You can add it from Group settings.');
+        }
+      }
       navigation.replace('GroupMain', { groupId: group.id });
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Could not create the group. Please try again.');
@@ -57,6 +73,7 @@ export function CreateGroupScreen({ navigation }: any) {
 
   return (
     <GroupScreen title="Create a group" subtitle="You will be its first admin" onBack={() => navigation.goBack()}>
+      <GroupPhotoPicker photo={logo} groupType={groupType} onChange={setLogo} />
       <FormField label="Group name" required value={name} onChangeText={onName} placeholder="e.g. Green Family Pune" maxLength={60} />
       <FormField
         label="Handle"
