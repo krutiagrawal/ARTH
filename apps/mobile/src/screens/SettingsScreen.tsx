@@ -399,6 +399,18 @@ export function SettingsScreen({ navigation }: any) {
         {/* My Activity – same shape for every role: who I follow, what I've liked/saved/reported. */}
         <SettingsSectionHeader title="My Activity" />
         <BorderCard noPadding>
+          {user?.role === 'user' && (
+            <>
+              <SettingsRow variant="light"
+                icon="👥"
+                label="My Groups"
+                sublabel="Plant together with family, friends or a club"
+                accent={COLORS.forest}
+                onPress={() => navigation.navigate('Groups')}
+              />
+              <SettingsDivider variant="light" />
+            </>
+          )}
           <SettingsRow variant="light"
             icon="🧭"
             label="Following"

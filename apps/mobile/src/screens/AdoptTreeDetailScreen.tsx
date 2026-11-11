@@ -22,7 +22,7 @@ import { ApiError } from '../api/client';
 
 import { TEXT } from '../constants/typography';
 export function AdoptTreeDetailScreen({ navigation, route }: any) {
-  const { treeId } = route.params as { treeId: string };
+  const { treeId, plantingGroupId, plantingGroupName } = route.params as { treeId: string; plantingGroupId?: string; plantingGroupName?: string };
   const insets = useSafeAreaInsets();
   const { success, error: errorHaptic } = useHaptics();
   const { data: tree, isLoading, refetch } = useAdoptableTree(treeId);
@@ -44,7 +44,7 @@ export function AdoptTreeDetailScreen({ navigation, route }: any) {
     if (!tree) return;
     setActionError('');
     try {
-      await adoptMutation.mutateAsync({ id: tree.id, message: message.trim() || undefined });
+      await adoptMutation.mutateAsync({ id: tree.id, message: message.trim() || undefined, plantingGroupId });
       success();
       setAdopted(true);
     } catch (e) {
@@ -180,7 +180,7 @@ export function AdoptTreeDetailScreen({ navigation, route }: any) {
               />
               {actionError ? <Text style={styles.errorText}>{actionError}</Text> : null}
               <AnimatedButton
-                label={adoptMutation.isPending ? 'Adopting…' : 'Adopt this tree'}
+                label={adoptMutation.isPending ? 'Adopting…' : plantingGroupName ? `Adopt for ${plantingGroupName}` : 'Adopt this tree'}
                 onPress={handleAdopt}
                 disabled={adoptMutation.isPending}
                 variant="primary"

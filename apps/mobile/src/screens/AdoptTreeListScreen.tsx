@@ -22,7 +22,10 @@ const NEAR_ME_KM = 50;
 
 type SortKey = 'nearest' | 'name';
 
-export function AdoptTreeListScreen({ navigation }: any) {
+export function AdoptTreeListScreen({ navigation, route }: any) {
+  // Carried through to the detail screen when a group admin is adopting for their group.
+  const plantingGroupId: string | undefined = route?.params?.plantingGroupId;
+  const plantingGroupName: string | undefined = route?.params?.plantingGroupName;
   const insets = useSafeAreaInsets();
   const { selection } = useHaptics();
   const { coords } = useMyLocation();
@@ -81,7 +84,7 @@ export function AdoptTreeListScreen({ navigation }: any) {
 
   const openTree = (treeId: string) => {
     selection();
-    navigation.navigate('AdoptTreeDetail', { treeId });
+    navigation.navigate('AdoptTreeDetail', { treeId, plantingGroupId, plantingGroupName });
   };
 
   return (

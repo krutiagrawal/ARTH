@@ -88,6 +88,14 @@ export async function unblockTarget(input: BlockInput): Promise<void> {
 // ---------- Notifications ----------
 
 export type NotificationType =
+  | 'group_join_requested'
+  | 'group_join_approved'
+  | 'group_join_declined'
+  | 'group_invited'
+  | 'group_invite_accepted'
+  | 'group_role_changed'
+  | 'group_member_removed'
+  | 'group_challenge_created'
   | 'friend_request'
   | 'friend_request_accepted'
   | 'follow_request'

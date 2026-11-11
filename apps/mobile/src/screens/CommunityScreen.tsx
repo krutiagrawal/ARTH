@@ -1,3 +1,4 @@
+import { useAuth } from '../context/AuthContext';
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
@@ -553,6 +554,7 @@ export function CommunityScreen({ navigation }: any) {
   const [joinedIds, setJoinedIds] = useState<Set<string>>(new Set());
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const { playSound } = useSoundSystem();
+  const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const bottomNavClearance = useBottomNavClearance();
 
@@ -591,6 +593,11 @@ export function CommunityScreen({ navigation }: any) {
         <TouchableOpacity style={styles.ngoButton} onPress={() => navigation.navigate('NurseryDirectory')}>
           <Text style={styles.ngoButtonText}>🌱 Nurseries</Text>
         </TouchableOpacity>
+        {user?.role === 'user' && (
+          <TouchableOpacity style={styles.ngoButton} onPress={() => navigation.navigate('Groups')}>
+            <Text style={styles.ngoButtonText}>👥 Groups</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Tab bar */}

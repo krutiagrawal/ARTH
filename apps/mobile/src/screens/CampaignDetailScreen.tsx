@@ -32,7 +32,12 @@ function formatRupees(cents: number) {
 
 export function CampaignDetailScreen({ navigation, route }: any) {
   // `presetAmount` (rupees) comes from the quick-donate chips on the campaigns list.
-  const { campaignId, presetAmount } = route.params as { campaignId: string; presetAmount?: number };
+  const { campaignId, presetAmount, plantingGroupId, plantingGroupName } = route.params as {
+    campaignId: string;
+    presetAmount?: number;
+    plantingGroupId?: string;
+    plantingGroupName?: string;
+  };
   const insets = useSafeAreaInsets();
   const { success, error: errorHaptic } = useHaptics();
   const { data: campaign, isLoading, refetch } = useCampaign(campaignId);
@@ -90,6 +95,7 @@ export function CampaignDetailScreen({ navigation, route }: any) {
         isAnonymous: anonymous,
         message: message.trim() || undefined,
         donorPan: pan || undefined,
+        plantingGroupId,
       });
       setPaidCents(amountCents);
 
@@ -310,7 +316,7 @@ export function CampaignDetailScreen({ navigation, route }: any) {
               {donationError ? <Text style={styles.errorText}>{donationError}</Text> : null}
 
               <AnimatedButton
-                label={paying ? 'Processing…' : `Donate ${amountCents ? formatRupees(amountCents) : ''}`}
+                label={paying ? 'Processing…' : `Donate ${amountCents ? formatRupees(amountCents) : ''}${plantingGroupName ? ` for ${plantingGroupName}` : ''}`}
                 onPress={handleDonate}
                 disabled={paying || !amountCents}
                 variant="primary"

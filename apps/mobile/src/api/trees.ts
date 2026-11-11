@@ -57,6 +57,8 @@ export interface PlantTreeInput {
   accuracy?: number;
   mocked?: boolean;
   photo?: { uri: string; name: string; type: string };
+  /** Plant on behalf of a group; the server only allows admins of that group. */
+  plantingGroupId?: string;
 }
 
 export async function plantTree(input: PlantTreeInput): Promise<ApiTree> {
@@ -72,6 +74,7 @@ export async function plantTree(input: PlantTreeInput): Promise<ApiTree> {
   // fails with a clear "move to an open area" error rather than a generic invalid-input one.
   form.append('accuracy', String(input.accuracy ?? 9999));
   form.append('mocked', input.mocked ? 'true' : 'false');
+  if (input.plantingGroupId) form.append('plantingGroupId', input.plantingGroupId);
   if (input.photo) {
     form.append('photo', toFormFile(input.photo.uri), input.photo.name);
   }

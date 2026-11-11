@@ -442,6 +442,9 @@ export function PlantTreeScreen({ navigation, route }: any) {
   // Lets a "Plant a replacement" CTA (Tree Passport's memorial state) land here with the same
   // species already chosen, instead of making the user re-pick it.
   const preselectSpeciesId: string | undefined = route?.params?.preselectSpeciesId;
+  // Set when a group admin plants on the group's behalf (opened from the group's action menu).
+  const plantingGroupId: string | undefined = route?.params?.plantingGroupId;
+  const plantingGroupName: string | undefined = route?.params?.plantingGroupName;
   const [selectedSpeciesId, setSelectedSpeciesId] = useState<string | null>(preselectSpeciesId ?? null);
   const [nickname, setNickname] = useState('');
   const [caption, setCaption] = useState('');
@@ -696,6 +699,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
         locationLabel: labelToSend?.slice(0, MAX_LABEL_LENGTH),
         caption: caption.trim() || undefined,
         photo: { uri: imageUri, name: filename, type: mimeType },
+        plantingGroupId,
       });
 
       setXpEarned(tree.xpEarned);
@@ -1108,7 +1112,7 @@ export function PlantTreeScreen({ navigation, route }: any) {
           {submitError && <Text style={styles.errorText}>{submitError}</Text>}
 
           <AnimatedButton
-            label={isSubmitting || plantTreeMutation.isPending ? 'Adding to Forest...' : '🌱  Add to My Forest'}
+            label={isSubmitting || plantTreeMutation.isPending ? 'Adding to Forest...' : (plantingGroupName ? `🌱  Plant for ${plantingGroupName}` : '🌱  Add to My Forest')}
             onPress={handleSubmit}
             variant="primary"
             size="lg"

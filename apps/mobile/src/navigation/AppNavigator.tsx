@@ -72,6 +72,24 @@ import { EmojiPickerScreen } from '../screens/EmojiPickerScreen';
 import { HomeThemePickerScreen } from '../screens/HomeThemePickerScreen';
 import { FriendsListScreen } from '../screens/FriendsListScreen';
 import { DrivesListScreen } from '../screens/DrivesListScreen';
+import { GroupsScreen } from '../screens/GroupsScreen';
+import { CreateGroupScreen } from '../screens/CreateGroupScreen';
+import { GroupDiscoverScreen } from '../screens/GroupDiscoverScreen';
+import { GroupDetailScreen } from '../screens/GroupDetailScreen';
+import { GroupHomeScreen } from '../screens/GroupHomeScreen';
+import { GroupMembersScreen } from '../screens/GroupMembersScreen';
+import { GroupChallengesScreen } from '../screens/GroupChallengesScreen';
+import { GroupMoreScreen } from '../screens/GroupMoreScreen';
+import { GroupActionsScreen } from '../screens/GroupActionsScreen';
+import { GroupSettingsScreen } from '../screens/GroupSettingsScreen';
+import {
+  GroupActivityScreen,
+  GroupAchievementsScreen,
+  GroupLeaderboardScreen,
+  GroupAnalyticsScreen,
+  GroupTreesScreen,
+  GroupGivingScreen,
+} from '../screens/GroupListScreens';
 import { DriveDetailScreen } from '../screens/DriveDetailScreen';
 import { MyTreesScreen } from '../screens/MyTreesScreen';
 import { TreePassportScreen } from '../screens/TreePassportScreen';
@@ -171,6 +189,19 @@ const NURSERY_TABS: TabItem[] = [
   { name: 'Community', icon: '👥', label: 'Community' },
   { name: 'Stock', icon: '📦', label: 'Stock', raised: true },
   { name: 'Orders', icon: '🚚', label: 'Orders' },
+];
+
+// A planting group's own dashboard. Opened from the Groups list; members reach it with their own
+// login. The raised centre button opens the "plant, adopt or donate for the group" screen instead of
+// becoming a tab, the same way the NGO Post button works.
+export type GroupTabName = 'Home' | 'Members' | 'Challenges' | 'More';
+
+const GROUP_TABS: TabItem[] = [
+  { name: 'Home', icon: '🏡', label: 'Home' },
+  { name: 'Members', icon: '👥', label: 'Members' },
+  { name: 'Act', icon: '🌱', label: 'Act', raised: true },
+  { name: 'Challenges', icon: '🏆', label: 'Challenges' },
+  { name: 'More', icon: '☰', label: 'More' },
 ];
 
 // Deliberately tiny – this role's whole feature surface is "see my assigned deliveries" and
@@ -356,6 +387,19 @@ export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   PersonalizeOnboarding: undefined;
+  Groups: undefined;
+  CreateGroup: undefined;
+  GroupDiscover: undefined;
+  GroupDetail: { groupId: string };
+  GroupMain: { groupId: string };
+  GroupActions: { groupId: string; groupName?: string };
+  GroupActivity: { groupId: string };
+  GroupAchievements: { groupId: string };
+  GroupLeaderboard: { groupId: string };
+  GroupAnalytics: { groupId: string };
+  GroupTrees: { groupId: string };
+  GroupGiving: { groupId: string };
+  GroupSettings: { groupId: string };
   NurseryRegister: undefined;
   NurseryMain: undefined;
   NurseryStock: undefined;
@@ -399,7 +443,7 @@ export type RootStackParamList = {
   CorporateMain: undefined;
   CorporateSponsorships: undefined;
   Main: undefined;
-  PlantTree: { verifiedLat?: number; verifiedLng?: number; preselectSpeciesId?: string } | undefined;
+  PlantTree: { verifiedLat?: number; verifiedLng?: number; preselectSpeciesId?: string; plantingGroupId?: string; plantingGroupName?: string } | undefined;
   StreakProtection: undefined;
   Settings: undefined;
   Profile: undefined;
@@ -443,10 +487,10 @@ export type RootStackParamList = {
     photoUrl?: string | null;
     publicId?: string;
   };
-  AdoptTreeList: undefined;
-  AdoptTreeDetail: { treeId: string };
+  AdoptTreeList: { plantingGroupId?: string; plantingGroupName?: string } | undefined;
+  AdoptTreeDetail: { treeId: string; plantingGroupId?: string; plantingGroupName?: string };
   Campaigns: undefined;
-  CampaignDetail: { campaignId: string };
+  CampaignDetail: { campaignId: string; presetAmount?: number; plantingGroupId?: string; plantingGroupName?: string };
   NgoMain: undefined;
   NgoProfile: undefined;
   NgoCreateDrive: undefined;
@@ -639,6 +683,42 @@ function NgoMainApp({ navigation }: any) {
         onTabPress={handleTabPress}
         theme={activeTab === 'Home' ? dashboardTheme : null}
       />
+    </View>
+  );
+}
+
+function GroupMainApp({ navigation, route }: any) {
+  const groupId: string = route.params.groupId;
+  const [activeTab, setActiveTab] = useState<GroupTabName>('Home');
+
+  const handleTabPress = useCallback(
+    (tab: TabName) => {
+      if (tab === 'Act') {
+        navigation.navigate('GroupActions', { groupId });
+        return;
+      }
+      setActiveTab(tab as GroupTabName);
+    },
+    [navigation, groupId],
+  );
+
+  const renderScreen = () => {
+    switch (activeTab) {
+      case 'Members':
+        return <GroupMembersScreen navigation={navigation} groupId={groupId} />;
+      case 'Challenges':
+        return <GroupChallengesScreen navigation={navigation} groupId={groupId} />;
+      case 'More':
+        return <GroupMoreScreen navigation={navigation} groupId={groupId} />;
+      default:
+        return <GroupHomeScreen navigation={navigation} groupId={groupId} onNavigateTab={(t) => setActiveTab(t)} />;
+    }
+  };
+
+  return (
+    <View style={styles.mainContainer}>
+      {renderScreen()}
+      <BottomNav tabs={GROUP_TABS} activeTab={activeTab} onTabPress={handleTabPress} theme={null} />
     </View>
   );
 }
@@ -950,6 +1030,19 @@ export function AppNavigator() {
           }}
         />
         <Stack.Screen name="Drives" component={DrivesListScreen} />
+        <Stack.Screen name="Groups" component={GroupsScreen} />
+        <Stack.Screen name="CreateGroup" component={CreateGroupScreen} />
+        <Stack.Screen name="GroupDiscover" component={GroupDiscoverScreen} />
+        <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
+        <Stack.Screen name="GroupMain" component={GroupMainApp} />
+        <Stack.Screen name="GroupActions" component={GroupActionsScreen} />
+        <Stack.Screen name="GroupActivity" component={GroupActivityScreen} />
+        <Stack.Screen name="GroupAchievements" component={GroupAchievementsScreen} />
+        <Stack.Screen name="GroupLeaderboard" component={GroupLeaderboardScreen} />
+        <Stack.Screen name="GroupAnalytics" component={GroupAnalyticsScreen} />
+        <Stack.Screen name="GroupTrees" component={GroupTreesScreen} />
+        <Stack.Screen name="GroupGiving" component={GroupGivingScreen} />
+        <Stack.Screen name="GroupSettings" component={GroupSettingsScreen} />
         <Stack.Screen name="DriveDetail" component={DriveDetailScreen} />
         <Stack.Screen name="MyTrees" component={MyTreesScreen} />
         <Stack.Screen name="TreePassport" component={TreePassportScreen} />

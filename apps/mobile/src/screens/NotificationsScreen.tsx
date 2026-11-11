@@ -27,7 +27,24 @@ const ORDER_NOTIFICATION_TYPES = new Set([
 
 /** One line of copy per notification type. The actor's name is rendered separately, in bold. */
 function describe(n: ApiNotification): string {
+  const group = typeof (n.data as any)?.groupName === 'string' ? `“${(n.data as any).groupName}”` : 'your group';
   switch (n.type) {
+    case 'group_join_requested':
+      return `asked to join ${group}`;
+    case 'group_join_approved':
+      return `approved your request to join ${group} 🎉`;
+    case 'group_join_declined':
+      return `declined your request to join ${group}`;
+    case 'group_invited':
+      return `invited you to join ${group}`;
+    case 'group_invite_accepted':
+      return `accepted your invitation to ${group}`;
+    case 'group_role_changed':
+      return (n.data as any)?.role === 'admin' ? `made you an admin of ${group}` : `changed your role in ${group}`;
+    case 'group_member_removed':
+      return `removed you from ${group}`;
+    case 'group_challenge_created':
+      return `started a challenge in ${group}: ${(n.data as any)?.title ?? ''}`;
     case 'friend_request':
       return 'wants to be your friend';
     case 'friend_request_accepted':
@@ -153,6 +170,18 @@ function describe(n: ApiNotification): string {
 
 function iconFor(n: ApiNotification): string {
   switch (n.type) {
+    case 'group_join_requested':
+    case 'group_join_approved':
+    case 'group_invited':
+    case 'group_invite_accepted':
+      return '👥';
+    case 'group_join_declined':
+    case 'group_member_removed':
+      return '🚪';
+    case 'group_role_changed':
+      return '🛡️';
+    case 'group_challenge_created':
+      return '🏆';
     case 'friend_request':
       return '🧑‍🤝‍🧑';
     case 'friend_request_accepted':
@@ -347,6 +376,20 @@ function present(n: ApiNotification): Presentation {
     case 'streak_broken':
       return { label: 'Streak broken', color: COLORS.coral };
 
+    // ---- groups ----
+    case 'group_join_requested':
+      return { label: 'Join request', color: COLORS.sage, cta: 'Review request' };
+    case 'group_invited':
+      return { label: 'Group invitation', color: COLORS.golden, cta: 'See invitation' };
+    case 'group_join_approved':
+    case 'group_invite_accepted':
+    case 'group_role_changed':
+      return { label: 'Group', color: COLORS.sage, cta: 'Open group' };
+    case 'group_challenge_created':
+      return { label: 'New challenge', color: COLORS.golden, cta: 'Open challenges' };
+    case 'group_join_declined':
+    case 'group_member_removed':
+      return { label: 'Group', color: COLORS.sage };
     // ---- people ----
     case 'follow_request':
       return { label: 'Follow request', color: COLORS.sage, cta: 'Review request' };
@@ -537,6 +580,13 @@ export function NotificationsScreen({ navigation }: any) {
       }
       if (n.type === 'reservation_fulfilled' || n.type === 'reservation_declined') {
         navigation.navigate('MySaplingReservations');
+        return;
+      }
+      if (n.type.startsWith('group_')) {
+        const groupId = (n.data as any)?.groupId as string | undefined;
+        if (n.type === 'group_invited') navigation.navigate('Groups');
+        else if (groupId && n.type !== 'group_join_declined' && n.type !== 'group_member_removed') navigation.navigate('GroupMain', { groupId });
+        else navigation.navigate('Groups');
         return;
       }
       if (n.type === 'follow_request') {

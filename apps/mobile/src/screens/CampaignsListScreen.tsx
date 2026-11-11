@@ -127,7 +127,10 @@ function ActiveChip({ label, onRemove }: { label: string; onRemove: () => void }
   );
 }
 
-export function CampaignsListScreen({ navigation }: any) {
+export function CampaignsListScreen({ navigation, route }: any) {
+  // Carried through to the detail screen when a group admin is donating for their group.
+  const plantingGroupId: string | undefined = route?.params?.plantingGroupId;
+  const plantingGroupName: string | undefined = route?.params?.plantingGroupName;
   const insets = useSafeAreaInsets();
   const { selection } = useHaptics();
   const queryClient = useQueryClient();
@@ -189,7 +192,7 @@ export function CampaignsListScreen({ navigation }: any) {
     // Same shape `getCampaign` returns, so the detail screen paints instantly instead
     // of re-fetching data this list screen already has.
     queryClient.setQueryData(['campaigns', c.id], c);
-    navigation.navigate('CampaignDetail', { campaignId: c.id, presetAmount });
+    navigation.navigate('CampaignDetail', { campaignId: c.id, presetAmount, plantingGroupId, plantingGroupName });
   };
 
   return (

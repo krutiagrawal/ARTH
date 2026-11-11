@@ -44,10 +44,10 @@ export async function fetchAdoptableTree(id: string): Promise<ApiAdoptableTree> 
   return apiFetch<ApiAdoptableTree>(`/api/adoptable-trees/${id}`);
 }
 
-export async function adoptTree(id: string, message?: string): Promise<ApiAdoptableTree> {
+export async function adoptTree(id: string, message?: string, plantingGroupId?: string): Promise<ApiAdoptableTree> {
   return apiFetch<ApiAdoptableTree>(`/api/adoptable-trees/${id}/adopt`, {
     method: 'POST',
-    body: message ? { message } : {},
+    body: { ...(message ? { message } : {}), ...(plantingGroupId ? { plantingGroupId } : {}) },
   });
 }
 

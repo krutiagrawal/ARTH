@@ -1176,9 +1176,10 @@ export function useAdoptableTree(id: string | null) {
 export function useAdoptTree() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, message }: { id: string; message?: string }) => adoptTree(id, message),
+    mutationFn: ({ id, message, plantingGroupId }: { id: string; message?: string; plantingGroupId?: string }) => adoptTree(id, message, plantingGroupId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adoptable-trees'] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
       // The Adopt tab on an NGO's public profile embeds its own tree snapshots inside this
       // separate query – never invalidated otherwise, so it kept showing the pre-adoption state.
       queryClient.invalidateQueries({ queryKey: ['ngos', 'public'] });
@@ -2315,6 +2316,7 @@ export function usePlantTree() {
         queryClient.invalidateQueries({ queryKey: ['achievements'] }),
         queryClient.invalidateQueries({ queryKey: ['streaks'] }),
         queryClient.invalidateQueries({ queryKey: ['leaderboard'] }),
+        queryClient.invalidateQueries({ queryKey: ['groups'] }),
         refreshUser(),
       ]);
     },

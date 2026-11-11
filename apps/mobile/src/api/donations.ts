@@ -58,6 +58,8 @@ export interface DonationExtras {
   message?: string;
   /** Optional PAN printed on the receipt for 80G claims. */
   donorPan?: string;
+  /** Donate on behalf of a group; the server only allows admins of that group. */
+  plantingGroupId?: string;
 }
 
 export async function createDonationIntent(campaignId: string, amountCents: number, extras: DonationExtras = {}): Promise<DonationIntent> {
