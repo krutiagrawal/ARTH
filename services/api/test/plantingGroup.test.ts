@@ -17,7 +17,7 @@ describe('planting group limits', () => {
 });
 
 describe('planting group input validation', () => {
-  const valid = { name: 'Green Family', handle: 'green_family', description: 'We plant on weekends', groupType: 'family' };
+  const valid = { name: 'Green Family', handle: 'green_family', description: 'We plant on weekends', groupType: 'family', city: 'Pune' };
 
   it('accepts a normal group and defaults the type', () => {
     expect(createGroupSchema.safeParse(valid).success).toBe(true);
@@ -31,6 +31,15 @@ describe('planting group input validation', () => {
     expect(createGroupSchema.safeParse({ ...valid, name: 'x' }).success).toBe(false);
     expect(createGroupSchema.safeParse({ ...valid, description: 'x'.repeat(501) }).success).toBe(false);
     expect(createGroupSchema.safeParse({ ...valid, groupType: 'corporate' }).success).toBe(false);
+    // A city is required.
+    const { city, ...noCity } = valid;
+    expect(createGroupSchema.safeParse(noCity).success).toBe(false);
+  });
+
+  it('accepts every offered group type', () => {
+    for (const groupType of ['family', 'friends', 'school', 'college', 'club', 'neighbourhood', 'workplace', 'other']) {
+      expect(createGroupSchema.safeParse({ ...valid, groupType }).success).toBe(true);
+    }
   });
 
   it('only ever reads the listed fields, so a request cannot set the creator or an id', () => {

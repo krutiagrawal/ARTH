@@ -147,6 +147,10 @@ enum PlantingGroupType {
   school
   club
   other
+  friends
+  college
+  neighbourhood
+  workplace
 }
 
 enum PlantingGroupRole {

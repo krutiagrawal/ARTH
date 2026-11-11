@@ -4,6 +4,7 @@ import { Text } from '../components/common/AppText';
 import { COLORS } from '../constants/colors';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { FormField } from '../components/common/FormField';
+import { CityPickerField } from '../components/common/CityPickerField';
 import { OutlineChip } from '../components/common/OutlineChip';
 import { GroupScreen } from '../components/groups/GroupScreen';
 import { SectionTitle } from '../components/groups/GroupBits';
@@ -26,7 +27,8 @@ export function CreateGroupScreen({ navigation }: any) {
   const [handleTouched, setHandleTouched] = useState(false);
   const [groupType, setGroupType] = useState<GroupType>('family');
   const [description, setDescription] = useState('');
-  const [city, setCity] = useState('');
+  // Only launched cities can be picked; Pune is the only one for now, so it is the default.
+  const [city, setCity] = useState('Pune');
   const [error, setError] = useState('');
 
   const onName = (v: string) => {
@@ -35,7 +37,7 @@ export function CreateGroupScreen({ navigation }: any) {
     if (!handleTouched) setHandle(toHandle(v));
   };
 
-  const valid = name.trim().length >= 2 && /^[a-z0-9_]{3,30}$/.test(handle) && description.trim().length >= 1;
+  const valid = name.trim().length >= 2 && /^[a-z0-9_]{3,30}$/.test(handle) && description.trim().length >= 1 && city.length > 0;
 
   const submit = async () => {
     setError('');
@@ -45,7 +47,7 @@ export function CreateGroupScreen({ navigation }: any) {
         handle,
         groupType,
         description: description.trim(),
-        city: city.trim() || undefined,
+        city,
       });
       navigation.replace('GroupMain', { groupId: group.id });
     } catch (e) {
@@ -87,7 +89,7 @@ export function CreateGroupScreen({ navigation }: any) {
         multiline
         maxLength={500}
       />
-      <FormField label="City" value={city} onChangeText={setCity} placeholder="Optional" maxLength={80} />
+      <CityPickerField required value={city} onChange={setCity} />
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <AnimatedButton

@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from '@arth/db';
+import { PlantingGroupType, Prisma, PrismaClient } from '@arth/db';
 import { MAX_GROUPS_CREATED_PER_USER, MAX_GROUP_MEMBERS } from '../constants/plantingGroups';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../utils/errors';
 import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
@@ -34,6 +34,16 @@ async function assertIndividual(prisma: Tx, userId: string) {
   if (!user) throw new NotFoundError('User not found');
   if (user.role !== 'user') throw new ForbiddenError('Only individual accounts can use groups');
   return user;
+}
+
+/**
+ * Groups are only available in launched cities for now (the same list the city picker shows).
+ * Returns the city's canonical spelling so a group never stores "pune" next to "Pune".
+ */
+async function resolveLaunchedCity(prisma: Tx, city: string) {
+  const found = await prisma.city.findFirst({ where: { name: { equals: city.trim(), mode: 'insensitive' }, isLaunched: true } });
+  if (!found) throw new BadRequestError('ARTH groups are not available in that city yet');
+  return found.name;
 }
 
 /** Takes a row lock on the group for the rest of the transaction. */
@@ -89,9 +99,10 @@ export function serializeGroup(group: any) {
 export async function createGroup(
   prisma: PrismaClient,
   userId: string,
-  input: { name: string; handle: string; groupType: 'family' | 'school' | 'club' | 'other'; description: string; city?: string | null },
+  input: { name: string; handle: string; groupType: PlantingGroupType; description: string; city: string },
 ) {
   await assertIndividual(prisma, userId);
+  const city = await resolveLaunchedCity(prisma, input.city);
 
   try {
     return await prisma.$transaction(async (tx) => {
@@ -109,7 +120,7 @@ export async function createGroup(
           handle: input.handle,
           groupType: input.groupType,
           description: input.description,
-          city: input.city || null,
+          city,
           members: { create: { userId, role: 'admin' } },
         },
         include: { _count: { select: { members: true } } },
@@ -177,9 +188,10 @@ export async function updateGroup(
   prisma: PrismaClient,
   viewerId: string,
   groupId: string,
-  input: { name?: string; groupType?: 'family' | 'school' | 'club' | 'other'; description?: string; city?: string | null; logoUrl?: string },
+  input: { name?: string; groupType?: PlantingGroupType; description?: string; city?: string; logoUrl?: string },
 ) {
   await requireAdmin(prisma, groupId, viewerId);
+  const city = input.city !== undefined ? await resolveLaunchedCity(prisma, input.city) : undefined;
 
   const previous = input.logoUrl ? await prisma.plantingGroup.findUnique({ where: { id: groupId }, select: { logoUrl: true } }) : null;
 
@@ -189,7 +201,7 @@ export async function updateGroup(
       ...(input.name !== undefined ? { name: input.name } : {}),
       ...(input.groupType !== undefined ? { groupType: input.groupType } : {}),
       ...(input.description !== undefined ? { description: input.description } : {}),
-      ...(input.city !== undefined ? { city: input.city || null } : {}),
+      ...(city !== undefined ? { city } : {}),
       ...(input.logoUrl ? { logoUrl: input.logoUrl } : {}),
     },
     include: { _count: { select: { members: true } } },

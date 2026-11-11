@@ -5,6 +5,7 @@ import { COLORS } from '../constants/colors';
 import { AnimatedButton } from '../components/common/AnimatedButton';
 import { BorderCard } from '../components/common/BorderCard';
 import { FormField } from '../components/common/FormField';
+import { CityPickerField } from '../components/common/CityPickerField';
 import { OutlineChip } from '../components/common/OutlineChip';
 import { PhotoPickerField, type PickedPhoto } from '../components/common/PhotoPickerField';
 import { View } from 'react-native';
@@ -40,7 +41,7 @@ export function GroupSettingsScreen({ navigation, route }: any) {
     if (!g) return;
     setName(g.name);
     setDescription(g.description);
-    setCity(g.city ?? '');
+    setCity(g.city ?? 'Pune');
     setGroupType(g.groupType);
   }, [g?.id, g?.name, g?.description, g?.city, g?.groupType]);
 
@@ -49,7 +50,7 @@ export function GroupSettingsScreen({ navigation, route }: any) {
   const save = async () => {
     setSaved('');
     try {
-      await update.mutateAsync({ name: name.trim(), description: description.trim(), groupType, city: city.trim() || null });
+      await update.mutateAsync({ name: name.trim(), description: description.trim(), groupType, city });
       if (logo) {
         await uploadLogo.mutateAsync(logo);
         setLogo(null);
@@ -102,7 +103,7 @@ export function GroupSettingsScreen({ navigation, route }: any) {
           <View style={{ height: 8 }} />
           <FormField label="Group name" required value={name} onChangeText={setName} maxLength={60} />
           <FormField label="About the group" required value={description} onChangeText={setDescription} multiline maxLength={500} />
-          <FormField label="City" value={city} onChangeText={setCity} maxLength={80} />
+          <CityPickerField required value={city} onChange={setCity} />
           <SectionTitle>Type</SectionTitle>
           <View style={styles.chips}>
             {GROUP_TYPES.map((t) => (

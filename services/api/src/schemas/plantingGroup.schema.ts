@@ -6,7 +6,7 @@ const handleSchema = z
   .max(30)
   .regex(/^[a-z0-9_]+$/, 'Handle may only contain lowercase letters, numbers, and underscores');
 
-const GROUP_TYPES = ['family', 'school', 'club', 'other'] as const;
+const GROUP_TYPES = ['family', 'friends', 'school', 'college', 'club', 'neighbourhood', 'workplace', 'other'] as const;
 
 export const groupIdParamSchema = z.object({ id: z.string().uuid() });
 export const groupMemberParamSchema = z.object({ id: z.string().uuid(), userId: z.string().uuid() });
@@ -18,7 +18,8 @@ export const createGroupSchema = z.object({
   handle: handleSchema,
   groupType: z.enum(GROUP_TYPES).default('other'),
   description: z.string().trim().min(1).max(500),
-  city: z.string().trim().max(80).nullish(),
+  // Must be a launched city (checked against the cities table by the service).
+  city: z.string().trim().min(1).max(80),
 });
 
 // The handle is fixed once created, so it is deliberately not editable here.
@@ -26,7 +27,7 @@ export const updateGroupSchema = z.object({
   name: z.string().trim().min(2).max(60).optional(),
   groupType: z.enum(GROUP_TYPES).optional(),
   description: z.string().trim().min(1).max(500).optional(),
-  city: z.string().trim().max(80).nullish(),
+  city: z.string().trim().min(1).max(80).optional(),
 });
 
 export const discoverGroupsQuerySchema = z.object({

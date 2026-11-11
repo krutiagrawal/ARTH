@@ -1,13 +1,17 @@
 import { apiFetch, toFormFile } from './client';
 import { pagedPath, type Page } from '../hooks/useInfiniteList';
 
-export type GroupType = 'family' | 'school' | 'club' | 'other';
+export type GroupType = 'family' | 'friends' | 'school' | 'college' | 'club' | 'neighbourhood' | 'workplace' | 'other';
 export type GroupRole = 'admin' | 'member';
 
 export const GROUP_TYPES: { key: GroupType; label: string; emoji: string }[] = [
   { key: 'family', label: 'Family', emoji: '🏡' },
+  { key: 'friends', label: 'Friends', emoji: '🧑‍🤝‍🧑' },
   { key: 'school', label: 'School', emoji: '🏫' },
+  { key: 'college', label: 'College', emoji: '🎓' },
   { key: 'club', label: 'Club', emoji: '🤝' },
+  { key: 'neighbourhood', label: 'Neighbourhood', emoji: '🏘️' },
+  { key: 'workplace', label: 'Workplace', emoji: '🏢' },
   { key: 'other', label: 'Other', emoji: '🌳' },
 ];
 
@@ -172,7 +176,7 @@ export interface ApiGroupAnalytics {
 
 // ---------- groups ----------
 
-export async function createGroup(input: { name: string; handle: string; groupType: GroupType; description: string; city?: string }) {
+export async function createGroup(input: { name: string; handle: string; groupType: GroupType; description: string; city: string }) {
   return apiFetch<ApiGroup>('/api/planting-groups', { method: 'POST', body: input });
 }
 
@@ -189,7 +193,7 @@ export async function fetchGroup(id: string): Promise<ApiGroupDetail> {
   return apiFetch<ApiGroupDetail>(`/api/planting-groups/${id}`);
 }
 
-export async function updateGroup(id: string, input: { name?: string; description?: string; groupType?: GroupType; city?: string | null }) {
+export async function updateGroup(id: string, input: { name?: string; description?: string; groupType?: GroupType; city?: string }) {
   return apiFetch<ApiGroup>(`/api/planting-groups/${id}`, { method: 'PATCH', body: input });
 }
 

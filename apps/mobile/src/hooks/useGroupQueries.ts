@@ -113,10 +113,10 @@ function useInvalidatingMutation<TInput, TOut>(fn: (input: TInput) => Promise<TO
 }
 
 export const useCreateGroup = () =>
-  useInvalidatingMutation((input: { name: string; handle: string; groupType: GroupType; description: string; city?: string }) => createGroup(input));
+  useInvalidatingMutation((input: { name: string; handle: string; groupType: GroupType; description: string; city: string }) => createGroup(input));
 
 export const useUpdateGroup = (id: string) =>
-  useInvalidatingMutation((input: { name?: string; description?: string; groupType?: GroupType; city?: string | null }) => updateGroup(id, input));
+  useInvalidatingMutation((input: { name?: string; description?: string; groupType?: GroupType; city?: string }) => updateGroup(id, input));
 
 export const useUploadGroupLogo = (id: string) =>
   useInvalidatingMutation((photo: { uri: string; name: string; type: string }) => uploadGroupLogo(id, photo));

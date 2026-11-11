@@ -24,7 +24,7 @@ describe.skipIf(!enabled)('planting groups (needs a database)', () => {
     return user;
   }
   const newGroup = (userId: string, handle: string) =>
-    svc.createGroup(prisma, userId, { name: `Group ${handle}`, handle: `${tag}${handle}`.toLowerCase(), groupType: 'club', description: 'test group' });
+    svc.createGroup(prisma, userId, { name: `Group ${handle}`, handle: `${tag}${handle}`.toLowerCase(), groupType: 'club', description: 'test group', city: 'Pune' });
 
   beforeAll(async () => {
     await import('../src/config/env');
@@ -52,6 +52,14 @@ describe.skipIf(!enabled)('planting groups (needs a database)', () => {
     const results = await Promise.allSettled([newGroup(dev.id, 'a1'), newGroup(dev.id, 'a2'), newGroup(dev.id, 'a3'), newGroup(dev.id, 'a4')]);
     expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(2);
     expect(await prisma.plantingGroup.count({ where: { createdById: dev.id } })).toBe(2);
+  });
+
+  it('only allows launched cities, and stores the canonical spelling', async () => {
+    const user = await makeUser('city1');
+    await expect(svc.createGroup(prisma, user.id, { name: 'Elsewhere', handle: `${tag}city1a`.toLowerCase(), groupType: 'friends', description: 'x', city: 'Mumbai' })).rejects.toThrow(/not available in that city/i);
+    const group = await svc.createGroup(prisma, user.id, { name: 'Local', handle: `${tag}city1b`.toLowerCase(), groupType: 'neighbourhood', description: 'x', city: 'pune' });
+    expect(group.city).toBe('Pune');
+    await expect(svc.updateGroup(prisma, user.id, group.id, { city: 'Delhi' })).rejects.toThrow(/not available in that city/i);
   });
 
   it('refuses non-individual accounts and duplicate handles', async () => {
