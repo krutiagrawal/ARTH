@@ -42,5 +42,5 @@ export function GroupDiscoverScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   muted: { color: COLORS.textMuted, textAlign: 'center', marginTop: 24 },
-  divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: COLORS.sageLight },
+  divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: COLORS.warmBrown },
 });

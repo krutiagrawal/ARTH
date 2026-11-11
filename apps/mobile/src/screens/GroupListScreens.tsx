@@ -21,7 +21,7 @@ import {
   useGroupTrees,
 } from '../hooks/useGroupQueries';
 
-const divider = { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: COLORS.sageLight } as const;
+const divider = { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: COLORS.warmBrown } as const;
 const timeAgo = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
 // ---------- Activity ----------
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   pending: { fontSize: 11, color: COLORS.golden, fontWeight: '700', marginTop: 2 },
   achievement: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   rank: { fontSize: 16, fontWeight: '800', color: COLORS.forest },
-  mine: { backgroundColor: 'rgba(135,168,120,0.18)' },
+  mine: { borderLeftWidth: 4, borderLeftColor: COLORS.sage },
   thumb: { width: 44, height: 44, borderRadius: RADIUS.sm },
   chart: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 4, height: 140 },
   barCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 3 },

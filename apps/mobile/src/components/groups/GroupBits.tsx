@@ -157,22 +157,22 @@ export function describeActivity(a: { type: string; data: Record<string, any> | 
 }
 
 const styles = StyleSheet.create({
-  avatarFallback: { backgroundColor: COLORS.beigeLight, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.sageLight },
+  avatarFallback: { backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: COLORS.warmBrown },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 12 },
   rowText: { flex: 1 },
   name: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
   sub: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
-  tile: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.sageLight, backgroundColor: 'rgba(255,255,255,0.5)' },
+  tile: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.warmBrown, backgroundColor: 'transparent' },
   tileEmoji: { fontSize: 20 },
   tileValue: { fontSize: 20, fontWeight: '800', color: COLORS.forest, marginTop: 2 },
   tileLabel: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
   sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 22, marginBottom: 8, paddingHorizontal: 4 },
   sectionTitle: { fontSize: 13, fontWeight: '800', color: COLORS.earth, letterSpacing: 1, textTransform: 'uppercase' },
   sectionAction: { fontSize: 13, fontWeight: '700', color: COLORS.sageDark },
-  pill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: RADIUS.full, backgroundColor: COLORS.beigeLight, borderWidth: 1, borderColor: COLORS.sageLight },
+  pill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: RADIUS.full, backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.warmBrown },
   pillAdmin: { backgroundColor: COLORS.forest, borderColor: COLORS.forest },
   pillText: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted },
   pillTextAdmin: { color: COLORS.white },
-  barTrack: { height: 8, borderRadius: 4, backgroundColor: COLORS.beigeLight, overflow: 'hidden' },
+  barTrack: { height: 8, borderRadius: 4, backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.warmBrown, overflow: 'hidden' },
   barFill: { height: 8, borderRadius: 4, backgroundColor: COLORS.sage },
 });

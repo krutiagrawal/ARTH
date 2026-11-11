@@ -52,7 +52,7 @@ export function GroupMoreScreen({ navigation, groupId }: { navigation: any; grou
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16 },
-  divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: COLORS.sageLight },
+  divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: COLORS.warmBrown },
   emoji: { fontSize: 22 },
   label: { flex: 1, fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
   chevron: { fontSize: 24, color: COLORS.textMuted },

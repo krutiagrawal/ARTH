@@ -154,5 +154,5 @@ const styles = StyleSheet.create({
   activityRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 14 },
   activityEmoji: { fontSize: 18 },
   activityText: { flex: 1, fontSize: 13, color: COLORS.textPrimary },
-  divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: COLORS.sageLight },
+  divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: COLORS.warmBrown },
 });

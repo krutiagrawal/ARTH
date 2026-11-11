@@ -103,7 +103,7 @@ export function GroupsScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 10, marginTop: 4 },
   actionButton: { flex: 1 },
-  divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: COLORS.sageLight },
+  divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: COLORS.warmBrown },
   inviteFooter: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingBottom: 10 },
   inviteText: { flex: 1, fontSize: 12, color: COLORS.textMuted },
 });

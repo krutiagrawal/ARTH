@@ -186,7 +186,7 @@ export function GroupMembersScreen({ navigation, groupId }: { navigation: any; g
 }
 
 const styles = StyleSheet.create({
-  divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: COLORS.sageLight },
+  divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: COLORS.warmBrown },
   pair: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   more: { fontSize: 22, color: COLORS.textMuted, paddingHorizontal: 4 },
   notice: { color: COLORS.sageDark, fontSize: 13, marginTop: 8 },
