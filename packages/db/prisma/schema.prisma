@@ -140,6 +140,34 @@ enum GroupStatus {
   suspended
 }
 
+// ---------- Planting groups (rebuilt from scratch; replaces the old GroupProfile account) ----------
+// A group is an entity owned by users, not a login. Members use their own account.
+enum PlantingGroupType {
+  family
+  school
+  club
+  other
+}
+
+enum PlantingGroupRole {
+  admin
+  member
+}
+
+// One table holds both directions: a person asking to join (join_request, approved by a group
+// admin) and an admin inviting a person (invitation, accepted by the invitee).
+enum PlantingGroupRequestKind {
+  join_request
+  invitation
+}
+
+enum PlantingGroupRequestStatus {
+  pending
+  accepted
+  declined
+  cancelled
+}
+
 enum NgoApprovalStatus {
   pending
   approved
@@ -467,6 +495,14 @@ enum NotificationType {
   tree_marked_dead
   tree_update_received
   tree_update_decided
+  // Planting groups
+  group_join_requested
+  group_join_approved
+  group_join_declined
+  group_invited
+  group_invite_accepted
+  group_role_changed
+  group_member_removed
 }
 
 // ---------- Core ----------
@@ -579,6 +615,11 @@ model User {
   wishlistItems          WishlistItem[]
 
   @@map("users")
+  plantingGroupsCreated        PlantingGroup[]               @relation("PlantingGroupCreator")
+  plantingGroupMemberships     PlantingGroupMember[]
+  plantingGroupRequests        PlantingGroupRequest[]        @relation("PlantingGroupRequestUser")
+  plantingGroupRequestsStarted PlantingGroupRequest[]        @relation("PlantingGroupRequestInitiator")
+  plantingGroupRequestsHandled PlantingGroupRequest[]        @relation("PlantingGroupRequestResponder")
 }
 
 model ForestLevelTier {
@@ -3042,4 +3083,69 @@ model NewsletterSubscriber {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("newsletter_subscribers")
+}
+
+// ---------- Planting groups ----------
+
+model PlantingGroup {
+  id          String            @id @default(uuid())
+  // The founder. Only they can delete the group; day-to-day running is by any admin member.
+  createdById String            @map("created_by_id")
+  name        String
+  handle      String            @unique
+  groupType   PlantingGroupType @default(other) @map("group_type")
+  description String
+  logoUrl     String?           @map("logo_url")
+  city        String?
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  createdBy User                   @relation("PlantingGroupCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  members   PlantingGroupMember[]
+  requests  PlantingGroupRequest[]
+
+  @@index([createdById])
+  @@map("planting_groups")
+}
+
+model PlantingGroupMember {
+  id       String            @id @default(uuid())
+  groupId  String            @map("group_id")
+  userId   String            @map("user_id")
+  role     PlantingGroupRole @default(member)
+  joinedAt DateTime          @default(now()) @map("joined_at")
+
+  group PlantingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+  @@index([groupId, role])
+  @@map("planting_group_members")
+}
+
+// One row per (group, person) pair, reused if they ask again after a decline, so there is never
+// more than one pending request for the same pair.
+model PlantingGroupRequest {
+  id            String                     @id @default(uuid())
+  groupId       String                     @map("group_id")
+  // The person who would join.
+  userId        String                     @map("user_id")
+  kind          PlantingGroupRequestKind
+  status        PlantingGroupRequestStatus @default(pending)
+  // The person who started it: the joiner for a join_request, the inviting admin for an invitation.
+  initiatedById String                     @map("initiated_by_id")
+  respondedById String?                    @map("responded_by_id")
+  createdAt     DateTime                   @default(now()) @map("created_at")
+  respondedAt   DateTime?                  @map("responded_at")
+
+  group       PlantingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user        User          @relation("PlantingGroupRequestUser", fields: [userId], references: [id], onDelete: Cascade)
+  initiatedBy User          @relation("PlantingGroupRequestInitiator", fields: [initiatedById], references: [id], onDelete: Cascade)
+  respondedBy User?         @relation("PlantingGroupRequestResponder", fields: [respondedById], references: [id], onDelete: SetNull)
+
+  @@unique([groupId, userId])
+  @@index([groupId, status])
+  @@index([userId, status])
+  @@map("planting_group_requests")
 }

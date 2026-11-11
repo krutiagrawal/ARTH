@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { Prisma, PrismaClient } from '@arth/db';
 import { ConflictError, ForbiddenError, NotFoundError } from '../utils/errors';
+import { leaveAllGroupsForErasure } from './plantingGroup.service';
 import { deleteUploadedFiles } from './upload.service';
 
 // Orders that are paid but not yet handed over: deleting the account now would strand money and goods.
@@ -74,6 +75,8 @@ export async function eraseAccount(prisma: PrismaClient, userId: string): Promis
       await tx.follow.deleteMany({ where: { followerId: userId } });
       await tx.friendship.deleteMany({ where: { OR: [{ requesterId: userId }, { addresseeId: userId }] } });
       await tx.block.deleteMany({ where: { OR: [{ blockerId: userId }, { blockedUserId: userId }] } });
+      // Groups: leave every one, hand admin on or delete the group if they were the last person in it.
+      filesToDelete.push(...(await leaveAllGroupsForErasure(tx, userId)));
       await tx.notification.deleteMany({ where: { userId } });
       await tx.notification.updateMany({ where: { actorUserId: userId }, data: { actorUserId: null } });
 

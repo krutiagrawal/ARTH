@@ -27,6 +27,7 @@ import treesRoutes from './routes/trees.routes';
 import plantingLocationsRoutes from './routes/plantingLocations.routes';
 import achievementsRoutes from './routes/achievements.routes';
 import friendsRoutes from './routes/friends.routes';
+import plantingGroupsRoutes from './routes/plantingGroups.routes';
 import leaderboardRoutes from './routes/leaderboard.routes';
 import challengesRoutes from './routes/challenges.routes';
 import missionsRoutes from './routes/missions.routes';
@@ -157,6 +158,7 @@ export async function buildApp() {
     await instance.register(plantingLocationsRoutes, { prefix: '/api/planting-locations' });
     await instance.register(achievementsRoutes, { prefix: '/api/achievements' });
     await instance.register(friendsRoutes, { prefix: '/api/friends' });
+    await instance.register(plantingGroupsRoutes, { prefix: '/api/planting-groups' });
     await instance.register(leaderboardRoutes, { prefix: '/api/leaderboard' });
     await instance.register(challengesRoutes, { prefix: '/api/challenges' });
     await instance.register(missionsRoutes, { prefix: '/api/missions' });

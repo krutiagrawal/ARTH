@@ -78,6 +78,10 @@ export function saveNgoLogo(photo: PhotoInput): Promise<string> {
   return saveImage(photo, 'ngo-logos');
 }
 
+export function savePlantingGroupLogo(photo: PhotoInput): Promise<string> {
+  return saveImage(photo, 'planting-group-logos');
+}
+
 export function saveNurseryLogo(photo: PhotoInput): Promise<string> {
   return saveImage(photo, 'nursery-logos');
 }
