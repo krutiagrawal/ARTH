@@ -168,6 +168,16 @@ enum PlantingGroupRequestStatus {
   cancelled
 }
 
+enum PlantingGroupActivityType {
+  member_joined
+  member_left
+  tree_planted
+  tree_adopted
+  donation_made
+  challenge_created
+  role_changed
+}
+
 enum NgoApprovalStatus {
   pending
   approved
@@ -503,6 +513,7 @@ enum NotificationType {
   group_invite_accepted
   group_role_changed
   group_member_removed
+  group_challenge_created
 }
 
 // ---------- Core ----------
@@ -620,6 +631,8 @@ model User {
   plantingGroupRequests        PlantingGroupRequest[]        @relation("PlantingGroupRequestUser")
   plantingGroupRequestsStarted PlantingGroupRequest[]        @relation("PlantingGroupRequestInitiator")
   plantingGroupRequestsHandled PlantingGroupRequest[]        @relation("PlantingGroupRequestResponder")
+  plantingGroupChallenges      PlantingGroupChallenge[]
+  plantingGroupActivity        PlantingGroupActivity[]
 }
 
 model ForestLevelTier {
@@ -754,6 +767,11 @@ model Tree {
   posts        Post[]
   sourceUnit   ArthSaplingUnit?
   observations TreeObservation[]
+
+  // Set when an admin planted this tree on behalf of a planting group. The planter still gets personal credit; the group gets it too.
+  plantingGroupId String? @map("planting_group_id")
+  plantingGroup   PlantingGroup? @relation(fields: [plantingGroupId], references: [id], onDelete: SetNull)
+  @@index([plantingGroupId])
 
   @@index([userId])
   @@index([plantedAt(sort: Desc)])
@@ -2290,6 +2308,10 @@ model Adoption {
   adoptableTree AdoptableTree @relation(fields: [adoptableTreeId], references: [id], onDelete: Cascade)
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  plantingGroupId String? @map("planting_group_id")
+  plantingGroup   PlantingGroup? @relation(fields: [plantingGroupId], references: [id], onDelete: SetNull)
+  @@index([plantingGroupId])
+
   @@index([userId])
   @@map("adoptions")
 }
@@ -2340,6 +2362,10 @@ model Donation {
 
   campaign DonationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  plantingGroupId String? @map("planting_group_id")
+  plantingGroup   PlantingGroup? @relation(fields: [plantingGroupId], references: [id], onDelete: SetNull)
+  @@index([plantingGroupId])
 
   @@index([campaignId])
   @@index([userId])
@@ -3104,6 +3130,12 @@ model PlantingGroup {
   members   PlantingGroupMember[]
   requests  PlantingGroupRequest[]
 
+  trees      Tree[]
+  adoptions  Adoption[]
+  donations  Donation[]
+  challenges PlantingGroupChallenge[]
+  activity   PlantingGroupActivity[]
+
   @@index([createdById])
   @@map("planting_groups")
 }
@@ -3148,4 +3180,41 @@ model PlantingGroupRequest {
   @@index([groupId, status])
   @@index([userId, status])
   @@map("planting_group_requests")
+}
+
+// A target for the whole group: plant `goalTotal` trees between the two dates. Progress is counted
+// from the group's trees on read, so it can never drift from the real planting records.
+model PlantingGroupChallenge {
+  id          String   @id @default(uuid())
+  groupId     String   @map("group_id")
+  createdById String   @map("created_by_id")
+  title       String
+  description String
+  goalTotal   Int      @map("goal_total")
+  startsAt    DateTime @map("starts_at")
+  endsAt      DateTime @map("ends_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  group     PlantingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy User          @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([groupId, endsAt])
+  @@map("planting_group_challenges")
+}
+
+// The group's timeline ("Maya planted a tree", "Dev joined"). Holds ids and short names only.
+model PlantingGroupActivity {
+  id        String                    @id @default(uuid())
+  groupId   String                    @map("group_id")
+  actorId   String?                   @map("actor_id")
+  type      PlantingGroupActivityType
+  data      Json?
+  createdAt DateTime                  @default(now()) @map("created_at")
+
+  group PlantingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  actor User?         @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([groupId, createdAt(sort: Desc)])
+  @@index([actorId])
+  @@map("planting_group_activity")
 }

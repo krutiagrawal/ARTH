@@ -56,3 +56,29 @@ describe('planting group input validation', () => {
     expect(discoverGroupsQuerySchema.safeParse({ q: 'x'.repeat(61) }).success).toBe(false);
   });
 });
+
+describe('group level and streak rules', () => {
+  const day = (iso: string) => new Date(`${iso}T10:00:00Z`);
+
+  it('maps tree counts to levels and shows how far the next one is', async () => {
+    const { levelForTrees } = await import('../src/services/plantingGroupInsights.service');
+    expect(levelForTrees(0)).toMatchObject({ level: 1, name: 'Seedlings', treesToNext: 5 });
+    expect(levelForTrees(5)).toMatchObject({ level: 2, name: 'Sprouts' });
+    expect(levelForTrees(99)).toMatchObject({ level: 4, treesToNext: 1 });
+    expect(levelForTrees(5000)).toMatchObject({ level: 8, treesToNext: 0, progress: 1 });
+  });
+
+  it('counts consecutive planting days and keeps the streak alive through yesterday only', async () => {
+    const { computeStreak } = await import('../src/services/plantingGroupInsights.service');
+    const now = day('2026-11-11');
+    expect(computeStreak([], now)).toEqual({ current: 0, max: 0 });
+    // Three days in a row ending today.
+    expect(computeStreak([day('2026-11-09'), day('2026-11-10'), day('2026-11-11')], now)).toEqual({ current: 3, max: 3 });
+    // Last planting was yesterday: still alive.
+    expect(computeStreak([day('2026-11-09'), day('2026-11-10')], now).current).toBe(2);
+    // Last planting two days ago: broken, but the best run is remembered.
+    expect(computeStreak([day('2026-11-07'), day('2026-11-08'), day('2026-11-09')], now)).toEqual({ current: 0, max: 3 });
+    // Several plantings on one day count once.
+    expect(computeStreak([day('2026-11-11'), day('2026-11-11')], now)).toEqual({ current: 1, max: 1 });
+  });
+});

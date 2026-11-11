@@ -1,3 +1,4 @@
+import { recordGroupActivity } from './plantingGroupActivity.service';
 import { PrismaClient } from '@arth/db';
 import { randomUUID } from 'node:crypto';
 import { getStripeClient, getStripeClientOrDevBypass } from '../lib/stripe';
@@ -287,7 +288,7 @@ export async function createDonationIntent(
   campaignId: string,
   amountCents: number,
   currency = 'inr',
-  extras: { isAnonymous?: boolean; message?: string; donorPan?: string } = {},
+  extras: { isAnonymous?: boolean; message?: string; donorPan?: string; plantingGroupId?: string } = {},
 ) {
   const campaign = await prisma.donationCampaign.findUnique({ where: { id: campaignId }, include: { ngo: true } });
   if (!campaign || campaign.status !== 'active' || campaign.ngo.status !== 'approved') {
@@ -338,6 +339,7 @@ export async function createDonationIntent(
       isAnonymous: extras.isAnonymous ?? false,
       message: extras.message || null,
       donorPan: extras.donorPan || null,
+      plantingGroupId: extras.plantingGroupId ?? null,
       stripePaymentIntentId: paymentIntent?.id,
       status: paymentIntent ? 'pending' : 'succeeded',
     },
@@ -360,6 +362,11 @@ async function finalizeSucceededDonation(prisma: PrismaClient, donationId: strin
     include: { campaign: { include: { ngo: true } }, user: { select: { name: true } } },
   });
   if (!donation) return;
+
+  // Shows up on the group's timeline only once the payment has really settled.
+  if (donation.plantingGroupId) {
+    await recordGroupActivity(prisma, donation.plantingGroupId, 'donation_made', donation.userId, { amountCents: donation.amountCents, campaignTitle: donation.campaign.title });
+  }
 
   if (!donation.receiptNumber) {
     await prisma.donation.update({ where: { id: donation.id }, data: { receiptNumber: generateReceiptNumber() } });
@@ -432,7 +439,7 @@ function buildReceiptHtml(donation: {
 async function loadDonationForReceipt(prisma: PrismaClient, donationId: string) {
   const donation = await prisma.donation.findUnique({
     where: { id: donationId },
-    include: { campaign: { include: { ngo: true } }, user: { select: { id: true, name: true } } },
+    include: { campaign: { include: { ngo: true } }, user: { select: { id: true, name: true } }, plantingGroup: { select: { name: true } } },
   });
   if (!donation || donation.status !== 'succeeded' || !donation.receiptNumber) {
     throw new NotFoundError('Receipt not found');
@@ -451,7 +458,7 @@ async function sendDonationReceiptEmail(prisma: PrismaClient, donationId: string
       amountCents: donation.amountCents,
       currency: donation.currency,
       createdAt: donation.createdAt,
-      donorName: donation.user.name,
+      donorName: donation.plantingGroup ? `${donation.plantingGroup.name} (via ${donation.user.name})` : donation.user.name,
       donorPan: donation.donorPan,
       campaignTitle: donation.campaign.title,
       ngoOrgName: donation.campaign.ngo.orgName,
@@ -475,15 +482,20 @@ export async function getDonationReceiptHtml(prisma: PrismaClient, requestingUse
   const donation = await loadDonationForReceipt(prisma, donationId);
   const isDonor = donation.userId === requestingUserId;
   const isReceivingNgo = donation.campaign.ngo.userId === requestingUserId;
-  if (!isDonor && !isReceivingNgo) throw new ForbiddenError('You cannot view this receipt');
+  // A donation made for a group can also be opened by that group's admins, so the receipt does not
+  // depend on one person's email. Their PAN stays visible to the donor only.
+  const isGroupAdmin =
+    !!donation.plantingGroupId &&
+    (await prisma.plantingGroupMember.count({ where: { groupId: donation.plantingGroupId, userId: requestingUserId, role: 'admin' } })) > 0;
+  if (!isDonor && !isReceivingNgo && !isGroupAdmin) throw new ForbiddenError('You cannot view this receipt');
 
   return buildReceiptHtml({
     receiptNumber: donation.receiptNumber!,
     amountCents: donation.amountCents,
     currency: donation.currency,
     createdAt: donation.createdAt,
-    donorName: donation.user.name,
-    donorPan: donation.donorPan,
+    donorName: donation.plantingGroup ? `${donation.plantingGroup.name} (via ${donation.user.name})` : donation.user.name,
+    donorPan: isDonor || isReceivingNgo ? donation.donorPan : null,
     campaignTitle: donation.campaign.title,
     ngoOrgName: donation.campaign.ngo.orgName,
     ngoEightyG: donation.campaign.ngo.eightyGRegistrationNumber,

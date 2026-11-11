@@ -1,6 +1,9 @@
 import { FastifyInstance } from 'fastify';
 import { limit } from '../plugins/rateLimit';
 import {
+  analyticsQuerySchema,
+  challengeParamSchema,
+  createChallengeSchema,
   createGroupSchema,
   discoverGroupsQuerySchema,
   groupIdParamSchema,
@@ -12,6 +15,7 @@ import {
   updateGroupSchema,
 } from '../schemas/plantingGroup.schema';
 import * as groupService from '../services/plantingGroup.service';
+import * as insights from '../services/plantingGroupInsights.service';
 import { savePlantingGroupLogo } from '../services/upload.service';
 import { BadRequestError } from '../utils/errors';
 import { splitMultipartBody } from '../utils/multipart';
@@ -49,6 +53,11 @@ export default async function plantingGroupsRoutes(fastify: FastifyInstance) {
   fastify.get('/discover', limit(60, '1 minute'), async (request, reply) => {
     const { q } = parse(discoverGroupsQuerySchema, request.query);
     reply.send(await groupService.searchGroups(fastify.prisma, q));
+  });
+
+  // Groups ranked by trees planted: names, logos and totals only.
+  fastify.get('/leaderboard', limit(60, '1 minute'), async (request, reply) => {
+    reply.send(await insights.groupsLeaderboard(fastify.prisma, request.user!.id));
   });
 
   // ---------- my own requests and invitations ----------
@@ -89,7 +98,7 @@ export default async function plantingGroupsRoutes(fastify: FastifyInstance) {
     if (!file) throw new BadRequestError('A logo photo is required');
 
     // Admin check first, so a non-admin cannot make the server write a file.
-    await groupService.assertAdminForUpload(fastify.prisma, id, request.user!.id);
+    await groupService.assertGroupAdmin(fastify.prisma, id, request.user!.id);
     const buffer = await file.toBuffer();
     const logoUrl = await savePlantingGroupLogo({ filename: file.filename, mimetype: file.mimetype, buffer });
     const group = await groupService.updateGroup(fastify.prisma, request.user!.id, id, { logoUrl });
@@ -152,5 +161,68 @@ export default async function plantingGroupsRoutes(fastify: FastifyInstance) {
   fastify.delete('/:id/requests/:requestId', limit(60, '1 hour'), async (request, reply) => {
     const { id, requestId } = parse(groupRequestParamSchema, request.params);
     reply.send(await groupService.cancelInvitation(fastify.prisma, request.user!.id, id, requestId));
+  });
+
+  // ---------- dashboard data (members only; the service checks membership) ----------
+
+  fastify.get('/:id/stats', async (request, reply) => {
+    const { id } = parse(groupIdParamSchema, request.params);
+    reply.send(await insights.getGroupStats(fastify.prisma, request.user!.id, id));
+  });
+
+  fastify.get('/:id/achievements', async (request, reply) => {
+    const { id } = parse(groupIdParamSchema, request.params);
+    reply.send(await insights.getGroupAchievements(fastify.prisma, request.user!.id, id));
+  });
+
+  fastify.get('/:id/contributors', async (request, reply) => {
+    const { id } = parse(groupIdParamSchema, request.params);
+    reply.send(await insights.contributorsLeaderboard(fastify.prisma, request.user!.id, id));
+  });
+
+  fastify.get('/:id/analytics', async (request, reply) => {
+    const { id } = parse(groupIdParamSchema, request.params);
+    const { weeks } = parse(analyticsQuerySchema, request.query);
+    reply.send(await insights.getAnalytics(fastify.prisma, request.user!.id, id, weeks ?? 8));
+  });
+
+  fastify.get<{ Querystring: CursorQuery }>('/:id/activity', async (request, reply) => {
+    const { id } = parse(groupIdParamSchema, request.params);
+    reply.send(await insights.listActivity(fastify.prisma, request.user!.id, id, request.query));
+  });
+
+  fastify.get<{ Querystring: CursorQuery }>('/:id/trees', async (request, reply) => {
+    const { id } = parse(groupIdParamSchema, request.params);
+    reply.send(await insights.listGroupTrees(fastify.prisma, request.user!.id, id, request.query));
+  });
+
+  fastify.get<{ Querystring: CursorQuery }>('/:id/adoptions', async (request, reply) => {
+    const { id } = parse(groupIdParamSchema, request.params);
+    reply.send(await insights.listGroupAdoptions(fastify.prisma, request.user!.id, id, request.query));
+  });
+
+  fastify.get<{ Querystring: CursorQuery }>('/:id/donations', async (request, reply) => {
+    const { id } = parse(groupIdParamSchema, request.params);
+    reply.send(await insights.listGroupDonations(fastify.prisma, request.user!.id, id, request.query));
+  });
+
+  // ---------- challenges ----------
+
+  fastify.get('/:id/challenges', async (request, reply) => {
+    const { id } = parse(groupIdParamSchema, request.params);
+    reply.send(await insights.listChallenges(fastify.prisma, request.user!.id, id));
+  });
+
+  fastify.post('/:id/challenges', limit(20, '1 hour'), async (request, reply) => {
+    const { id } = parse(groupIdParamSchema, request.params);
+    const input = parse(createChallengeSchema, request.body);
+    const challenge = await insights.createChallenge(fastify.prisma, request.user!.id, id, input);
+    reply.status(201).send({ id: challenge.id });
+  });
+
+  fastify.delete('/:id/challenges/:challengeId', limit(60, '1 hour'), async (request, reply) => {
+    const { id, challengeId } = parse(challengeParamSchema, request.params);
+    await insights.deleteChallenge(fastify.prisma, request.user!.id, id, challengeId);
+    reply.status(204).send();
   });
 }

@@ -158,6 +158,69 @@ describe.skipIf(!enabled)('planting groups (needs a database)', () => {
     expect(await prisma.plantingGroup.count({ where: { id: group.id } })).toBe(0);
   });
 
+  it('challenges: only admins create or delete them, other groups cannot touch them, and progress is counted from real trees', async () => {
+    const insights = await import('../src/services/plantingGroupInsights.service');
+    const admin = await makeUser('ch1');
+    const member = await makeUser('ch2');
+    const otherAdmin = await makeUser('ch3');
+    const group = await newGroup(admin.id, 'chal');
+    const otherGroup = await newGroup(otherAdmin.id, 'chal2');
+    const req = await svc.requestToJoin(prisma, member.id, group.id);
+    await svc.respondToJoinRequest(prisma, admin.id, group.id, req.id, 'approve');
+
+    const input = { title: 'Plant 2 this week', description: 'Let us go', goalTotal: 2, startsAt: new Date(Date.now() - 86_400_000), endsAt: new Date(Date.now() + 7 * 86_400_000) };
+    await expect(insights.createChallenge(prisma, member.id, group.id, input)).rejects.toThrow(/admin/i);
+    await expect(insights.createChallenge(prisma, admin.id, group.id, { ...input, endsAt: input.startsAt })).rejects.toThrow(/end date/i);
+    const challenge = await insights.createChallenge(prisma, admin.id, group.id, input);
+
+    const species = await prisma.treeSpecies.findFirst();
+    if (!species) throw new Error('local database has no tree species; run the seed first');
+    const { generatePublicId } = await import('@arth/db');
+    for (let i = 0; i < 2; i++) {
+      await prisma.tree.create({
+        data: { userId: member.id, plantingGroupId: group.id, speciesId: species.id, publicId: generatePublicId(), nickname: `t${i}`, lat: 18.5, lng: 73.8, aiVerificationStatus: 'verified' } as any,
+      });
+    }
+    const list = await insights.listChallenges(prisma, member.id, group.id);
+    expect(list.find((c) => c.id === challenge.id)).toMatchObject({ progress: 2, status: 'completed' });
+    const stats = await insights.getGroupStats(prisma, member.id, group.id);
+    expect(stats.treesPlanted).toBe(2);
+    expect(stats.challengesCompleted).toBe(1);
+
+    // A rejected photo never counts.
+    await prisma.tree.create({
+      data: { userId: member.id, plantingGroupId: group.id, speciesId: species.id, publicId: generatePublicId(), nickname: 'bad', lat: 18.5, lng: 73.8, aiVerificationStatus: 'rejected' } as any,
+    });
+    expect((await insights.getGroupStats(prisma, member.id, group.id)).treesPlanted).toBe(2);
+
+    // The contributor board lists everyone, planters first.
+    const board = await insights.contributorsLeaderboard(prisma, admin.id, group.id);
+    expect(board[0].user.id).toBe(member.id);
+    expect(board[0].treesPlanted).toBe(2);
+
+    // Strangers see nothing; another group's admin cannot delete this challenge.
+    await expect(insights.getGroupStats(prisma, otherAdmin.id, group.id)).rejects.toThrow(/not found/i);
+    await expect(insights.deleteChallenge(prisma, otherAdmin.id, otherGroup.id, challenge.id)).rejects.toThrow(/not found/i);
+    await expect(insights.deleteChallenge(prisma, member.id, group.id, challenge.id)).rejects.toThrow(/admin/i);
+    await insights.deleteChallenge(prisma, admin.id, group.id, challenge.id);
+
+    await prisma.tree.deleteMany({ where: { plantingGroupId: group.id } });
+  });
+
+  it('records joins on the group timeline and lists the group on the leaderboard', async () => {
+    const insights = await import('../src/services/plantingGroupInsights.service');
+    const admin = await makeUser('tl1');
+    const joiner = await makeUser('tl2');
+    const group = await newGroup(admin.id, 'timeline');
+    const req = await svc.requestToJoin(prisma, joiner.id, group.id);
+    await svc.respondToJoinRequest(prisma, admin.id, group.id, req.id, 'approve');
+    const activity = await insights.listActivity(prisma, admin.id, group.id, {});
+    expect(activity.items.map((a) => a.type)).toContain('member_joined');
+    await expect(insights.listActivity(prisma, (await makeUser('tl3')).id, group.id, {})).rejects.toThrow(/not found/i);
+    // No trees yet, so it is not ranked.
+    expect((await insights.groupsLeaderboard(prisma, admin.id)).some((g) => g.group.id === group.id)).toBe(false);
+  });
+
   it('deleting an account removes the person from groups and keeps each group runnable', async () => {
     const founder = await makeUser('er1');
     const next = await makeUser('er2');

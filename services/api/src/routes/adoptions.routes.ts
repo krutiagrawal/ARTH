@@ -1,3 +1,4 @@
+import { assertGroupAdmin } from '../services/plantingGroup.service';
 import { toCsv } from '../utils/csv';
 import { FastifyInstance } from 'fastify';
 import { ORG_ROLES } from '../constants/roles';
@@ -245,11 +246,16 @@ export default async function adoptionsRoutes(fastify: FastifyInstance) {
     const parsed = adoptSchema.safeParse(request.body ?? {});
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
 
+    if (parsed.data.plantingGroupId) {
+      await assertGroupAdmin(fastify.prisma, parsed.data.plantingGroupId, request.user!.id);
+    }
+
     const adoption = await adoptionService.adoptTree(
       fastify.prisma,
       request.user!.id,
       request.params.id,
       parsed.data.message,
+      parsed.data.plantingGroupId,
     );
     reply.status(201).send(serializeAdoptableTree(adoption.adoptableTree));
   });

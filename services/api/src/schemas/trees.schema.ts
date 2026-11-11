@@ -18,6 +18,8 @@ export const plantTreeSchema = z.object({
   // Present only when planting a sapling scanned from a nursery order/reservation — see
   // tree.service.ts's plantTree for the validation this must pass.
   saplingUnitId: z.string().uuid().optional(),
+  // Plant on behalf of a planting group. Only admins of that group may.
+  plantingGroupId: z.string().uuid().optional(),
 });
 
 export const updateTreeSchema = z.object({

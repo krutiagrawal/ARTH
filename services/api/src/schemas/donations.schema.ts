@@ -21,6 +21,8 @@ export const updateCampaignSchema = z.object({
 });
 
 export const createDonationSchema = z.object({
+  // Donate on behalf of a planting group. Only admins of that group may.
+  plantingGroupId: z.string().uuid().optional(),
   amountCents: z.coerce.number().int().min(100).max(1_000_000_00),
   currency: z.string().length(3).optional(),
   isAnonymous: z.boolean().optional(),

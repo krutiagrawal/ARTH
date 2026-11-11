@@ -1,3 +1,4 @@
+import { assertGroupAdmin } from '../services/plantingGroup.service';
 import { toCsv } from '../utils/csv';
 import { FastifyInstance } from 'fastify';
 import { ORG_ROLES } from '../constants/roles';
@@ -223,13 +224,18 @@ export default async function donationsRoutes(fastify: FastifyInstance) {
     const parsed = createDonationSchema.safeParse(request.body);
     if (!parsed.success) throw new BadRequestError(parsed.error.errors[0]?.message ?? 'Invalid input');
 
+    // Checked before any payment is started: only an admin of the group can spend as the group.
+    if (parsed.data.plantingGroupId) {
+      await assertGroupAdmin(fastify.prisma, parsed.data.plantingGroupId, request.user!.id);
+    }
+
     const { donation, clientSecret } = await donationService.createDonationIntent(
       fastify.prisma,
       request.user!.id,
       request.params.id,
       parsed.data.amountCents,
       parsed.data.currency ?? 'inr',
-      { isAnonymous: parsed.data.isAnonymous, message: parsed.data.message, donorPan: parsed.data.donorPan },
+      { isAnonymous: parsed.data.isAnonymous, message: parsed.data.message, donorPan: parsed.data.donorPan, plantingGroupId: parsed.data.plantingGroupId },
     );
 
     reply.status(201).send({ donationId: donation.id, clientSecret });

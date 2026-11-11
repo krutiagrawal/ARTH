@@ -23,6 +23,8 @@ export const updateAdoptableTreeSchema = z.object({
 
 export const adoptSchema = z.object({
   message: z.string().max(500).optional(),
+  // Adopt on behalf of a planting group. Only admins of that group may.
+  plantingGroupId: z.string().uuid().optional(),
 });
 
 export const nearbyQuerySchema = z.object({

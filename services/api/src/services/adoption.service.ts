@@ -1,3 +1,4 @@
+import { recordGroupActivity } from './plantingGroupActivity.service';
 import { PrismaClient } from '@arth/db';
 import { ConflictError, ForbiddenError, NotFoundError } from '../utils/errors';
 import { geocodeAddress } from '../utils/geocode';
@@ -372,7 +373,7 @@ export async function releaseAdoptionByUser(prisma: PrismaClient, userId: string
   return updated;
 }
 
-export async function adoptTree(prisma: PrismaClient, userId: string, treeId: string, message?: string) {
+export async function adoptTree(prisma: PrismaClient, userId: string, treeId: string, message?: string, plantingGroupId?: string) {
   const adoption = await prisma.$transaction(async (tx) => {
     const tree = await tx.adoptableTree.findUnique({ where: { id: treeId }, include: { ngo: { select: { userId: true, orgName: true } } } });
     if (!tree || tree.status !== 'available') throw new ConflictError('This tree is no longer available for adoption');
@@ -381,9 +382,12 @@ export async function adoptTree(prisma: PrismaClient, userId: string, treeId: st
     await tx.adoptableTree.update({ where: { id: treeId }, data: { status: 'adopted' } });
 
     const created = await tx.adoption.create({
-      data: { adoptableTreeId: treeId, userId, message },
+      data: { adoptableTreeId: treeId, userId, message, plantingGroupId },
       include: { adoptableTree: { include: adoptableTreeInclude } },
     });
+    if (plantingGroupId) {
+      await recordGroupActivity(tx, plantingGroupId, 'tree_adopted', userId, { nickname: tree.nickname });
+    }
 
     return { created, tree };
   });

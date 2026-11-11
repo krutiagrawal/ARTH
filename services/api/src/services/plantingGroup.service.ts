@@ -4,6 +4,7 @@ import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '.
 import { cursorArgs, toCursorPage, type CursorQuery } from '../utils/pagination';
 import { getBlockedIds } from './block.service';
 import { notify } from './notification.service';
+import { recordGroupActivity } from './plantingGroupActivity.service';
 import { deleteUploadedFiles } from './upload.service';
 
 /**
@@ -41,14 +42,14 @@ async function lockGroup(tx: Tx, groupId: string) {
   if (rows.length === 0) throw new NotFoundError('Group not found');
 }
 
-async function requireMember(prisma: Tx, groupId: string, userId: string) {
+export async function requireMember(prisma: Tx, groupId: string, userId: string) {
   const membership = await prisma.plantingGroupMember.findFirst({ where: { groupId, userId } });
   // A non-member learns nothing about member-only data, so this reads as "not found".
   if (!membership) throw new NotFoundError('Group not found');
   return membership;
 }
 
-async function requireAdmin(prisma: Tx, groupId: string, userId: string) {
+export async function requireAdmin(prisma: Tx, groupId: string, userId: string) {
   const membership = await requireMember(prisma, groupId, userId);
   if (membership.role !== 'admin') throw new ForbiddenError('Only group admins can do this');
   return membership;
@@ -167,8 +168,8 @@ export async function getGroup(prisma: PrismaClient, viewerId: string, groupId: 
   };
 }
 
-/** Lets the route reject a non-admin before any uploaded file is written to disk. */
-export async function assertAdminForUpload(prisma: PrismaClient, groupId: string, userId: string) {
+/** Lets a route reject a non-admin before it writes a file or starts a payment on the group's behalf. */
+export async function assertGroupAdmin(prisma: PrismaClient, groupId: string, userId: string) {
   await requireAdmin(prisma, groupId, userId);
 }
 
@@ -254,6 +255,7 @@ export async function setMemberRole(
     }
 
     await tx.plantingGroupMember.update({ where: { id: target.id }, data: { role } });
+    await recordGroupActivity(tx, groupId, 'role_changed', actorId, { targetUserId, role });
     const group = await tx.plantingGroup.findUnique({ where: { id: groupId }, select: { name: true } });
     return { changed: true, groupName: group?.name ?? '' };
   });
@@ -307,6 +309,8 @@ export async function removeMember(prisma: PrismaClient, actorId: string, groupI
     if (remaining === 0) {
       await tx.plantingGroup.delete({ where: { id: groupId } });
       groupDeleted = true;
+    } else if (leaving) {
+      await recordGroupActivity(tx, groupId, 'member_left', actorId);
     }
     return { groupName: group?.name ?? '', logoUrl: group?.logoUrl ?? null, groupDeleted };
   });
@@ -447,6 +451,7 @@ export async function respondToJoinRequest(
       where: { id: request.id },
       data: { status: decision === 'approve' ? 'accepted' : 'declined', respondedById: actorId, respondedAt: new Date() },
     });
+    if (decision === 'approve') await recordGroupActivity(tx, groupId, 'member_joined', request.userId);
     const group = await tx.plantingGroup.findUnique({ where: { id: groupId }, select: { name: true } });
     return { userId: request.userId, groupName: group?.name ?? '' };
   });
@@ -528,6 +533,7 @@ export async function respondToInvitation(prisma: PrismaClient, userId: string, 
       where: { id: request.id },
       data: { status: accept ? 'accepted' : 'declined', respondedById: userId, respondedAt: new Date() },
     });
+    if (accept) await recordGroupActivity(tx, groupId, 'member_joined', userId);
     const group = await tx.plantingGroup.findUnique({ where: { id: groupId }, select: { name: true } });
     return { inviterId: request.initiatedById, groupName: group?.name ?? '' };
   });
@@ -557,6 +563,7 @@ export async function leaveAllGroupsForErasure(tx: Tx, userId: string): Promise<
   const files: string[] = [];
 
   await tx.plantingGroupRequest.deleteMany({ where: { OR: [{ userId }, { initiatedById: userId }] } });
+  await tx.plantingGroupActivity.deleteMany({ where: { actorId: userId } });
   await tx.plantingGroupRequest.updateMany({ where: { respondedById: userId }, data: { respondedById: null } });
 
   const memberships = await tx.plantingGroupMember.findMany({ where: { userId } });

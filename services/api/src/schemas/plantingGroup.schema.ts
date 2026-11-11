@@ -40,3 +40,17 @@ export const inviteSchema = z.object({
 export const setRoleSchema = z.object({
   role: z.enum(['admin', 'member']),
 });
+
+export const challengeParamSchema = z.object({ id: z.string().uuid(), challengeId: z.string().uuid() });
+
+export const createChallengeSchema = z.object({
+  title: z.string().trim().min(2).max(80),
+  description: z.string().trim().min(1).max(300),
+  goalTotal: z.coerce.number().int().min(1).max(100_000),
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
+});
+
+export const analyticsQuerySchema = z.object({
+  weeks: z.coerce.number().int().min(1).max(26).optional(),
+});

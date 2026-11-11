@@ -1,3 +1,4 @@
+import { recordGroupActivity } from './plantingGroupActivity.service';
 import { Prisma, PrismaClient, generatePublicId } from '@arth/db';
 import { addXp } from './xp.service';
 import { recordPlantedToday } from './streak.service';
@@ -36,6 +37,8 @@ const BASE_XP_PER_TREE = 80;
 
 interface PlantTreeInput {
   userId: string;
+  // Set when an admin plants on behalf of a planting group (the route has already checked they are an admin of it).
+  plantingGroupId?: string;
   speciesId: string;
   nickname: string;
   lat: number;
@@ -116,11 +119,16 @@ export async function plantTree(prisma: PrismaClient, input: PlantTreeInput) {
           xpEarned,
           aiVerificationStatus: input.aiVerificationStatus,
           nurseryId: unit?.nurseryId,
+          plantingGroupId: input.plantingGroupId,
           publicId,
         },
         include: { species: true },
       }),
     );
+
+    if (input.plantingGroupId && input.aiVerificationStatus !== 'rejected') {
+      await recordGroupActivity(tx, input.plantingGroupId, 'tree_planted', input.userId, { treeId: tree.id, nickname: input.nickname });
+    }
 
     // Tracks physical reality (a scanned sapling really was planted) independent of the AI
     // verification outcome below — a rejected/unverified photo doesn't un-plant the sapling.

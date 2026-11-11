@@ -5,6 +5,7 @@ import { plantTreeSchema, updateTreeSchema, logOwnObservationSchema } from '../s
 import { saveTreePhoto, saveHealthCheckPhoto } from '../services/upload.service';
 import { splitMultipartBody } from '../utils/multipart';
 import { plantTree } from '../services/tree.service';
+import { assertGroupAdmin } from '../services/plantingGroup.service';
 import { logOwnerObservation } from '../services/treeObservation.service';
 import { verifyPlantingPhoto } from '../services/aiVerification.service';
 import { assertGpsNotMocked, assertGpsAccuracy } from '../services/plantingLocation.service';
@@ -194,6 +195,11 @@ export default async function treesRoutes(fastify: FastifyInstance) {
     // The app always captures a live photo; a request without one is a script, not a person at a tree.
     if (!photoFile) throw new BadRequestError('A live photo is required to plant a tree.');
 
+    // Before the paid photo check: a non-admin must not be able to make the server spend money.
+    if (parsed.data.plantingGroupId) {
+      await assertGroupAdmin(fastify.prisma, parsed.data.plantingGroupId, request.user!.id);
+    }
+
     assertGpsNotMocked(parsed.data.mocked);
     assertGpsAccuracy(parsed.data.accuracy);
 
@@ -219,6 +225,7 @@ export default async function treesRoutes(fastify: FastifyInstance) {
 
     const tree = await plantTree(fastify.prisma, {
       userId: request.user!.id,
+      plantingGroupId: parsed.data.plantingGroupId,
       speciesId: parsed.data.speciesId,
       nickname: parsed.data.nickname,
       lat: parsed.data.lat,
