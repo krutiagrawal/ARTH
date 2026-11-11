@@ -42,6 +42,8 @@ import { useReduceMotion } from '../hooks/useReduceMotion';
 import { AmbientCreatures } from '../components/common/AmbientCreatures';
 import { useTimeTheme } from '../hooks/useTimeTheme';
 import { useAuth } from '../context/AuthContext';
+import { useGroup, useGroupStats, useGroupThemes, useSelectGroupTheme } from '../hooks/useGroupQueries';
+import { groupAsUser } from '../utils/groupAdapters';
 import { useThemes, useSelectTheme, useDecorationPlacements, useCreateDecorationPlacement } from '../hooks/useApiQueries';
 import { getForestLevelLabel } from '../constants/forestLevels';
 import { getForestThemePalette, type ForestThemePalette, type ForestTreeShape } from '../constants/forestThemePalettes';
@@ -294,22 +296,42 @@ function FloatingLeaf({ x, delay, color }: { x: number; delay: number; color: st
   );
 }
 
-export function ForestScreen({ navigation }: any) {
+export function ForestScreen({ navigation, groupId }: any) {
   const theme = useTimeTheme();
   const confirm = useConfirm();
   const isNight = theme.mascotOutfit === 'night';
   const insets = useSafeAreaInsets();
   const bottomNavClearance = useBottomNavClearance();
-  const { user } = useAuth();
-  const { data: themes = [], refetch: refetchThemes } = useThemes();
-  const selectThemeMutation = useSelectTheme();
+  const { user: me } = useAuth();
+  // Group mode: the same forest, but it is the group's - its trees, level, CO2 and chosen theme.
+  const group = useGroup(groupId);
+  const groupStats = useGroupStats(groupId);
+  const user = groupId ? groupAsUser(group.data, groupStats.data) : me;
+  const isGroupAdmin = group.data?.viewer.role === 'admin';
+  const personalThemes = useThemes();
+  const groupThemes = useGroupThemes(groupId);
+  const themes = groupId
+    ? (groupThemes.data ?? []).map((t) => ({ id: t.id, key: t.key, name: t.name, preview: t.preview, unlocked: t.unlocked, unlockCriteria: `Reach group level ${t.unlockLevel}` }))
+    : personalThemes.data ?? [];
+  const refetchThemes = groupId ? groupThemes.refetch : personalThemes.refetch;
+  const selectPersonalTheme = useSelectTheme();
+  const selectGroupThemeMutation = useSelectGroupTheme(groupId ?? '');
+  const selectThemeMutation = {
+    mutate: (themeId: string) => {
+      if (!groupId) return selectPersonalTheme.mutate(themeId);
+      if (!isGroupAdmin) return confirm('Only admins can change this', 'Ask a group admin to pick the forest theme.');
+      selectGroupThemeMutation.mutate(themeId);
+    },
+  };
   const selectedTheme = user?.selectedForestThemeId ?? themes.find(t => t.key === 'classic')?.id ?? null;
   const selectedThemeKey = themes.find(t => t.id === selectedTheme)?.key;
   const palette = getForestThemePalette(selectedThemeKey);
   const forestLevelLabel = getForestLevelLabel(user?.level ?? 1);
 
-  const { data: placements = [], refetch: refetchPlacements } = useDecorationPlacements();
-  const { refreshing, onRefresh } = usePullToRefresh([refetchThemes, refetchPlacements]);
+  const { data: ownPlacements = [], refetch: refetchPlacements } = useDecorationPlacements();
+  // Decorations are personal; a group's forest shows none.
+  const placements = groupId ? [] : ownPlacements;
+  const { refreshing, onRefresh } = usePullToRefresh(groupId ? [refetchThemes, groupStats.refetch, group.refetch] : [refetchThemes, refetchPlacements]);
   const [decorateMode, setDecorateMode] = useState(false);
   const [pickerZone, setPickerZone] = useState<EcosystemZoneKey | null>(null);
   const createPlacementMutation = useCreateDecorationPlacement();
@@ -547,16 +569,18 @@ export function ForestScreen({ navigation }: any) {
         </BlurView>
       </View>
 
-      {/* Snapshot → Story button */}
-      <TouchableOpacity
-        style={[styles.snapshotButton, { top: insets.top + 12 }]}
-        activeOpacity={0.85}
-        onPress={handleSnapshot}
-      >
-        <BlurView intensity={30} tint={isNight ? 'dark' : 'light'} style={styles.snapshotBlur}>
-          <Text style={styles.snapshotIcon}>📸</Text>
-        </BlurView>
-      </TouchableOpacity>
+      {/* Snapshot → Story button (personal stories only) */}
+      {!groupId && (
+        <TouchableOpacity
+          style={[styles.snapshotButton, { top: insets.top + 12 }]}
+          activeOpacity={0.85}
+          onPress={handleSnapshot}
+        >
+          <BlurView intensity={30} tint={isNight ? 'dark' : 'light'} style={styles.snapshotBlur}>
+            <Text style={styles.snapshotIcon}>📸</Text>
+          </BlurView>
+        </TouchableOpacity>
+      )}
 
       {/* Forest stats overlay */}
       <View style={[styles.statsOverlay, { top: insets.top + 64 }]}>
@@ -612,7 +636,9 @@ export function ForestScreen({ navigation }: any) {
           </View>
         </View>
 
-        {/* Ecosystem sections */}
+        {/* Ecosystem sections (personal decorating) */}
+        {!groupId && (
+        <>
         <View style={styles.ecosystemHeaderRow}>
           <Text style={[styles.sectionTitle, isNight && styles.lightText]}>Ecosystem Zones</Text>
           <TouchableOpacity
@@ -638,6 +664,8 @@ export function ForestScreen({ navigation }: any) {
             );
           })}
         </ScrollView>
+        </>
+        )}
 
         {/* Forest themes */}
         <Text style={[styles.sectionTitle, isNight && styles.lightText]}>Forest Themes</Text>

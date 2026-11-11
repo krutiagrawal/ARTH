@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { COLORS } from '../constants/colors';
 import { AnimatedButton } from '../components/common/AnimatedButton';
@@ -7,18 +7,29 @@ import { BorderCard } from '../components/common/BorderCard';
 import { FormField } from '../components/common/FormField';
 import { CityPickerField } from '../components/common/CityPickerField';
 import { OutlineChip } from '../components/common/OutlineChip';
+import { Toggle } from '../components/common/Toggle';
+import { SettingsDivider, SettingsRow, SettingsSectionHeader } from '../components/common/SettingsRow';
 import type { PickedPhoto } from '../components/common/PhotoPickerField';
 import { GroupPhotoPicker } from '../components/groups/GroupPhotoPicker';
-import { View } from 'react-native';
 import { GroupScreen } from '../components/groups/GroupScreen';
 import { SectionTitle } from '../components/groups/GroupBits';
 import { useAuth } from '../context/AuthContext';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import { ApiError } from '../api/client';
 import { GROUP_TYPES, type GroupType } from '../api/plantingGroups';
-import { useDeleteGroup, useGroup, useRemoveGroupMember, useUpdateGroup, useUploadGroupLogo } from '../hooks/useGroupQueries';
+import {
+  useDeleteGroup,
+  useGroup,
+  useRemoveGroupMember,
+  useSetMyShareActivity,
+  useUpdateGroup,
+  useUploadGroupLogo,
+} from '../hooks/useGroupQueries';
 
-/** Group profile: admins edit the details and logo; anyone can leave; the founder can delete the group. */
+/**
+ * Group settings, laid out like the individual Settings page: the group's profile (admins edit),
+ * the caller's own membership, everything else the group has, and leaving or deleting.
+ */
 export function GroupSettingsScreen({ navigation, route }: any) {
   const groupId: string = route.params.groupId;
   const { user } = useAuth();
@@ -27,13 +38,14 @@ export function GroupSettingsScreen({ navigation, route }: any) {
   const update = useUpdateGroup(groupId);
   const uploadLogo = useUploadGroupLogo(groupId);
   const remove = useRemoveGroupMember(groupId);
+  const setShare = useSetMyShareActivity(groupId);
   const del = useDeleteGroup();
   const g = group.data;
   const isAdmin = g?.viewer.role === 'admin';
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [city, setCity] = useState('');
+  const [city, setCity] = useState('Pune');
   const [groupType, setGroupType] = useState<GroupType>('other');
   // The photo just picked, shown while it uploads; the stored logo takes over once it is saved.
   const [pickedLogo, setPickedLogo] = useState<PickedPhoto | null>(null);
@@ -65,15 +77,23 @@ export function GroupSettingsScreen({ navigation, route }: any) {
     setPickedLogo(photo);
     try {
       await uploadLogo.mutateAsync(photo);
-      setPickedLogo(null);
     } catch (e) {
+      fail(e);
+    } finally {
       setPickedLogo(null);
+    }
+  };
+
+  const toggleShare = async (next: boolean) => {
+    try {
+      await setShare.mutateAsync(next);
+    } catch (e) {
       fail(e);
     }
   };
 
   const leave = () =>
-    confirm('Leave this group?', 'You can ask to join again later.', [
+    confirm('Leave this group?', 'Your work stops counting for the group. You can ask to join again later.', [
       { text: 'Stay', style: 'cancel' },
       {
         text: 'Leave',
@@ -106,6 +126,8 @@ export function GroupSettingsScreen({ navigation, route }: any) {
       },
     ]);
 
+  const go = (route: string) => () => navigation.navigate(route, { groupId });
+
   return (
     <GroupScreen title="Group settings" subtitle={g ? `@${g.handle}` : undefined} onBack={() => navigation.goBack()} refetch={[group.refetch]}>
       {isAdmin ? (
@@ -123,6 +145,7 @@ export function GroupSettingsScreen({ navigation, route }: any) {
           <AnimatedButton
             label={update.isPending ? 'Saving…' : 'Save changes'}
             onPress={save}
+            size="sm"
             disabled={name.trim().length < 2 || description.trim().length < 1 || update.isPending}
             variant="primary"
             fullWidth
@@ -132,11 +155,44 @@ export function GroupSettingsScreen({ navigation, route }: any) {
         </>
       ) : (
         <BorderCard>
-          <Text style={styles.muted}>Only group admins can change the group's details.</Text>
+          <Text style={styles.muted}>Only group admins can change the group's details, photo and forest theme.</Text>
         </BorderCard>
       )}
 
-      <SectionTitle>Membership</SectionTitle>
+      <SettingsSectionHeader title="My membership" />
+      <BorderCard noPadding>
+        <SettingsRow
+          variant="light"
+          icon="🌿"
+          label="Count my ARTH activity"
+          sublabel="My trees, adoptions, donations and drives count for this group from the day I joined"
+          accent={COLORS.sage}
+          rightElement={<Toggle value={g?.viewer.shareActivity ?? true} onValueChange={toggleShare} offColor={COLORS.sand} onColor={COLORS.sage} />}
+        />
+        <SettingsDivider variant="light" />
+        <SettingsRow variant="light" icon="🛡️" label="My role" sublabel={isAdmin ? 'Admin' : 'Member'} accent={COLORS.golden} />
+      </BorderCard>
+
+      <SettingsSectionHeader title="Everything the group has" />
+      <BorderCard noPadding>
+        <SettingsRow variant="light" icon="📣" label="Activity" accent={COLORS.sage} onPress={go('GroupActivity')} />
+        <SettingsDivider variant="light" />
+        <SettingsRow variant="light" icon="🏅" label="Achievements" accent={COLORS.golden} onPress={go('GroupAchievements')} />
+        <SettingsDivider variant="light" />
+        <SettingsRow variant="light" icon="🏆" label="Leaderboards" accent={COLORS.golden} onPress={go('GroupLeaderboard')} />
+        <SettingsDivider variant="light" />
+        <SettingsRow variant="light" icon="📊" label="Analytics" accent={COLORS.sage} onPress={go('GroupAnalytics')} />
+        <SettingsDivider variant="light" />
+        <SettingsRow variant="light" icon="🌳" label="Our trees" accent={COLORS.sage} onPress={go('GroupTrees')} />
+        <SettingsDivider variant="light" />
+        <SettingsRow variant="light" icon="💚" label="Donations & adopted trees" accent={COLORS.coral} onPress={go('GroupGiving')} />
+        <SettingsDivider variant="light" />
+        <SettingsRow variant="light" icon="🔔" label="Group notifications" accent={COLORS.sage} onPress={() => navigation.navigate('Notifications', { groupId })} />
+        <SettingsDivider variant="light" />
+        <SettingsRow variant="light" icon="🔀" label="Switch group" accent={COLORS.sage} onPress={() => navigation.navigate('Groups')} />
+      </BorderCard>
+
+      <SettingsSectionHeader title="Membership" />
       <AnimatedButton label="Leave group" size="sm" variant="secondary" fullWidth onPress={leave} />
       {g?.viewer.isCreator && <AnimatedButton label="Delete group" size="sm" variant="danger" fullWidth onPress={deleteGroup} style={{ marginTop: 10 }} />}
     </GroupScreen>

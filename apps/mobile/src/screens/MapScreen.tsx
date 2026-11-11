@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { View, StyleSheet, Dimensions, TouchableOpacity, ScrollView, ActivityIndicator, AppState, Image } from 'react-native';
 import { Text } from '../components/common/AppText';
 import { LeafletPinMap, type LeafletPin, type LeafletCircle } from '../components/map/LeafletPinMap';
@@ -31,6 +31,8 @@ import {
   useSettings,
   useNgoPlantingMap,
 } from '../hooks/useApiQueries';
+import { useGroup, useGroupTreePins } from '../hooks/useGroupQueries';
+import { groupTreeAsTree } from '../utils/groupAdapters';
 import { EmptyState } from '../components/common/EmptyState';
 import { StatDisplay } from '../components/common/StatDisplay';
 import { StatusModal } from '../components/common/StatusModal';
@@ -554,8 +556,12 @@ function PlantingInfoCard({ entry, onClose, isNight }: {
   );
 }
 
-export function MapScreen({ navigation, route, mode = 'user' }: any) {
+export function MapScreen({ navigation, route, mode = 'user', groupId: groupIdProp }: any) {
   const insets = useSafeAreaInsets();
+  // Group mode: the "my trees" layer is the group's trees (members' personal ones shown only as an area).
+  const groupId: string | undefined = groupIdProp ?? route?.params?.groupId;
+  const group = useGroup(groupId);
+  const groupPins = useGroupTreePins(groupId);
   const theme = useTimeTheme();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [locationPending, setLocationPending] = useState(true);
@@ -590,9 +596,10 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
   // Both public and NGO-owned feeds are always fetched (stable per-mount `mode` prop, never
   // toggles) so this never has to call hooks conditionally – whichever pair isn't relevant for
   // this mode is simply not used below. NGO mode has no personal "planted trees" concept at all.
-  const { data: rawTrees = [] } = useTrees(undefined, !isNgo && !scopeNurseryId);
+  const { data: rawTrees = [] } = useTrees(undefined, !isNgo && !scopeNurseryId && !groupId);
   const { data: nurseryScopedTrees = [] } = useTreesMap({ scope: 'global', nurseryId: scopeNurseryId }, !!scopeNurseryId);
-  const trees = isNgo ? [] : scopeNurseryId ? nurseryScopedTrees : rawTrees;
+  const groupTreesAsTrees = useMemo(() => (groupPins.data ?? []).map(groupTreeAsTree), [groupPins.data]);
+  const trees = isNgo ? [] : groupId ? groupTreesAsTrees : scopeNurseryId ? nurseryScopedTrees : rawTrees;
   const { data: publicAdoptableTrees = [] } = useAdoptableTrees(undefined, undefined, !isNgo, scopeNgoId);
   const { data: myAdoptableTrees = [] } = useMyAdoptableTrees(isNgo);
   const adoptableTrees = isNgo ? myAdoptableTrees : publicAdoptableTrees;
@@ -754,7 +761,11 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
     try {
       const result = await checkEligibility.mutateAsync({ lat, lng });
       if (result.eligible) {
-        navigation.navigate('PlantTree', { verifiedLat: lat, verifiedLng: lng });
+        if (groupId && group.data && group.data.viewer.role !== 'admin') {
+          navigation.navigate('GroupActions', { groupId, groupName: group.data.name });
+        } else {
+          navigation.navigate('PlantTree', { verifiedLat: lat, verifiedLng: lng, ...(groupId && group.data ? { plantingGroupId: groupId, plantingGroupName: group.data.name } : {}) });
+        }
       } else {
         setStatusModal('notApproved');
       }
@@ -1113,14 +1124,14 @@ export function MapScreen({ navigation, route, mode = 'user' }: any) {
       {!selectedTree && !isNgo && (
         <View style={[styles.bottomSheet, { paddingBottom: insets.bottom }]}>
           <BlurView intensity={isNight ? 70 : 55} tint={isNight ? 'dark' : 'light'} style={styles.bottomBlur}>
-            <Text style={[styles.bottomTitle, isNight && styles.lightText]}>Your Trees</Text>
+            <Text style={[styles.bottomTitle, isNight && styles.lightText]}>{groupId ? 'Our Trees' : 'Your Trees'}</Text>
             {trees.length === 0 ? (
               <EmptyState
                 icon="🌱"
-                title="Your map is waiting"
-                body="Plant your first tree and it'll show up here."
+                title={groupId ? 'The group map is waiting' : 'Your map is waiting'}
+                body={groupId ? "Trees planted by members and for the group will show up here." : "Plant your first tree and it'll show up here."}
                 actionLabel="Plant a Tree"
-                onAction={() => navigation.navigate('PlantTree')}
+                onAction={() => (groupId ? navigation.navigate('GroupActions', { groupId, groupName: group.data?.name }) : navigation.navigate('PlantTree'))}
                 tint={isNight ? 'dark' : 'light'}
               />
             ) : (

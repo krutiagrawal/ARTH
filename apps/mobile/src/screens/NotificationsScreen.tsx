@@ -532,17 +532,19 @@ function NotificationRow({
  * Everything is marked read on open rather than per-row: the badge is the thing people act on,
  * and leaving it lit after they have plainly seen the list is the more annoying failure mode.
  */
-export function NotificationsScreen({ navigation }: any) {
+export function NotificationsScreen({ navigation, route }: any) {
+  // Opened from a group's bell: show only that group's notifications.
+  const groupFilter: string | undefined = route?.params?.groupId;
   const { data, isLoading, refetch, isRefetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useNotifications();
   const markRead = useMarkNotificationsRead();
   const { user } = useAuth();
   const isNursery = user?.role === 'nursery';
 
-  const notifications = useMemo(
-    () => data?.pages.flatMap((p) => p.notifications) ?? [],
-    [data],
-  );
+  const notifications = useMemo(() => {
+    const all = data?.pages.flatMap((p) => p.notifications) ?? [];
+    return groupFilter ? all.filter((n) => n.type.startsWith('group_') && (n.data as any)?.groupId === groupFilter) : all;
+  }, [data, groupFilter]);
 
   useEffect(() => {
     if (notifications.some((n) => !n.read)) markRead.mutate(undefined);

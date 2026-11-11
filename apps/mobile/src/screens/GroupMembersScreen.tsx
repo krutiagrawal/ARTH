@@ -24,7 +24,8 @@ import {
 } from '../hooks/useGroupQueries';
 
 /** Members, join requests and invitations. Admins manage; everyone can see who is in and can leave. */
-export function GroupMembersScreen({ navigation, groupId }: { navigation: any; groupId: string }) {
+export function GroupMembersScreen({ navigation, groupId: groupIdProp, route, embedded }: { navigation: any; groupId?: string; route?: any; embedded?: boolean }) {
+  const groupId: string = groupIdProp ?? route.params.groupId;
   const clearance = useBottomNavClearance();
   const { user } = useAuth();
   const confirm = useConfirm();
@@ -101,6 +102,7 @@ export function GroupMembersScreen({ navigation, groupId }: { navigation: any; g
       refetch={[group.refetch, members.refetch, requests.refetch]}
       bottomPad={clearance}
       paged={members}
+      embedded={embedded}
     >
       {isAdmin && (
         <>

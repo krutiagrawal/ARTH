@@ -20,12 +20,22 @@ interface GroupScreenProps {
   bottomPad?: number;
   /** A paged query, to load the next page when the user nears the bottom. */
   paged?: Parameters<typeof infiniteScrollProps>[0];
+  /** Render just the content, inside another screen's tab (no header, gradient or scrolling of its own). */
+  embedded?: boolean;
 }
 
 /** The page chrome every group screen shares: gradient, header, pull-to-refresh, safe padding. */
-export function GroupScreen({ title, subtitle, onBack, right, children, refetch, bottomPad, paged }: GroupScreenProps) {
+export function GroupScreen({ title, subtitle, onBack, right, children, refetch, bottomPad, paged, embedded }: GroupScreenProps) {
   const insets = useSafeAreaInsets();
   const { refreshing, onRefresh } = usePullToRefresh(refetch);
+  if (embedded) {
+    return (
+      <View>
+        {right ? <View style={styles.embeddedRight}>{right}</View> : null}
+        {children}
+      </View>
+    );
+  }
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
@@ -47,4 +57,5 @@ export function GroupScreen({ title, subtitle, onBack, right, children, refetch,
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 4 },
+  embeddedRight: { alignItems: 'flex-end', marginBottom: 8 },
 });

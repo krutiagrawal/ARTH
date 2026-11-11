@@ -26,12 +26,12 @@ const timeAgo = (iso: string) => new Date(iso).toLocaleDateString(undefined, { d
 
 // ---------- Activity ----------
 
-export function GroupActivityScreen({ navigation, route }: any) {
-  const groupId: string = route.params.groupId;
+export function GroupActivityScreen({ navigation, route, groupId: groupIdProp, embedded }: any) {
+  const groupId: string = groupIdProp ?? route.params.groupId;
   const activity = useGroupActivity(groupId);
   const list = activity.data ?? [];
   return (
-    <GroupScreen title="Activity" onBack={() => navigation.goBack()} refetch={[activity.refetch]} paged={activity}>
+    <GroupScreen title="Activity" onBack={() => navigation.goBack()} refetch={[activity.refetch]} paged={activity} embedded={embedded}>
       {list.length === 0 ? (
         <EmptyState icon="📣" title="Nothing yet" body="Joins, plantings, adoptions and donations show up here." />
       ) : (
@@ -79,14 +79,14 @@ export function GroupAchievementsScreen({ navigation, route }: any) {
 
 // ---------- Leaderboards ----------
 
-export function GroupLeaderboardScreen({ navigation, route }: any) {
-  const groupId: string = route.params.groupId;
+export function GroupLeaderboardScreen({ navigation, route, groupId: groupIdProp, embedded }: any) {
+  const groupId: string = groupIdProp ?? route.params.groupId;
   const [tab, setTab] = useState<'groups' | 'planters'>('groups');
   const groups = useGroupsLeaderboard();
   const planters = useGroupContributors(groupId);
 
   return (
-    <GroupScreen title="Leaderboards" onBack={() => navigation.goBack()} refetch={[groups.refetch, planters.refetch]}>
+    <GroupScreen title="Leaderboards" onBack={() => navigation.goBack()} refetch={[groups.refetch, planters.refetch]} embedded={embedded}>
       <SlidingSegment
         fill
         value={tab}
@@ -275,7 +275,7 @@ export function GroupGivingScreen({ navigation, route }: any) {
                     {rupees(d.amountCents)} · {d.campaign.title}
                   </Text>
                   <Text style={styles.muted} numberOfLines={1}>
-                    {d.campaign.ngoName} · by {d.donatedBy.name} · {timeAgo(d.createdAt)}
+                    {d.campaign.ngoName} · by {d.donatedBy?.name ?? 'a member'} · {timeAgo(d.createdAt)}
                   </Text>
                   {d.receiptNumber && <Text style={styles.muted}>Receipt {d.receiptNumber}</Text>}
                 </View>

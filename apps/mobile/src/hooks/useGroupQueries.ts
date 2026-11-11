@@ -15,6 +15,9 @@ import {
   fetchGroupChallenges,
   fetchGroupContributors,
   fetchGroupDonations,
+  fetchGroupDrives,
+  fetchGroupThemes,
+  fetchGroupTreePins,
   fetchGroupMembers,
   fetchGroupRequests,
   fetchGroupStats,
@@ -28,7 +31,9 @@ import {
   respondToGroupInvitation,
   respondToGroupRequest,
   searchGroups,
+  selectGroupTheme,
   setGroupMemberRole,
+  setMyShareActivity,
   updateGroup,
   uploadGroupLogo,
   type GroupRole,
@@ -85,6 +90,9 @@ export const useGroup = (id: string | undefined) => useGroupQuery(['detail'], id
 export const useGroupStats = (id: string | undefined) => useGroupQuery(['stats'], id, fetchGroupStats);
 export const useGroupAchievements = (id: string | undefined) => useGroupQuery(['achievements'], id, fetchGroupAchievements);
 export const useGroupChallenges = (id: string | undefined) => useGroupQuery(['challenges'], id, fetchGroupChallenges);
+export const useGroupDrives = (id: string | undefined) => useGroupQuery(['drives'], id, fetchGroupDrives);
+export const useGroupThemes = (id: string | undefined) => useGroupQuery(['themes'], id, fetchGroupThemes);
+export const useGroupTreePins = (id: string | undefined) => useGroupQuery(['tree-pins'], id, fetchGroupTreePins);
 export const useGroupContributors = (id: string | undefined) => useGroupQuery(['contributors'], id, fetchGroupContributors);
 export const useGroupAnalytics = (id: string | undefined, weeks: number) =>
   useGroupQuery(['analytics', weeks], id, (gid) => fetchGroupAnalytics(gid, weeks));
@@ -120,6 +128,10 @@ export const useUpdateGroup = (id: string) =>
 
 export const useUploadGroupLogo = (id: string) =>
   useInvalidatingMutation((photo: { uri: string; name: string; type: string }) => uploadGroupLogo(id, photo));
+
+export const useSelectGroupTheme = (id: string) => useInvalidatingMutation((themeId: string) => selectGroupTheme(id, themeId));
+
+export const useSetMyShareActivity = (id: string) => useInvalidatingMutation((share: boolean) => setMyShareActivity(id, share));
 
 export const useDeleteGroup = () => useInvalidatingMutation((id: string) => deleteGroup(id));
 

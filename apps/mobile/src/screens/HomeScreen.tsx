@@ -1,4 +1,4 @@
-import React, { useState, useRef, type RefObject } from 'react';
+import React, { useMemo, useState, useRef, type RefObject } from 'react';
 import { View, Image, StyleSheet, ScrollView, TouchableOpacity, Dimensions, RefreshControl } from 'react-native';
 import { Text } from '../components/common/AppText';
 import Animated from 'react-native-reanimated';
@@ -45,6 +45,8 @@ import { useBottomNavClearance } from '../components/navigation/BottomNav';
 import { getHeroSeamColor } from '../utils/heroSeam';
 import { StoriesTray } from '../components/stories/StoriesTray';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useGroup, useGroupChallenges, useGroupStats, useGroupTrees } from '../hooks/useGroupQueries';
+import { challengesAsMissions, groupAsUser, groupTreeAsTree } from '../utils/groupAdapters';
 
 import { TEXT } from '../constants/typography';
 const { width: SW, height: SH } = Dimensions.get('window');
@@ -99,7 +101,11 @@ function HeroSection({
   weather,
   coords,
   blurTarget,
+  groupId,
+  groupTrees,
 }: {
+  groupId?: string;
+  groupTrees?: ApiTree[];
   theme: TimeTheme;
   user: ApiUser | null;
   navigation: any;
@@ -109,7 +115,10 @@ function HeroSection({
   blurTarget: RefObject<View | null>;
 }) {
   const insets = useSafeAreaInsets();
-  const streakStatus = useStreakStatus().data;
+  // A group has no personal streak to revive; its streak is just shown.
+  const personalStreak = useStreakStatus().data;
+  const streakStatus = groupId ? undefined : personalStreak;
+  const openProfile = () => (groupId ? navigation.navigate('GroupProfile', { groupId }) : navigation.navigate('Profile'));
   // Broken-but-revivable and about-to-break streaks make the tile a shortcut to the save/revive screen.
   const showAtRisk = streakStatus?.state === 'at_risk' && isAtRiskHours();
   const streakNeedsAction = streakStatus ? streakStatus.revivable || showAtRisk : false;
@@ -170,8 +179,8 @@ function HeroSection({
         </View>
         <View style={styles.headerRight}>
           <MuteButton style={styles.muteInHeader} bare />
-          <NotificationBell onPress={() => navigation.navigate('Notifications')} />
-          <TouchableOpacity style={styles.avatarButton} onPress={() => navigation.navigate('Profile')}>
+          <NotificationBell onPress={() => navigation.navigate('Notifications', groupId ? { groupId } : undefined)} />
+          <TouchableOpacity style={styles.avatarButton} onPress={openProfile}>
             <LinearGradient
               colors={[COLORS.sageLight, COLORS.forest]}
               style={styles.avatar}
@@ -228,7 +237,7 @@ function HeroSection({
             subTextColor={statColor}
             haloColor={haloColor}
             delay={200}
-            onPress={() => navigation.navigate('Profile')}
+            onPress={openProfile}
           />
         </View>
       </View>
@@ -246,6 +255,8 @@ function HeroSection({
         <View style={[styles.forestStatsOverlay, { backgroundColor: hexToRgba(theme.cardBackground, theme.cardOverlayAlpha) }]} />
         <ForestPulsePill
           user={user}
+          groupId={groupId}
+          groupTrees={groupTrees}
           weather={weather}
           coords={coords}
           navigation={navigation}
@@ -258,7 +269,7 @@ function HeroSection({
   );
 }
 
-function MissionCard({ missions, navigation, onNavigateTab, blurTarget, previewPeriod }: { missions: ApiDailyMission[]; navigation: any; onNavigateTab: (tab: string) => void; blurTarget: RefObject<View | null>; previewPeriod?: TimePeriod | null }) {
+function MissionCard({ missions, navigation, onNavigateTab, blurTarget, previewPeriod, groupId }: { missions: (ApiDailyMission & { progressLabel?: string })[]; groupId?: string; navigation: any; onNavigateTab: (tab: string) => void; blurTarget: RefObject<View | null>; previewPeriod?: TimePeriod | null }) {
   const slideStyle = useSlideUp(100, 24);
   const { data: homeSettings } = useSettings();
   const theme = useTimeTheme((previewPeriod !== undefined ? previewPeriod : (homeSettings?.pinnedTimeTheme ?? null)) as TimePeriod | null);
@@ -266,6 +277,10 @@ function MissionCard({ missions, navigation, onNavigateTab, blurTarget, previewP
   const progress = missions.length > 0 ? completedCount / missions.length : 0;
 
   const handleMissionPress = (mission: ApiDailyMission) => {
+    if (groupId) {
+      navigation.navigate('GroupChallenges', { groupId });
+      return;
+    }
     if (mission.completed) return;
     // A quest is never completed by tapping it: each one finishes when the user actually does the
     // thing (the server marks it), so tapping just takes them to where that happens.
@@ -308,8 +323,8 @@ function MissionCard({ missions, navigation, onNavigateTab, blurTarget, previewP
         />
         <View style={styles.missionHeader}>
           <View>
-            <Text style={[styles.missionTag, { color: homeTextColor(theme, theme.accentColor) }]}>DAILY MISSIONS</Text>
-            <Text style={[styles.missionTitle, { color: homeTextColor(theme, theme.textPrimaryOnCard) }]}>Today's Quests</Text>
+            <Text style={[styles.missionTag, { color: homeTextColor(theme, theme.accentColor) }]}>{groupId ? 'GROUP CHALLENGES' : 'DAILY MISSIONS'}</Text>
+            <Text style={[styles.missionTitle, { color: homeTextColor(theme, theme.textPrimaryOnCard) }]}>{groupId ? 'Our Quests' : "Today's Quests"}</Text>
           </View>
           <ProgressRing
             size={52}
@@ -327,7 +342,7 @@ function MissionCard({ missions, navigation, onNavigateTab, blurTarget, previewP
             <TouchableOpacity
               key={mission.id}
               activeOpacity={0.7}
-              disabled={mission.completed}
+              disabled={!groupId && mission.completed}
               onPress={() => handleMissionPress(mission)}
             >
               <View style={[styles.missionItem, { backgroundColor: rowBg }, mission.completed && styles.missionItemDone]}>
@@ -342,7 +357,7 @@ function MissionCard({ missions, navigation, onNavigateTab, blurTarget, previewP
                   <Text style={[styles.missionItemDesc, { color: homeTextColor(theme, theme.textSecondaryOnCard, { secondary: true }) }, mission.completed && styles.missionItemDoneText]}>{mission.description}</Text>
                 </View>
                 <View style={styles.missionXp}>
-                  <Text style={[styles.missionXpText, { color: homeTextColor(theme, COLORS.xpBlue) }]}>+{mission.xpReward} XP</Text>
+                  <Text style={[styles.missionXpText, { color: homeTextColor(theme, COLORS.xpBlue) }]}>{groupId ? mission.progressLabel : `+${mission.xpReward} XP`}</Text>
                 </View>
               </View>
             </TouchableOpacity>
@@ -360,7 +375,7 @@ function GamesCard({ games, navigation, blurTarget, previewPeriod }: { games: Ap
   return <DailyGamesCard games={games} navigation={navigation} blurTarget={blurTarget} theme={theme} />;
 }
 
-function RecentTrees({ trees, navigation, blurTarget, previewPeriod }: { trees: ApiTree[]; navigation: any; blurTarget: RefObject<View | null>; previewPeriod?: TimePeriod | null }) {
+function RecentTrees({ trees, navigation, blurTarget, previewPeriod, groupId }: { groupId?: string; trees: ApiTree[]; navigation: any; blurTarget: RefObject<View | null>; previewPeriod?: TimePeriod | null }) {
   const slideStyle = useSlideUp(200, 24);
   const { data: homeSettings } = useSettings();
   const theme = useTimeTheme((previewPeriod !== undefined ? previewPeriod : (homeSettings?.pinnedTimeTheme ?? null)) as TimePeriod | null);
@@ -370,7 +385,7 @@ function RecentTrees({ trees, navigation, blurTarget, previewPeriod }: { trees: 
     <Animated.View style={slideStyle}>
       <View style={styles.sectionHeader}>
         <Text style={[styles.missionTitle, { color: homeTextColor(theme, theme.textPrimaryOnCard) }]}>Recent Plants</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('MyTrees')}>
+        <TouchableOpacity onPress={() => (groupId ? navigation.navigate('GroupTrees', { groupId }) : navigation.navigate('MyTrees'))}>
           <Text style={[styles.seeAll, { color: homeTextColor(theme, theme.accentColor) }]}>See all →</Text>
         </TouchableOpacity>
       </View>
@@ -381,7 +396,7 @@ function RecentTrees({ trees, navigation, blurTarget, previewPeriod }: { trees: 
             tree={tree}
             size="chip"
             theme={theme}
-            onPress={() => navigation.navigate('TreePassport', { kind: 'tree', id: tree.id })}
+            onPress={() => (groupId ? navigation.navigate('GroupTrees', { groupId }) : navigation.navigate('TreePassport', { kind: 'tree', id: tree.id }))}
             style={styles.treeCardSpacing}
             blurTarget={blurTarget}
           />
@@ -426,7 +441,7 @@ function EcoFactCard({ fact, blurTarget, previewPeriod }: { fact: string; blurTa
 /** The primary "take action" entry point – the single most important tap target on Home. Sits
  * right below the hero, ahead of the XP card and quests, so the real-world mission always
  * outranks the gamification below it. Opens GrowActionSheet's four contribution paths. */
-function HomeGrowCTA({ theme, onPress }: { theme: TimeTheme; onPress: () => void }) {
+function HomeGrowCTA({ theme, onPress, title, subtitle }: { theme: TimeTheme; onPress: () => void; title?: string; subtitle?: string }) {
   const { medium } = useHaptics();
   const { style: pressStyle, onPressIn, onPressOut } = useSpringPress();
   const slideStyle = useSlideUp(100, 20);
@@ -455,8 +470,8 @@ function HomeGrowCTA({ theme, onPress }: { theme: TimeTheme; onPress: () => void
               <Text style={styles.growCtaIcon}>🌱</Text>
             </View>
             <View style={styles.growCtaTextWrap}>
-              <Text style={styles.growCtaTitle}>Take action for the Earth</Text>
-              <Text style={styles.growCtaSubtitle}>Plant, adopt, join a drive, or give</Text>
+              <Text style={styles.growCtaTitle}>{title ?? 'Take action for the Earth'}</Text>
+              <Text style={styles.growCtaSubtitle}>{subtitle ?? 'Plant, adopt, join a drive, or give'}</Text>
             </View>
             <Text style={styles.growCtaArrow}>›</Text>
           </LinearGradient>
@@ -494,25 +509,34 @@ function GrowActionSheet({
   visible,
   onClose,
   navigation,
+  group,
 }: {
   visible: boolean;
   onClose: () => void;
   navigation: any;
+  /** When set, the actions are done for this group (only its admins may plant, adopt or donate). */
+  group?: { id: string; name: string; isAdmin: boolean };
 }) {
   const { selection } = useHaptics();
+  const context = group ? { plantingGroupId: group.id, plantingGroupName: group.name } : undefined;
 
   const handlePick = (key: GrowAction['key']) => {
     selection();
     onClose();
-    if (key === 'plant') {
-      navigation.navigate('PlantTree');
+    // Joining a drive is personal; everything else is the group's and needs an admin.
+    if (group && key !== 'ngo' && !group.isAdmin) {
+      navigation.navigate('GroupActions', { groupId: group.id, groupName: group.name });
       return;
     }
-    navigation.navigate(GROW_ACTION_ROUTES[key]);
+    if (key === 'plant') {
+      navigation.navigate('PlantTree', context);
+      return;
+    }
+    navigation.navigate(GROW_ACTION_ROUTES[key], context);
   };
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="How would you like to help?" variant="slideUp">
+    <Sheet visible={visible} onClose={onClose} title={group ? `Help as ${group.name}` : 'How would you like to help?'} variant="slideUp">
       {GROW_ACTIONS.map(action => (
         <TouchableOpacity
           key={action.key}
@@ -522,7 +546,7 @@ function GrowActionSheet({
         >
           <Text style={styles.growActionIcon}>{action.icon}</Text>
           <View style={styles.growActionTextWrap}>
-            <Text style={[styles.growActionTitle, { color: COLORS.textPrimary }]}>{action.title}</Text>
+            <Text style={[styles.growActionTitle, { color: COLORS.textPrimary }]}>{group && action.key !== 'ngo' ? action.title.replace('by myself', 'for the group').replace('Adopt a nearby tree', 'Adopt a tree for the group').replace('Donate to an NGO', 'Donate for the group') : action.title}</Text>
             <Text style={[styles.growActionSubtitle, { color: COLORS.textPrimary }]}>{action.subtitle}</Text>
           </View>
           <Text style={[styles.growActionArrow, { color: COLORS.textPrimary }]}>›</Text>
@@ -532,13 +556,20 @@ function GrowActionSheet({
   );
 }
 
-export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePreview }: any) {
+export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePreview, groupId }: any) {
   const { data: homeSettings } = useSettings();
   const theme = useTimeTheme((previewPeriod !== undefined ? previewPeriod : (homeSettings?.pinnedTimeTheme ?? null)) as TimePeriod | null);
   const insets = useSafeAreaInsets();
   const bottomNavClearance = useBottomNavClearance();
-  const { user } = useAuth();
+  const { user: me } = useAuth();
   const { weather, coords } = useDeviceWeather();
+  // In group mode the whole page shows the group: its name and photo, level, streak, trees and quests.
+  const group = useGroup(groupId);
+  const groupStats = useGroupStats(groupId);
+  const groupTreesQuery = useGroupTrees(groupId);
+  const groupChallenges = useGroupChallenges(groupId);
+  const user = groupId ? groupAsUser(group.data, groupStats.data) : me;
+  const groupTrees = useMemo(() => (groupTreesQuery.data ?? []).slice(0, 4).map(groupTreeAsTree), [groupTreesQuery.data]);
   const sceneryMode = getSceneryMode(weather);
   const [growSheetVisible, setGrowSheetVisible] = useState(false);
   // blurMethod is intentionally omitted (Android "dimezisBlurView*" crashes the RenderThread on
@@ -550,7 +581,11 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
   const { data: missions = [], refetch: refetchMissions } = useTodayMissions();
   const { data: ecoFacts = [], refetch: refetchEcoFacts } = useEcoFacts();
   const { data: gamesStatus, refetch: refetchGames } = useGamesStatus();
-  const { refreshing, onRefresh } = usePullToRefresh([refetchTrees, refetchMissions, refetchEcoFacts, refetchGames]);
+  const { refreshing, onRefresh } = usePullToRefresh(
+    groupId
+      ? [group.refetch, groupStats.refetch, groupTreesQuery.refetch, groupChallenges.refetch, refetchEcoFacts]
+      : [refetchTrees, refetchMissions, refetchEcoFacts, refetchGames],
+  );
 
   const todayFact = ecoFacts.length > 0 ? ecoFacts[new Date().getDate() % ecoFacts.length] : '';
   const forestLevelLabel = getForestLevelLabel(user?.level ?? 1);
@@ -567,22 +602,29 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
       >
         {/* Illustrated hero – header, stat row, scenery, and stats pill all scroll together as
             one normal-flow block instead of a fixed backdrop the rest of the page scrolls over. */}
-        <HeroSection theme={theme} user={user} navigation={navigation} onNavigateTab={onNavigateTab} weather={weather} coords={coords} blurTarget={blurTargetRef} />
+        <HeroSection theme={theme} user={user} navigation={navigation} onNavigateTab={onNavigateTab} weather={weather} coords={coords} blurTarget={blurTargetRef} groupId={groupId} groupTrees={groupTrees} />
 
         {/* Primary "take action" entry point – outranks quests/XP below it in hierarchy */}
         <View style={styles.growCtaSection}>
-          <HomeGrowCTA theme={theme} onPress={() => setGrowSheetVisible(true)} />
+          <HomeGrowCTA
+            theme={theme}
+            onPress={() => setGrowSheetVisible(true)}
+            title={groupId ? `Take action for ${group.data?.name ?? 'the group'}` : undefined}
+            subtitle={groupId ? 'Plant, adopt or give together, or join a drive' : undefined}
+          />
         </View>
 
-        {/* Stories from accounts the user follows */}
-        <View style={styles.trayWrap}>
-          <StoriesTray tone={theme.cardTint === 'dark' ? 'onDark' : 'onLight'} />
-        </View>
+        {/* Stories from accounts the user follows (a group has none) */}
+        {!groupId && (
+          <View style={styles.trayWrap}>
+            <StoriesTray tone={theme.cardTint === 'dark' ? 'onDark' : 'onLight'} />
+          </View>
+        )}
 
         {/* Mascot greeting */}
         <View style={styles.mascotSection}>
           <MascotBubble
-            message={`You're on a ${user?.streakCurrent ?? 0}-day streak! Keep it going 🌱`}
+            message={groupId ? `${group.data?.name ?? 'Your group'} is on a ${user?.streakCurrent ?? 0}-day streak! Keep planting together 🌱` : `You're on a ${user?.streakCurrent ?? 0}-day streak! Keep it going 🌱`}
             size={104}
             mood="encouraging"
           />
@@ -630,13 +672,20 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
           </BlurView>
         </View>
 
-        <MissionCard missions={missions} navigation={navigation} onNavigateTab={onNavigateTab} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />
-        {gamesStatus ? (
+        <MissionCard
+          missions={groupId ? challengesAsMissions(groupChallenges.data) : missions}
+          groupId={groupId}
+          navigation={navigation}
+          onNavigateTab={onNavigateTab}
+          blurTarget={blurTargetRef}
+          previewPeriod={previewPeriod}
+        />
+        {gamesStatus && !groupId ? (
           <View style={styles.gamesCardSection}>
             <GamesCard games={gamesStatus.games} navigation={navigation} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />
           </View>
         ) : null}
-        <RecentTrees trees={trees} navigation={navigation} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />
+        <RecentTrees trees={groupId ? groupTrees : trees} groupId={groupId} navigation={navigation} blurTarget={blurTargetRef} previewPeriod={previewPeriod} />
         {todayFact ? (
           <View style={styles.ecoInsightSection}>
             <View style={styles.sectionHeader}>
@@ -682,6 +731,7 @@ export function HomeScreen({ navigation, onNavigateTab, previewPeriod, onClosePr
         visible={growSheetVisible}
         onClose={() => setGrowSheetVisible(false)}
         navigation={navigation}
+        group={groupId && group.data ? { id: groupId, name: group.data.name, isAdmin: group.data.viewer.role === 'admin' } : undefined}
       />
     </BlurTargetView>
   );

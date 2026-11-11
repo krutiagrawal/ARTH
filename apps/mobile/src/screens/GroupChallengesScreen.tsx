@@ -19,7 +19,8 @@ const DURATIONS = [7, 14, 30, 90];
 const STATUS_LABEL = { upcoming: 'Starts soon', active: 'Active', completed: 'Completed 🏆', ended: 'Ended' } as const;
 
 /** Group challenges: "plant N trees by this date". Progress comes from the group's real plantings. */
-export function GroupChallengesScreen({ navigation, groupId }: { navigation: any; groupId: string }) {
+export function GroupChallengesScreen({ navigation, groupId: groupIdProp, route, embedded }: { navigation: any; groupId?: string; route?: any; embedded?: boolean }) {
+  const groupId: string = groupIdProp ?? route.params.groupId;
   const clearance = useBottomNavClearance();
   const confirm = useConfirm();
   const group = useGroup(groupId);
@@ -78,6 +79,7 @@ export function GroupChallengesScreen({ navigation, groupId }: { navigation: any
       onBack={() => navigation.goBack()}
       refetch={[challenges.refetch]}
       bottomPad={clearance}
+      embedded={embedded}
       right={isAdmin ? <AnimatedButton label="＋ New" size="sm" onPress={() => setOpen(true)} /> : undefined}
     >
       {list.length === 0 ? (

@@ -1,5 +1,6 @@
 import { apiFetch, toFormFile } from './client';
 import { pagedPath, type Page } from '../hooks/useInfiniteList';
+import type { ApiDrive } from './drives';
 
 export type GroupType = 'family' | 'friends' | 'school' | 'college' | 'club' | 'neighbourhood' | 'workplace' | 'other';
 export type GroupRole = 'admin' | 'member';
@@ -25,6 +26,7 @@ export interface ApiGroup {
   city: string | null;
   memberCount: number;
   maxMembers: number;
+  selectedForestThemeId: string | null;
   createdAt: string;
   /** Only on the caller's own list. */
   myRole?: GroupRole;
@@ -34,6 +36,8 @@ export interface ApiGroup {
 export interface ApiGroupDetail extends ApiGroup {
   viewer: {
     role: GroupRole | null;
+    /** Whether this person's own ARTH activity counts for the group (null if not a member). */
+    shareActivity: boolean | null;
     pendingRequest: { id: string; kind: 'join_request' | 'invitation' } | null;
     isCreator: boolean;
   };
@@ -69,19 +73,23 @@ export interface ApiMyRequests {
 
 export interface ApiGroupStats {
   memberCount: number;
+  /** Members whose own ARTH activity counts for the group. */
+  sharingCount: number;
   treesPlanted: number;
+  /** Of those, trees planted in the group's name by an admin. */
+  treesForGroup: number;
   co2Kg: number;
   co2NextYearKg: number;
   adoptions: number;
   donatedCents: number;
+  drivesJoined: number;
   streakCurrent: number;
   streakMax: number;
   challengesCompleted: number;
+  xp: number;
   level: number;
-  name: string;
-  treesToNext: number;
-  nextName: string | null;
-  progress: number;
+  xpIntoLevel: number;
+  xpPerLevel: number;
 }
 
 export interface ApiGroupAchievement {
@@ -107,7 +115,9 @@ export interface ApiGroupChallenge {
 
 export interface ApiGroupActivity {
   id: string;
-  type: 'member_joined' | 'member_left' | 'tree_planted' | 'tree_adopted' | 'donation_made' | 'challenge_created' | 'role_changed';
+  type: 'member_joined' | 'member_left' | 'tree_planted' | 'tree_adopted' | 'donation_made' | 'drive_joined' | 'challenge_created' | 'role_changed';
+  /** True when it was done in the group's name rather than by a member on their own. */
+  forGroup?: boolean;
   createdAt: string;
   data: Record<string, any> | null;
   actor: ApiPerson | null;
@@ -120,17 +130,21 @@ export interface ApiGroupTree {
   species: { commonName: string; emoji: string };
   lat: number;
   lng: number;
+  /** True for a member's personal tree: the spot is blurred to about 1 km. */
+  approximate: boolean;
   locationLabel: string | null;
   photoUrl: string | null;
   plantedAt: string;
-  healthStatus: string;
+  healthStatus: 'not_checked' | 'healthy' | 'struggling' | 'dead' | 'removed';
   verification: string;
+  forGroup: boolean;
   plantedBy: ApiPerson;
 }
 
 export interface ApiGroupAdoption {
   id: string;
   createdAt: string;
+  forGroup: boolean;
   tree: { id: string; nickname: string; speciesName: string; photoUrl: string | null; ngoName: string };
   adoptedBy: { id: string; name: string; handle: string };
 }
@@ -141,9 +155,23 @@ export interface ApiGroupDonation {
   currency: string;
   receiptNumber: string | null;
   createdAt: string;
+  forGroup: boolean;
   campaign: { id: string; title: string; ngoName: string };
-  donatedBy: { id: string; name: string; handle: string };
+  /** Null when the donor chose to stay anonymous. */
+  donatedBy: { id: string; name: string; handle: string } | null;
 }
+
+export interface ApiGroupTheme {
+  id: string;
+  key: string;
+  name: string;
+  preview: string;
+  unlockLevel: number;
+  unlocked: boolean;
+  selected: boolean;
+}
+
+export type ApiGroupDrive = ApiDrive & { groupAttendees: ApiPerson[] };
 
 export interface ApiContributor {
   rank: number;
@@ -276,6 +304,27 @@ export async function fetchGroupActivity(id: string, cursor?: string): Promise<P
 
 export async function fetchGroupTrees(id: string, cursor?: string): Promise<Page<ApiGroupTree>> {
   return apiFetch<Page<ApiGroupTree>>(pagedPath(`/api/planting-groups/${id}/trees`, cursor, {}, 50));
+}
+
+export async function fetchGroupTreePins(id: string): Promise<ApiGroupTree[]> {
+  return apiFetch<ApiGroupTree[]>(`/api/planting-groups/${id}/trees/map`);
+}
+
+export async function fetchGroupDrives(id: string): Promise<ApiGroupDrive[]> {
+  return apiFetch<ApiGroupDrive[]>(`/api/planting-groups/${id}/drives`);
+}
+
+export async function fetchGroupThemes(id: string): Promise<ApiGroupTheme[]> {
+  return apiFetch<ApiGroupTheme[]>(`/api/planting-groups/${id}/themes`);
+}
+
+export async function selectGroupTheme(id: string, themeId: string) {
+  return apiFetch<{ selectedForestThemeId: string }>(`/api/planting-groups/${id}/themes/${themeId}/select`, { method: 'POST' });
+}
+
+/** The caller's own switch: should my ARTH activity count for this group? */
+export async function setMyShareActivity(id: string, shareActivity: boolean) {
+  return apiFetch<{ shareActivity: boolean }>(`/api/planting-groups/${id}/membership`, { method: 'PATCH', body: { shareActivity } });
 }
 
 export async function fetchGroupAdoptions(id: string, cursor?: string): Promise<Page<ApiGroupAdoption>> {

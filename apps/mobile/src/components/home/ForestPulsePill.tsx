@@ -231,6 +231,8 @@ function Dot({ index, scrollX, color }: { index: number; scrollX: SharedValue<nu
  * stat row above already shows. Auto-advances until the user swipes it themselves. */
 export function ForestPulsePill({
   user,
+  groupId,
+  groupTrees,
   weather,
   coords,
   navigation,
@@ -239,6 +241,9 @@ export function ForestPulsePill({
   accentColor,
 }: {
   user: ApiUser | null;
+  /** Group mode: summarise the group's trees instead of the signed-in person's. */
+  groupId?: string;
+  groupTrees?: ApiTree[];
   weather: ApiWeather | null;
   coords: { lat: number; lng: number } | null;
   navigation: any;
@@ -246,17 +251,18 @@ export function ForestPulsePill({
   secondaryColor: string;
   accentColor: string;
 }) {
-  const { data: trees = [] } = useTrees(100);
+  const { data: ownTrees = [] } = useTrees(100);
+  const trees = groupId ? groupTrees ?? [] : ownTrees;
   const { data: drives = [] } = useDrives(coords?.lat, coords?.lng, !!coords);
 
   const cards = useMemo(
     () =>
       buildCards(trees, drives, weather, user, {
-        goTrees: () => navigation.navigate('MyTrees'),
-        goPlant: () => navigation.navigate('PlantTree'),
+        goTrees: () => (groupId ? navigation.navigate('GroupTrees', { groupId }) : navigation.navigate('MyTrees')),
+        goPlant: () => (groupId ? navigation.navigate('GroupActions', { groupId }) : navigation.navigate('PlantTree')),
         goDrive: (driveId) => navigation.navigate('DriveDetail', { driveId }),
       }),
-    [trees, drives, weather, user, navigation],
+    [trees, drives, weather, user, navigation, groupId],
   );
 
   const scrollX = useSharedValue(0);

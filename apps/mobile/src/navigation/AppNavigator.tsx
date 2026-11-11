@@ -76,10 +76,13 @@ import { GroupsScreen } from '../screens/GroupsScreen';
 import { CreateGroupScreen } from '../screens/CreateGroupScreen';
 import { GroupDiscoverScreen } from '../screens/GroupDiscoverScreen';
 import { GroupDetailScreen } from '../screens/GroupDetailScreen';
-import { GroupHomeScreen } from '../screens/GroupHomeScreen';
+import { HomeScreen as GroupHome } from '../screens/HomeScreen';
+import { ForestScreen as GroupForest } from '../screens/ForestScreen';
+import { MapScreen as GroupMap } from '../screens/MapScreen';
+import { GroupCommunityScreen } from '../screens/GroupCommunityScreen';
+import { GroupProfileScreen } from '../screens/GroupProfileScreen';
 import { GroupMembersScreen } from '../screens/GroupMembersScreen';
 import { GroupChallengesScreen } from '../screens/GroupChallengesScreen';
-import { GroupMoreScreen } from '../screens/GroupMoreScreen';
 import { GroupActionsScreen } from '../screens/GroupActionsScreen';
 import { GroupSettingsScreen } from '../screens/GroupSettingsScreen';
 import {
@@ -194,14 +197,17 @@ const NURSERY_TABS: TabItem[] = [
 // A planting group's own dashboard. Opened from the Groups list; members reach it with their own
 // login. The raised centre button opens the "plant, adopt or donate for the group" screen instead of
 // becoming a tab, the same way the NGO Post button works.
-export type GroupTabName = 'Home' | 'Members' | 'Challenges' | 'More';
+export type GroupTabName = 'Home' | 'Forest' | 'Map' | 'Community';
 
+// The group's app is the individual app with the group's data: the same five tabs. The raised centre
+// button opens the "plant, adopt or donate for the group" screen instead of becoming a tab, the same
+// way the NGO Post button works.
 const GROUP_TABS: TabItem[] = [
   { name: 'Home', icon: '🏡', label: 'Home' },
-  { name: 'Members', icon: '👥', label: 'Members' },
-  { name: 'Act', icon: '🌱', label: 'Act', raised: true },
-  { name: 'Challenges', icon: '🏆', label: 'Challenges' },
-  { name: 'More', icon: '☰', label: 'More' },
+  { name: 'Forest', icon: '🌲', label: 'Forest' },
+  { name: 'Act', icon: '➕', label: 'Plant', raised: true },
+  { name: 'Map', icon: '🗺️', label: 'Map' },
+  { name: 'Community', icon: '👥', label: 'Community' },
 ];
 
 // Deliberately tiny – this role's whole feature surface is "see my assigned deliveries" and
@@ -400,6 +406,9 @@ export type RootStackParamList = {
   GroupTrees: { groupId: string };
   GroupGiving: { groupId: string };
   GroupSettings: { groupId: string };
+  GroupProfile: { groupId: string };
+  GroupChallenges: { groupId: string };
+  GroupMembers: { groupId: string };
   NurseryRegister: undefined;
   NurseryMain: undefined;
   NurseryStock: undefined;
@@ -690,6 +699,9 @@ function NgoMainApp({ navigation }: any) {
 function GroupMainApp({ navigation, route }: any) {
   const groupId: string = route.params.groupId;
   const [activeTab, setActiveTab] = useState<GroupTabName>('Home');
+  // Same as the individual app: the nav bar takes the time-of-day colour on the Home tab.
+  const { data: navSettings } = useSettings();
+  const dashboardTheme = useTimeTheme((navSettings?.pinnedTimeTheme ?? null) as TimePeriod | null);
 
   const handleTabPress = useCallback(
     (tab: TabName) => {
@@ -704,21 +716,21 @@ function GroupMainApp({ navigation, route }: any) {
 
   const renderScreen = () => {
     switch (activeTab) {
-      case 'Members':
-        return <GroupMembersScreen navigation={navigation} groupId={groupId} />;
-      case 'Challenges':
-        return <GroupChallengesScreen navigation={navigation} groupId={groupId} />;
-      case 'More':
-        return <GroupMoreScreen navigation={navigation} groupId={groupId} />;
+      case 'Forest':
+        return <GroupForest navigation={navigation} groupId={groupId} />;
+      case 'Map':
+        return <GroupMap navigation={navigation} groupId={groupId} />;
+      case 'Community':
+        return <GroupCommunityScreen navigation={navigation} groupId={groupId} />;
       default:
-        return <GroupHomeScreen navigation={navigation} groupId={groupId} onNavigateTab={(t) => setActiveTab(t)} />;
+        return <GroupHome navigation={navigation} groupId={groupId} onNavigateTab={(t: string) => setActiveTab(t as GroupTabName)} />;
     }
   };
 
   return (
     <View style={styles.mainContainer}>
       {renderScreen()}
-      <BottomNav tabs={GROUP_TABS} activeTab={activeTab} onTabPress={handleTabPress} theme={null} />
+      <BottomNav tabs={GROUP_TABS} activeTab={activeTab} onTabPress={handleTabPress} theme={activeTab === 'Home' ? dashboardTheme : null} />
     </View>
   );
 }
@@ -1043,6 +1055,9 @@ export function AppNavigator() {
         <Stack.Screen name="GroupTrees" component={GroupTreesScreen} />
         <Stack.Screen name="GroupGiving" component={GroupGivingScreen} />
         <Stack.Screen name="GroupSettings" component={GroupSettingsScreen} />
+        <Stack.Screen name="GroupProfile" component={GroupProfileScreen} />
+        <Stack.Screen name="GroupChallenges" component={GroupChallengesScreen} />
+        <Stack.Screen name="GroupMembers" component={GroupMembersScreen} />
         <Stack.Screen name="DriveDetail" component={DriveDetailScreen} />
         <Stack.Screen name="MyTrees" component={MyTreesScreen} />
         <Stack.Screen name="TreePassport" component={TreePassportScreen} />
