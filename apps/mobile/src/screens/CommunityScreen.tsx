@@ -1,4 +1,6 @@
 import { useAuth } from '../context/AuthContext';
+import { useMyGroupRequests, useMyGroups } from '../hooks/useGroupQueries';
+import { GroupAvatar } from '../components/groups/GroupBits';
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator, RefreshControl } from 'react-native';
 import { Text, TextInput } from '../components/common/AppText';
@@ -555,6 +557,10 @@ export function CommunityScreen({ navigation }: any) {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const { playSound } = useSoundSystem();
   const { user } = useAuth();
+  // The person's groups, shown right here so entering one is a single tap.
+  const myGroups = useMyGroups();
+  const groupRequests = useMyGroupRequests();
+  const pendingInvites = groupRequests.data?.invitations.length ?? 0;
   const insets = useSafeAreaInsets();
   const bottomNavClearance = useBottomNavClearance();
 
@@ -595,10 +601,33 @@ export function CommunityScreen({ navigation }: any) {
         </TouchableOpacity>
         {user?.role === 'user' && (
           <TouchableOpacity style={styles.ngoButton} onPress={() => navigation.navigate('Groups')}>
-            <Text style={styles.ngoButtonText}>👥 Groups</Text>
+            <Text style={styles.ngoButtonText}>{pendingInvites > 0 ? `👥 Groups · ${pendingInvites} new` : '👥 Groups'}</Text>
           </TouchableOpacity>
         )}
       </View>
+
+      {user?.role === 'user' && (
+        <View style={styles.myGroupsBlock}>
+          <Text style={styles.myGroupsTitle}>MY GROUPS</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.myGroupsRow}>
+            {(myGroups.data ?? []).map((g) => (
+              <TouchableOpacity key={g.id} style={styles.myGroupChip} activeOpacity={0.8} onPress={() => navigation.navigate('GroupMain', { groupId: g.id })}>
+                <GroupAvatar group={g} size={32} />
+                <View>
+                  <Text style={styles.myGroupName} numberOfLines={1}>
+                    {g.name}
+                  </Text>
+                  <Text style={styles.myGroupSub}>{g.myRole === 'admin' ? 'Admin' : 'Member'} · Open →</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={[styles.myGroupChip, styles.myGroupAdd]} activeOpacity={0.8} onPress={() => navigation.navigate('Groups')}>
+              <Text style={styles.myGroupPlus}>＋</Text>
+              <Text style={styles.myGroupName}>{(myGroups.data ?? []).length === 0 ? 'Start or join a group' : 'Create / find'}</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      )}
 
       {/* Tab bar */}
       <BorderCard noPadding borderRadius={RADIUS.xl} style={[styles.tabBarDark, styles.noBorder]}>
@@ -813,6 +842,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 12,
   },
+  myGroupsBlock: { paddingBottom: 12 },
+  myGroupsTitle: { fontSize: 11, fontWeight: '800', color: COLORS.earth, letterSpacing: 1.2, paddingHorizontal: 20, marginBottom: 6 },
+  myGroupsRow: { paddingHorizontal: 16, gap: 8 },
+  myGroupChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1.5,
+    borderColor: COLORS.warmBrown,
+    backgroundColor: 'transparent',
+    maxWidth: 240,
+  },
+  myGroupAdd: { borderStyle: 'dashed' },
+  myGroupPlus: { fontSize: 18, color: COLORS.forest, fontWeight: '800' },
+  myGroupName: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary, maxWidth: 170 },
+  myGroupSub: { fontSize: 11, color: COLORS.sageDark, fontWeight: '600' },
   directoryRow: {
     flexDirection: 'row',
     gap: 8,

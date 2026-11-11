@@ -165,6 +165,11 @@ function HeroSection({
           which would be invisible/wrong the other way round. */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View>
+          {groupId && (
+            <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={8} accessibilityRole="button" accessibilityLabel="Back to my own forest">
+              <Text style={[{ fontSize: 12, fontWeight: '800', marginBottom: 4, color: theme.textOnSky }, !isLightText && styles.textGlow]}>‹ Back to my forest</Text>
+            </TouchableOpacity>
+          )}
           <Text style={[styles.greeting, { color: theme.textOnSky }, !isLightText && styles.textGlow]}>
             {theme.greeting} {theme.emoji}
           </Text>

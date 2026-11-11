@@ -72,6 +72,9 @@ export function GroupCommunityScreen({ navigation, groupId }: { navigation: any;
         <TouchableOpacity style={styles.pill} onPress={() => navigation.navigate('Groups')}>
           <Text style={styles.pillText}>👥 Groups</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.pill} onPress={() => navigation.goBack()}>
+          <Text style={styles.pillText}>🏠 Me</Text>
+        </TouchableOpacity>
       </View>
 
       <BorderCard noPadding borderRadius={RADIUS.xl} style={styles.tabBar}>
