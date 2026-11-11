@@ -29,7 +29,7 @@
     "test:e2e": "npm run test:e2e --workspace=apps/web"
   },
   "devDependencies": {
-    "@types/react": "^19.1.17"
+    "@types/react": "^19.3.0"
   },
   "engines": {
     "node": ">=20"
