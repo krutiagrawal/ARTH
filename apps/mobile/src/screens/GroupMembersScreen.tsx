@@ -109,6 +109,7 @@ export function GroupMembersScreen({ navigation, groupId }: { navigation: any; g
             <FormField label="Their ARTH handle" value={handle} onChangeText={setHandle} placeholder="@handle" autoCapitalize="none" maxLength={31} />
             <AnimatedButton
               label={invite.isPending ? 'Sending…' : 'Send invitation'}
+              size="sm"
               onPress={sendInvite}
               disabled={handle.trim().replace(/^@/, '').length < 3 || invite.isPending}
               variant="primary"
@@ -179,7 +180,7 @@ export function GroupMembersScreen({ navigation, groupId }: { navigation: any; g
         ))}
       </BorderCard>
 
-      <AnimatedButton label="Leave group" variant="ghost" onPress={leave} style={{ marginTop: 20 }} />
+      <AnimatedButton label="Leave group" size="sm" variant="ghost" onPress={leave} style={{ marginTop: 20 }} />
     </GroupScreen>
   );
 }

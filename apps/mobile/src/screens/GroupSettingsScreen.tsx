@@ -126,8 +126,8 @@ export function GroupSettingsScreen({ navigation, route }: any) {
       )}
 
       <SectionTitle>Membership</SectionTitle>
-      <AnimatedButton label="Leave group" variant="secondary" fullWidth onPress={leave} />
-      {g?.viewer.isCreator && <AnimatedButton label="Delete group" variant="danger" fullWidth onPress={deleteGroup} style={{ marginTop: 10 }} />}
+      <AnimatedButton label="Leave group" size="sm" variant="secondary" fullWidth onPress={leave} />
+      {g?.viewer.isCreator && <AnimatedButton label="Delete group" size="sm" variant="danger" fullWidth onPress={deleteGroup} style={{ marginTop: 10 }} />}
     </GroupScreen>
   );
 }

@@ -31,23 +31,24 @@ export function GroupDetailScreen({ navigation, route }: any) {
   const action = () => {
     if (!g) return null;
     if (g.viewer.role) {
-      return <AnimatedButton label="Open group" variant="primary" fullWidth onPress={() => navigation.replace('GroupMain', { groupId })} />;
+      return <AnimatedButton label="Open group" size="sm" variant="primary" fullWidth onPress={() => navigation.replace('GroupMain', { groupId })} />;
     }
     const pending = g.viewer.pendingRequest;
     if (pending?.kind === 'invitation') {
       return (
         <View style={styles.row}>
-          <AnimatedButton label="Accept invitation" variant="primary" style={styles.flex} onPress={() => run(() => respond.mutateAsync({ requestId: pending.id, action: 'accept' }))} />
-          <AnimatedButton label="Decline" variant="ghost" onPress={() => run(() => respond.mutateAsync({ requestId: pending.id, action: 'decline' }))} />
+          <AnimatedButton label="Accept invitation" size="sm" variant="primary" style={styles.flex} onPress={() => run(() => respond.mutateAsync({ requestId: pending.id, action: 'accept' }))} />
+          <AnimatedButton label="Decline" size="sm" variant="ghost" onPress={() => run(() => respond.mutateAsync({ requestId: pending.id, action: 'decline' }))} />
         </View>
       );
     }
     if (pending?.kind === 'join_request') {
-      return <AnimatedButton label="Request sent. Waiting for an admin" variant="secondary" fullWidth disabled onPress={() => {}} />;
+      return <AnimatedButton label="Request sent ✓" size="sm" variant="secondary" fullWidth disabled onPress={() => {}} />;
     }
     return (
       <AnimatedButton
         label={join.isPending ? 'Sending…' : 'Ask to join'}
+        size="sm"
         variant="primary"
         fullWidth
         disabled={join.isPending || g.memberCount >= g.maxMembers}

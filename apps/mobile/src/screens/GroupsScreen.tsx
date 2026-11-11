@@ -38,8 +38,8 @@ export function GroupsScreen({ navigation }: any) {
       refetch={[groups.refetch, requests.refetch]}
     >
       <View style={styles.actions}>
-        <AnimatedButton label="＋ Create a group" onPress={() => navigation.navigate('CreateGroup')} variant="primary" style={styles.actionButton} />
-        <AnimatedButton label="🔍 Find groups" onPress={() => navigation.navigate('GroupDiscover')} variant="secondary" style={styles.actionButton} />
+        <AnimatedButton label="＋ Create group" size="sm" onPress={() => navigation.navigate('CreateGroup')} variant="primary" style={styles.actionButton} />
+        <AnimatedButton label="🔍 Find groups" size="sm" onPress={() => navigation.navigate('GroupDiscover')} variant="secondary" style={styles.actionButton} />
       </View>
 
       {invitations.length > 0 && (

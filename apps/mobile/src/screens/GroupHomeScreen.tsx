@@ -128,7 +128,8 @@ export function GroupHomeScreen({ navigation, groupId, onNavigateTab }: Props) {
 
       {g?.viewer.role === 'admin' && (
         <AnimatedButton
-          label="🌱 Plant, adopt or donate for the group"
+          label="🌱 Plant, adopt or donate"
+          size="sm"
           variant="primary"
           fullWidth
           style={{ marginTop: 20 }}
